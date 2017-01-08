@@ -22,12 +22,14 @@ import (
 	"path/filepath"
 	//"crypto/x509"
 	//"text/template/parse"
+	"strconv"
 )
 
 //Global Variables
 var DEBUG = false
 var VERBOSE = true
 var src = rand.NewSource(time.Now().UnixNano())
+const merlinVersion = "0.1 Beta"
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
     letterIdxBits = 6                    // 6 bits to represent a letter index
@@ -39,52 +41,24 @@ var agents = make(map[uuid.UUID]agent) //global map to house agent objects
 
 func main() {
 
-	color.Blue(lib.Banner1)
 	flag.BoolVar(&VERBOSE, "v", false, "Enable verbose output")
 	flag.BoolVar(&DEBUG, "debug", false, "Enable debug output")
+	port := flag.Int("p", 443, "Merlin Server Port")
+	ip := flag.String("i", "0.0.0.0", "The IP address of the interface to bind to")
+	crt := flag.String("x509cert", filepath.Join(string(currentDir), "data/x509/server.crt"), "The x509 certificate for the HTTPS listener")
+	key := flag.String("x509key", filepath.Join(string(currentDir), "data/x509/server.key"), "The x509 certificate key for the HTTPS listener")
 	flag.Parse()
+
+	color.Blue(banner.Banner1)
+	color.Blue("\t\t   Version: %s", merlinVersion)
 
 	//Database Connection
 	//db, _ := sql.Open("sqlite3", string(currentDir) + "/data/db/foo.db")
 
-	//Import X.509 Certificate and Key
-	cer, err := tls.LoadX509KeyPair(filepath.Join(currentDir, "data/x509/server.crt"), filepath.Join(currentDir, "data/x509/server.key"))
-	if err != nil {
-		color.Red("[!]There was an error importing the SSL/TLS x509 key pair")
-		color.Red("[!]Ensure a keypair is located in the data/x509 directory")
-		fmt.Println(err)
-		return
-	}
+	//time.Sleep(300 * time.Millisecond)
 
-	//Configure TLS
-	config := &tls.Config{
-		Certificates: []tls.Certificate{cer},
-		//NextProtos: []string{"h2"},
-	}
-
-	http.HandleFunc("/", httpHandler)
-
-	s := &http.Server{
-		Addr:           ":443",
-		Handler:        nil,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-		TLSConfig:      config,
-	}
-
-
-
-	//Run up the command prompt
-	go shell()
-	time.Sleep(300 * time.Millisecond)
-
-	//I shouldn't need to specify the certs as they are in the config
-	color.Yellow("[-]HTTPS Listener Started...")
-	fmt.Printf("merlin>")
-	go log.Fatal(s.ListenAndServeTLS("data/x509/server.crt", "data/x509/server.key"))
-	// TODO determine scripts path and load certs by their absolute path
-
+	go startListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
+	shell ()
 }
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,6 +101,58 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(g)
 	}
+}
+
+func startListener(port string, ip string, crt string, key string, webpath string) {
+
+	//Check to make sure files exist
+	_, err_crt := os.Stat(crt)
+	if err_crt != nil {
+		color.Red("[!]There was an error importing the SSL/TLS x509 certificate")
+		fmt.Println(err_crt)
+		fmt.Printf("merlin>")
+		return
+	}
+
+	_, err_key := os.Stat(key)
+	if err_key != nil {
+		color.Red("[!]There was an error importing the SSL/TLS x509 key")
+		fmt.Println(err_key)
+		fmt.Printf("merlin>")
+		return
+	}
+
+	cer, err := tls.LoadX509KeyPair(crt, key)
+
+	if err != nil {
+		color.Red("[!]There was an error importing the SSL/TLS x509 key pair")
+		color.Red("[!]Ensure a keypair is located in the data/x509 directory")
+		fmt.Println(err)
+		fmt.Printf("merlin>")
+		return
+	}
+
+	//Configure TLS
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cer},
+		//NextProtos: []string{"h2"},
+	}
+	http.HandleFunc(webpath, httpHandler)
+
+	s := &http.Server{
+		Addr:           ip + ":" + port,
+		Handler:        nil,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+		TLSConfig:      config,
+	}
+
+	//I shouldn't need to specify the certs as they are in the config
+	color.Yellow("[-]HTTPS Listener Started on %s:%s", ip, port)
+	fmt.Printf("merlin>")
+	go log.Fatal(s.ListenAndServeTLS(crt, key))
+	// TODO determine scripts path and load certs by their absolute path
 }
 
 func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
@@ -216,14 +242,14 @@ func statusCheckIn(j messages.Base) messages.Base {
 }
 
 func usage () {
-	color.White("Merlin C2 Server")
-	color.White("agent_cmd <agent ID> <command>\t\tRun a command in PowerShell on an agent")
-	color.White("agent_control <agent ID> <command>\tKill the Merlin agent")
+	color.Yellow("Merlin C2 Server (version %s)", merlinVersion)
+	color.Yellow("agent_cmd <agent ID> <command>\t\tRun a command in PowerShell on an agent")
+	color.Yellow("agent_control <agent ID> <command>\tKill the Merlin agent")
 	color.White("\tValid commands: kill, ")
-	color.White("agent_info\t\t\t\tDisplay all agent information")
-	color.White("agent_list\t\t\t\tList agents")
-	color.White("exit\t\t\t\t\tKill Merlin server")
-	color.White("quit\t\t\t\t\tKill Merlin server")
+	color.Yellow("agent_info\t\t\t\tDisplay all agent information")
+	color.Yellow("agent_list\t\t\t\tList agents")
+	color.Yellow("exit\t\t\t\t\tKill Merlin server")
+	color.Yellow("quit\t\t\t\t\tKill Merlin server")
 }
 
 func shell() {
@@ -247,10 +273,12 @@ func shell() {
 		case "help":
 			usage()
 		case "agent_control":
+			//TODO check and make sure an agent ID and command were provided
 			a, _ := uuid.FromString(cmd[1])
 			s := agents[a].channel //https://github.com/golang/go/issues/3117
 			s <- cmd
 		case "agent_cmd":
+			//TODO check and make sure an agent ID and command were provided
 			a, _ := uuid.FromString(cmd[1])
 			s := agents[a].channel //https://github.com/golang/go/issues/3117
 			s <- cmd

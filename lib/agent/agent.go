@@ -26,6 +26,7 @@ var hostUUID = uuid.NewV4()
 var url = "https://127.0.0.1:443/"
 var h2Client = getH2WebClient()
 var waitTime = 10000 * time.Millisecond
+const agentVersion = "0.1 Beta"
 
 func main() {
 
@@ -42,6 +43,7 @@ func main() {
 	for RUN {
 		//Sleep then check in
 		if VERBOSE {
+			color.Yellow("[-]Agent version: %s", agentVersion)
 			color.Yellow("[-]Sleeping for %s", waitTime.String())
 		}
 		time.Sleep(waitTime)
