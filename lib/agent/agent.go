@@ -25,7 +25,7 @@ var RUN = true
 var hostUUID = uuid.NewV4()
 var url = "https://127.0.0.1:443/"
 var h2Client = getH2WebClient()
-var waitTime = 10000 * time.Millisecond
+var waitTime = 30000 * time.Millisecond
 const agentVersion = "0.1 Beta"
 
 func main() {

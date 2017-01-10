@@ -37,7 +37,7 @@ const (
     letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 var currentDir, _ = os.Getwd()
-var agents = make(map[uuid.UUID]agent) //global map to house agent objects
+var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
 
 func main() {
 
@@ -88,6 +88,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			//TODO move to its own function
 			var p messages.PSResults
 			json.Unmarshal(payload, &p)
+			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results for job: %s\r\n",time.Now(), p.Job))
+			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results:\r\n%s\r\n",time.Now(), p.Result))
 			color.Green("[+]Results for job %s", p.Job)
 			color.Green("%s", p.Result)
 			fmt.Printf("merlin>")
@@ -163,15 +165,32 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		color.Yellow("\t[i]Payload: %s", j.Payload)
 		color.Yellow("\t[i]Username: %s", p.UserName)
 	}
-	agentsDir := filepath.Join(currentDir, "..", "agents")
-
-	// Add custom agent struct to global agents map
-	agents[j.ID]=agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID, hostName: p.HostName, pid: p.Pid, channel: make(chan []string, 10)}
+	agentsDir := filepath.Join(currentDir, "agents")
 
 	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
 		os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
 		os.Create(filepath.Join(agentsDir, j.ID.String(),"agent_log.txt"))
+
+		if VERBOSE{
+			color.Yellow("[-]Created agent log file at: %s", agentsDir, j.ID.String(),"agent_log.txt")
+		}
 	}
+
+	f, err := os.OpenFile(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"), os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+    		panic(err)
+	}
+	// Add custom agent struct to global agents map
+	agents[j.ID]=&agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID,
+		           hostName: p.HostName, pid: p.Pid, channel: make(chan []string, 10),
+		           agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
+
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent initial check in for agent %s\r\n",time.Now(), j.ID))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), p.HostName))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), p.UserName))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), p.UserGUID))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), p.Pid))
+
 	fmt.Printf("merlin>")
 	//Add code here to create db record
 }
@@ -185,16 +204,22 @@ func statusCheckIn(j messages.Base) messages.Base {
 		color.Red("[DEBUG]Channel content: %s", agents[j.ID].channel)
 	}
 
+	agents[j.ID].sCheckIn = time.Now()
 	if len(agents[j.ID].channel) >= 1 {
 		command := <-agents[j.ID].channel
 		jobID := RandStringBytesMaskImprSrc(10)
 		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
+
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n",time.Now(), command[0]))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n",time.Now(), command[1:]))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Created job %s for agent %s\r\n",time.Now(), jobID, j.ID))
+
 		fmt.Printf("merlin>")
 
 		switch command[0]{
 		case "agent_cmd":
 			p := messages.CmdPayload{
-			Command: command[2],
+			Command: strings.Join(command[2:], " "),
 			Job: jobID,
 			}
 
@@ -246,7 +271,7 @@ func usage () {
 	color.Yellow("agent_cmd <agent ID> <command>\t\tRun a command in PowerShell on an agent")
 	color.Yellow("agent_control <agent ID> <command>\tKill the Merlin agent")
 	color.White("\tValid commands: kill, ")
-	color.Yellow("agent_info\t\t\t\tDisplay all agent information")
+	color.Yellow("agent_info <agent ID>\t\t\t\tDisplay all agent information")
 	color.Yellow("agent_list\t\t\t\tList agents")
 	color.Yellow("exit\t\t\t\t\tKill Merlin server")
 	color.Yellow("quit\t\t\t\t\tKill Merlin server")
@@ -273,19 +298,27 @@ func shell() {
 		case "help":
 			usage()
 		case "agent_control":
-			//TODO check and make sure an agent ID and command were provided
-			a, _ := uuid.FromString(cmd[1])
-			s := agents[a].channel //https://github.com/golang/go/issues/3117
-			s <- cmd
+			if len(cmd) == 3 {
+				a, _ := uuid.FromString(cmd[1])
+				s := agents[a].channel //https://github.com/golang/go/issues/3117
+				s <- cmd
+			}else {
+				color.Red("[!]Invalid command")
+				color.White("agent_control <agent ID> <command>")
+			}
 		case "agent_cmd":
-			//TODO check and make sure an agent ID and command were provided
-			a, _ := uuid.FromString(cmd[1])
-			s := agents[a].channel //https://github.com/golang/go/issues/3117
-			s <- cmd
-			a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[1]))
-			if DEBUG {
-				color.Red("Input: %s", cmd[1])
-				color.Red("Base64 Input: %s", a_cmd)
+			if len(cmd) >= 3 {
+				a, _ := uuid.FromString(cmd[1])
+				s := agents[a].channel //https://github.com/golang/go/issues/3117
+				s <- cmd
+				a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[1]))
+				if DEBUG {
+					color.Red("Input: %s", cmd[1])
+					color.Red("Base64 Input: %s", a_cmd)
+				}
+			}else {
+				color.Red("[!]Invalid command")
+				color.White("agent_cmd <agent ID> <cmd>")
 			}
 		case "agent_list":
 			color.Yellow("====================================================")
@@ -297,12 +330,19 @@ func shell() {
 				color.Yellow("%s\t%s\t%s", k.String(), v.userName, v.hostName)
 			}
 		case "agent_info":
-			a, _ := uuid.FromString(cmd[1])
-			color.Yellow("ID : %s", agents[a].id.String())
-			color.Yellow("UserName : %s", agents[a].userName)
-			color.Yellow("User GUID : %s", agents[a].userGUID)
-			color.Yellow("Hostname : %s", agents[a].hostName)
-			color.Yellow("Process ID : %d", agents[a].pid)
+			if len(cmd) == 1 {
+				color.Red("[!]Invalid command")
+				color.White("agent_info <agent_id>")
+			} else if len(cmd) >= 2 {
+				a, _ := uuid.FromString(cmd[1])
+				color.Yellow("ID : %s", agents[a].id.String())
+				color.Yellow("UserName : %s", agents[a].userName)
+				color.Yellow("User GUID : %s", agents[a].userGUID)
+				color.Yellow("Hostname : %s", agents[a].hostName)
+				color.Yellow("Process ID : %d", agents[a].pid)
+				color.Yellow("Initial Check In: %s", agents[a].iCheckIn.String())
+				color.Yellow("Last Check In: %s", agents[a].sCheckIn.String())
+			}
 		default:
 			color.Red("[!]Invalid command: %s", cmd)
 		}
@@ -334,5 +374,8 @@ type agent struct {
 	userGUID	string
 	hostName 	string
 	pid 		int
+	agentLog	*os.File
 	channel		chan []string
+	iCheckIn	time.Time
+	sCheckIn	time.Time
 }
