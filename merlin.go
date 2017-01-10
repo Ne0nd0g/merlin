@@ -167,6 +167,9 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	}
 	agentsDir := filepath.Join(currentDir, "agents")
 
+	if _, d_err := os.Stat(agentsDir); os.IsNotExist(d_err) {
+		os.Mkdir(agentsDir, os.ModeDir)
+	}
 	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
 		os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
 		os.Create(filepath.Join(agentsDir, j.ID.String(),"agent_log.txt"))
