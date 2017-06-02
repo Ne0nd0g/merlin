@@ -1,0 +1,3 @@
+golang.org/x/net/http2
+github.com/fatih/color
+github.com/satori/go.uuid
