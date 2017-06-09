@@ -22,9 +22,9 @@ go get github.com/fatih/color
 go get github.com/satori/go.uuid
 ```
 
-Run Merlin as a script: `go run merlin.go`
+Run Merlin Server as a script: `go run merlinserver.go`
 
-Compile Merlin into an executable: `go build -o C:\Merlin\bin\merlin.exe C:\Merlin\merlin.go`
+Compile Merlin into an executable: `go build -o bin\merlinserver.exe merlinserver.go`
 
 ### USAGE
 ```
@@ -66,11 +66,6 @@ agent_list                          List agents
 
 ```
 
-## PowerShell
-By default, all commands are executed on the victim using PowerShell and base64 commands.
-
-`PS C:\> powershell.exe -w hidden -nop -Enc RwBlAHQALQBOAGUAdABBAGQAYQBwAHQAZQByAA==`
-
 ### TLS Certificates
 By default, Merlin will load server.crt and server.key from the `data/x509/` directory. You must generate your own certificate pair and place them in this directory.
 ### Third Party Libraries
@@ -84,7 +79,7 @@ By default, Merlin will load server.crt and server.key from the `data/x509/` dir
 Execute this command to install all dependencies:
 `go get github.com/fatih/color github.com/satori/go.uuid golang.org/x/net/http2 github.com/mattn/go-sqlite3`
 
-## Running Merlin's Agent
+## Merlin Agent
 The agent portion of Merlin should be run as a compiled binary file on a target host.
 
 >Ensure your GOPATH environment variable is set
@@ -93,7 +88,9 @@ Windows `set GOPATH=C:\Merlin`
 
 *nix    `export GOPATH=/opt/Merlin`
 
-Compile Merlin Agent into an executable: `go build -o C:\Merlin\bin\agent.exe C:\Merlin\lib\agent\agent.go`
+Compile Merlin Agent into an executable: `go build -o bin\merlinagent.exe merlin\agent\main.go`
+
+Run Merlin Agent as script `go run merlin\agent\main.go`
 
 ### USAGE
 

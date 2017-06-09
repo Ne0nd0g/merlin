@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"./lib/standard/messages"
+	"./merlin/messages" // TODO move to github.com/neondog/Merlin/merlin
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"flag"
-	"./lib/standard/banner"
+	"./merlin/banner" // TODO move to github.com/neondog/Merlin/merlin
 	"math/rand"
 	//"github.com/mattn/go-sqlite3"
 	//"database/sql"
@@ -92,10 +92,12 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			color.Red("[DEBUG]POST DATA: %s", j)
 		}
 		switch j.Type {
+
 		case "InitialCheckIn":
 			var p messages.SysInfo
 			json.Unmarshal(payload, &p)
 			agentInitialCheckIn(j, p)
+
 		case "StatusCheckIn":
 			w.Header().Set("Content-Type", "application/json")
 			x := statusCheckIn(j)
@@ -103,13 +105,14 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				color.Green(x.Type)
 			}
 			json.NewEncoder(w).Encode(x)
+
 		case "CmdResults":
 			//TODO move to its own function
 			var p messages.CmdResults
 			json.Unmarshal(payload, &p)
 			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results for job: %s\r\n",time.Now(), p.Job))
 
-			color.Blue("[+]Results for job %s", p.Job)
+			color.Cyan("[+]Results for job %s", p.Job)
 			if len(p.Stdout) > 0{
 				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Results (stdout):\r\n%s\r\n",
 					time.Now(),
@@ -123,6 +126,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				color.Red("%s", p.Stderr)
 			}
 			fmt.Printf("merlin>")
+
 		default:
 			color.Red("[!]Invalid Activity: %s", j.Type)
 			fmt.Printf("merlin>")
@@ -215,7 +219,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		color.Yellow("\t[i]Architecture: %s", p.Architecture)
 		color.Yellow("\t[i]Username: %s", p.UserName)
 	}
-	agentsDir := filepath.Join(currentDir, "agents")
+	agentsDir := filepath.Join(currentDir, "data", "agents")
 
 	if _, d_err := os.Stat(agentsDir); os.IsNotExist(d_err) {
 		os.Mkdir(agentsDir, os.ModeDir)
@@ -239,7 +243,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		           hostName: p.HostName, pid: p.Pid, channel: make(chan []string, 10),
 		           agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
 
-	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent initial check in for agent %s\r\n",time.Now(), j.ID))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n",time.Now(), j.ID))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), p.Platform))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), p.Architecture))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), p.HostName))
@@ -438,7 +442,7 @@ func shell() {
 				color.Yellow("Hostname : %s", agents[a].hostName)
 				color.Yellow("Process ID : %d", agents[a].pid)
 				color.Yellow("Initial Check In: \t%s", agents[a].iCheckIn.String())
-				color.Yellow("Last Check In: \t%s", agents[a].sCheckIn.String())
+				color.Yellow("Last Check In: \t\t%s", agents[a].sCheckIn.String())
 			}
 
 		default:

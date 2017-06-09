@@ -1,7 +1,7 @@
 package Exfiltration
 
 import (
-	"../../../../modules"
+	"../../../"
 )
 
 
