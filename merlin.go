@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"./merlin/messages" // TODO move to github.com/neondog/Merlin/merlin
+	"pkg/messages" // TODO move to github.com/neondog/Merlin/merlin
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"flag"
-	"./merlin/banner" // TODO move to github.com/neondog/Merlin/merlin
+	"pkg/banner" // TODO move to github.com/neondog/Merlin/merlin
 	"math/rand"
 	//"github.com/mattn/go-sqlite3"
 	//"database/sql"
