@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"pkg/messages" // TODO move to github.com/neondog/Merlin/merlin
+	"github.com/ne0nd0g/merlin/pkg"
+	"github.com/ne0nd0g/merlin/pkg/banner"
+	"github.com/ne0nd0g/merlin/pkg/messages"
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"flag"
-	"pkg/banner" // TODO move to github.com/neondog/Merlin/merlin
 	"math/rand"
 	//"github.com/mattn/go-sqlite3"
 	//"database/sql"
@@ -30,7 +31,6 @@ import (
 var DEBUG = false
 var VERBOSE = false
 var src = rand.NewSource(time.Now().UnixNano())
-const merlinVersion = "0.1 Beta"
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
     letterIdxBits = 6                    // 6 bits to represent a letter index
@@ -51,7 +51,7 @@ func main() {
 	flag.Parse()
 
 	color.Blue(banner.Banner1)
-	color.Blue("\t\t   Version: %s", merlinVersion)
+	color.Blue("\t\t   Version: %s", merlin.Version)
 
 	//Database Connection
 	//db, _ := sql.Open("sqlite3", string(currentDir) + "/data/db/foo.db")
@@ -338,7 +338,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 }
 
 func usage () {
-	color.Yellow("Merlin C2 Server (version %s)", merlinVersion)
+	color.Yellow("Merlin C2 Server (version %s)", merlin.Version)
 	color.Yellow("agent_cmd <agent ID> <command>\t\tRun a command in PowerShell on an agent")
 	color.Yellow("agent_control <agent ID> <command>\tKill the Merlin agent")
 	color.White("\tValid commands: kill, ")

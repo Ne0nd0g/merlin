@@ -1,3 +1,3 @@
 package merlin
 
-const merlinVersion = "0.1 Beta"
+const Version = "0.1 Beta"
