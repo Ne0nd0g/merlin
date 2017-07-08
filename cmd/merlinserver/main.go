@@ -14,6 +14,7 @@ import (
 	"github.com/ne0nd0g/merlin/pkg/messages"
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
+	"github.com/olekukonko/tablewriter"
 	"flag"
 	"math/rand"
 	//"github.com/mattn/go-sqlite3"
@@ -339,13 +340,24 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 func usage () {
 	color.Yellow("Merlin C2 Server (version %s)", merlin.Version)
-	color.Yellow("agent_cmd <agent ID> <command>\t\tRun a command in PowerShell on an agent")
-	color.Yellow("agent_control <agent ID> <command>\tKill the Merlin agent")
-	color.White("\tValid commands: kill, ")
-	color.Yellow("agent_info <agent ID>\t\t\t\tDisplay all agent information")
-	color.Yellow("agent_list\t\t\t\tList agents")
-	color.Yellow("exit\t\t\t\t\tKill Merlin server")
-	color.Yellow("quit\t\t\t\t\tKill Merlin server")
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetHeader([]string{"Command", "Arguments", "Options", "Description"})
+
+	data := [][]string{
+		[]string{"agent_cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
+		[]string{"agent_control", "<agent ID> <command>", "kill", "Control messages & " +
+			"functions to the agent itself"},
+		[]string{"agent_info", "<agent ID>", "", "Display all information about an agent"},
+		[]string{"agent_list", "None", "", "List all checked In agents"},
+		[]string{"exit", "None", "", "Exit the Merlin server"},
+		[]string{"quit", "None", "", "Exit the Merlin server"},
+	}
+
+	table.AppendBulk(data)
+	fmt.Println()
+	table.Render()
+	fmt.Println()
 }
 
 func shell() {
@@ -415,34 +427,40 @@ func shell() {
 			}
 
 		case "agent_list":
-			color.Yellow("====================================================" +
-				"====================================================")
-			color.Yellow("\t\t\t\t\tAgents List")
-			color.Yellow("====================================================" +
-				"====================================================")
-			color.Yellow("GUID\t\t\t\t\tPlatform\t\tUser\t\t\tHost")
-			color.Yellow("====================================================" +
-				"====================================================")
-			for k, v := range agents{
-				color.Yellow("%s\t%s/%s\t\t%s\t\t%s", k.String(), v.platform, v.architecture,
-					v.userName, v.hostName)
-			}
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+			table.SetAlignment(tablewriter.ALIGN_CENTER)
 
+			for k, v := range agents {
+    				table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
+					v.hostName, "HTTP/2"})
+			}
+			fmt.Println()
+			table.Render()
+			fmt.Println()
 		case "agent_info":
 			if len(cmd) == 1 {
 				color.Red("[!]Invalid command")
 				color.White("agent_info <agent_id>")
 			} else if len(cmd) >= 2 {
 				a, _ := uuid.FromString(cmd[1])
-				color.Yellow("ID : %s", agents[a].id.String())
-				color.Yellow("Platform: %s", agents[a].platform)
-				color.Yellow("Architecture: %s", agents[a].architecture)
-				color.Yellow("UserName : %s", agents[a].userName)
-				color.Yellow("User GUID : %s", agents[a].userGUID)
-				color.Yellow("Hostname : %s", agents[a].hostName)
-				color.Yellow("Process ID : %d", agents[a].pid)
-				color.Yellow("Initial Check In: \t%s", agents[a].iCheckIn.String())
-				color.Yellow("Last Check In: \t\t%s", agents[a].sCheckIn.String())
+				table := tablewriter.NewWriter(os.Stdout)
+				table.SetAlignment(tablewriter.ALIGN_LEFT)
+				data := [][]string{
+					[]string{"ID", agents[a].id.String()},
+					[]string{"Platform", agents[a].platform},
+					[]string{"Architecture", agents[a].architecture},
+					[]string{"UserName", agents[a].userName},
+					[]string{"User GUID", agents[a].userGUID},
+					[]string{"Hostname", agents[a].hostName},
+					[]string{"Process ID", strconv.Itoa(agents[a].pid)},
+					[]string{"Inital Check In", agents[a].iCheckIn.String()},
+					[]string{"Last Check In", agents[a].sCheckIn.String()},
+				}
+				table.AppendBulk(data)
+				fmt.Println()
+				table.Render()
+				fmt.Println()
 			}
 
 		default:

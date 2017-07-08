@@ -7,8 +7,8 @@ The Go programing language must be installed on the system hosting Merlin.
 
 Download and install GO: `https://golang.org/doc/install`
 
-## Running Merlin
-Merlin can be run as a script or compiled and run as a standalone binary file.
+## Running Merlin Server
+Merlin Server can be run as a script or compiled and run as a standalone binary file.
 >Ensure your GOPATH environment variable is set
 
 Windows `set GOPATH=C:\Merlin`
@@ -17,16 +17,15 @@ Windows `set GOPATH=C:\Merlin`
 
 3rd party libraries must be installed with:
 ```
-go get golang.org/x/net/http2
 go get github.com/fatih/color
 go get github.com/satori/go.uuid
 ```
 
-Run Merlin Server as a script: `go run merlinserver.go`
+Run Merlin Server as a script: `go run cmd/merlinserver/main.go`
 
-Compile Merlin into an executable: `go build -o bin\merlinserver.exe merlinserver.go`
+Compile Merlin Server into an executable: `go build -o merlinserver.exe cmd/merlinserver/main.go`
 
-### USAGE
+### Merlin Server Usage
 ```
   -debug
         Enable debug output
@@ -41,7 +40,7 @@ Compile Merlin into an executable: `go build -o bin\merlinserver.exe merlinserve
         The x509 certificate key for the HTTPS listener (default "C:\\Merlin\\data\\x509\\server.key")
 ```
 
-## Server Commands
+## Merlin Server Commands
 ```
 
 exit    Exit and close Merlin
@@ -88,9 +87,9 @@ Windows `set GOPATH=C:\Merlin`
 
 *nix    `export GOPATH=/opt/Merlin`
 
-Compile Merlin Agent into an executable: `go build -o bin\merlinagent.exe merlin\agent\main.go`
+Compile Merlin Agent into an executable: `go build -o merlinagent.exe cmd/merlinagent/main.go`
 
-Run Merlin Agent as script `go run merlin\agent\main.go`
+Run Merlin Agent as script `go run cmd/merlinagent/main.go`
 
 ### USAGE
 

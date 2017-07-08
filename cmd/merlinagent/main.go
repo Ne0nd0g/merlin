@@ -13,7 +13,7 @@ import (
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 	"os/exec"
-	"../pkg/messages" // TODO Needs to be replaced with github.com/Neond0g/merlin/pkg/messages
+	"github.com/ne0nd0g/merlin/pkg/messages"
 	"flag"
 	"runtime"
 	"strings"
