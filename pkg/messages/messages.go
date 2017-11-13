@@ -10,6 +10,7 @@ type Base struct {
 	ID      uuid.UUID 	`json:"id"`
 	Type    string    	`json:"type"`
 	Payload interface{}    `json:"payload,omitempty"`
+	Padding string		`json:"padding"`
 	//Payload *json.RawMessage    `json:"payload,omitempty"`
 }
 

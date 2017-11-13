@@ -35,6 +35,9 @@ var VERBOSE = false
 var src = rand.NewSource(time.Now().UnixNano())
 var currentDir, _ = os.Getwd()
 var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
+var paddingMax = 4096
+var version string
+var build string
 
 //Constants
 const (
@@ -55,7 +58,8 @@ func main() {
 	flag.Parse()
 
 	color.Blue(banner.Banner1)
-	color.Blue("\t\t   Version: %s", merlin.Version)
+	color.Blue("\t\t   Version: %s", version)
+	color.Blue("\t\t   Build: %s", build)
 
 	go startListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
 	shell ()
@@ -101,7 +105,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			x := statusCheckIn(j)
 			if VERBOSE {
-				color.Green(x.Type)
+				color.Yellow("[-]Sending " + x.Type + " message type to agent")
 			}
 			json.NewEncoder(w).Encode(x)
 
@@ -289,6 +293,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 				ID:      j.ID,
 				Type:    "CmdPayload",
 				Payload: (*json.RawMessage)(&k),
+				Padding: RandStringBytesMaskImprSrc(paddingMax),
 			}
 
 			return g
@@ -305,6 +310,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 				ID:      j.ID,
 				Type:    "AgentControl",
 				Payload: (*json.RawMessage)(&k),
+				Padding: RandStringBytesMaskImprSrc(paddingMax),
 			}
 
 			return g
@@ -320,6 +326,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 				ID:      j.ID,
 				Type:    "AgentControl",
 				Payload: (*json.RawMessage)(&k),
+				Padding: RandStringBytesMaskImprSrc(paddingMax),
 			}
 
 			return g
@@ -328,6 +335,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 			Version: 1.0,
 			ID:      j.ID,
 			Type:    "ServerOk",
+			Padding: RandStringBytesMaskImprSrc(paddingMax),
 			}
 			return g
 		}
@@ -336,6 +344,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 			Version: 1.0,
 			ID:      j.ID,
 			Type:    "ServerOk",
+			Padding: RandStringBytesMaskImprSrc(paddingMax),
 		}
 		return g
 	}

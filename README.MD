@@ -1,5 +1,5 @@
 
-# Merlin
+# Merlin (BETA)
 Merlin is a Command & Control toolset written in golang that operates over an HTTP/2 connection. Communications are passed between the server and agent using JSON messages.
 
 ## Install GO
@@ -7,23 +7,27 @@ The Go programing language must be installed on the system hosting Merlin.
 
 Download and install GO: `https://golang.org/doc/install`
 
-## Running Merlin Server
-Merlin Server can be run as a script or compiled and run as a standalone binary file.
 >Ensure your GOPATH environment variable is set
 
 Windows `set GOPATH=C:\Merlin`
 
 *nix    `export GOPATH=/opt/Merlin`
 
-3rd party libraries must be installed with:
-```
-go get github.com/fatih/color
-go get github.com/satori/go.uuid
-```
+## Running Merlin Server
+Merlin Server can be run as a script or compiled and run as a standalone binary file.
 
-Run Merlin Server as a script: `go run cmd/merlinserver/main.go`
+> It is recommended to download the compiled binaries from the
+[Releases](https://github.com/Ne0nd0g/merlin/releases) section
 
-Compile Merlin Server into an executable: `go build -o merlinserver.exe cmd/merlinserver/main.go`
+Run Merlin Server as a script:
+
+`git clone https://github.com/Ne0nd0g/merlin/`
+
+`go run cmd/merlinserver/main.go`
+
+Compile Merlin Server into an executable:
+
+`make server-windows` or `make server-linux` or `make server-darwin`
 
 ### Merlin Server Usage
 ```
@@ -41,6 +45,10 @@ Compile Merlin Server into an executable: `go build -o merlinserver.exe cmd/merl
 ```
 
 ## Merlin Server Commands
+Merlin is equipped with a tab completion system that can be used to see
+what commands are available at any given time. Hit double tab to get a
+list of all available commands.
+
 ```
 
 exit    Exit and close Merlin
@@ -53,43 +61,50 @@ quit    Exit and close Merlin
 ```
 
 ## Agent Commands
-```
-agent_cmd <agent id> <command>       A command to run on a remote agent
+These are the commands to control an agent from the server. Tab
+completion can be used to select an Agent's identifier.
 
-agent_control <agent id> <command>  Configure/Control a remote agent (not the host)
+```
+agent cmd <agent id> <command>       A command to run on a remote agent
+
+agent control <agent id> <command>  Configure/Control a remote agent (not the host)
                 [kill,]
 
-agent_info <agent id>               Display all information for an agent
+agent info <agent id>               Display all information for an agent
 
-agent_list                          List agents
+agent list                          List agents
 
 ```
 
 ### TLS Certificates
 By default, Merlin will load server.crt and server.key from the `data/x509/` directory. You must generate your own certificate pair and place them in this directory.
 ### Third Party Libraries
-	github.com/fatih/color
-	github.com/satori/go.uuid
-	golang.org/x/net/http2
-	github.com/mattn/go-sqlite3
-	    * requires gcc
-	    * Use tdm64-gcc or mingw-w64 for Windows and add its /bin directory to your path
+The 3rd party libraries used with Merlin are kept in the _vendor_
+directory. This project will default to using the library files in that
+folder.
 
-Execute this command to install all dependencies:
-`go get github.com/fatih/color github.com/satori/go.uuid golang.org/x/net/http2 github.com/mattn/go-sqlite3`
+## Running Merlin Agent
+The agent portion of Merlin should be run as a compiled binary file on
+a target host.
 
-## Merlin Agent
-The agent portion of Merlin should be run as a compiled binary file on a target host.
+> It is recommended to download the compiled binaries from the
+[Releases](https://github.com/Ne0nd0g/merlin/releases) section
 
->Ensure your GOPATH environment variable is set
+>Ensure your GOPATH environment variable is set!
 
-Windows `set GOPATH=C:\Merlin`
+Compile Merlin Agent into an executable
 
-*nix    `export GOPATH=/opt/Merlin`
+`make agent-windows` or `make agent-linux` or `make agent-darwin`
 
-Compile Merlin Agent into an executable: `go build -o merlinagent.exe cmd/merlinagent/main.go`
+Merlin Agent can also be compiled without Make, using just go. To
+compile Merlin Agent with your Merlin Server's address, so it doesn't
+have to specified on the command line, include `-ldflags
+-X main.URL=https://acme.com:443/`
 
-Run Merlin Agent as script `go run cmd/merlinagent/main.go`
+>Example: `go build -o merlinagent.exe -ldflags
+"-X main.URL=https://acme.com:443/" cmd/merlinagent/main.go`
+
+Run Merlin Agent as script: `go run cmd/merlinagent/main.go`
 
 ### USAGE
 

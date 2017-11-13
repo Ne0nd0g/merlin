@@ -1,9 +1,11 @@
 package modules
 
-type module struct {
+type Module struct {
 	Name	string
-	Author 	string
+	Author 	[]string
 	Path 	string
 	Platform string
 	Arch string
+	Lang string
+	Notes string
 }
