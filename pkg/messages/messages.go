@@ -11,10 +11,9 @@ type Base struct {
 	Type    string    	`json:"type"`
 	Payload interface{}    `json:"payload,omitempty"`
 	Padding string		`json:"padding"`
-	//Payload *json.RawMessage    `json:"payload,omitempty"`
 }
 
-//JSON cmd.exe Payload MESSAGE TYPE: CmdPayload
+//JSON Payload MESSAGE TYPE: CmdPayload
 type CmdPayload struct {
 	Command	   string `json:"executable"`
 	Args string `json:"args"`
@@ -23,8 +22,8 @@ type CmdPayload struct {
 
 //JSON System Information Payload
 type SysInfo struct {
-	Platform string `json:platform,omitempty`
-	Architecture string `json:architecture,omitempty`
+	Platform string `json:"platform,omitempty"`
+	Architecture string `json:"architecture,omitempty"`
 	UserName string `json:"username,omitempty"`
 	UserGUID string `json:"userguid,omitempty"`
 	HostName string `json:"hostname,omitempty"`
@@ -41,7 +40,8 @@ type CmdResults struct {
 
 //JSON Agent Control Commands
 type AgentControl struct {
-	Job	   string `json:"job"`
-	Command string `json:"command"`
-	Result string `json:"result"`
+	Job	   string 	`json:"job"`
+	Command string 	`json:"command"`
+	Args string		`json:"args,omitempty"`
+	Result string 	`json:"result"`
 }

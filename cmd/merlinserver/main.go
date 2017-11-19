@@ -252,6 +252,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 }
 
 func statusCheckIn(j messages.Base) messages.Base {
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in",time.Now()))
 	if VERBOSE {
 		color.Green("[+]Recieved agent status checkin from %s", j.ID)
 	}
@@ -271,6 +272,12 @@ func statusCheckIn(j messages.Base) messages.Base {
 		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n",time.Now(), command[3:]))
 		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Created job %s for agent %s\r\n",time.Now(), jobID, j.ID))
 
+		m := messages.Base{
+			Version: 1.0,
+			ID:      j.ID,
+			Padding: RandStringBytesMaskImprSrc(paddingMax),
+		}
+
 		switch command[1]{
 		case "cmd":
 			p := messages.CmdPayload{
@@ -281,63 +288,46 @@ func statusCheckIn(j messages.Base) messages.Base {
 				p.Args = strings.Join(command[4:], " ")
 			}
 
-			k, err := json.Marshal(p)
+			k := marshalMessage(p)
+			m.Type = "CmdPayload"
+			m.Payload = (*json.RawMessage)(&k)
 
-			if err != nil {
-				color.Red("There was an error marshaling the JSON object")
-				color.Red(err.Error())
-			}
-
-			g := messages.Base{
-				Version: 1.0,
-				ID:      j.ID,
-				Type:    "CmdPayload",
-				Payload: (*json.RawMessage)(&k),
-				Padding: RandStringBytesMaskImprSrc(paddingMax),
-			}
-
-			return g
+			return m
 
 		case "control":
 			p := messages.AgentControl{
-			Command: command[2],
+			Command: command[3],
 			Job: jobID,
 			}
 
-			k, _ := json.Marshal(p)
-			g := messages.Base{
-				Version: 1.0,
-				ID:      j.ID,
-				Type:    "AgentControl",
-				Payload: (*json.RawMessage)(&k),
-				Padding: RandStringBytesMaskImprSrc(paddingMax),
+			if len(command) == 5 {
+				p.Args = command[4]
 			}
 
-			return g
+			k := marshalMessage(p)
+			m.Type = "AgentControl"
+			m.Payload = (*json.RawMessage)(&k)
+
+			if command[3] == "kill" {delete(agents, j.ID)}
+			return m
+
 		case "kill":
 			p := messages.AgentControl{
 			Command: command[1],
 			Job: jobID,
 			}
 
-			k, _ := json.Marshal(p)
-			g := messages.Base{
-				Version: 1.0,
-				ID:      j.ID,
-				Type:    "AgentControl",
-				Payload: (*json.RawMessage)(&k),
-				Padding: RandStringBytesMaskImprSrc(paddingMax),
-			}
+			k := marshalMessage(p)
+			m.Type = "AgentControl"
+			m.Payload = (*json.RawMessage)(&k)
 
-			return g
+			delete(agents, j.ID)
+
+			return m
+
 		default:
-			g := messages.Base{
-			Version: 1.0,
-			ID:      j.ID,
-			Type:    "ServerOk",
-			Padding: RandStringBytesMaskImprSrc(paddingMax),
-			}
-			return g
+			m.Type = "ServerOk"
+			return m
 		}
 	} else {
 		g := messages.Base{
@@ -358,13 +348,13 @@ func usage () {
 	table.SetHeader([]string{"Command", "Arguments", "Options", "Description"})
 
 	data := [][]string{
-		[]string{"agent cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
-		[]string{"agent control", "<agent ID> <command>", "kill", "Control messages & " +
+		{"agent cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
+		{"agent control", "<agent ID> <command>", "sleep, kill, padding", "Control messages & " +
 			"functions to the agent itself"},
-		[]string{"agent info", "<agent ID>", "", "Display all information about an agent"},
-		[]string{"agent list", "None", "", "List all checked In agents"},
-		[]string{"exit", "None", "", "Exit the Merlin server"},
-		[]string{"quit", "None", "", "Exit the Merlin server"},
+		{"agent info", "<agent ID>", "", "Display all information about an agent"},
+		{"agent list", "None", "", "List all checked In agents"},
+		{"exit", "None", "", "Exit the Merlin server"},
+		{"quit", "None", "", "Exit the Merlin server"},
 	}
 
 	table.AppendBulk(data)
@@ -405,7 +395,11 @@ func shell() {
 				agentCompleter,
 			),
 			readline.PcItem("control",
-				agentCompleter,
+				readline.PcItemDynamic(getAgentList(),
+					readline.PcItem("sleep"),
+						readline.PcItem("kill"),
+							readline.PcItem("padding"),
+				),
 			),
 			readline.PcItem("kill",
 				agentCompleter,
@@ -471,15 +465,15 @@ func shell() {
 					table := tablewriter.NewWriter(os.Stdout)
 					table.SetAlignment(tablewriter.ALIGN_LEFT)
 					data := [][]string{
-						[]string{"ID", agents[a].id.String()},
-						[]string{"Platform", agents[a].platform},
-						[]string{"Architecture", agents[a].architecture},
-						[]string{"UserName", agents[a].userName},
-						[]string{"User GUID", agents[a].userGUID},
-						[]string{"Hostname", agents[a].hostName},
-						[]string{"Process ID", strconv.Itoa(agents[a].pid)},
-						[]string{"Inital Check In", agents[a].iCheckIn.String()},
-						[]string{"Last Check In", agents[a].sCheckIn.String()},
+						{"ID", agents[a].id.String()},
+						{"Platform", agents[a].platform},
+						{"Architecture", agents[a].architecture},
+						{"UserName", agents[a].userName},
+						{"User GUID", agents[a].userGUID},
+						{"Hostname", agents[a].hostName},
+						{"Process ID", strconv.Itoa(agents[a].pid)},
+						{"Inital Check In", agents[a].iCheckIn.String()},
+						{"Last Check In", agents[a].sCheckIn.String()},
 					}
 					table.AppendBulk(data)
 					fmt.Println()
@@ -488,29 +482,54 @@ func shell() {
 				}
 			case "cmd":
 				if len(cmd) >= 4 {
-					a, _ := uuid.FromString(cmd[2])
-					s := agents[a].channel //https://github.com/golang/go/issues/3117
-					s <- cmd
+					addChannel(cmd)
 					a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
 					if DEBUG {
 						color.Red("[DEBUG]Input: %s", cmd[3])
 						color.Red("[DEBUG]Base64 Input: %s", a_cmd)
 					}
-				}else {
+				} else {
 					color.Red("[!]Invalid command")
 					color.White("agent cmd <agent ID> <cmd>")
 				}
 			case "kill":
 				if len(cmd) == 3 {
-					a, _ := uuid.FromString(cmd[2])
-					s := agents[a].channel //https://github.com/golang/go/issues/3117
-					s <- cmd
-				}else {
+					addChannel(cmd)
+				} else {
 					color.Red("[!]Invalid command")
 					color.White("agent kill <agent ID>")
 				}
 			case "control":
-				color.Red("[!]Agent control not implemented yet")
+				switch cmd[3] {
+				case "kill":
+					addChannel(cmd)
+				case "sleep":
+					if len(cmd) == 5 {
+						_, err := time.ParseDuration(cmd[4])
+						if err != nil {
+							color.Red("[!]There was an error setting the agent sleep time")
+							color.Red(err.Error())
+						} else {
+							addChannel(cmd)
+						}
+					} else {
+						color.Red("[!]Invalid command")
+						color.White("agent control <agent ID> sleep <time>")
+					}
+				case "padding":
+					if len(cmd) == 5 {
+						_, err := strconv.Atoi(cmd[4])
+						if err != nil {
+							color.Red("[!]There was an error setting the agent maximum message padding size")
+							color.Red(err.Error())
+						} else {
+							addChannel(cmd)
+						}
+					} else {
+						color.Red("[!]Invalid command")
+						color.White("agent control <agent ID> padding <size as integer>")
+					}
+				}
 			default:
 				println("invalid agent command:", line[5:])
 			}
@@ -548,6 +567,25 @@ func RandStringBytesMaskImprSrc(n int) string {
     }
 
     return string(b)
+}
+
+func marshalMessage(m interface{}) []byte {
+	k, err := json.Marshal(m)
+	if err != nil {
+		color.Red("There was an error marshaling the JSON object")
+		color.Red(err.Error())
+	}
+	return k
+}
+
+func addChannel(cmd []string){
+	a, err := uuid.FromString(cmd[2])
+	if err != nil {
+		color.Red("[!]Error converting passed in string to a UUID")
+		color.Red(err.Error())
+	}
+	s := agents[a].channel
+	s <- cmd
 }
 
 type agent struct {

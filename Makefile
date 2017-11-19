@@ -6,8 +6,8 @@ MAGENT=merlinAgent
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/bin/v${VERSION}/
 GOPATH := ${PWD}/_vendor:${GOPATH}
-LDFLAGS=-ldflags "-X main.version=${VERSION} -X main.build=${BUILD}"
-WINAGENTLDFLAGS=-ldflags "-X main.version=${VERSION} -X main.build=${BUILD} -H=windowsgui"
+LDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD}"
+WINAGENTLDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD} -H=windowsgui"
 
 export GOPATH
 

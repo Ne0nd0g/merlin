@@ -1,3 +1,4 @@
+[![GoReportCard](https://goreportcard.com/badge/github.com/ne0nd0g/merlin?style=flat-square)](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)
 
 # Merlin (BETA)
 Merlin is a Command & Control toolset written in golang that operates over an HTTP/2 connection. Communications are passed between the server and agent using JSON messages.
