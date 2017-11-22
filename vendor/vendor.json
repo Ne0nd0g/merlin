@@ -15,6 +15,12 @@
 			"revisionTime": "2016-10-25T12:05:01Z"
 		},
 		{
+			"checksumSHA1": "+a74DVHv7qMIr5BEg1PnPOdgaT4=",
+			"path": "github.com/mattn/go-shellwords",
+			"revision": "95c860c1895b21b58903abdd1d9c591560b0601c",
+			"revisionTime": "2017-08-28T04:11:23Z"
+		},
+		{
 			"checksumSHA1": "Pc8xXumeXymW7wNgN5lNW8RG9kU=",
 			"path": "github.com/olekukonko/tablewriter",
 			"revision": "febf2d34b54a69ce7530036c7503b1c9fbfdf0bb",

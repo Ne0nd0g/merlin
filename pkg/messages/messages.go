@@ -45,3 +45,13 @@ type AgentControl struct {
 	Args string		`json:"args,omitempty"`
 	Result string 	`json:"result"`
 }
+
+//JSON Agent Information Payload
+type AgentInfo struct {
+	Version string 	`json:"version,omitempty"`
+	Build string 	`json:"build,omitempty"`
+	WaitTime string `json:"waittime,omitempty"`
+	PaddingMax int 	`json:"paddingmax,omitempty"`
+	MaxRetry int 	`json:"maxretry,omitempty"`
+	FailedCheckin int	`json:"failedcheckin,omitempty"`
+}

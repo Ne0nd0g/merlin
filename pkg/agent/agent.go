@@ -4,13 +4,17 @@ package agent
 
 import (
 	"os/exec"
-	"strings"
+	"fmt"
+	"github.com/mattn/go-shellwords"
 )
 
 func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 	var cmd *exec.Cmd
 
-	cmd = exec.Command(name, strings.Fields(arg)...)
+	argS, errS := shellwords.Parse(arg)
+	if errS != nil {fmt.Println("There was an error parsing command line argments")}
+
+	cmd = exec.Command(name, argS...)
 
 	out, err := cmd.CombinedOutput();
 	stdout = string(out);

