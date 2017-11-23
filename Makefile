@@ -1,15 +1,18 @@
 # Merlin Server & Agent version number
-VERSION=0.1.2
+VERSION=0.1.3
 
 MSERVER=merlinServer
 MAGENT=merlinAgent
+PASSWORD=merlin
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/bin/v${VERSION}/
-GOPATH := ${PWD}/_vendor:${GOPATH}
 LDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD}"
 WINAGENTLDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD} -H=windowsgui"
-
-export GOPATH
+PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
+F=README.MD data/README.MD data/agents/README.MD data/db/ data/log data/x509 data/src data/bin/README.MD
+W=Windows-x64
+L=Linux-x64
+D=Darwin-x64
 
 # Make Directory to store executables
 $(shell mkdir -p ${DIR})
@@ -19,7 +22,7 @@ default: server-windows agent-windows server-linux agent-linux server-darwin age
 
 all: default
 
-# Complile Windows binaries
+# Compile Windows binaries
 windows: server-windows agent-windows
 
 # Compile Linux binaries
@@ -30,55 +33,54 @@ darwin: server-darwin agent-darwin
 
 # Compile Server - Windows x64
 server-windows:
-	export GOOS=windows;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-Windows-x64.exe cmd/merlinserver/main.go
+	export GOOS=windows;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${W}.exe cmd/merlinserver/main.go
 
 # Compile Agent - Windows x64
 agent-windows:
-
-	export GOOS=windows;export GOARCH=amd64;go build ${WINAGENTLDFLAGS} -o ${DIR}/${MAGENT}-Windows-x64.exe cmd/merlinagent/main.go
+	export GOOS=windows;export GOARCH=amd64;go build ${WINAGENTLDFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
 
 # Compile Server - Linux x64
 server-linux:
-	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-Linux-x64 cmd/merlinserver/main.go
+	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${L} cmd/merlinserver/main.go
 
 # Compile Agent - Linux x64
 agent-linux:
-
-	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-Linux-x64 cmd/merlinagent/main.go
+	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${L} cmd/merlinagent/main.go
 	
 # Compile Server - Darwin x64
 server-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-Darwin-x64.dmg cmd/merlinserver/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D}.dmg cmd/merlinserver/main.go
 
 # Compile Agent - Darwin x64
 agent-darwin:
-
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-Darwin-x64.dmg cmd/merlinagent/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D}.dmg cmd/merlinagent/main.go
 
 # Make directory 'data' and then agents, db, log, x509; Copy src folder, README, and requirements
-tar-server-windows:
+package-server-windows:
+	${PACKAGE} ${DIR}/${MSERVER}-${W}-v${VERSION}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}-${W}-v${VERSION}.7z ${MSERVER}-${W}.exe
 
-	cd ${DIR};tar -zcvf ${MSERVER}-Windows-x64-v${VERSION}.tar.gz ${MSERVER}-Windows-x64.exe ../../../data/README.MD ../../../data/requirements.txt ../../../data/db ../../../data/log ../../../data/src ../../../data/x509 ../../../data/agents/README.MD
-	
-tar-server-linux:
-	cd ${DIR};tar -zcvf ${MSERVER}-Linux-x64-v${VERSION}.tar.gz ${MSERVER}-Linux-x64 ../../../data/README.MD ../../../data/requirements.txt ../../../data/db ../../../data/log ../../../data/src ../../../data/x509 ../../../data/agents/README.MD
-	
-tar-server-darwin:
-	cd ${DIR};tar -zcvf ${MSERVER}-Darwin-x64-v${VERSION}.tar.gz ${MSERVER}-Darwin-x64.dmg ../../../data/README.MD ../../../data/requirements.txt ../../../data/db ../../../data/log ../../../data/src ../../../data/x509 ../../../data/agents/README.MD
+package-server-linux:
+	${PACKAGE} ${DIR}/${MSERVER}-${L}-v${VERSION}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}-${L}-v${VERSION}.7z ${MSERVER}-${L}
 
-tar-agent-windows:
-	cd ${DIR};tar -zcvf ${MAGENT}-Windows-x64-v${VERSION}.tar.gz ${MAGENT}-Windows-x64.exe
+package-server-darwin:
+	${PACKAGE} ${DIR}/${MSERVER}-${D}-v${VERSION}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}.dmg
 
-tar-agent-linux:
-	cd ${DIR};tar -zcvf ${MAGENT}-Linux-x64-v${VERSION}.tar.gz ${MAGENT}-Linux-x64
+package-agent-windows:
+	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
+
+package-agent-linux:
+	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
 	
-tar-agent-darwin:
-	cd ${DIR};tar -zcvf ${MAGENT}-Darwin-x64-v${VERSION}.tar.gz ${MAGENT}-Darwin-x64.dmg
+package-agent-darwin:
+	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}.dmg
 	
-tar-all: tar-server-windows tar-server-linux tar-server-darwin tar-agent-windows tar-agent-linux tar-agent-darwin
+package-all: package-server-windows package-server-linux package-server-darwin package-agent-windows package-agent-linux package-agent-darwin
 
 clean:
 	$(RM) ${DIR}/merlin*
 
-#Build all files for release distrobution
-distro: clean all tar-all
+#Build all files for release distribution
+distro: clean all package-all
