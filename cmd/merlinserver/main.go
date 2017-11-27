@@ -38,6 +38,7 @@ var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
 var paddingMax = 4096
 var version = "nonRelease"
 var build = "nonRelease"
+var serverLog *os.File
 
 //Constants
 const (
@@ -49,6 +50,26 @@ const (
 
 func main() {
 
+	color.Blue(banner.Banner1)
+	color.Blue("\t\t   Version: %s", version)
+	color.Blue("\t\t   Build: %s", build)
+
+	//Server Logging
+	if _, err := os.Stat(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
+		os.Mkdir(filepath.Join(currentDir, "data", "log"), os.ModeDir)
+		os.Create(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt"))
+		if DEBUG{
+			color.Red("[DEBUG]Created server log file at: %s\\data\\log\\merlinServerLog.txt", currentDir)
+		}
+	}
+	var errLog error
+	serverLog, errLog = os.OpenFile(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt"), os.O_APPEND|os.O_WRONLY, 0600)
+	if errLog != nil {
+		color.Red("[!]There was an error with the Merlin Server log file")
+		fmt.Println(errLog)
+	}
+	serverLog.WriteString(fmt.Sprintf("[%s]Starting Merlin Server\r\n",time.Now()))
+
 	flag.BoolVar(&VERBOSE, "v", false, "Enable verbose output")
 	flag.BoolVar(&DEBUG, "debug", false, "Enable debug output")
 	port := flag.Int("p", 443, "Merlin Server Port")
@@ -57,10 +78,6 @@ func main() {
 	key := flag.String("x509key", filepath.Join(string(currentDir), "data/x509/server.key"), "The x509 certificate key for the HTTPS listener")
 	flag.Parse()
 
-	color.Blue(banner.Banner1)
-	color.Blue("\t\t   Version: %s", version)
-	color.Blue("\t\t   Build: %s", build)
-
 	go startListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
 	shell ()
 }
@@ -68,6 +85,8 @@ func main() {
 func httpHandler(w http.ResponseWriter, r *http.Request) {
 	if VERBOSE {
 		color.Yellow("[-]Received HTTP %s Connection from %s", r.Method, r.Host)
+		serverLog.WriteString(fmt.Sprintf("[%s]Received HTTP %s Connection from %s\r\n", time.Now(),
+			r.Method, r.Host))
 	}
 
 	if DEBUG {
@@ -81,6 +100,18 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		color.Red("[DEBUG]TLS Cipher Suite: %d", r.TLS.CipherSuite)
 		color.Red("[DEBUG]TLS Server Name: %s", r.TLS.ServerName)
 		color.Red("[DEBUG]Content Length: %d", r.ContentLength)
+
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]HTTP Connection Details:\r\n", time.Now()))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]Host: %s\r\n", time.Now(), r.Host))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]URI: %s\r\n", time.Now(), r.RequestURI))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]Method: %s\r\n", time.Now(), r.Method))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]Protocol: %s\r\n", time.Now(), r.Proto))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]Headers: %s\r\n", time.Now(), r.Header))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]TLS Negotiated Protocol: %s\r\n", time.Now(),
+			r.TLS.NegotiatedProtocol))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]TLS Cipher Suite: %d\r\n", time.Now(), r.TLS.CipherSuite))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]TLS Server Name: %s\r\n", time.Now(), r.TLS.ServerName))
+		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]Content Length: %d\r\n", time.Now(), r.ContentLength))
 	}
 
 	if r.Method == "POST" && r.ProtoMajor == 2 {
@@ -152,11 +183,18 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 
 func startListener(port string, ip string, crt string, key string, webpath string) {
 
+	serverLog.WriteString(fmt.Sprintf("[%s]Starting HTTP/2 Listener \r\n", time.Now()))
+	serverLog.WriteString(fmt.Sprintf("[%s]Address: %s:%s%s\r\n", time.Now(), ip, port, webpath))
+	serverLog.WriteString(fmt.Sprintf("[%s]x.509 Certificate %s\r\n", time.Now(), crt))
+	serverLog.WriteString(fmt.Sprintf("[%s]x.509 Key %s\r\n", time.Now(), key))
+
 	time.Sleep(45 * time.Millisecond) //Sleep to allow the shell to start up
 	//Check to make sure files exist
 	_, errCrt := os.Stat(crt)
 	if errCrt != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 certificate")
+		serverLog.WriteString(fmt.Sprintf("[%s]There was an error importing the SSL/TLS x509 certificate\r\n",
+			time.Now()))
 		fmt.Println(errCrt)
 		return
 	}
@@ -164,6 +202,8 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	_, errKey := os.Stat(key)
 	if errKey != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 key")
+		serverLog.WriteString(fmt.Sprintf("[%s]There was an error importing the SSL/TLS x509 key\r\n",
+			time.Now()))
 		fmt.Println(errKey)
 		return
 	}
@@ -173,6 +213,8 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	if err != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 key pair")
 		color.Red("[!]Ensure a keypair is located in the data/x509 directory")
+		serverLog.WriteString(fmt.Sprintf("[%s]There was an error importing the SSL/TLS x509 key pair\r\n",
+			time.Now()))
 		fmt.Println(err)
 		return
 	}
@@ -204,7 +246,8 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	color.Yellow("[-]HTTPS Listener Started on %s:%s", ip, port)
 	err2 := s.ListenAndServeTLS(crt, key)
 	if err2 != nil {
-		color.Red("[!]There was an error with the web server")
+		color.Red("[!]There was an error starting the web server")
+		serverLog.WriteString(fmt.Sprintf("[%s]There was an error starting the web server\r\n", time.Now()))
 		fmt.Println(err2)
 		return
 	}
@@ -213,7 +256,8 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 
 func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	color.Green("[+]Received new agent checkin from %s", j.ID)
-	if VERBOSE {
+	serverLog.WriteString(fmt.Sprintf("[%s]Received new agent checkin from %s\r\n", time.Now(), j.ID))
+		if VERBOSE {
 		color.Yellow("\t[i]Host ID: %s", j.ID)
 		color.Yellow("\t[i]Activity: %s", j.Type)
 		color.Yellow("\t[i]Payload: %s", j.Payload)
@@ -290,6 +334,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 	_, ok := agents[j.ID]
 	if ! ok {
 		color.Red("[!]Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String())
+		serverLog.WriteString(fmt.Sprintf("[%s]Orphaned agent %s has checked in\r\n", time.Now(), j.ID.String()))
 		jobID := RandStringBytesMaskImprSrc(10)
 		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
 		g := messages.Base{
@@ -621,9 +666,11 @@ func shell() {
 			usage()
 		case "exit":
 			color.Red("[!]Quitting")
+			serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
 			os.Exit(0)
 		case "quit":
 			color.Red("[!]Quitting")
+			serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
 			os.Exit(0)
 		case "":
 		default:
@@ -692,3 +739,5 @@ type agent struct {
 
 //TODO Add session ID
 //TODO add job and its ID to the channel immediately after input
+//TODO add warning for using distributed TLS cert
+//TODO change defaullt useragent from Go-http-client/2.0
