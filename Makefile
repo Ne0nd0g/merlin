@@ -1,3 +1,5 @@
+# !!!MAKE SURE YOUR GOPATH ENVIRONMENT VARIABLE IS SET FIRST!!!
+
 # Merlin Server & Agent version number
 VERSION=0.1.3
 
@@ -9,7 +11,7 @@ DIR=data/bin/v${VERSION}/
 LDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD}"
 WINAGENTLDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
-F=README.MD data/README.MD data/agents/README.MD data/db/ data/log data/x509 data/src data/bin/README.MD
+F=README.MD data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin/README.MD
 W=Windows-x64
 L=Linux-x64
 D=Darwin-x64
