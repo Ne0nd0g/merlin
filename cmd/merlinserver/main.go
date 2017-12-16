@@ -50,10 +50,6 @@ const (
 
 func main() {
 
-	color.Blue(banner.Banner1)
-	color.Blue("\t\t   Version: %s", version)
-	color.Blue("\t\t   Build: %s", build)
-
 	//Server Logging
 	if _, err := os.Stat(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
 		os.Mkdir(filepath.Join(currentDir, "data", "log"), os.ModeDir)
@@ -74,9 +70,22 @@ func main() {
 	flag.BoolVar(&DEBUG, "debug", false, "Enable debug output")
 	port := flag.Int("p", 443, "Merlin Server Port")
 	ip := flag.String("i", "0.0.0.0", "The IP address of the interface to bind to")
-	crt := flag.String("x509cert", filepath.Join(string(currentDir), "data/x509/server.crt"), "The x509 certificate for the HTTPS listener")
-	key := flag.String("x509key", filepath.Join(string(currentDir), "data/x509/server.key"), "The x509 certificate key for the HTTPS listener")
+	crt := flag.String("x509cert", filepath.Join(string(currentDir), "data", "x509", "server.crt"),
+		"The x509 certificate for the HTTPS listener")
+	key := flag.String("x509key", filepath.Join(string(currentDir), "data", "x509", "server.key"),
+		"The x509 certificate key for the HTTPS listener")
+	flag.Usage = func(){
+		color.Blue("#################################################")
+		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
+		color.Blue("#################################################")
+		color.Blue("Version: " + version + " Build: " + build)
+		flag.PrintDefaults()
+	}
 	flag.Parse()
+
+	color.Blue(banner.Banner1)
+	color.Blue("\t\t   Version: %s", version)
+	color.Blue("\t\t   Build: %s", build)
 
 	go startListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
 	shell ()
@@ -740,4 +749,5 @@ type agent struct {
 //TODO Add session ID
 //TODO add job and its ID to the channel immediately after input
 //TODO add warning for using distributed TLS cert
-//TODO change defaullt useragent from Go-http-client/2.0
+//TODO change default useragent from Go-http-client/2.0
+//TODO add CSRF tokens
