@@ -69,9 +69,11 @@ func main() {
 			statusCheckIn(URL, h2Client)
 		} else {
 			initial = initialCheckIn(URL, h2Client)
-			agentInfo(URL, h2Client)
+			if initial {
+				agentInfo(URL, h2Client)
+			}
 		}
-		if failedCheckin == maxRetry {os.Exit(1)}
+		if failedCheckin >= maxRetry {os.Exit(1)}
 		if VERBOSE {
 			color.Yellow("[-]Sleeping for %s at %s", waitTime.String(), time.Now())
 		}
