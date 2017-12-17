@@ -12,14 +12,15 @@ https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a
 
 ## Getting Started
 The quickest and easiest way to start using Merlin is download the
-pre-compiled binary files found on the
-[Releases](https://github.com/Ne0nd0g/merlin/releases). The files are
-compressed into 7z archives and are password protected to prevent
-Anti-Virus inspection when downloading. The password is `merlin`.
+pre-compiled binary files found in the
+[Releases](https://github.com/Ne0nd0g/merlin/releases) section. The
+files are compressed into 7z archives and are password protected to
+prevent Anti-Virus inspection when downloading. The password is
+`merlin`.
 
 ## Install GO
-In order to run Merlin from source or to compile Merlin yourself, the Go
- programing language must be installed on the system. However, if you
+In order to run Merlin from source, or to compile Merlin yourself, the
+Go programing language must be installed on the system. However, if you
  just want to run a pre-compiled version, you _do not_ need to install
  Go.
 
