@@ -11,7 +11,8 @@ DIR=data/bin/v${VERSION}/
 LDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD}"
 WINAGENTLDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
-F=README.MD data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin/README.MD
+F=README.MD LICENSE data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin/README.MD
+F2=LICENSE
 W=Windows-x64
 L=Linux-x64
 D=Darwin-x64
@@ -71,12 +72,15 @@ package-server-darwin:
 	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}.dmg
 
 package-agent-windows:
+	${PACKAGE} ${DIR}/${MAGENT}-${W}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
 
 package-agent-linux:
+	${PACKAGE} ${DIR}/${MAGENT}-${L}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
 	
 package-agent-darwin:
+	${PACKAGE} ${DIR}/${MAGENT}-${D}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}.dmg
 	
 package-all: package-server-windows package-server-linux package-server-darwin package-agent-windows package-agent-linux package-agent-darwin

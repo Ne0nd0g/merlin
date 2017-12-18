@@ -1,4 +1,5 @@
 [![GoReportCard](https://goreportcard.com/badge/github.com/ne0nd0g/merlin?style=flat-square)](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 # Merlin (BETA)
 Merlin is a cross-platform post-exploitation HTTP/2 Command & Control 
