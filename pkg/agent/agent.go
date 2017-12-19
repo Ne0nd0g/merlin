@@ -16,6 +16,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package agent
 
 import (
@@ -24,6 +25,7 @@ import (
 	"os/exec"
 )
 
+// ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
 func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 	var cmd *exec.Cmd
 

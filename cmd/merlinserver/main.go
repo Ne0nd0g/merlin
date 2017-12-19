@@ -20,25 +20,25 @@ package main
 import (
 	// Standard
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
+	"log"
+	"math/rand"
 	"net/http"
 	"os"
-	"time"
-	"flag"
-	"math/rand"
-	"strings"
 	"path/filepath"
 	"strconv"
-	"log"
-	"io"
-	"encoding/base64"
+	"strings"
+	"time"
 
 	// 3rd Party
-	"github.com/fatih/color"
-	"github.com/satori/go.uuid"
-	"github.com/olekukonko/tablewriter"
 	"github.com/chzyer/readline"
+	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
+	"github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/ne0nd0g/merlin/pkg"
@@ -61,10 +61,10 @@ var serverLog *os.File
 // Constants
 
 const (
-    letterIdxBits = 6                    // 6 bits to represent a letter index
-    letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-    letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
-    letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 func main() {
@@ -74,7 +74,7 @@ func main() {
 	if _, err := os.Stat(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
 		os.Mkdir(filepath.Join(currentDir, "data", "log"), os.ModeDir)
 		os.Create(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt"))
-		if debug{
+		if debug {
 			color.Red("[DEBUG]Created server log file at: %s\\data\\log\\merlinServerLog.txt", currentDir)
 		}
 	}
@@ -84,7 +84,7 @@ func main() {
 		color.Red("[!]There was an error with the Merlin Server log file")
 		fmt.Println(errLog)
 	}
-	serverLog.WriteString(fmt.Sprintf("[%s]Starting Merlin Server\r\n",time.Now()))
+	serverLog.WriteString(fmt.Sprintf("[%s]Starting Merlin Server\r\n", time.Now()))
 
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&debug, "debug", false, "Enable debug output")
@@ -94,7 +94,7 @@ func main() {
 		"The x509 certificate for the HTTPS listener")
 	key := flag.String("x509key", filepath.Join(string(currentDir), "data", "x509", "server.key"),
 		"The x509 certificate key for the HTTPS listener")
-	flag.Usage = func(){
+	flag.Usage = func() {
 		color.Blue("#################################################")
 		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
 		color.Blue("#################################################")
@@ -108,7 +108,7 @@ func main() {
 	color.Blue("\t\t   Build: %s", build)
 
 	go startListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
-	shell ()
+	shell()
 }
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {
@@ -173,16 +173,16 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			// TODO move to its own function
 			var p messages.CmdResults
 			json.Unmarshal(payload, &p)
-			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results for job: %s\r\n",time.Now(), p.Job))
+			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results for job: %s\r\n", time.Now(), p.Job))
 
 			color.Cyan("[+]Results for job %s", p.Job)
-			if len(p.Stdout) > 0{
+			if len(p.Stdout) > 0 {
 				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Results (stdout):\r\n%s\r\n",
 					time.Now(),
 					p.Stdout))
 				color.Green("%s", p.Stdout)
 			}
-			if len(p.Stderr) > 0{
+			if len(p.Stderr) > 0 {
 				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Results (stderr):\r\n%s\r\n",
 					time.Now(),
 					p.Stderr))
@@ -248,13 +248,12 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	// Configure TLS
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cer},
-		MinVersion: tls.VersionTLS12,
+		MinVersion:   tls.VersionTLS12,
 		CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-
-			},
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		},
 		NextProtos: []string{"h2"},
 	}
 	http.HandleFunc(webpath, httpHandler)
@@ -283,7 +282,7 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	color.Green("[+]Received new agent checkin from %s", j.ID)
 	serverLog.WriteString(fmt.Sprintf("[%s]Received new agent checkin from %s\r\n", time.Now(), j.ID))
-		if verbose {
+	if verbose {
 		color.Yellow("\t[i]Host ID: %s", j.ID)
 		color.Yellow("\t[i]Activity: %s", j.Type)
 		color.Yellow("\t[i]Payload: %s", j.Payload)
@@ -298,24 +297,24 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	}
 	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
 		os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
-		os.Create(filepath.Join(agentsDir, j.ID.String(),"agent_log.txt"))
+		os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
 
-		if verbose{
-			color.Yellow("[-]Created agent log file at: %s", agentsDir, j.ID.String(),"agent_log.txt")
+		if verbose {
+			color.Yellow("[-]Created agent log file at: %s", agentsDir, j.ID.String(), "agent_log.txt")
 		}
 	}
 
 	f, err := os.OpenFile(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"), os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-    		panic(err)
+		panic(err)
 	}
 	// Add custom agent struct to global agents map
-	agents[j.ID]=&agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID, platform: p.Platform,
-		           architecture: p.Architecture,
-		           hostName: p.HostName, pid: p.Pid, channel: make(chan []string, 10),
-		           agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
+	agents[j.ID] = &agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID, platform: p.Platform,
+		architecture: p.Architecture,
+		hostName:     p.HostName, pid: p.Pid, channel: make(chan []string, 10),
+		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
 
-	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n",time.Now(), j.ID))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now(), j.ID))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), p.Platform))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), p.Architecture))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), p.HostName))
@@ -329,7 +328,10 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 func agentInfo(j messages.Base, p messages.AgentInfo) {
 	_, ok := agents[j.ID]
 
-	if ! ok {color.Red("[!]The agent was not found while processing an AgentInfo message"); return}
+	if !ok {
+		color.Red("[!]The agent was not found while processing an AgentInfo message")
+		return
+	}
 	if debug {
 		color.Red("[DEBUG]Processing new agent info")
 		color.Red("\t[DEBUG]Agent Version: %s", p.Version)
@@ -339,7 +341,7 @@ func agentInfo(j messages.Base, p messages.AgentInfo) {
 		color.Red("\t[DEBUG]Agent maxRetry: %d", p.MaxRetry)
 		color.Red("\t[DEBUG]Agent failedCheckin: %d", p.FailedCheckin)
 	}
-	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Processing AgentInfo message:\r\n",time.Now()))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Processing AgentInfo message:\r\n", time.Now()))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Build: %s \r\n", p.Build))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent waitTime: %s \r\n", p.WaitTime))
@@ -358,7 +360,7 @@ func agentInfo(j messages.Base, p messages.AgentInfo) {
 func statusCheckIn(j messages.Base) messages.Base {
 	// Check to make sure agent UUID is in dataset
 	_, ok := agents[j.ID]
-	if ! ok {
+	if !ok {
 		color.Red("[!]Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String())
 		serverLog.WriteString(fmt.Sprintf("[%s]Orphaned agent %s has checked in\r\n", time.Now(), j.ID.String()))
 		jobID := randStringBytesMaskImprSrc(10)
@@ -371,7 +373,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 		}
 		p := messages.AgentControl{
 			Command: "initialize",
-			Job: jobID,
+			Job:     jobID,
 		}
 
 		k := marshalMessage(p)
@@ -379,11 +381,11 @@ func statusCheckIn(j messages.Base) messages.Base {
 		return g
 	}
 
-	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n",time.Now()))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n", time.Now()))
 	if verbose {
 		color.Green("[+]Received agent status checkin from %s", j.ID)
 	}
-	if debug{
+	if debug {
 		color.Red("[DEBUG]Received agent status checkin from %s", j.ID)
 		color.Red("[DEBUG]Channel length: %d", len(agents[j.ID].channel))
 		color.Red("[DEBUG]Channel content: %s", agents[j.ID].channel)
@@ -395,9 +397,9 @@ func statusCheckIn(j messages.Base) messages.Base {
 		jobID := randStringBytesMaskImprSrc(10)
 		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
 
-		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n",time.Now(), command[1]))
-		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n",time.Now(), command[3:]))
-		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Created job %s for agent %s\r\n",time.Now(), jobID, j.ID))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n", time.Now(), command[1]))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n", time.Now(), command[3:]))
+		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Created job %s for agent %s\r\n", time.Now(), jobID, j.ID))
 
 		m := messages.Base{
 			Version: 1.0,
@@ -405,11 +407,11 @@ func statusCheckIn(j messages.Base) messages.Base {
 			Padding: randStringBytesMaskImprSrc(paddingMax),
 		}
 
-		switch command[1]{
+		switch command[1] {
 		case "cmd":
 			p := messages.CmdPayload{
-			Command: command[3],
-			Job: jobID,
+				Command: command[3],
+				Job:     jobID,
 			}
 			if len(command) > 4 {
 				p.Args = strings.Join(command[4:], " ")
@@ -423,8 +425,8 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 		case "control":
 			p := messages.AgentControl{
-			Command: command[3],
-			Job: jobID,
+				Command: command[3],
+				Job:     jobID,
 			}
 
 			if len(command) == 5 {
@@ -435,13 +437,15 @@ func statusCheckIn(j messages.Base) messages.Base {
 			m.Type = "AgentControl"
 			m.Payload = (*json.RawMessage)(&k)
 
-			if command[3] == "kill" {delete(agents, j.ID)}
+			if command[3] == "kill" {
+				delete(agents, j.ID)
+			}
 			return m
 
 		case "kill":
 			p := messages.AgentControl{
-			Command: command[1],
-			Job: jobID,
+				Command: command[1],
+				Job:     jobID,
 			}
 
 			k := marshalMessage(p)
@@ -468,7 +472,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 }
 
-func usage () {
+func usage() {
 	color.Yellow("Merlin C2 Server (version %s)", merlin.Version)
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -524,9 +528,9 @@ func shell() {
 			readline.PcItem("control",
 				readline.PcItemDynamic(getAgentList(),
 					readline.PcItem("sleep"),
-						readline.PcItem("kill"),
-							readline.PcItem("padding"),
-								readline.PcItem("maxretry"),
+					readline.PcItem("kill"),
+					readline.PcItem("padding"),
+					readline.PcItem("maxretry"),
 				),
 			),
 			readline.PcItem("kill",
@@ -539,11 +543,11 @@ func shell() {
 	)
 
 	ms, err := readline.NewEx(&readline.Config{
-		Prompt:          "\033[31mMerlin»\033[0m ",
-		HistoryFile:     "/tmp/readline.tmp",
-		AutoComplete:    completer,
-		InterruptPrompt: "^C",
-		EOFPrompt:       "exit",
+		Prompt:              "\033[31mMerlin»\033[0m ",
+		HistoryFile:         "/tmp/readline.tmp",
+		AutoComplete:        completer,
+		InterruptPrompt:     "^C",
+		EOFPrompt:           "exit",
 		HistorySearchFold:   true,
 		FuncFilterInputRune: filterInput,
 	})
@@ -571,9 +575,9 @@ func shell() {
 		line = strings.TrimSpace(line)
 		cmd := strings.Split(line, " ")
 
-		switch cmd[0]{
+		switch cmd[0] {
 		case "agent":
-			if len(cmd) >1 {
+			if len(cmd) > 1 {
 				switch cmd[1] {
 				case "list":
 					table := tablewriter.NewWriter(os.Stdout)
@@ -706,21 +710,21 @@ func shell() {
 
 func randStringBytesMaskImprSrc(n int) string {
 	// http://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
-    b := make([]byte, n)
-    // A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
-    for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
-        if remain == 0 {
-            cache, remain = src.Int63(), letterIdxMax
-        }
-        if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-            b[i] = letterBytes[idx]
-            i--
-        }
-        cache >>= letterIdxBits
-        remain--
-    }
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
 
-    return string(b)
+	return string(b)
 }
 
 func marshalMessage(m interface{}) []byte {
@@ -732,7 +736,7 @@ func marshalMessage(m interface{}) []byte {
 	return k
 }
 
-func addChannel(cmd []string){
+func addChannel(cmd []string) {
 	a, err := uuid.FromString(cmd[2])
 	if err != nil {
 		color.Red("[!]Error converting passed in string to a UUID")
@@ -743,23 +747,23 @@ func addChannel(cmd []string){
 }
 
 type agent struct {
-	id		uuid.UUID
-	platform	string
-	architecture	string
-	userName	string
-	userGUID	string
-	hostName 	string
-	pid 		int
-	agentLog	*os.File
-	channel		chan []string
-	iCheckIn	time.Time
-	sCheckIn	time.Time
-	version 	string
-	build 		string
-	waitTime 	string
-	paddingMax 	int
-	maxRetry	int
-	failedCheckin 	int
+	id            uuid.UUID
+	platform      string
+	architecture  string
+	userName      string
+	userGUID      string
+	hostName      string
+	pid           int
+	agentLog      *os.File
+	channel       chan []string
+	iCheckIn      time.Time
+	sCheckIn      time.Time
+	version       string
+	build         string
+	waitTime      string
+	paddingMax    int
+	maxRetry      int
+	failedCheckin int
 }
 
 // TODO Add session ID
