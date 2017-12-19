@@ -1,23 +1,24 @@
-//Merlin is a post-exploitation command and control framework.
-//This file is part of Merlin.
-//Copyright (C) 2017  Russel Van Tuyl
+// Merlin is a post-exploitation command and control framework.
+// This file is part of Merlin.
+// Copyright (C) 2017  Russel Van Tuyl
 
-//Merlin is free software: you can redistribute it and/or modify
-//it under the terms of the GNU General Public License as published by
-//the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// Merlin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
 
-//Merlin is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//GNU General Public License for more details.
+// Merlin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 
-//You should have received a copy of the GNU General Public License
-//along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+// You should have received a copy of the GNU General Public License
+// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
-	//Standard
+	// Standard
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -33,21 +34,22 @@ import (
 	"io"
 	"encoding/base64"
 
-	//3rd Party
+	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"github.com/olekukonko/tablewriter"
 	"github.com/chzyer/readline"
 
-	//Merlin
+	// Merlin
 	"github.com/ne0nd0g/merlin/pkg"
 	"github.com/ne0nd0g/merlin/pkg/banner"
 	"github.com/ne0nd0g/merlin/pkg/messages"
 )
 
-//Global Variables
-var DEBUG = false
-var VERBOSE = false
+// Global Variables
+
+var debug = false
+var verbose = false
 var src = rand.NewSource(time.Now().UnixNano())
 var currentDir, _ = os.Getwd()
 var agents = make(map[uuid.UUID]*agent) //global map to house agent objects
@@ -56,7 +58,8 @@ var version = "nonRelease"
 var build = "nonRelease"
 var serverLog *os.File
 
-//Constants
+// Constants
+
 const (
     letterIdxBits = 6                    // 6 bits to represent a letter index
     letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
@@ -66,11 +69,12 @@ const (
 
 func main() {
 
-	//Server Logging
+	// Server Logging
+
 	if _, err := os.Stat(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
 		os.Mkdir(filepath.Join(currentDir, "data", "log"), os.ModeDir)
 		os.Create(filepath.Join(currentDir, "data", "log", "merlinServerLog.txt"))
-		if DEBUG{
+		if debug{
 			color.Red("[DEBUG]Created server log file at: %s\\data\\log\\merlinServerLog.txt", currentDir)
 		}
 	}
@@ -82,8 +86,8 @@ func main() {
 	}
 	serverLog.WriteString(fmt.Sprintf("[%s]Starting Merlin Server\r\n",time.Now()))
 
-	flag.BoolVar(&VERBOSE, "v", false, "Enable verbose output")
-	flag.BoolVar(&DEBUG, "debug", false, "Enable debug output")
+	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
+	flag.BoolVar(&debug, "debug", false, "Enable debug output")
 	port := flag.Int("p", 443, "Merlin Server Port")
 	ip := flag.String("i", "0.0.0.0", "The IP address of the interface to bind to")
 	crt := flag.String("x509cert", filepath.Join(string(currentDir), "data", "x509", "server.crt"),
@@ -108,13 +112,13 @@ func main() {
 }
 
 func httpHandler(w http.ResponseWriter, r *http.Request) {
-	if VERBOSE {
+	if verbose {
 		color.Yellow("[-]Received HTTP %s Connection from %s", r.Method, r.Host)
 		serverLog.WriteString(fmt.Sprintf("[%s]Received HTTP %s Connection from %s\r\n", time.Now(),
 			r.Method, r.Host))
 	}
 
-	if DEBUG {
+	if debug {
 		color.Red("\n[DEBUG]HTTP Connection Details:")
 		color.Red("[DEBUG]Host: %s", r.Host)
 		color.Red("[DEBUG]URI: %s", r.RequestURI)
@@ -147,7 +151,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		json.NewDecoder(r.Body).Decode(&j)
 
-		if DEBUG {
+		if debug {
 			color.Red("[DEBUG]POST DATA: %s", j)
 		}
 		switch j.Type {
@@ -160,13 +164,13 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		case "StatusCheckIn":
 			w.Header().Set("Content-Type", "application/json")
 			x := statusCheckIn(j)
-			if VERBOSE {
+			if verbose {
 				color.Yellow("[-]Sending " + x.Type + " message type to agent")
 			}
 			json.NewEncoder(w).Encode(x)
 
 		case "CmdResults":
-			//TODO move to its own function
+			// TODO move to its own function
 			var p messages.CmdResults
 			json.Unmarshal(payload, &p)
 			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Results for job: %s\r\n",time.Now(), p.Job))
@@ -195,11 +199,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else if r.Method == "GET" {
-		//Should answer any GET requests
-		//g := messages.Base{ID: uuid.NewV4(), Type: "TEST"}
-		//w.Header().Set("Content-Type", "application/json")
-		//json.NewEncoder(w).Encode(g)
-		//Send 404
+		// Should answer any GET requests
+		// Send 404
 		w.WriteHeader(404)
 	} else {
 		w.WriteHeader(404)
@@ -213,8 +214,8 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 	serverLog.WriteString(fmt.Sprintf("[%s]x.509 Certificate %s\r\n", time.Now(), crt))
 	serverLog.WriteString(fmt.Sprintf("[%s]x.509 Key %s\r\n", time.Now(), key))
 
-	time.Sleep(45 * time.Millisecond) //Sleep to allow the shell to start up
-	//Check to make sure files exist
+	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
+	// Check to make sure files exist
 	_, errCrt := os.Stat(crt)
 	if errCrt != nil {
 		color.Red("[!]There was an error importing the SSL/TLS x509 certificate")
@@ -244,7 +245,7 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 		return
 	}
 
-	//Configure TLS
+	// Configure TLS
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cer},
 		MinVersion: tls.VersionTLS12,
@@ -267,7 +268,7 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 		TLSConfig:      config,
 	}
 
-	//I shouldn't need to specify the certs as they are in the config
+	// I shouldn't need to specify the certs as they are in the config
 	color.Yellow("[-]HTTPS Listener Started on %s:%s", ip, port)
 	err2 := s.ListenAndServeTLS(crt, key)
 	if err2 != nil {
@@ -282,7 +283,7 @@ func startListener(port string, ip string, crt string, key string, webpath strin
 func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	color.Green("[+]Received new agent checkin from %s", j.ID)
 	serverLog.WriteString(fmt.Sprintf("[%s]Received new agent checkin from %s\r\n", time.Now(), j.ID))
-		if VERBOSE {
+		if verbose {
 		color.Yellow("\t[i]Host ID: %s", j.ID)
 		color.Yellow("\t[i]Activity: %s", j.Type)
 		color.Yellow("\t[i]Payload: %s", j.Payload)
@@ -299,7 +300,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
 		os.Create(filepath.Join(agentsDir, j.ID.String(),"agent_log.txt"))
 
-		if VERBOSE{
+		if verbose{
 			color.Yellow("[-]Created agent log file at: %s", agentsDir, j.ID.String(),"agent_log.txt")
 		}
 	}
@@ -322,14 +323,14 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), p.UserGUID))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), p.Pid))
 
-	//Add code here to create db record
+	// Add code here to create db record
 }
 
 func agentInfo(j messages.Base, p messages.AgentInfo) {
 	_, ok := agents[j.ID]
 
 	if ! ok {color.Red("[!]The agent was not found while processing an AgentInfo message"); return}
-	if DEBUG {
+	if debug {
 		color.Red("[DEBUG]Processing new agent info")
 		color.Red("\t[DEBUG]Agent Version: %s", p.Version)
 		color.Red("\t[DEBUG]Agent Build: %s", p.Build)
@@ -360,13 +361,13 @@ func statusCheckIn(j messages.Base) messages.Base {
 	if ! ok {
 		color.Red("[!]Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String())
 		serverLog.WriteString(fmt.Sprintf("[%s]Orphaned agent %s has checked in\r\n", time.Now(), j.ID.String()))
-		jobID := RandStringBytesMaskImprSrc(10)
+		jobID := randStringBytesMaskImprSrc(10)
 		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
 		g := messages.Base{
 			Version: 1.0,
 			ID:      j.ID,
 			Type:    "AgentControl",
-			Padding: RandStringBytesMaskImprSrc(paddingMax),
+			Padding: randStringBytesMaskImprSrc(paddingMax),
 		}
 		p := messages.AgentControl{
 			Command: "initialize",
@@ -379,10 +380,10 @@ func statusCheckIn(j messages.Base) messages.Base {
 	}
 
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n",time.Now()))
-	if VERBOSE {
+	if verbose {
 		color.Green("[+]Received agent status checkin from %s", j.ID)
 	}
-	if DEBUG{
+	if debug{
 		color.Red("[DEBUG]Received agent status checkin from %s", j.ID)
 		color.Red("[DEBUG]Channel length: %d", len(agents[j.ID].channel))
 		color.Red("[DEBUG]Channel content: %s", agents[j.ID].channel)
@@ -391,7 +392,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 	agents[j.ID].sCheckIn = time.Now()
 	if len(agents[j.ID].channel) >= 1 {
 		command := <-agents[j.ID].channel
-		jobID := RandStringBytesMaskImprSrc(10)
+		jobID := randStringBytesMaskImprSrc(10)
 		color.Yellow("[-]Created job %s for agent %s", jobID, j.ID)
 
 		agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n",time.Now(), command[1]))
@@ -401,7 +402,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 		m := messages.Base{
 			Version: 1.0,
 			ID:      j.ID,
-			Padding: RandStringBytesMaskImprSrc(paddingMax),
+			Padding: randStringBytesMaskImprSrc(paddingMax),
 		}
 
 		switch command[1]{
@@ -460,7 +461,7 @@ func statusCheckIn(j messages.Base) messages.Base {
 			Version: 1.0,
 			ID:      j.ID,
 			Type:    "ServerOk",
-			Padding: RandStringBytesMaskImprSrc(paddingMax),
+			Padding: randStringBytesMaskImprSrc(paddingMax),
 		}
 		return g
 	}
@@ -548,7 +549,6 @@ func shell() {
 	})
 
 	if err != nil {
-		//panic(err)
 		color.Red("[!]There was an error with the provided input")
 		color.Red(err.Error())
 	}
@@ -620,7 +620,7 @@ func shell() {
 					if len(cmd) >= 4 {
 						addChannel(cmd)
 						cmdAgent := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
-						if DEBUG {
+						if debug {
 							color.Red("[DEBUG]Input: %s", cmd[3])
 							color.Red("[DEBUG]Base64 Input: %s", cmdAgent)
 						}
@@ -704,8 +704,8 @@ func shell() {
 	}
 }
 
-func RandStringBytesMaskImprSrc(n int) string {
-	//http://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
+func randStringBytesMaskImprSrc(n int) string {
+	// http://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
     b := make([]byte, n)
     // A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
     for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
@@ -762,8 +762,8 @@ type agent struct {
 	failedCheckin 	int
 }
 
-//TODO Add session ID
-//TODO add job and its ID to the channel immediately after input
-//TODO add warning for using distributed TLS cert
-//TODO change default useragent from Go-http-client/2.0
-//TODO add CSRF tokens
+// TODO Add session ID
+// TODO add job and its ID to the channel immediately after input
+// TODO add warning for using distributed TLS cert
+// TODO change default useragent from Go-http-client/2.0
+// TODO add CSRF tokens

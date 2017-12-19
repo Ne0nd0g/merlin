@@ -14,8 +14,10 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package banner
 
+// Banner1 is the first banner image for Merlin
 const Banner1 string = `
                                &&&&&&&&
                              &&&&&&&&&&&&

