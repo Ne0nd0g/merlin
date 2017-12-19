@@ -119,10 +119,10 @@ Compile Merlin Agent into an executable
 Merlin Agent can also be compiled without Make, using just go. To
 compile Merlin Agent with your hard coded Merlin Server's address, so it
  doesn't have to specified on the command line, include `-ldflags
- -X main.URL=https://acme.com:443/`
+ -X main.url=https://acme.com:443/`
 
 >Example: `go build -o merlinagent.exe -ldflags
-"-X main.URL=https://acme.com:443/" cmd/merlinagent/main.go`
+"-X main.url=https://acme.com:443/" cmd/merlinagent/main.go`
 
 Run Merlin Agent as script: `go run cmd/merlinagent/main.go`
 
