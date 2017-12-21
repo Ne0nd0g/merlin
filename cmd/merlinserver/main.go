@@ -38,6 +38,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
+	"github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/ne0nd0g/merlin/pkg"
