@@ -68,15 +68,15 @@ const (
 
 func main() {
 
-	rand.Seed(time.Now().Unix())
-
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&debug, "debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
-	flag.Int64Var(&waitSkew, "skew", 3000, "varriable skew added to each agent sleep")
+	flag.Int64Var(&waitSkew, "skew", 3000, "Variable time skew for agent to sleep")
 	flag.DurationVar(&waitTime, "sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	if verbose {
 		color.Yellow("[-]Agent version: %s", version)
