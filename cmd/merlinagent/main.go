@@ -513,3 +513,4 @@ func agentInfo(host string, client *http.Client) {
 // TODO add cert stapling
 // TODO set message jitter
 // TODO get and return IP addresses with initial checkin
+// TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
