@@ -265,10 +265,6 @@ func statusCheckIn(host string, client *http.Client) {
 			if verbose {
 				color.Yellow("Writing blob to : %s", p.Dest)
 			}
-			resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
-			if resp2.StatusCode != 200 {
-				color.Red("Message error from server. HTTP Status code: %d", resp2.StatusCode)
-			}
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)
