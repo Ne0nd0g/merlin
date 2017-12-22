@@ -25,6 +25,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -88,7 +89,7 @@ func main() {
 
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&debug, "debug", false, "Enable debug output")
-	port := flag.Int("p", 443, "Merlin Server Port")
+	port := flag.Int("p", 4433, "Merlin Server Port")
 	ip := flag.String("i", "0.0.0.0", "The IP address of the interface to bind to")
 	crt := flag.String("x509cert", filepath.Join(string(currentDir), "data", "x509", "server.crt"),
 		"The x509 certificate for the HTTPS listener")
@@ -409,9 +410,10 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 		switch command[1] {
 		case "upload":
+			fileData := getFiledata(command[3])
 			p := messages.UploadFile{
 				Dest:     command[4],
-				FileBlob: command[3],
+				FileBlob: fileData,
 				Job:      jobID,
 			}
 
@@ -639,10 +641,8 @@ func shell() {
 				case "upload":
 					if len(cmd) >= 5 {
 						addChannel(cmd)
-						cmdAgent := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
 						if debug {
-							color.Red("[DEBUG]Input: %s", cmd[3])
-							color.Red("[DEBUG]Base64 Input: %s", cmdAgent)
+							color.Red("[DEBUG]Input: %s", strings.Join(cmd[3:], " "))
 						}
 					} else {
 						color.Red("[!]Invalid file or path")
@@ -764,6 +764,15 @@ func marshalMessage(m interface{}) []byte {
 	return k
 }
 
+func getFiledata(filePath string) string {
+	dat, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		color.Red("There was an error reading %s", filePath)
+		color.Red(err.Error())
+	}
+	return base64.StdEncoding.EncodeToString([]byte(dat))
+}
+
 func addChannel(cmd []string) {
 	a, err := uuid.FromString(cmd[2])
 	if err != nil {
@@ -799,3 +808,5 @@ type agent struct {
 // TODO add warning for using distributed TLS cert
 // TODO change default useragent from Go-http-client/2.0
 // TODO add CSRF tokens
+// TODO check if agentLog exists even outside of InitialCheckIn
+// TODO readline for file paths to use with upload
