@@ -27,7 +27,8 @@ Go programing language must be installed on the system. However, if you
 
 Download and install GO: `https://golang.org/doc/install`
 
->Ensure your GOPATH environment variable is set
+>Ensure your GOPATH environment variable is
+[set](https://github.com/golang/go/wiki/SettingGOPATH)
 
 ## Running Merlin Server
 Merlin Server can be run as a script or compiled and run as a standalone
@@ -38,7 +39,12 @@ Merlin Server can be run as a script or compiled and run as a standalone
 
 Run Merlin Server as a script:
 
-`git clone https://github.com/Ne0nd0g/merlin/`
+`go get github.com/Ne0nd0g/merlin`
+
+If you want to use git, merlin must be in your GOPATH i.e.
+`$GOPATH/src/github.com/Ne0nd0g/merlin`
+
+`cd $GOPATH/src/github.com/Ne0nd0g;git clone https://github.com/Ne0nd0g/merlin/`
 
 `go run cmd/merlinserver/main.go`
 
