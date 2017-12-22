@@ -593,146 +593,154 @@ func shell() {
 		line = strings.TrimSpace(line)
 		cmd := strings.Fields(line)
 
-		switch cmd[0] {
-		case "agent":
-			if len(cmd) > 1 {
-				switch cmd[1] {
-				case "list":
-					table := tablewriter.NewWriter(os.Stdout)
-					table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
-					table.SetAlignment(tablewriter.ALIGN_CENTER)
-					for k, v := range agents {
-						table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
-							v.hostName, "HTTP/2"})
-					}
-					fmt.Println()
-					table.Render()
-					fmt.Println()
-				case "info":
-					if len(cmd) == 2 {
-						color.Red("[!]Invalid command")
-						color.White("agent info <agent_id>")
-					} else if len(cmd) >= 3 {
-						a, _ := uuid.FromString(cmd[2])
+		if len(cmd) > 0 {
+			switch cmd[0] {
+			case "agent":
+				if len(cmd) > 1 {
+					switch cmd[1] {
+					case "list":
 						table := tablewriter.NewWriter(os.Stdout)
-						table.SetAlignment(tablewriter.ALIGN_LEFT)
-						data := [][]string{
-							{"ID", agents[a].id.String()},
-							{"Platform", agents[a].platform},
-							{"Architecture", agents[a].architecture},
-							{"UserName", agents[a].userName},
-							{"User GUID", agents[a].userGUID},
-							{"Hostname", agents[a].hostName},
-							{"Process ID", strconv.Itoa(agents[a].pid)},
-							{"Initial Check In", agents[a].iCheckIn.String()},
-							{"Last Check In", agents[a].sCheckIn.String()},
-							{"Agent Version", agents[a].version},
-							{"Agent Build", agents[a].build},
-							{"Agent Wait Time", agents[a].waitTime},
-							{"Agent Message Padding Max", strconv.Itoa(agents[a].paddingMax)},
-							{"Agent Max Retries", strconv.Itoa(agents[a].maxRetry)},
-							{"Agent Failed Logins", strconv.Itoa(agents[a].failedCheckin)},
+						table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+						table.SetAlignment(tablewriter.ALIGN_CENTER)
+						for k, v := range agents {
+							table.Append([]string{k.String(), v.platform + "/" + v.architecture, v.userName,
+								v.hostName, "HTTP/2"})
 						}
-						table.AppendBulk(data)
 						fmt.Println()
 						table.Render()
 						fmt.Println()
-					}
-				case "upload":
-					if len(cmd) >= 5 {
-						addChannel(cmd)
-						if debug {
-							color.Red("[DEBUG]Input: %s", strings.Join(cmd[3:], " "))
+					case "info":
+						if len(cmd) == 2 {
+							color.Red("[!]Invalid command")
+							color.White("agent info <agent_id>")
+						} else if len(cmd) >= 3 {
+							a, _ := uuid.FromString(cmd[2])
+							table := tablewriter.NewWriter(os.Stdout)
+							table.SetAlignment(tablewriter.ALIGN_LEFT)
+							data := [][]string{
+								{"ID", agents[a].id.String()},
+								{"Platform", agents[a].platform},
+								{"Architecture", agents[a].architecture},
+								{"UserName", agents[a].userName},
+								{"User GUID", agents[a].userGUID},
+								{"Hostname", agents[a].hostName},
+								{"Process ID", strconv.Itoa(agents[a].pid)},
+								{"Initial Check In", agents[a].iCheckIn.String()},
+								{"Last Check In", agents[a].sCheckIn.String()},
+								{"Agent Version", agents[a].version},
+								{"Agent Build", agents[a].build},
+								{"Agent Wait Time", agents[a].waitTime},
+								{"Agent Message Padding Max", strconv.Itoa(agents[a].paddingMax)},
+								{"Agent Max Retries", strconv.Itoa(agents[a].maxRetry)},
+								{"Agent Failed Logins", strconv.Itoa(agents[a].failedCheckin)},
+							}
+							table.AppendBulk(data)
+							fmt.Println()
+							table.Render()
+							fmt.Println()
 						}
-					} else {
-						color.Red("[!]Invalid file or path")
-						color.White("agent upload <agent ID> <local_file> <target_file>")
-					}
-				case "cmd":
-					if len(cmd) >= 4 {
-						addChannel(cmd)
-						cmdAgent := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
-						if debug {
-							color.Red("[DEBUG]Input: %s", cmd[3])
-							color.Red("[DEBUG]Base64 Input: %s", cmdAgent)
+					case "upload":
+						if len(cmd) == 5 {
+							_, err := os.Stat(cmd[3])
+							if err == nil {
+								addChannel(cmd)
+								if debug {
+									color.Red("[DEBUG] Uploading: %s", strings.Join(cmd[3:], " "))
+								}
+							} else {
+								color.Red("[!] Local file : %s does not exist", cmd[3])
+							}
+						} else {
+							color.Red("[!] Invalid upload command")
+							color.White("[!] USAGE: agent upload <agent ID> <local_file> <target_file>")
 						}
-					} else {
-						color.Red("[!]Invalid command")
-						color.White("agent cmd <agent ID> <cmd>")
-					}
-				case "kill":
-					if len(cmd) == 3 {
-						addChannel(cmd)
-					} else {
-						color.Red("[!]Invalid command")
-						color.White("agent kill <agent ID>")
-					}
-				case "control":
-					switch cmd[3] {
+					case "cmd":
+						if len(cmd) >= 4 {
+							addChannel(cmd)
+							cmdAgent := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
+							if debug {
+								color.Red("[DEBUG]Input: %s", cmd[3])
+								color.Red("[DEBUG]Base64 Input: %s", cmdAgent)
+							}
+						} else {
+							color.Red("[!]Invalid command")
+							color.White("agent cmd <agent ID> <cmd>")
+						}
 					case "kill":
-						addChannel(cmd)
-					case "sleep":
-						if len(cmd) == 5 {
-							_, err := time.ParseDuration(cmd[4])
-							if err != nil {
-								color.Red("[!]There was an error setting the agent sleep time")
-								color.Red(err.Error())
-							} else {
-								addChannel(cmd)
-							}
+						if len(cmd) == 3 {
+							addChannel(cmd)
 						} else {
 							color.Red("[!]Invalid command")
-							color.White("agent control <agent ID> sleep <time>")
+							color.White("agent kill <agent ID>")
 						}
-					case "padding":
-						if len(cmd) == 5 {
-							_, err := strconv.Atoi(cmd[4])
-							if err != nil {
-								color.Red("[!]There was an error setting the agent maximum message padding size")
-								color.Red(err.Error())
+					case "control":
+						switch cmd[3] {
+						case "kill":
+							addChannel(cmd)
+						case "sleep":
+							if len(cmd) == 5 {
+								_, err := time.ParseDuration(cmd[4])
+								if err != nil {
+									color.Red("[!]There was an error setting the agent sleep time")
+									color.Red(err.Error())
+								} else {
+									addChannel(cmd)
+								}
 							} else {
-								addChannel(cmd)
+								color.Red("[!]Invalid command")
+								color.White("agent control <agent ID> sleep <time>")
 							}
-						} else {
-							color.Red("[!]Invalid command")
-							color.White("agent control <agent ID> padding <size as integer>")
-						}
-					case "maxretry":
-						if len(cmd) == 5 {
-							_, err := strconv.Atoi(cmd[4])
-							if err != nil {
-								color.Red("[!]There was an error setting the agent maximum retries")
-								color.Red(err.Error())
+						case "padding":
+							if len(cmd) == 5 {
+								_, err := strconv.Atoi(cmd[4])
+								if err != nil {
+									color.Red("[!]There was an error setting the agent maximum message padding size")
+									color.Red(err.Error())
+								} else {
+									addChannel(cmd)
+								}
 							} else {
-								addChannel(cmd)
+								color.Red("[!]Invalid command")
+								color.White("agent control <agent ID> padding <size as integer>")
 							}
-						} else {
-							color.Red("[!]Invalid command")
-							color.White("agent control <agent ID> maxretry <tries as integer>")
+						case "maxretry":
+							if len(cmd) == 5 {
+								_, err := strconv.Atoi(cmd[4])
+								if err != nil {
+									color.Red("[!]There was an error setting the agent maximum retries")
+									color.Red(err.Error())
+								} else {
+									addChannel(cmd)
+								}
+							} else {
+								color.Red("[!]Invalid command")
+								color.White("agent control <agent ID> maxretry <tries as integer>")
+							}
 						}
+					default:
+						color.Yellow("[-]Invalid agent command:", line[5:])
 					}
-				default:
-					color.Yellow("[-]Invalid agent command:", line[5:])
+				} else {
+					color.Yellow("[-]Missing subsequent agent command")
 				}
-			} else {
-				color.Yellow("[-]Missing subsequent agent command")
+			case "help":
+				usage()
+			case "?":
+				usage()
+			case "exit":
+				color.Red("[!]Quitting")
+				serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
+				os.Exit(0)
+			case "quit":
+				color.Red("[!]Quitting")
+				serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
+				os.Exit(0)
+			case "":
+			default:
+				color.Yellow("[-]Invalid command")
 			}
-		case "help":
-			usage()
-		case "?":
-			usage()
-		case "exit":
-			color.Red("[!]Quitting")
-			serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
-			os.Exit(0)
-		case "quit":
-			color.Red("[!]Quitting")
-			serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
-			os.Exit(0)
-		case "":
-		default:
-			color.Yellow("[-]Invalid command")
 		}
+
 	}
 }
 
