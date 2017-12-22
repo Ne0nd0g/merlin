@@ -32,8 +32,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"golang.org/x/net/http2"
 	"github.com/satori/go.uuid"
+	"golang.org/x/net/http2"
 	
 	"github.com/ne0nd0g/merlin/pkg/agent"
 	"github.com/ne0nd0g/merlin/pkg/messages"
