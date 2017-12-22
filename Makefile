@@ -23,7 +23,7 @@ D=Darwin-x64
 $(shell mkdir -p ${DIR})
 
 # Change default to just make for the host OS and add MAKE ALL to do this
-default: server-windows agent-windows server-linux agent-linux server-darwin agent-darwin
+default: server-darwin agent-darwin
 
 all: default
 
