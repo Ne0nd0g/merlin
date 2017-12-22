@@ -21,10 +21,10 @@
 			"revisionTime": "2016-11-03T16:00:40Z"
 		},
 		{
-			"checksumSHA1": "Xe1H36zS96+8urk4a0bYdNY3mnw=",
+			"checksumSHA1": "kum8izZy1+pVfDiApW5hT2HoH1w=",
 			"path": "github.com/mattn/go-isatty",
-			"revision": "66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8",
-			"revisionTime": "2016-08-06T12:27:52Z"
+			"revision": "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
+			"revisionTime": "2017-11-07T05:05:31Z"
 		},
 		{
 			"checksumSHA1": "b64yVZEKG21+a/xvcKEvqfai1ik=",
