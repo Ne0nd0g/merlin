@@ -408,6 +408,18 @@ func statusCheckIn(j messages.Base) messages.Base {
 		}
 
 		switch command[1] {
+		case "upload":
+			p := messages.UploadFile{
+				Dest:     command[4],
+				FileBlob: command[3],
+				Job:      jobID,
+			}
+
+			k := marshalMessage(p)
+			m.Type = "UploadFile"
+			m.Payload = (*json.RawMessage)(&k)
+
+			return m
 		case "cmd":
 			p := messages.CmdPayload{
 				Command: command[3],
@@ -480,6 +492,7 @@ func usage() {
 
 	data := [][]string{
 		{"agent cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
+		{"agent upload", "<agent ID> <local_file> <target_file>", "", "Upload a file to target"},
 		{"agent control", "<agent ID> <command>", "sleep, kill, padding", "Control messages & " +
 			"functions to the agent itself"},
 		{"agent info", "<agent ID>", "", "Display all information about an agent"},
@@ -523,6 +536,9 @@ func shell() {
 				agentCompleter,
 			),
 			readline.PcItem("cmd",
+				agentCompleter,
+			),
+			readline.PcItem("upload",
 				agentCompleter,
 			),
 			readline.PcItem("control",
@@ -619,6 +635,18 @@ func shell() {
 						fmt.Println()
 						table.Render()
 						fmt.Println()
+					}
+				case "upload":
+					if len(cmd) >= 5 {
+						addChannel(cmd)
+						cmdAgent := base64.StdEncoding.EncodeToString([]byte(cmd[3]))
+						if debug {
+							color.Red("[DEBUG]Input: %s", cmd[3])
+							color.Red("[DEBUG]Base64 Input: %s", cmdAgent)
+						}
+					} else {
+						color.Red("[!]Invalid file or path")
+						color.White("agent upload <agent ID> <local_file> <target_file>")
 					}
 				case "cmd":
 					if len(cmd) >= 4 {
