@@ -34,10 +34,9 @@ import (
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
-	
-	"github.com/ne0nd0g/merlin/pkg/agent"
-	"github.com/ne0nd0g/merlin/pkg/messages"
-	
+
+	"github.com/Ne0nd0g/merlin/pkg/agent"
+	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
 // GLOBAL VARIABLES
@@ -520,3 +519,4 @@ func agentInfo(host string, client *http.Client) {
 // TODO add cert stapling
 // TODO set message jitter
 // TODO get and return IP addresses with initial checkin
+// TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
