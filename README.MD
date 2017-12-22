@@ -27,29 +27,29 @@ Go programing language must be installed on the system. However, if you
 
 Download and install GO: `https://golang.org/doc/install`
 
->Ensure your GOPATH environment variable is
-[set](https://github.com/golang/go/wiki/SettingGOPATH)
-
-## Running Merlin Server
-Merlin Server can be run as a script or compiled and run as a standalone
- binary file.
-
+## Download Merlin Server
 > It is recommended to download the compiled binaries from the
 [Releases](https://github.com/Ne0nd0g/merlin/releases) section
 
-Run Merlin Server as a script:
+>Ensure your GOPATH environment variable is
+[set](https://github.com/golang/go/wiki/SettingGOPATH)
 
+Download Merlin with Go
 `go get github.com/Ne0nd0g/merlin`
 
-If you want to use git, merlin must be in your GOPATH i.e.
+If you want to use git instead of Go, merlin must be in your GOPATH i.e.
 `$GOPATH/src/github.com/Ne0nd0g/merlin`
+
+## Run Merlin Server
+Merlin Server can be run as a script or compiled and run as a standalone
+ binary file.
 
 `cd $GOPATH/src/github.com/Ne0nd0g;git clone https://github.com/Ne0nd0g/merlin/`
 
 `go run cmd/merlinserver/main.go`
 
-Compile Merlin Server into an executable:
-
+## Compile Merlin Server
+Compile Merlin into an executable using Make
 `make server-windows` or `make server-linux` or `make server-darwin`
 
 ### Merlin Server Usage
