@@ -263,8 +263,14 @@ func statusCheckIn(host string, client *http.Client) {
 		case "UploadFile":
 			var p messages.UploadFile
 			json.Unmarshal(payload, &p)
-			d1, _ := base64.StdEncoding.DecodeString(p.FileBlob)
-			err := ioutil.WriteFile(p.Dest, d1, 0644)
+			d1, err := base64.StdEncoding.DecodeString(p.FileBlob)
+			if err != nil {
+				if verbose {
+					color.Red("[!]There was an error decoding the fileBlob")
+					color.Red(err.Error())
+				}
+			}
+			err = ioutil.WriteFile(p.Dest, d1, 0644)
 			if err != nil {
 				if verbose {
 					color.Red("[!]There was an error writing to : %s", p.Dest)
