@@ -1,4 +1,2 @@
 .DS_STORE
-data/.DS_Store
-data/x509/server.crt
-data/x509/server.key
+data/
