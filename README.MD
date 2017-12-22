@@ -35,16 +35,17 @@ Download and install GO: `https://golang.org/doc/install`
 [set](https://github.com/golang/go/wiki/SettingGOPATH)
 
 Download Merlin with Go
+
 `go get github.com/Ne0nd0g/merlin`
 
 If you want to use git instead of Go, merlin must be in your GOPATH i.e.
 `$GOPATH/src/github.com/Ne0nd0g/merlin`
 
+`cd $GOPATH/src/github.com/Ne0nd0g;git clone https://github.com/Ne0nd0g/merlin/`
+
 ## Run Merlin Server
 Merlin Server can be run as a script or compiled and run as a standalone
  binary file.
-
-`cd $GOPATH/src/github.com/Ne0nd0g;git clone https://github.com/Ne0nd0g/merlin/`
 
 `go run cmd/merlinserver/main.go`
 
