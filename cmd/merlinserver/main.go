@@ -591,7 +591,7 @@ func shell() {
 		}
 
 		line = strings.TrimSpace(line)
-		cmd := strings.Split(line, " ")
+		cmd := strings.Fields(line)
 
 		switch cmd[0] {
 		case "agent":
