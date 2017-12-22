@@ -641,11 +641,11 @@ func shell() {
 						}
 					case "upload":
 						if len(cmd) == 5 {
-							_, err := os.Stat(cmd[3])
-							if err == nil {
+							uploadStat, err := os.Stat(cmd[3])
+							if err == nil && !uploadStat.IsDir() {
 								addChannel(cmd)
 								if debug {
-									color.Red("[DEBUG] Uploading: %s", strings.Join(cmd[3:], " "))
+									color.Red("[DEBUG] Uploading: %s to %s", cmd[3], cmd[4])
 								}
 							} else {
 								color.Red("[!] Local file : %s does not exist", cmd[3])
