@@ -33,10 +33,11 @@ import (
 
 	"github.com/fatih/color"
 	"golang.org/x/net/http2"
-
+	"github.com/satori/go.uuid"
+	
 	"github.com/ne0nd0g/merlin/pkg/agent"
 	"github.com/ne0nd0g/merlin/pkg/messages"
-	"github.com/satori/go.uuid"
+	
 )
 
 // GLOBAL VARIABLES
