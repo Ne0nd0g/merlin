@@ -89,7 +89,7 @@ func main() {
 
 	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&debug, "debug", false, "Enable debug output")
-	port := flag.Int("p", 4433, "Merlin Server Port")
+	port := flag.Int("p", 443, "Merlin Server Port")
 	ip := flag.String("i", "0.0.0.0", "The IP address of the interface to bind to")
 	crt := flag.String("x509cert", filepath.Join(string(currentDir), "data", "x509", "server.crt"),
 		"The x509 certificate for the HTTPS listener")
