@@ -98,6 +98,8 @@ agent info <agent id>               Display all information for an agent
 
 agent list                          List agents
 
+agent upload <agent id> <local_file> <target_file>  Upload a local file to the target
+
 ```
 
 ### TLS Certificates
