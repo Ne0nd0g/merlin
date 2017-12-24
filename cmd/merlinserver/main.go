@@ -289,7 +289,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		color.Yellow("\t[i]Platform: %s", p.Platform)
 		color.Yellow("\t[i]Architecture: %s", p.Architecture)
 		color.Yellow("\t[i]Username: %s", p.UserName)
-		color.Yellow("\t[i]IpAddrs: %v", p.Ips)
+		color.Yellow("\t[i]IPAddrs: %v", p.Ips)
 	}
 	agentsDir := filepath.Join(currentDir, "data", "agents")
 

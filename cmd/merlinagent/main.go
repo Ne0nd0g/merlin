@@ -138,7 +138,7 @@ func initialCheckIn(host string, client *http.Client) bool {
 		}
 	} else {
 		if debug {
-			color.Red("[!]There was an error getting the the ip addresses")
+			color.Red("[!]There was an error getting the the IP addresses")
 			color.Red(errI.Error())
 		}
 	}
