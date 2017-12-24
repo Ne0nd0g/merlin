@@ -289,6 +289,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 		color.Yellow("\t[i]Platform: %s", p.Platform)
 		color.Yellow("\t[i]Architecture: %s", p.Architecture)
 		color.Yellow("\t[i]Username: %s", p.UserName)
+		color.Yellow("\t[i]IpAddrs: %v", p.Ips)
 	}
 	agentsDir := filepath.Join(currentDir, "data", "agents")
 
@@ -310,8 +311,8 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	}
 	// Add custom agent struct to global agents map
 	agents[j.ID] = &agent{id: j.ID, userName: p.UserName, userGUID: p.UserGUID, platform: p.Platform,
-		architecture: p.Architecture,
-		hostName:     p.HostName, pid: p.Pid, channel: make(chan []string, 10),
+		architecture: p.Architecture, ips: p.Ips,
+		hostName: p.HostName, pid: p.Pid, channel: make(chan []string, 10),
 		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
 
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now(), j.ID))
@@ -321,6 +322,7 @@ func agentInitialCheckIn(j messages.Base, p messages.SysInfo) {
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), p.UserName))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), p.UserGUID))
 	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), p.Pid))
+	agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now(), p.Ips))
 
 	// Add code here to create db record
 }
@@ -605,6 +607,7 @@ func shell() {
 							{"UserName", agents[a].userName},
 							{"User GUID", agents[a].userGUID},
 							{"Hostname", agents[a].hostName},
+							{"IPs", fmt.Sprintf("%v", agents[a].ips)},
 							{"Process ID", strconv.Itoa(agents[a].pid)},
 							{"Initial Check In", agents[a].iCheckIn.String()},
 							{"Last Check In", agents[a].sCheckIn.String()},
@@ -753,6 +756,7 @@ type agent struct {
 	userName      string
 	userGUID      string
 	hostName      string
+	ips           []string
 	pid           int
 	agentLog      *os.File
 	channel       chan []string

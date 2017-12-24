@@ -24,6 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"os/user"
@@ -124,6 +125,24 @@ func initialCheckIn(host string, client *http.Client) bool {
 		}
 	}
 
+	var ips []string
+	interfaces, errI := net.Interfaces()
+	if errI == nil {
+		for _, iface := range interfaces {
+			addrs, err := iface.Addrs()
+			if err == nil {
+				for _, addr := range addrs {
+					ips = append(ips, addr.String())
+				}
+			}
+		}
+	} else {
+		if debug {
+			color.Red("[!]There was an error getting the the IP addresses")
+			color.Red(errI.Error())
+		}
+	}
+
 	if verbose {
 		color.Green("[+]Host Information:")
 		color.Green("\tAgent UUID: %s", hostUUID)
@@ -133,6 +152,7 @@ func initialCheckIn(host string, client *http.Client) bool {
 		color.Green("\tUser GUID: %s", u.Gid)
 		color.Green("\tHostname: %s", h)
 		color.Green("\tPID: %d", os.Getpid())
+		color.Green("\tIPs: %v", ips)
 	}
 
 	// JSON "initial" payload object
@@ -143,6 +163,7 @@ func initialCheckIn(host string, client *http.Client) bool {
 		UserGUID:     u.Gid,
 		HostName:     h,
 		Pid:          os.Getpid(),
+		Ips:          ips,
 	}
 
 	payload, errP := json.Marshal(i)
