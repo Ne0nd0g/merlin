@@ -19,6 +19,7 @@ package main
 
 import (
 	// Standard
+	"crypto/sha1"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -776,6 +777,13 @@ func marshalMessage(m interface{}) []byte {
 
 func getFiledata(filePath string) string {
 	dat, err := ioutil.ReadFile(filePath)
+	h := sha1.New()
+	io.WriteString(h, string(dat))
+	serverLog.WriteString(fmt.Sprintf("[%s] Uploading file: %s of size %d and sha1: % x\n",
+		time.Now(),
+		filePath,
+		len(dat),
+		h.Sum(nil)))
 	if err != nil {
 		color.Red("There was an error reading %s", filePath)
 		color.Red(err.Error())
