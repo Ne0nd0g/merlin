@@ -46,12 +46,13 @@ type CmdPayload struct {
 
 // SysInfo is a JSON payload containing information about the system where the agent is running
 type SysInfo struct {
-	Platform     string `json:"platform,omitempty"`
-	Architecture string `json:"architecture,omitempty"`
-	UserName     string `json:"username,omitempty"`
-	UserGUID     string `json:"userguid,omitempty"`
-	HostName     string `json:"hostname,omitempty"`
-	Pid          int    `json:"pid,omitempty"`
+	Platform     string   `json:"platform,omitempty"`
+	Architecture string   `json:"architecture,omitempty"`
+	UserName     string   `json:"username,omitempty"`
+	UserGUID     string   `json:"userguid,omitempty"`
+	HostName     string   `json:"hostname,omitempty"`
+	Pid          int      `json:"pid,omitempty"`
+	Ips          []string `json:"ips,omitempty"`
 }
 
 // CmdResults is a JSON payload that contains the results of an executed command from an agent

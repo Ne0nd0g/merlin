@@ -142,6 +142,8 @@ Run Merlin Agent as script: `go run cmd/merlinagent/main.go`
         Enable debug output
   -sleep duration
         Time for agent to sleep (default 10s)
+  -skew int
+        Variable time skew for agent to sleep
   -url string
         Full URL for agent to connect to (default "https://127.0.0.1:443")
   -v    Enable verbose output
