@@ -206,28 +206,28 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 					color.Red(errD.Error())
 				}
 				color.Cyan("[+]Results for job %s", p.Job)
-				d1, err := base64.StdEncoding.DecodeString(p.FileBlob)
+				downloadBlob, downloadBlobErr := base64.StdEncoding.DecodeString(p.FileBlob)
 
-				if err != nil {
+				if downloadBlobErr != nil {
 					color.Red("[!]There was an error decoding the fileBlob")
-					color.Red(err.Error())
+					color.Red(downloadBlobErr.Error())
 				} else {
-					d := filepath.Join(agentsDir, j.ID.String(), f)
-					errW := ioutil.WriteFile(d, d1, 0644)
-					if errW != nil {
+					downloadFile := filepath.Join(agentsDir, j.ID.String(), f)
+					writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
+					if writingErr != nil {
 						color.Red("[!]There was an error writing to : %s", p.FileLocation)
-						color.Red(err.Error())
+						color.Red(writingErr.Error())
 					} else {
 						color.Green("[+]Successfully downloaded file %s with a size of %d bytes from agent to %s",
 							p.FileLocation,
-							len(d1),
-							d)
+							len(downloadBlob),
+							downloadFile)
 						agents[j.ID].agentLog.WriteString(fmt.Sprintf(
 							"[%s]Successfully downloaded file %s with a size of %d bytes from agent to %s",
 							time.Now(),
 							p.FileLocation,
-							len(d1),
-							d))
+							len(downloadBlob),
+							downloadFile))
 					}
 				}
 			}
