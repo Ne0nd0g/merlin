@@ -30,11 +30,12 @@ type Base struct {
 	Padding string      `json:"padding"`
 }
 
-// UploadFile is the JSON payload for files to be uploaded to an agent
-type UploadFile struct {
-	Dest     string `json:"dest"`
-	FileBlob string `json:"blob"`
-	Job      string `json:"job"`
+// FileTransfer is the JSON payload to transfer files between the server and agent
+type FileTransfer struct {
+	FileLocation    string `json:"dest"`
+	FileBlob 		string `json:"blob"`
+	IsDownload		bool `json:download`
+	Job      		string `json:"job"`
 }
 
 // CmdPayload is the JSON payload for commands to execute on an agent
