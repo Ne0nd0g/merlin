@@ -94,11 +94,13 @@ agent cmd <agent id> <command>       A command to run on a remote agent
 agent control <agent id> <command>  Configure/Control a remote agent (not the host)
                 [kill,sleep,padding,maxretry]
 
+agent download <agent id> <remote_file>  Download a file from the agent to the server
+
 agent info <agent id>               Display all information for an agent
 
 agent list                          List agents
 
-agent upload <agent id> <local_file> <target_file>  Upload a local file to the target
+agent upload <agent id> <local_file> <target_file> Upload a file from the server to the agent
 
 ```
 

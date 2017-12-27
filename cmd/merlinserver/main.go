@@ -455,30 +455,29 @@ func statusCheckIn(j messages.Base) messages.Base {
 
 				m.Type = "ServerOk"
 				return m
-			} else {
-				fileHash := sha1.New()
-				io.WriteString(fileHash, string(uploadFile))
-				agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d" +
-					" bytes and SHA-1: %x to agent at %s\r\n",
-					time.Now(),
-					command[3],
-					len(uploadFile),
-					fileHash.Sum(nil),
-					command[4]))
-
-				p := messages.FileTransfer{
-					FileLocation: command[4],
-					FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
-					IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
-					Job:          jobID,
-				}
-
-				k := marshalMessage(p)
-				m.Type = "FileTransfer"
-				m.Payload = (*json.RawMessage)(&k)
-
-				return m
 			}
+			fileHash := sha1.New()
+			io.WriteString(fileHash, string(uploadFile))
+			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d" +
+				" bytes and SHA-1: %x to agent at %s\r\n",
+				time.Now(),
+				command[3],
+				len(uploadFile),
+				fileHash.Sum(nil),
+				command[4]))
+
+			p := messages.FileTransfer{
+				FileLocation: command[4],
+				FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
+				IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
+				Job:          jobID,
+			}
+
+			k := marshalMessage(p)
+			m.Type = "FileTransfer"
+			m.Payload = (*json.RawMessage)(&k)
+
+			return m
 		case "download":
 			agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
 				time.Now(),
@@ -572,7 +571,7 @@ func usage() {
 		{"agent download", "<agent ID> <remote_file>", "", "Download a file from the agent to the server"},
 		{"agent info", "<agent ID>", "", "Display all information about an agent"},
 		{"agent list", "None", "", "List all checked In agents"},
-		{"agent upload", "<agent ID> <local_file> <target_file>", "", "Upload a file to target"},
+		{"agent upload", "<agent ID> <local_file> <target_file>", "", "Upload a file from the server to the agent"},
 		{"exit", "None", "", "Exit the Merlin server"},
 		{"quit", "None", "", "Exit the Merlin server"},
 	}
