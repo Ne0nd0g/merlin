@@ -223,7 +223,7 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 							len(downloadBlob),
 							downloadFile)
 						agents[j.ID].agentLog.WriteString(fmt.Sprintf(
-							"[%s]Successfully downloaded file %s with a size of %d bytes from agent to %s",
+							"[%s]Successfully downloaded file %s with a size of %d bytes from agent to %s\r\n",
 							time.Now(),
 							p.FileLocation,
 							len(downloadBlob),
@@ -909,3 +909,4 @@ type agent struct {
 // TODO add CSRF tokens
 // TODO check if agentLog exists even outside of InitialCheckIn
 // TODO readline for file paths to use with upload
+// TODO handle file names containing a space for upload/download
