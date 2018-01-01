@@ -1,2 +1,6 @@
 .DS_STORE
-data/
+data/agents
+data/bin
+data/db
+data/log
+data/x509
