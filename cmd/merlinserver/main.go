@@ -145,6 +145,8 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		serverLog.WriteString(fmt.Sprintf("[%s][DEBUG]Content Length: %d\r\n", time.Now(), r.ContentLength))
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	if r.Method == "POST" && r.ProtoMajor == 2 {
 
 		var payload json.RawMessage
@@ -194,6 +196,9 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		case "AgentInfo":
 			var p messages.AgentInfo
 			json.Unmarshal(payload, &p)
+			if debug {
+				color.Red("AgentInfo JSON object: %s", p)
+			}
 			agentInfo(j, p)
 		case "FileTransfer":
 			var p messages.FileTransfer
@@ -239,6 +244,10 @@ func httpHandler(w http.ResponseWriter, r *http.Request) {
 		// Should answer any GET requests
 		// Send 404
 		w.WriteHeader(404)
+	} else if r.Method == "OPTIONS" && r.ProtoMajor == 2 {
+		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "accept, content-type")
 	} else {
 		w.WriteHeader(404)
 	}

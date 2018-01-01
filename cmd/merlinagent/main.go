@@ -669,3 +669,5 @@ func agentInfo(host string, client *http.Client) {
 // TODO set message jitter
 // TODO get and return IP addresses with initial checkin
 // TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
+// TODO Add standard function for printing messages like in the JavaScript agent. Make it a lib for agent and server?
+// TODO send cmdResult for agentcontrol messages
