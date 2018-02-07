@@ -3,7 +3,7 @@
     "type": "standard",
     "name": "Invoke-DCOM",
     "author": ["Steve Borosh (@rvrsh3ll)"],
-    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-Mimikatz.json"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOM.json"],
     "platform": "windows",
     "arch": "x64",
     "lang": "PowerShell",
