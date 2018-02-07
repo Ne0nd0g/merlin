@@ -1,0 +1,1 @@
+* Modules will be stored in platform/arch/language/type directories

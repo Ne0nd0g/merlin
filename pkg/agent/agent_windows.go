@@ -33,6 +33,7 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 	argS, errS := shellwords.Parse(arg)
 	if errS != nil {
 		fmt.Println("There was an error parsing command line argments")
+		fmt.Println(errS)
 	}
 
 	cmd = exec.Command(name, argS...)

