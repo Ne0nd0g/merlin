@@ -10,14 +10,27 @@
     "notes": "",
     "remote": "https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh",
     "local": ["data", "src", "rebootuser", "LinEnum", "LinEnum.sh"],
-    "options": {
-      "-k": [],
-      "-e": [],
-      "-t": [],
-      "-r": [],
-      "-h": []
-    },
+    "options": [
+      {"name": "keyword", "value": "", "required": false, "flag": "-k", "description":"Enter keyword"},
+      {"name": "export", "value": "", "required": false, "flag": "-e", "description":"Enter export location"},
+      {"name": "thorough", "value": "", "required": false, "flag": "-t", "description":"Include thorough (lengthy) tests"},
+      {"name": "report", "value": "", "required": false, "flag": "-r", "description":"Enter report name"},
+      {"name": "help", "value": "", "required": false, "flag": "-h", "description":"Displays the help text"}
+    ],
     "description": "A script to enumerate local information from a Linux host",
-    "commands": ["wget", "-O /tmp/update.sh https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh;chmod +x /tmp/update.sh;/tmp/update.sh;rm /tmp/update.sh"]
+    "commands": [
+      "wget", "-O /tmp/update.sh https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh;",
+      "chmod",
+      "+x",
+      "/tmp/update.sh;",
+      "/tmp/update.sh",
+      "{{keyword}}",
+      "{{export}}",
+      "{{thorough.Flag}}",
+      "{{report}}",
+      "{{help.Flag}}",
+      ";",
+      "rm /tmp/update.sh"
+    ]
   }
 }

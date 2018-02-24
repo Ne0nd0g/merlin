@@ -10,11 +10,14 @@
     "notes": "",
     "remote": "",
     "local": [""],
-    "options": {
-      "": [],
-      "": []
-    },
+    "options": [
+      {"name": "", "value": "", "required": true, "flag": "", "description":""},
+      {"name": "", "value": "", "required": false, "flag": "", "description":""}
+    ],
     "description": "",
-    "commands": ["", ""]
+    "commands": [
+      "",
+      ""
+    ]
   }
 }

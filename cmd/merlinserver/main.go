@@ -664,6 +664,10 @@ func shell() {
 									readline.PcItem("Find-BadPrivilege"),
 									readline.PcItem("Find-PotentiallyCrackableAccounts"),
 								),
+								readline.PcItem("credentials",
+									readline.PcItem("dumpCredStore"),
+									readline.PcItem("LaZagneForensic"),
+								),
 							),
 						),
 					),
@@ -865,7 +869,9 @@ func shell() {
 					case "module":
 						// TODO Modify shell to change into the module so that options can be set
 						if len(cmd) > 3 {
-							color.Red("[DEBUG]Executing Module")
+							if debug {
+								color.Red("[DEBUG]Executing Module")
+							}
 							var mPath = path.Join(currentDir, "data", "modules")
 							for c := range cmd[3:]{
 								mPath = path.Join(mPath, cmd[3+c])
@@ -878,7 +884,13 @@ func shell() {
 							} else {
 								// TODO Options can only be viewed, but can't be set
 								m.ShowInfo()
-								addChannel(append([]string{cmd[0],"cmd", cmd[2]}, m.Run()...))
+								command, errRun := m.Run()
+								if errRun != nil {
+									color.Red("[!]There was an error running the module")
+									color.Red("%s", errRun)
+								} else {
+									addChannel(append([]string{cmd[0], "cmd", cmd[2]}, command...))
+								}
 							}
 						} else {
 							color.Red("[!]Invalid module command")

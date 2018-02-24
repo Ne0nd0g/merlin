@@ -24,9 +24,13 @@ import (
 	"encoding/json"
 	"strings"
 	"errors"
+	"os"
+	"strconv"
 
 	// 3rd Party
 	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
+
 )
 
 // Module is a structure containing the base information or template for modules
@@ -37,14 +41,23 @@ type Module struct {
 	Platform string 	`json:"platform"`	// Platform the module can run on (i.e. Windows, Linux, Darwin, or ALL)
 	Arch     string 	`json:"arch"`	// The Architecture the module can run on (i.e. x86, x64, MIPS, ARM, or ALL)
 	Lang     string 	`json:"lang"`	// What language does the module execute in (i.e. PowerShell, Python, or Perl)
-	Priv     bool		`json:"privilege"` // Does this module required a priviledged level account like root or SYSTEM?
+	Priv     bool		`json:"privilege"` // Does this module required a privileged level account like root or SYSTEM?
 	Description string 	`json:"description"`	// A description of what the module does
 	Notes    string 	`json:"notes"`	// Additional information or notes about the module
 	Commands []string 	`json:"commands"`	// A list of commands to be run on the agent
 	SourceRemote string `json:"remote"`	// Online or remote source code for a module (i.e. https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1)
 	SourceLocal	[]string 	`json:"local"`	// The local file path to the script or payload
-	Options map[string][]string 	`json:"options"`	// A list of configurable options/arguments for the module
+	Options []Option 	`json:"options"`	// A list of configurable options/arguments for the module
 	Powershell interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
+}
+
+// Option is a structure containing the keys for the object
+type Option struct {
+	Name 		string		`json:"name"` 		// Name of the option
+	Value 		string		`json:"value"` 		// Value of the option
+	Required 	bool		`json:"required"` 	// Is this a required option?
+	Flag 		string		`json:"flag"`		// The command line flag used for the option
+	Description string		`json:"description"`// A description of the option
 }
 
 // PowerShell structure is used to describe additional PowerShell features for modules that leverage PowerShell
@@ -55,15 +68,53 @@ type Powershell struct {
 }
 
 // Run function returns an array of commands to execute the module on an agent
-func (m *Module) Run() []string {
-	return m.Commands
+func (m *Module) Run() ([]string, error) {
+
+	var command = m.Commands
+
+	// Check every 'required' option to make sure it isn't null
+	for _, v := range m.Options {
+		if v.Required {
+			if v.Value == "" {
+				return command, errors.New(v.Name + " is required")
+			}
+		}
+	}
+
+	// Fill in or remove options values
+	for k := len(command) - 1; k >= 0; k-- {
+		for _, o := range m.Options {
+			if o.Value != "" && strings.Contains(command[k], "{{" + o.Name + "}}" ){
+				command[k] = strings.Replace(command[k], "{{" + o.Name + "}}", o.Flag + " " + o.Value, -1)
+			} else if o.Value == "" && strings.Contains(command[k], "{{" + o.Name + "}}"){
+				command = append(command[:k], command[k+1:]...)
+			} else if strings.ToLower(o.Value) == "true" && strings.Contains(command[k], "{{" + o.Name + ".Flag}}" ){
+				command[k] = strings.Replace(command[k], "{{" + o.Name + ".Flag}}", o.Flag, -1)
+			} else if strings.ToLower(o.Value) != "true" && strings.Contains(command[k], "{{" + o.Name + ".Flag}}" ){
+				command = append(command[:k], command[k+1:]...)
+			} else if o.Value != "" && strings.Contains(command[k], "{{" + o.Name + ".Value}}" ){
+				command[k] = strings.Replace(command[k], "{{" + o.Name + ".Value}}", o.Value, -1)
+			} else if o.Value == "" && strings.Contains(command[k], "{{" + o.Name + ".Value}}"){
+				command = append(command[:k], command[k+1:]...)
+			}
+
+		}
+	}
+	return command, nil
 }
 
 // ShowOptions function is used to display only a module's configurable options
 func (m *Module) ShowOptions(){
-	for k, v := range m.Options {
-		fmt.Printf("%s:\t\t%s\n",k,v)
+	color.Yellow("\r\nModule options(" + m.Name + ")\r\n\r\n")
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
+	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
+	table.SetBorder(false)
+
+	for _, v := range m.Options {
+		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
+	table.Render()
 }
 
 // ShowInfo function displays all of the information about a module to include items such as authors and options
@@ -75,10 +126,7 @@ func (m *Module) ShowInfo(){
 		color.Yellow("\t%s", m.Author[a])
 	}
 	color.Yellow("Description:\r\n\t%s", m.Description)
-	color.Yellow("Options:")
-	for k, v := range m.Options {
-		color.Yellow("\t%s:\t\t%s",k,v)
-	}
+	m.ShowOptions()
 	fmt.Println()
 	color.Yellow("Notes: %s", m.Notes)
 
@@ -137,7 +185,7 @@ func Create(modulePath string) (Module, error) {
 		}
 	}
 
-	_, errValidate := validate(m)
+	_, errValidate := validateModule(m)
 	if errValidate != nil {
 		return m, errValidate
 	}
@@ -145,7 +193,7 @@ func Create(modulePath string) (Module, error) {
 }
 
 // validate function is used to check a module's configuration for errors
-func validate(m Module) (bool, error) {
+func validateModule(m Module) (bool, error) {
 
 	// Validate Platform
 	switch strings.ToUpper(m.Platform) {
