@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"path"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
@@ -46,6 +47,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 // Global Variables
@@ -639,11 +641,51 @@ func shell() {
 			readline.PcItem("kill",
 				agentCompleter,
 			),
-		),
+			// TODO This list needs to be dynamically generated, not statically created
+			readline.PcItem("module",
+				readline.PcItemDynamic(getAgentList(),
+					readline.PcItem("windows",
+						readline.PcItem("x64",
+							readline.PcItem("powershell",
+								readline.PcItem("lateral",
+									readline.PcItem("dcom",
+										readline.PcItem("Invoke-DCOM"),
+										),
+									readline.PcItem("gpo",
+										readline.PcItem("Grouper"),
+										readline.PcItem("Find-ComputersWithRemoteAccessPolicies")),
+									),
+								readline.PcItem("powersploit",
+									readline.PcItem("Get-GPPPassword"),
+									readline.PcItem("Invoke-Mimikatz"),
+									readline.PcItem("PowerUp"),
+								),
+								readline.PcItem("privesc",
+									readline.PcItem("Find-BadPrivilege"),
+									readline.PcItem("Find-PotentiallyCrackableAccounts"),
+								),
+								readline.PcItem("credentials",
+									readline.PcItem("dumpCredStore"),
+									readline.PcItem("LaZagneForensic"),
+								),
+							),
+						),
+					),
+					readline.PcItem("linux",
+						readline.PcItem("x64",
+							readline.PcItem("bash",
+								readline.PcItem("privesc",
+									readline.PcItem("LinEnum"),
+								),
+							),
+						),
+					),
+				),
+			),
 		readline.PcItem("exit"),
 		readline.PcItem("quit"),
 		readline.PcItem("help"),
-	)
+	))
 
 	ms, err := readline.NewEx(&readline.Config{
 		Prompt:              "\033[31mMerlin»\033[0m ",
@@ -824,6 +866,36 @@ func shell() {
 								color.White("agent control <agent ID> maxretry <tries as integer>")
 							}
 						}
+					case "module":
+						// TODO Modify shell to change into the module so that options can be set
+						if len(cmd) > 3 {
+							if debug {
+								color.Red("[DEBUG]Executing Module")
+							}
+							var mPath = path.Join(currentDir, "data", "modules")
+							for c := range cmd[3:]{
+								mPath = path.Join(mPath, cmd[3+c])
+							}
+							// Execute Module
+							m, errModule := modules.Create(mPath + ".json")
+							if errModule != nil {
+								color.Red("[!]There was an error creating the module")
+								color.Red("%s", errModule)
+							} else {
+								// TODO Options can only be viewed, but can't be set
+								m.ShowInfo()
+								command, errRun := m.Run()
+								if errRun != nil {
+									color.Red("[!]There was an error running the module")
+									color.Red("%s", errRun)
+								} else {
+									addChannel(append([]string{cmd[0], "cmd", cmd[2]}, command...))
+								}
+							}
+						} else {
+							color.Red("[!]Invalid module command")
+						}
+
 					default:
 						color.Yellow("[-]Invalid agent command:", line[5:])
 					}

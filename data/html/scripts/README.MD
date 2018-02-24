@@ -1,3 +1,5 @@
+[![JavaScript Style Guide](https://cdn.rawgit.com/standard/standard/master/badge.svg)](https://github.com/standard/standard)
+
 # Merlin JavaScript Agent
 This version of the Merlin Agent is written in JavaScript and can be run
 in any location that can execute JavaScript. Web browsers can be found
