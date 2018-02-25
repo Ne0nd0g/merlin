@@ -73,36 +73,55 @@ Merlin is equipped with a tab completion system that can be used to see
 what commands are available at any given time. Hit double tab to get a
 list of all available commands.
 
-```
-
-exit    Exit and close Merlin
-
-help   Show Merlin help menu
-
-quit    Exit and close Merlin
-
-?      Show Merlin help menu
-```
+ Name   | Description
+ ---    | ---
+ agent   | Interact with agents or list agents
+ banner | Print the Merlin banner
+ exit   | Exit and close the Merlin server
+ help   | Print help screen
+ quit   | Exit and close the Merlin server
+ use    | Use a function of Merlin (i.e modules)
+ version | Print the Merlin server version
+ ?      | Print help screen
+ `*`    | Anything else will be execute on the host operating system
 
 ## Agent Commands
 These are the commands to control an agent from the server. Tab
 completion can be used to select an Agent's identifier.
 
-```
-agent cmd <agent id> <command>       A command to run on a remote agent
+ Name   | Description
+ ---    | ---
+ cmd   | Execute a command on the agent", "cmd ping -c 3 8.8.8.8"
+ back   | Return to the main menu
+ download | Download a file from the agent
+ exit   | Exit and close the Merlin server
+ help   | Print help screen
+ info | Display all information about the agent
+ kill | Instruct the agent to die or quit
+ main | Return to the main menu
+ quit   | Exit and close the Merlin server
+ set | Set the value for one of the agent's options (maxretry, padding, skew, sleep)
+ show | Show information about a module or its options (show options or show info)
+ upload | Upload a file to the agent
+  ?      | Print help screen
+  `*`    | Anything else will be execute on the host operating system
 
-agent control <agent id> <command>  Configure/Control a remote agent (not the host)
-                [kill,sleep,padding,maxretry]
+## Module Commands
+These are the commands to configure and execute a module. Tab completion
+ can be used to select options and agents.
 
-agent download <agent id> <remote_file>  Download a file from the agent to the server
-
-agent info <agent id>               Display all information for an agent
-
-agent list                          List agents
-
-agent upload <agent id> <local_file> <target_file> Upload a file from the server to the agent
-
-```
+ Name   | Description
+ ---    | ---
+ back   | Return to the main menu
+ exit   | Exit and close the Merlin server
+ help   | Print help screen
+ main | Return to the main menu
+ quit   | Exit and close the Merlin server
+ run | Run or execute the module
+ set | Set the value for one of the module's options
+ show | Show information about a module or its options (show options or show info)
+ ?      | Print help screen
+ `*`    | Anything else will be execute on the host operating system
 
 ### TLS Certificates
 By default, Merlin will load server.crt and server.key from the

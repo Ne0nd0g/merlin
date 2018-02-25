@@ -319,18 +319,20 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 
 	// Main Menu Completer
 	var main = readline.NewPrefixCompleter(
-		readline.PcItem("help"),
-		readline.PcItem("use",
-			readline.PcItem("module",
-				readline.PcItemDynamic(modules.GetModuleList()),
-			),
-		),
 		readline.PcItem("agent",
 			readline.PcItem("list"),
 			readline.PcItem("interact",
 				readline.PcItemDynamic(agents.GetAgentList()),
 			),
 		),
+		readline.PcItem("banner"),
+		readline.PcItem("help"),
+		readline.PcItem("use",
+			readline.PcItem("module",
+				readline.PcItemDynamic(modules.GetModuleList()),
+			),
+		),
+		readline.PcItem("version"),
 	)
 
 
@@ -389,13 +391,13 @@ func menuHelpMain() {
 	table.SetHeader([]string{"Command", "Options", "Description"})
 
 	data := [][]string{
-		{"agent", "interact, list", "Interact with agents or list agents"},
+		{"agent", "Interact, list", "Interact with agents or list agents"},
 		{"banner", "", "Print the Merlin banner"},
-		{"exit", "", "Exit the Merlin server"},
-		{"quit", "", "Exit the Merlin server"},
-		{"use", "module", "Use a funtion of Merlin"},
+		{"exit", "", "Exit and close the Merlin server"},
+		{"quit", "", "Exit and close the Merlin server"},
+		{"use", "module", "Use a function of Merlin"},
 		{"version", "", "Print the Merlin server version"},
-		{"*", "", "Anything else will be execute on host operating system"},
+		{"*", "", "Anything else will be execute on the host operating system"},
 	}
 
 	table.AppendBulk(data)
@@ -442,7 +444,6 @@ func menuHelpAgent() {
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
-		{"show", "Show information about a module or its options", "info, options"},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 	}
 
