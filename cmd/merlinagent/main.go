@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2017  Russel Van Tuyl
+// Copyright (C) 2018  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -478,6 +478,18 @@ func statusCheckIn(host string, client *http.Client) {
 						color.Red("The provided time was: %s", t.String())
 					}
 				}
+			case "skew":
+				t, err := strconv.ParseInt(p.Args, 10, 64)
+				if err != nil {
+					if verbose {
+						color.Red("[!]There was an error changing the agent skew interval")
+					}
+				}
+				if verbose {
+					color.Yellow("[-]Setting agent skew interval to %d", t)
+				}
+				waitSkew = t
+				agentInfo(host, client)
 			case "padding":
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {

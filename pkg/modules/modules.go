@@ -30,11 +30,12 @@ import (
 	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
-
+	"github.com/satori/go.uuid"
 )
 
 // Module is a structure containing the base information or template for modules
 type Module struct {
+	Agent 	 uuid.UUID // The Agent that will later be associated with this module prior to execution
 	Name     string  	`json:"name"` 	// Name of the module
 	Author   []string 	`json:"author"`	// A list of module authors
 	Path     []string 	`json:"path"`	// Path to the module (i.e. data/modules/powershell/powerview)
@@ -70,6 +71,9 @@ type Powershell struct {
 // Run function returns an array of commands to execute the module on an agent
 func (m *Module) Run() ([]string, error) {
 
+	if m.Agent == uuid.FromStringOrNil("00000000-0000-0000-0000-000000000000") {
+		return nil, errors.New("agent not set for module")
+	}
 	var command = m.Commands
 
 	// Check every 'required' option to make sure it isn't null
@@ -105,6 +109,7 @@ func (m *Module) Run() ([]string, error) {
 
 // ShowOptions function is used to display only a module's configurable options
 func (m *Module) ShowOptions(){
+	color.Cyan(fmt.Sprintf("\r\nAgent: %s\r\n", m.Agent.String()))
 	color.Yellow("\r\nModule options(" + m.Name + ")\r\n\r\n")
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
@@ -115,6 +120,41 @@ func (m *Module) ShowOptions(){
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
 	table.Render()
+}
+
+func (m *Module) GetOptionsList() func(string) []string {
+	return func(line string) []string {
+		o := make([]string, 0)
+		//o = append(o, "agent")
+		for _, v := range m.Options {
+			o = append(o, v.Name)
+		}
+		return o
+	}
+}
+
+func (m *Module) SetOption(option string, value string) (string, error){
+	// Verify this option exists
+	for k, v := range m.Options {
+		if option == v.Name {
+			m.Options[k].Value = value
+			return fmt.Sprintf("%s set to %s", v.Name, v.Value), nil
+		}
+	}
+	return "", errors.New(fmt.Sprintf("invalid module option: %s", option))
+}
+
+func (m *Module) SetAgent(agentUUID string) (string, error){
+	if strings.ToLower(agentUUID) == "all"{
+		agentUUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+	}
+	i, err := uuid.FromString(agentUUID)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("invalid UUID"))
+	} else {
+		m.Agent = i
+	}
+	return fmt.Sprintf("agent set to %s", m.Agent.String()), nil
 }
 
 // ShowInfo function displays all of the information about a module to include items such as authors and options
