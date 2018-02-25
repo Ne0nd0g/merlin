@@ -36,7 +36,6 @@ import (
 )
 
 // Global Variables
-var version = "nonRelease"
 var build = "nonRelease"
 
 func main() {
