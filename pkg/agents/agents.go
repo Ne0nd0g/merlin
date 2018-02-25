@@ -228,7 +228,7 @@ func StatusCheckIn(j messages.Base) messages.Base {
 				Command: command[1],
 				Job:     jobID,
 			}
-			if len(command) > 4 {
+			if len(command) > 2 {
 				p.Args = strings.Join(command[2:], " ")
 			}
 
