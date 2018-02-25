@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2017  Russel Van Tuyl
+// Copyright (C) 2018  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 package main
 
 import (
+	// Standard
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
@@ -37,10 +38,13 @@ import (
 	"io"
 	"path/filepath"
 
+	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agent"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
@@ -58,7 +62,6 @@ var waitTime = 30000 * time.Millisecond
 var agentShell = ""
 var paddingMax = 4096
 var src = rand.NewSource(time.Now().UnixNano())
-var version = "nonRelease"
 var build = "nonRelease"
 var maxRetry = 7
 var failedCheckin = 0
@@ -85,7 +88,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if verbose {
-		color.Yellow("[-]Agent version: %s", version)
+		color.Yellow("[-]Agent version: %s", merlin.Version)
 		color.Yellow("[-]Agent build: %s", build)
 	}
 
@@ -478,6 +481,18 @@ func statusCheckIn(host string, client *http.Client) {
 						color.Red("The provided time was: %s", t.String())
 					}
 				}
+			case "skew":
+				t, err := strconv.ParseInt(p.Args, 10, 64)
+				if err != nil {
+					if verbose {
+						color.Red("[!]There was an error changing the agent skew interval")
+					}
+				}
+				if verbose {
+					color.Yellow("[-]Setting agent skew interval to %d", t)
+				}
+				waitSkew = t
+				agentInfo(host, client)
 			case "padding":
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {
@@ -594,7 +609,7 @@ func randStringBytesMaskImprSrc(n int) string {
 
 func agentInfo(host string, client *http.Client) {
 	i := messages.AgentInfo{
-		Version:       version,
+		Version:       merlin.Version,
 		Build:         build,
 		WaitTime:      waitTime.String(),
 		PaddingMax:    paddingMax,
