@@ -2,7 +2,7 @@
   "base": {
     "type": "standard",
     "name": "Find-BadPrivilege",
-    "author": ["Tobias Nccyrrt (@lordsaibat)", "Tony Pombo"],
+    "author": ["Tobias Mccurry (@lordsaibat)", "Tony Pombo"],
     "path": ["windows", "x64", "powershell", "privesc", "Find-BadPrivilege.json"],
     "platform": "windows",
     "arch": "x64",

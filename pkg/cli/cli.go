@@ -23,6 +23,7 @@ import (
 	"io"
 	"strings"
 	"os"
+	"os/exec"
 	"fmt"
 	"time"
 	"path"
@@ -38,7 +39,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/modules"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
-
+	"github.com/Ne0nd0g/merlin/pkg/banner"
 )
 
 // Global Variables
@@ -96,6 +97,9 @@ func Shell() {
 					if len(cmd) > 1 {
 						menuAgent(cmd[1:])
 					}
+				case "banner":
+					color.Blue(banner.Banner1)
+					color.Blue("\t\t   Version: %s", merlin.Version)
 				case "help":
 					menuHelpMain()
 				case "?":
@@ -106,9 +110,17 @@ func Shell() {
 					exit()
 				case "use":
 					menuUse(cmd[1:])
+				case "version":
+					color.Blue(fmt.Sprintf("Merlin version: %s", merlin.Version))
 				case "":
 				default:
-					message("note", "Invalid command")
+					message("info", "Executing system command...")
+					if len(cmd) > 1 {
+						executeCommand(cmd[0], cmd[1:])
+					} else {
+						var x []string
+						executeCommand(cmd[0], x)
+					}
 				}
 			case "module":
 				switch cmd[0] {
@@ -151,6 +163,14 @@ func Shell() {
 					menuHelpModule()
 				case "?":
 					menuHelpModule()
+				default:
+					message("info", "Executing system command...")
+					if len(cmd) > 1 {
+						executeCommand(cmd[0], cmd[1:])
+					} else {
+						var x []string
+						executeCommand(cmd[0], x)
+					}
 				}
 			case "agent":
 				switch cmd[0] {
@@ -212,6 +232,14 @@ func Shell() {
 					if len(cmd) >1{
 						agents.AddChannel(shellAgent, "upload", cmd[1:])
 						if err != nil {message("warn", err.Error())}
+					}
+				default:
+					message("info", "Executing system command...")
+					if len(cmd) > 1 {
+						executeCommand(cmd[0], cmd[1:])
+					} else {
+						var x []string
+						executeCommand(cmd[0], x)
 					}
 				}
 			}
@@ -294,7 +322,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("help"),
 		readline.PcItem("use",
 			readline.PcItem("module",
-				readline.PcItem("windows\\x64\\powershell\\lateral\\dcom\\Invoke-DCOM"),
+				readline.PcItemDynamic(modules.GetModuleList()),
 			),
 		),
 		readline.PcItem("agent",
@@ -362,9 +390,12 @@ func menuHelpMain() {
 
 	data := [][]string{
 		{"agent", "interact, list", "Interact with agents or list agents"},
-		{"use", "module", "Use a funtion of Merlin"},
+		{"banner", "", "Print the Merlin banner"},
 		{"exit", "", "Exit the Merlin server"},
 		{"quit", "", "Exit the Merlin server"},
+		{"use", "module", "Use a funtion of Merlin"},
+		{"version", "", "Print the Merlin server version"},
+		{"*", "", "Anything else will be execute on host operating system"},
 	}
 
 	table.AppendBulk(data)
@@ -454,4 +485,17 @@ func exit(){
 	os.Exit(0)
 }
 
+func executeCommand(name string, arg []string) {
+	var cmd *exec.Cmd
+
+	cmd = exec.Command(name, arg...)
+
+	out, err := cmd.CombinedOutput()
+
+	if err != nil {
+		message("warn", err.Error())
+	} else {
+		message("success", fmt.Sprintf("%s", out))
+	}
+}
 

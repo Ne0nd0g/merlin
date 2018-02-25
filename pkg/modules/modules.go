@@ -26,11 +26,16 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"path"
+	"path/filepath"
 
 	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/core"
 )
 
 // Module is a structure containing the base information or template for modules
@@ -125,10 +130,37 @@ func (m *Module) ShowOptions(){
 func (m *Module) GetOptionsList() func(string) []string {
 	return func(line string) []string {
 		o := make([]string, 0)
-		//o = append(o, "agent")
 		for _, v := range m.Options {
 			o = append(o, v.Name)
 		}
+		return o
+	}
+}
+
+func GetModuleList() func(string) []string {
+	return func(line string) []string {
+		ModuleDir := path.Join(filepath.ToSlash(core.CurrentDir), "data", "modules")
+		o := make([]string, 0)
+
+		err := filepath.Walk(ModuleDir, func(path string, f os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", ModuleDir, err)
+				return err
+			}
+			if strings.HasSuffix(f.Name(), ".json"){
+				d := strings.SplitAfter(filepath.ToSlash(path), ModuleDir)
+				if len(d) > 0 {
+					m := d[1]
+					m = strings.TrimLeft(m, "/")
+					m = strings.TrimRight(m, ".json")
+					if !strings.Contains(m, "templates"){
+						o = append(o, m)
+					}
+				}
+			}
+			return nil
+		})
+		if err != nil {fmt.Printf("error walking the path %q: %v\n", ModuleDir, err)}
 		return o
 	}
 }
