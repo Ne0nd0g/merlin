@@ -285,7 +285,7 @@ func menuAgent(cmd []string){
 
 func menuSetAgent(agentID uuid.UUID) {
 	for k := range agents.Agents{
-		if agentID == agents.Agents[k].Id {
+		if agentID == agents.Agents[k].ID {
 			shellAgent = agentID
 			prompt.Config.AutoComplete = getCompleter("agent")
 			prompt.SetPrompt("\033[31mMerlin[\033[32magent\033[31m][\033[33m" + shellAgent.String() + "\033[31m]»\033[0m ")

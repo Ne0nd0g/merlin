@@ -172,6 +172,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// StartListener starts an instance of the HTTP/2 server
 func StartListener(port string, ip string, crt string, key string, webpath string) {
 
 	logging.Server("Starting HTTP/2 Listener")

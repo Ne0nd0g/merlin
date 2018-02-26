@@ -23,8 +23,11 @@ import (
 	"math/rand"
 )
 
+// Debug puts Merlin into debug mode and displays debug messages
 var Debug = false
+// Verbose puts Merlin into verbose mode and displays verbose messages
 var Verbose = false
+// CurrentDir is the current directory where Merlin was executed from
 var CurrentDir, _ = os.Getwd()
 var src = rand.NewSource(time.Now().UnixNano())
 
@@ -36,6 +39,7 @@ const (
 	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
+// RandStringBytesMaskImprSrc generates and returns a random string of n characters long
 func RandStringBytesMaskImprSrc(n int) string {
 	// http://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
 	b := make([]byte, n)

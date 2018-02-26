@@ -45,11 +45,13 @@ import (
 )
 
 // Global Variables
-var Agents = make(map[uuid.UUID]*agent) //global map to house agent objects
+
+// Agents contains all of the instantiated agent object that are accessed by other modules
+var Agents = make(map[uuid.UUID]*agent)
 var paddingMax = 4096
 
 type agent struct {
-	Id            uuid.UUID
+	ID            uuid.UUID
 	Platform      string
 	Architecture  string
 	UserName      string
@@ -69,6 +71,7 @@ type agent struct {
 	FailedCheckin int
 }
 
+// InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
 func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
 	//serverLog.WriteString(fmt.Sprintf("[%s]Received new agent checkin from %s\r\n", time.Now(), j.ID))
@@ -103,7 +106,7 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 		panic(err)
 	}
 	// Add custom agent struct to global agents map
-	Agents[j.ID] = &agent{Id: j.ID, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
+	Agents[j.ID] = &agent{ID: j.ID, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
 		Architecture: p.Architecture, Ips: p.Ips,
 		HostName: p.HostName, Pid: p.Pid, channel: make(chan []string, 10),
 		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
@@ -120,6 +123,7 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 	// Add code here to create db record
 }
 
+// StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
 func StatusCheckIn(j messages.Base) messages.Base {
 	// Check to make sure agent UUID is in dataset
 	_, ok := Agents[j.ID]
@@ -333,6 +337,7 @@ func marshalMessage(m interface{}) []byte {
 	return k
 }
 
+// Info is used to update an agent's information with the passed in message data
 func Info(j messages.Base, p messages.AgentInfo) {
 	_, ok := Agents[j.ID]
 
@@ -365,10 +370,12 @@ func Info(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].FailedCheckin = p.FailedCheckin
 }
 
+// Log is used to write log messages to the agent's log file
 func Log (agentID uuid.UUID, logMessage string) {
 	Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now(), logMessage))
 }
 
+// GetAgentList returns a list of agents that exist and is used for command line tab completion
 func GetAgentList() func(string) []string {
 	return func(line string) []string {
 		a := make([]string, 0)
@@ -378,7 +385,6 @@ func GetAgentList() func(string) []string {
 		return a
 	}
 }
-
 
 // AddChannel is the function used to add commands for an agent to run into the channel
 func AddChannel(agentID uuid.UUID, cmdType string, cmd []string) (error) {
@@ -391,7 +397,7 @@ func AddChannel(agentID uuid.UUID, cmdType string, cmd []string) (error) {
 	isAgent := false
 
 	for k := range Agents {
-		if Agents[k].Id == agentID {
+		if Agents[k].ID == agentID {
 			isAgent = true
 		}
 	}
@@ -406,26 +412,26 @@ func AddChannel(agentID uuid.UUID, cmdType string, cmd []string) (error) {
 				s <- c
 			}
 			return nil
-		} else {
-			s := Agents[agentID].channel
-			c := []string{cmdType}
-			c = append(c, cmd...)
-			s <- c
-			return nil
 		}
+		s := Agents[agentID].channel
+		c := []string{cmdType}
+		c = append(c, cmd...)
+		s <- c
+		return nil
 	}
-	return errors.New(fmt.Sprintf("invalid agent ID"))
+	return errors.New("invalid agent ID")
 }
 
 // TODO turn this into a method of the agent struct
 
+// ShowInfo lists all of the agent's structure value in a table
 func ShowInfo(agentID uuid.UUID){
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 
 	data := [][]string{
-		{"ID", Agents[agentID].Id.String()},
+		{"ID", Agents[agentID].ID.String()},
 		{"Platform", Agents[agentID].Platform},
 		{"Architecture", Agents[agentID].Architecture},
 		{"UserName", Agents[agentID].UserName},

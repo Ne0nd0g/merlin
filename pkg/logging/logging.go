@@ -51,6 +51,7 @@ func init() {
 	}
 }
 
+// Server writes a log entry into the server's log file
 func Server(logMessage string){
 	serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", logMessage, time.Now()))
 }

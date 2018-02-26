@@ -67,7 +67,7 @@ type Option struct {
 }
 
 // PowerShell structure is used to describe additional PowerShell features for modules that leverage PowerShell
-type Powershell struct {
+type PowerShell struct {
 	DisableAV bool // Disable Windows Real Time "Set-MpPreference -DisableRealtimeMonitoring $true"
 	Obfuscation bool // Unimplemented command to obfuscated powershell
 	Base64 bool // Base64 encode the powershell command?
@@ -127,6 +127,7 @@ func (m *Module) ShowOptions(){
 	table.Render()
 }
 
+// GetOptionsList generates and returns a list of the module's configurable options. Used with tab completion
 func (m *Module) GetOptionsList() func(string) []string {
 	return func(line string) []string {
 		o := make([]string, 0)
@@ -137,6 +138,7 @@ func (m *Module) GetOptionsList() func(string) []string {
 	}
 }
 
+// GetModuleList generates and returns a list of all modules in Merlin's "module" directory folder. Used with tab completion
 func GetModuleList() func(string) []string {
 	return func(line string) []string {
 		ModuleDir := path.Join(filepath.ToSlash(core.CurrentDir), "data", "modules")
@@ -165,6 +167,7 @@ func GetModuleList() func(string) []string {
 	}
 }
 
+// SetOption is used to change the passed in module option's value. Used when a user is configuring a module
 func (m *Module) SetOption(option string, value string) (string, error){
 	// Verify this option exists
 	for k, v := range m.Options {
@@ -173,19 +176,19 @@ func (m *Module) SetOption(option string, value string) (string, error){
 			return fmt.Sprintf("%s set to %s", v.Name, v.Value), nil
 		}
 	}
-	return "", errors.New(fmt.Sprintf("invalid module option: %s", option))
+	return "", fmt.Errorf("invalid module option: %s", option)
 }
 
+// SetAgent is used to set the agent associated with the module.
 func (m *Module) SetAgent(agentUUID string) (string, error){
 	if strings.ToLower(agentUUID) == "all"{
 		agentUUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	}
 	i, err := uuid.FromString(agentUUID)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("invalid UUID"))
-	} else {
-		m.Agent = i
+		return "", fmt.Errorf("invalid UUID")
 	}
+	m.Agent = i
 	return fmt.Sprintf("agent set to %s", m.Agent.String()), nil
 }
 
@@ -238,11 +241,10 @@ func Create(modulePath string) (Module, error) {
 	// Marshal Base message type
 	if !containsBase {
 		return m, errors.New("the module's definition does not contain the 'BASE' message type")
-	} else {
-		errJson := json.Unmarshal(*moduleJSON["base"], &m)
-		if errJson != nil {
-			return m, errJson
-		}
+	}
+	errJSON := json.Unmarshal(*moduleJSON["base"], &m)
+	if errJSON != nil {
+		return m, errJSON
 	}
 
 	// Check for PowerShell configuration options
@@ -252,7 +254,7 @@ func Create(modulePath string) (Module, error) {
 		case "powershell":
 			k := marshalMessage(*moduleJSON["powershell"])
 			m.Powershell = (*json.RawMessage)(&k)
-			var p Powershell
+			var p PowerShell
 			json.Unmarshal(k, &p)
 		}
 	}
