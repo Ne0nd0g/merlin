@@ -106,8 +106,16 @@ func Shell() {
 					menuHelpMain()
 				case "exit":
 					exit()
+				case "interact":
+					if len(cmd) > 1 {
+						i := []string{"interact"}
+						i = append(i, cmd[1])
+						menuAgent(i)
+					}
 				case "quit":
 					exit()
+				case "sessions":
+					menuAgent([]string{"list"})
 				case "use":
 					menuUse(cmd[1:])
 				case "version":
@@ -327,6 +335,10 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		),
 		readline.PcItem("banner"),
 		readline.PcItem("help"),
+		readline.PcItem("interact",
+			readline.PcItemDynamic(agents.GetAgentList()),
+		),
+		readline.PcItem("sessions"),
 		readline.PcItem("use",
 			readline.PcItem("module",
 				readline.PcItemDynamic(modules.GetModuleList()),
@@ -394,7 +406,9 @@ func menuHelpMain() {
 		{"agent", "Interact, list", "Interact with agents or list agents"},
 		{"banner", "", "Print the Merlin banner"},
 		{"exit", "", "Exit and close the Merlin server"},
+		{"interact", "", "Interact with an agent. Alias for Empire users"},
 		{"quit", "", "Exit and close the Merlin server"},
+		{"sessions", "", "List all agents session information. Alias for MSF users"},
 		{"use", "module", "Use a function of Merlin"},
 		{"version", "", "Print the Merlin server version"},
 		{"*", "", "Anything else will be execute on the host operating system"},

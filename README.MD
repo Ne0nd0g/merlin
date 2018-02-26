@@ -79,7 +79,9 @@ list of all available commands.
  banner | Print the Merlin banner
  exit   | Exit and close the Merlin server
  help   | Print help screen
+ interact | Interact with an agent. Alias for Empire users
  quit   | Exit and close the Merlin server
+ sessions | List all agents session information. Alias for MSF users
  use    | Use a function of Merlin (i.e modules)
  version | Print the Merlin server version
  ?      | Print help screen
