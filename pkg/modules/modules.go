@@ -75,22 +75,23 @@ type PowerShell struct {
 
 // Run function returns an array of commands to execute the module on an agent
 func (m *Module) Run() ([]string, error) {
-
 	if m.Agent == uuid.FromStringOrNil("00000000-0000-0000-0000-000000000000") {
 		return nil, errors.New("agent not set for module")
 	}
-	var command = m.Commands
 
 	// Check every 'required' option to make sure it isn't null
 	for _, v := range m.Options {
 		if v.Required {
 			if v.Value == "" {
-				return command, errors.New(v.Name + " is required")
+				return nil, errors.New(v.Name + " is required")
 			}
 		}
 	}
 
 	// Fill in or remove options values
+	command := make([]string, len(m.Commands))
+	copy(command, m.Commands)
+
 	for k := len(command) - 1; k >= 0; k-- {
 		for _, o := range m.Options {
 			if o.Value != "" && strings.Contains(command[k], "{{" + o.Name + "}}" ){
@@ -106,7 +107,6 @@ func (m *Module) Run() ([]string, error) {
 			} else if o.Value == "" && strings.Contains(command[k], "{{" + o.Name + ".Value}}"){
 				command = append(command[:k], command[k+1:]...)
 			}
-
 		}
 	}
 	return command, nil
