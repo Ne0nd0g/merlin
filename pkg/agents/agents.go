@@ -69,6 +69,7 @@ type agent struct {
 	PaddingMax    int
 	MaxRetry      int
 	FailedCheckin int
+	Skew		  int64
 }
 
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
@@ -350,6 +351,7 @@ func Info(j messages.Base, p messages.AgentInfo) {
 		message("debug",fmt.Sprintf("Agent Version: %s", p.Version))
 		message("debug",fmt.Sprintf("Agent Build: %s", p.Build))
 		message("debug",fmt.Sprintf("Agent waitTime: %s", p.WaitTime))
+		message("debug",fmt.Sprintf("Agent skew: %d", p.Skew))
 		message("debug",fmt.Sprintf("Agent paddingMax: %d", p.PaddingMax))
 		message("debug",fmt.Sprintf("Agent maxRetry: %d", p.MaxRetry))
 		message("debug",fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
@@ -358,6 +360,7 @@ func Info(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Build: %s \r\n", p.Build))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent waitTime: %s \r\n", p.WaitTime))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent skew: %d \r\n", p.Skew))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent paddingMax: %d \r\n", p.PaddingMax))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent maxRetry: %d \r\n", p.MaxRetry))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent failedCheckin: %d \r\n", p.FailedCheckin))
@@ -365,6 +368,7 @@ func Info(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].Version = p.Version
 	Agents[j.ID].Build = p.Build
 	Agents[j.ID].WaitTime = p.WaitTime
+	Agents[j.ID].Skew = p.Skew
 	Agents[j.ID].PaddingMax = p.PaddingMax
 	Agents[j.ID].MaxRetry = p.MaxRetry
 	Agents[j.ID].FailedCheckin = p.FailedCheckin
@@ -438,11 +442,13 @@ func ShowInfo(agentID uuid.UUID){
 		{"User GUID", Agents[agentID].UserGUID},
 		{"Hostname", Agents[agentID].HostName},
 		{"Process ID", strconv.Itoa(Agents[agentID].Pid)},
+		{"IP", fmt.Sprintf("%v", Agents[agentID].Ips)},
 		{"Initial Check In", Agents[agentID].iCheckIn.String()},
 		{"Last Check In", Agents[agentID].sCheckIn.String()},
 		{"Agent Version", Agents[agentID].Version},
 		{"Agent Build", Agents[agentID].Build},
 		{"Agent Wait Time", Agents[agentID].WaitTime},
+		{"Agent Wait Time Skew", fmt.Sprintf(strconv.FormatInt(Agents[agentID].Skew, 10))},
 		{"Agent Message Padding Max", strconv.Itoa(Agents[agentID].PaddingMax)},
 		{"Agent Max Retries", strconv.Itoa(Agents[agentID].MaxRetry)},
 		{"Agent Failed Logins", strconv.Itoa(Agents[agentID].FailedCheckin)},

@@ -80,4 +80,5 @@ type AgentInfo struct {
 	PaddingMax    int    `json:"paddingmax,omitempty"`
 	MaxRetry      int    `json:"maxretry,omitempty"`
 	FailedCheckin int    `json:"failedcheckin,omitempty"`
+	Skew		  int64	 `json:"skew,omitempty"`
 }

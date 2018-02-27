@@ -615,6 +615,7 @@ func agentInfo(host string, client *http.Client) {
 		PaddingMax:    paddingMax,
 		MaxRetry:      maxRetry,
 		FailedCheckin: failedCheckin,
+		Skew:		   waitSkew,
 	}
 
 	payload, errP := json.Marshal(i)
