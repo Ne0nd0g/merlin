@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Menu system from one long command to multiple menus
 - Merlin Server from 1 large file to multiple library files in `pkg`
 - Make file instructions for Merlin version number
+- Agent command execution to send back argument processing errors
 
 
 ## 0.1.3 - 2017-12-17
