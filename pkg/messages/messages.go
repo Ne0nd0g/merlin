@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2017  Russel Van Tuyl
+// Copyright (C) 2018  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,6 +30,14 @@ type Base struct {
 	Padding string      `json:"padding"`
 }
 
+// FileTransfer is the JSON payload to transfer files between the server and agent
+type FileTransfer struct {
+	FileLocation    string `json:"dest"`
+	FileBlob 		string `json:"blob"`
+	IsDownload		bool `json:download`
+	Job      		string `json:"job"`
+}
+
 // CmdPayload is the JSON payload for commands to execute on an agent
 type CmdPayload struct {
 	Command string `json:"executable"`
@@ -39,12 +47,13 @@ type CmdPayload struct {
 
 // SysInfo is a JSON payload containing information about the system where the agent is running
 type SysInfo struct {
-	Platform     string `json:"platform,omitempty"`
-	Architecture string `json:"architecture,omitempty"`
-	UserName     string `json:"username,omitempty"`
-	UserGUID     string `json:"userguid,omitempty"`
-	HostName     string `json:"hostname,omitempty"`
-	Pid          int    `json:"pid,omitempty"`
+	Platform     string   `json:"platform,omitempty"`
+	Architecture string   `json:"architecture,omitempty"`
+	UserName     string   `json:"username,omitempty"`
+	UserGUID     string   `json:"userguid,omitempty"`
+	HostName     string   `json:"hostname,omitempty"`
+	Pid          int      `json:"pid,omitempty"`
+	Ips          []string `json:"ips,omitempty"`
 }
 
 // CmdResults is a JSON payload that contains the results of an executed command from an agent
@@ -71,4 +80,5 @@ type AgentInfo struct {
 	PaddingMax    int    `json:"paddingmax,omitempty"`
 	MaxRetry      int    `json:"maxretry,omitempty"`
 	FailedCheckin int    `json:"failedcheckin,omitempty"`
+	Skew		  int64	 `json:"skew,omitempty"`
 }

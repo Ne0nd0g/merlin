@@ -1,0 +1,30 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Get-InjectedThread",
+    "author": ["Jared Atkinson (@jaredcatkinson)"],
+    "path": ["windows", "x64", "powershell", "detection", "Get-InectedThread"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": true,
+    "notes": "Looks for threads that were created as a result of code injection.",
+    "remote": "https://gist.githubusercontent.com/jaredcatkinson/23905d34537ce4b5b1818c3e6405c1d2/raw/c5e20d54c35d0ef6736793d2504d29b8610e9727/Get-InjectedThread.ps1",
+    "local": ["data", "src", "jaredcatkinson", "gists", "Get-InectedThread.ps1"],
+    "options": [],
+    "description": "Memory resident malware (fileless malware) often uses a form of memory injection to get code execution. Get-InjectedThread looks at each running thread to determine if it is the result of memory injection.\\r\\nCommon memory injection techniques that *can* be caught using this method include:\\r\\n\\t- Classic Injection (OpenProcess, VirtualAllocEx, WriteProcessMemory, CreateRemoteThread)\\r\\n\\t- Reflective DLL Injection\\r\\n\\t- Memory Module\\r\\n\\r\\nNOTE: Nothing in security is a silver bullet. An attacker could modify their tactics to avoid detection using this methodology.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://gist.githubusercontent.com/jaredcatkinson/23905d34537ce4b5b1818c3e6405c1d2/raw/c5e20d54c35d0ef6736793d2504d29b8610e9727/Get-InjectedThread.ps1');",
+      "Get-InjectedThread.ps1",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}

