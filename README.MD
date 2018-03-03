@@ -12,7 +12,7 @@ An introductory blog post can be found here:
 https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a
 
 
-[![asciicast](https://asciinema.org/a/ryljo8qNjHz1JFcFDK7wP6e9I.png)](https://asciinema.org/a/ryljo8qNjHz1JFcFDK7wP6e9I)
+[![asciicast](https://asciinema.org/a/166722.png)](https://asciinema.org/a/166722&speed=2)
 
 ## Getting Started
 The quickest and easiest way to start using Merlin is download the
