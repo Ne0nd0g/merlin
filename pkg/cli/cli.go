@@ -350,6 +350,9 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 
 	// Module Menu
 	var module = readline.NewPrefixCompleter(
+		readline.PcItem("back"),
+		readline.PcItem("help"),
+		readline.PcItem("main"),
 		readline.PcItem("run"),
 		readline.PcItem("show",
 			readline.PcItem("options"),
@@ -400,18 +403,18 @@ func menuHelpMain() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	table.SetHeader([]string{"Command", "Options", "Description"})
+	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
-		{"agent", "Interact, list", "Interact with agents or list agents"},
-		{"banner", "", "Print the Merlin banner"},
-		{"exit", "", "Exit and close the Merlin server"},
-		{"interact", "", "Interact with an agent. Alias for Empire users"},
-		{"quit", "", "Exit and close the Merlin server"},
-		{"sessions", "", "List all agents session information. Alias for MSF users"},
-		{"use", "module", "Use a function of Merlin"},
-		{"version", "", "Print the Merlin server version"},
-		{"*", "", "Anything else will be execute on the host operating system"},
+		{"agent", "Interact with agents or list agents", "interact, list"},
+		{"banner", "Print the Merlin banner", ""},
+		{"exit", "Exit and close the Merlin server", ""},
+		{"interact", "Interact with an agent. Alias for Empire users", ""},
+		{"quit", "Exit and close the Merlin server", ""},
+		{"sessions", "List all agents session information. Alias for MSF users", ""},
+		{"use", "Use a function of Merlin", "module"},
+		{"version", "Print the Merlin server version", ""},
+		{"*", "Anything else will be execute on the host operating system", ""},
 	}
 
 	table.AppendBulk(data)
