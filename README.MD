@@ -1,5 +1,8 @@
 [![GoReportCard](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Release](https://img.shields.io/github/release/Ne0nd0g/merlin.svg)](https://github.com/Ne0nd0g/merlin/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Ne0nd0g/merlin/total.svg)](https://github.com/Ne0nd0g/merlin/releases)
+[![Slack](https://img.shields.io/badge/Slack-Sign--Up-blue.svg)](https://communityinviter.com/apps/merlin-go/merlin)
 
 # Merlin (BETA)
 Merlin is a cross-platform post-exploitation HTTP/2 Command & Control 
@@ -9,7 +12,7 @@ An introductory blog post can be found here:
 https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a
 
 
-[![asciicast](https://asciinema.org/a/ryljo8qNjHz1JFcFDK7wP6e9I.png)](https://asciinema.org/a/ryljo8qNjHz1JFcFDK7wP6e9I)
+[![asciicast](https://asciinema.org/a/166722.png)](https://asciinema.org/a/166722&speed=2)
 
 ## Getting Started
 The quickest and easiest way to start using Merlin is download the
@@ -73,32 +76,57 @@ Merlin is equipped with a tab completion system that can be used to see
 what commands are available at any given time. Hit double tab to get a
 list of all available commands.
 
-```
-
-exit    Exit and close Merlin
-
-help   Show Merlin help menu
-
-quit    Exit and close Merlin
-
-?      Show Merlin help menu
-```
+ Name   | Description
+ ---    | ---
+ agent   | Interact with agents or list agents
+ banner | Print the Merlin banner
+ exit   | Exit and close the Merlin server
+ help   | Print help screen
+ interact | Interact with an agent. Alias for Empire users
+ quit   | Exit and close the Merlin server
+ sessions | List all agents session information. Alias for MSF users
+ use    | Use a function of Merlin (i.e modules)
+ version | Print the Merlin server version
+ ?      | Print help screen
+ `*`    | Anything else will be execute on the host operating system
 
 ## Agent Commands
 These are the commands to control an agent from the server. Tab
 completion can be used to select an Agent's identifier.
 
-```
-agent cmd <agent id> <command>       A command to run on a remote agent
+ Name   | Description
+ ---    | ---
+ cmd   | Execute a command on the agent", "cmd ping -c 3 8.8.8.8"
+ back   | Return to the main menu
+ download | Download a file from the agent
+ exit   | Exit and close the Merlin server
+ help   | Print help screen
+ info | Display all information about the agent
+ kill | Instruct the agent to die or quit
+ main | Return to the main menu
+ quit   | Exit and close the Merlin server
+ set | Set the value for one of the agent's options (maxretry, padding, skew, sleep)
+ show | Show information about a module or its options (show options or show info)
+ upload | Upload a file to the agent
+  ?      | Print help screen
+  `*`    | Anything else will be execute on the host operating system
 
-agent control <agent id> <command>  Configure/Control a remote agent (not the host)
-                [kill,sleep,padding,maxretry]
+## Module Commands
+These are the commands to configure and execute a module. Tab completion
+ can be used to select options and agents.
 
-agent info <agent id>               Display all information for an agent
-
-agent list                          List agents
-
-```
+ Name   | Description
+ ---    | ---
+ back   | Return to the main menu
+ exit   | Exit and close the Merlin server
+ help   | Print help screen
+ main | Return to the main menu
+ quit   | Exit and close the Merlin server
+ run | Run or execute the module
+ set | Set the value for one of the module's options
+ show | Show information about a module or its options (show options or show info)
+ ?      | Print help screen
+ `*`    | Anything else will be execute on the host operating system
 
 ### TLS Certificates
 By default, Merlin will load server.crt and server.key from the

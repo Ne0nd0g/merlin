@@ -1,0 +1,23 @@
+{
+  "base": {
+    "name": "",
+    "author": [""],
+    "path": [""],
+    "platform": "",
+    "arch": "",
+    "lang": "",
+    "privilege": false,
+    "notes": "",
+    "remote": "",
+    "local": [""],
+    "options": [
+      {"name": "", "value": "", "required": true, "flag": "", "description":""},
+      {"name": "", "value": "", "required": false, "flag": "", "description":""}
+    ],
+    "description": "",
+    "commands": [
+      "",
+      ""
+    ]
+  }
+}

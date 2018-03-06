@@ -2,7 +2,7 @@
 
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2017  Russel Van Tuyl
+// Copyright (C) 2018  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 
 	argS, errS := shellwords.Parse(arg)
 	if errS != nil {
-		fmt.Println("There was an error parsing command line argments")
+		return "", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", arg, errS.Error())
 	}
 
 	cmd = exec.Command(name, argS...)

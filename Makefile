@@ -1,20 +1,22 @@
 # !!!MAKE SURE YOUR GOPATH ENVIRONMENT VARIABLE IS SET FIRST!!!
 
 # Merlin Server & Agent version number
-VERSION=0.1.3
+VERSION=0.1.4
 
 MSERVER=merlinServer
 MAGENT=merlinAgent
 PASSWORD=merlin
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/bin/v${VERSION}/
-LDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD}"
-WINAGENTLDFLAGS=-ldflags "-s -X main.version=${VERSION} -X main.build=${BUILD} -H=windowsgui"
+LDFLAGS=-ldflags "-s -X main.build=${BUILD}"
+WINAGENTLDFLAGS=-ldflags "-s -X main.build=${BUILD} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
-F=README.MD LICENSE data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin/README.MD
+F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin/README.MD
 F2=LICENSE
 W=Windows-x64
 L=Linux-x64
+A=Linux-arm
+M=Linux-mips
 D=Darwin-x64
 
 # Make Directory to store executables
@@ -31,6 +33,12 @@ windows: server-windows agent-windows
 # Compile Linux binaries
 linux: server-linux agent-linux
 
+# Compile Arm binaries
+arm: agent-arm
+
+# Compile mips binaries
+mips: agent-mips
+
 # Compile Darwin binaries
 darwin: server-darwin agent-darwin
 
@@ -45,6 +53,14 @@ agent-windows:
 # Compile Server - Linux x64
 server-linux:
 	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${L} cmd/merlinserver/main.go
+
+# Compile Agent - Linux mips
+agent-mips:
+	export GOOS=linux;export GOARCH=mips;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${M} cmd/merlinagent/main.go
+
+# Compile Agent - Linux arm
+agent-arm:
+	export GOOS=linux;export GOARCH=arm;export GOARM=7;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${A} cmd/merlinagent/main.go
 
 # Compile Agent - Linux x64
 agent-linux:
