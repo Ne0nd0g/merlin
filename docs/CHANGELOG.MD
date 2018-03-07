@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 
-## [1.4.0] - 2018-02-xx
+## [0.1.4] - 2018-03-02
 ### Added
 - Time skew to sleep by @ahhh
 - IP address information from agents by @ahhh
