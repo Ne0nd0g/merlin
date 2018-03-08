@@ -64,6 +64,7 @@ accepted and merged into `dev`
 * Error checking should be done as soon as possible
 * Update the usage() function if applicable
 * Ensure log entries are created in the respective log files
+* Update docs/CHANGELOG.MD
 
 # Contributors
 Thank you to everyone that has contributed to Merlin. Your contributions
