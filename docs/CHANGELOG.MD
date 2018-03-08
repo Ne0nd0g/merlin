@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Module reload command to instantiate a new, clean object
 - windows/x64/powershell/privesc/psgetsystem.json module
+- data/modules/linux/x64/bash/credentials/MimiPenguin.json module by @ahhh
 
 ### Changed
 - Updated existing linux modules to use the /bin/sh shell
+- Updated module template file base.json
 
 ### Fixed
 - Null use command caused shell to exit
