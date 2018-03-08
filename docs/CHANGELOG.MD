@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 
 ## [Unreleased]
-
+### Added
+- Module reload command to instantiate a new, clean object
 
 ## [0.1.4] - 2018-03-02
 ### Added
