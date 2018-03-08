@@ -259,11 +259,19 @@ func Shell() {
 }
 
 func menuUse(cmd []string) {
-	switch cmd[0] {
-	case "module":
-		if len(cmd) > 1 {menuSetModule(cmd[1])} else {message("warn","Invalid module")}
-	case "":
-	default:
+	if len(cmd) > 0 {
+		switch cmd[0] {
+		case "module":
+			if len(cmd) > 1 {
+				menuSetModule(cmd[1])
+			} else {
+				message("warn", "Invalid module")
+			}
+		case "":
+		default:
+			color.Yellow("[-]Invalid 'use' command")
+		}
+	} else {
 		color.Yellow("[-]Invalid 'use' command")
 	}
 }
