@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 - Updated existing linux modules to use the /bin/sh shell
 
+### Fixed
+- Null use command caused shell to exit
+
 ## [0.1.4] - 2018-03-02
 ### Added
 - Time skew to sleep by @ahhh
