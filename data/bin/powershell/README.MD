@@ -23,7 +23,14 @@ address into the `url` variable of the `cmd/merlinagent/main.go` prior
 to creating the DLL.
 
 ## Invoke-ReflectivePEInjection
-All of the normal Invoke-ReflectivePEInection.ps1 script is still in
+All of the normal Invoke-ReflectivePEInjection.ps1 script is still in
 place and allows the user to additionally leverage any of the scripts
 original functionality. The only significant change is that the
 `-PEBytes` parameter is not required and will default to merlin.dll.
+
+## Update DLL
+The following steps can be used to update the DLL in the script using
+PowerShell:
+* `$PEBytes = [IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')`
+* `$Base64String = [System.Convert]::ToBase64String($PEBytes)`
+* `(Get-Content data/bin/powershell/Invoke-Merlin.ps1) | foreach-object {$_ -replace '^\$global\:merlin \= (.*)', ('$global:merlin = ' + "'" + $Base64String + "'")} | Set-Content data/bin/powershell/Invoke-Merlin.ps1`
