@@ -7,9 +7,11 @@ was specifically chosen to facilitate use with PowerSploit's
 . Using `VoidFunc` requires no modification to run Merlin's DLL with
 Invoke-ReflectivePEInjection.
 
-It is recommended to compile the DLL on Windows.
-The [TDM-GCC](http://tdm-gcc.tdragon.net/download) 64bit compiler has
-proven to work well during testing.
+If the DLL is compiled on Windows, the
+[TDM-GCC](http://tdm-gcc.tdragon.net/download) 64bit compiler has proven
+ to work well during testing.
+
+If the DLL is compiled on Linux, ensure `MinGW-w64` is installed.
 
 ## Limitations
 It is important to note that the DLL is currently in the
@@ -22,11 +24,14 @@ address into the `url` variable of the `cmd/merlinagent/main.go` prior
 to creating the C archive file.
 
 ## Creating the DLL
+The DLL can be created using the Make file with `make agent-dll`
+
+Alternatively, it can be compiled without Make by following these steps:
 * Create the required C archive file:
-  * `go build -buildmode=c-archive cmd\merlinagent\main.go`
+  * `cd data/bin/dll;go build -buildmode=c-archive ../../../cmd/merlinagentdll/main.go`
 
 * Compile the DLL
-  * `gcc -shared -pthread -o data/bin/dll/merlin.dll data/bin/dll/merlin.c data/bin/dll/main.a -lWinMM -lntdll -lWS2_32`
+  * `gcc -shared -pthread -o merlin.dll merlin.c main.a -lwinmm -lntdll -lws2_32`
 
 You will now have DLL file that you can use with whatever method of
 execution you would like.
