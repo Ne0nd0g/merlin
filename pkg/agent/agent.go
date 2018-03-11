@@ -56,8 +56,8 @@ var build = "nonRelease"
 var initial = false
 
 //TODO this is a duplicate with agents/agents.go, centralize
-// agent is a structure for agent objects. It is not exported to force the use of the New() function
-type agent struct {
+// Agent is a structure for agent objects. It is not exported to force the use of the New() function
+type Agent struct {
 	ID            uuid.UUID
 	Platform      string
 	Architecture  string
@@ -80,9 +80,9 @@ type agent struct {
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(verbose bool, debug bool) agent {
+func New(verbose bool, debug bool) Agent {
 	if debug{message("debug", "Entering agent.init() function")}
-	a := agent {
+	a := Agent {
 		ID: uuid.NewV4(),
 		Platform: runtime.GOOS,
 		Architecture: runtime.GOARCH,
@@ -150,7 +150,7 @@ func New(verbose bool, debug bool) agent {
 }
 
 // Connect instructs an agent to establish communications with the passed in server using the passed in protocol
-func (a *agent) Run(server string, proto string) {
+func (a *Agent) Run(server string, proto string) {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if a.Verbose {
@@ -185,7 +185,7 @@ func (a *agent) Run(server string, proto string) {
 	}
 }
 
-func (a *agent) initialCheckIn(host string, client *http.Client) bool {
+func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 
 	if a.Debug {message("debug","Entering initialCheckIn fuction")}
 
@@ -258,7 +258,7 @@ func (a *agent) initialCheckIn(host string, client *http.Client) bool {
 	return true
 }
 
-func (a *agent) statusCheckIn(host string, client *http.Client) {
+func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	g := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
@@ -596,7 +596,7 @@ func getH2WebClient() *http.Client {
 	return client
 }
 
-func (a *agent) executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
+func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
 	if a.Debug {
 		message("debug", fmt.Sprintf("Received input parameter for executeCommand function: %s", j))
 
@@ -620,7 +620,7 @@ func (a *agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 	return stdout, stderr // TODO return if the output was stdout or stderr and color stderr red on server
 }
 
-func (a *agent) agentInfo(host string, client *http.Client) {
+func (a *Agent) agentInfo(host string, client *http.Client) {
 	i := messages.AgentInfo{
 		Version:       merlin.Version,
 		Build:         build,
