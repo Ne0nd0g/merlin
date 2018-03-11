@@ -10,10 +10,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Module reload command to instantiate a new, clean object
 - windows/x64/powershell/privesc/psgetsystem.json module
 - data/modules/linux/x64/bash/credentials/MimiPenguin.json module by @ahhh
+- Merlin agent DLL
+- Invoke-Merlin PowerShell script
 
 ### Changed
 - Updated existing linux modules to use the /bin/sh shell
 - Updated module template file base.json
+- Make file to support compiling DLL
+- cmd/merlinagent/main.go into several packages and struct in
+pkg/agent/main.go
+- Renamed pkg/agent/agent.go to pkg/agent/exec.go
 
 ### Fixed
 - Null use command caused shell to exit
