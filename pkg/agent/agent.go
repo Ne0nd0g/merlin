@@ -56,6 +56,7 @@ var build = "nonRelease"
 var initial = false
 
 //TODO this is a duplicate with agents/agents.go, centralize
+
 // Agent is a structure for agent objects. It is not exported to force the use of the New() function
 type Agent struct {
 	ID            uuid.UUID
@@ -149,7 +150,7 @@ func New(verbose bool, debug bool) Agent {
 	return a
 }
 
-// Connect instructs an agent to establish communications with the passed in server using the passed in protocol
+// Run instructs an agent to establish communications with the passed in server using the passed in protocol
 func (a *Agent) Run(server string, proto string) {
 	rand.Seed(time.Now().UTC().UnixNano())
 
