@@ -5,11 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased]
+## [Unreleased] [0.5.0]
 ### Added
 - Module reload command to instantiate a new, clean object
 - windows/x64/powershell/privesc/psgetsystem.json module
-- data/modules/linux/x64/bash/credentials/MimiPenguin.json module by @ahhh
+- linux/x64/bash/credentials/MimiPenguin.json module by @ahhh
+- linux/x64/bash/troll/Prank.json module by @ahhh
+- windows/x64/powershell/persistence/Invoke-ADSBackdoor.json
 - Merlin agent DLL
 - Invoke-Merlin PowerShell script
 
@@ -20,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - cmd/merlinagent/main.go into several packages and struct in
 pkg/agent/main.go
 - Renamed pkg/agent/agent.go to pkg/agent/exec.go
+- Version numbers to follow semantic versioning
 
 ### Fixed
 - Null use command caused shell to exit
