@@ -106,7 +106,7 @@ completion can be used to select an Agent's identifier.
  kill | Instruct the agent to die or quit
  main | Return to the main menu
  quit   | Exit and close the Merlin server
- set | Set the value for one of the agent's options (maxretry, padding, skew, sleep)
+ set | Set the value for one of the agent's options (alias, maxretry, padding, skew, sleep)
  show | Show information about a module or its options (show options or show info)
  upload | Upload a file to the agent
   ?      | Print help screen
