@@ -125,7 +125,7 @@ func (m *Module) ShowOptions(){
 	// Check for all agent value first, or else we get a null pointer dereference error
 	if m.Agent.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
 		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
-	} else if agents.Agents[m.Agent].Alias != agents.ALIAS_NOT_SET {
+	} else if agents.Agents[m.Agent].Alias != agents.AliasNotSet {
 		table.Append([]string{"Agent", agents.Agents[m.Agent].Alias, "true", "Agent on which to run module " + m.Name })
 	} else {
 		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
@@ -198,12 +198,10 @@ func (m *Module) SetAgent(agentValue string) (string, error){
 		if val, ok := agents.AgentAliasToID[agentValue]; ok {
 			m.Agent = val
 			return fmt.Sprintf("agent set to %s", agentValue), nil
-		} else {
-			return "", fmt.Errorf("invalid UUID or Alias")
 		}
-	} else {
-		m.Agent = i
+		return "", fmt.Errorf("invalid UUID or Alias")
 	}
+	m.Agent = i
 	return fmt.Sprintf("agent set to %s", m.Agent.String()), nil
 }
 

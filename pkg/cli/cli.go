@@ -318,7 +318,7 @@ func menuSetAgent(agentID uuid.UUID) {
 	var agentHasAlias = false
 	for k := range agents.Agents{
 		if agentID == agents.Agents[k].ID {
-			if agents.Agents[agentID].Alias != agents.ALIAS_NOT_SET {
+			if agents.Agents[agentID].Alias != agents.AliasNotSet {
 				agentHasAlias = true
 			}
 			shellAgent = agentID
