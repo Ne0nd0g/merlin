@@ -216,6 +216,16 @@ func Shell() {
 				case "set":
 					if len(cmd) >1{
 						switch cmd[1]{
+						case "alias":
+							if len(cmd) >2{
+								err := agents.SetAlias(shellAgent, cmd[2:])
+								if err != nil {
+									message("warn", err.Error())
+								} else {
+									{message("success", fmt.Sprintf("Set alias to %s", agents.Agents[shellAgent].Alias))}
+									prompt.SetPrompt("\033[31mMerlin[\033[32magent\033[31m][\033[33m" + agents.Agents[shellAgent].Alias + "\033[31m]»\033[0m ")
+								}
+							}
 						case "maxretry":
 							if len(cmd) >2{
 								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
@@ -254,7 +264,6 @@ func Shell() {
 				}
 			}
 		}
-
 	}
 }
 
@@ -280,10 +289,10 @@ func menuAgent(cmd []string){
 	switch cmd[0] {
 	case "list":
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+		table.SetHeader([]string{"Agent GUID", "Alias", "Platform", "User", "Host", "Transport"})
 		table.SetAlignment(tablewriter.ALIGN_CENTER)
 		for k, v := range agents.Agents {
-			table.Append([]string{k.String(), v.Platform + "/" + v.Architecture, v.UserName,
+			table.Append([]string{k.String(), agents.Agents[k].Alias, v.Platform + "/" + v.Architecture, v.UserName,
 				v.HostName, "HTTP/2"})
 		}
 		fmt.Println()
@@ -293,7 +302,11 @@ func menuAgent(cmd []string){
 		if len(cmd) > 1 {
 			i, errUUID := uuid.FromString(cmd[1])
 			if errUUID != nil {
-				message("warn", fmt.Sprintf("There was an error interacting with agent %s", cmd[1]))
+				if val, ok := agents.AgentAliasToID[cmd[1]]; ok {
+					menuSetAgent(val)
+				} else {
+					message("warn", fmt.Sprintf("There was an error interacting with agent %s", cmd[1]))
+				}
 			} else {
 				menuSetAgent(i)
 			}
@@ -302,11 +315,19 @@ func menuAgent(cmd []string){
 }
 
 func menuSetAgent(agentID uuid.UUID) {
+	var agentHasAlias = false
 	for k := range agents.Agents{
 		if agentID == agents.Agents[k].ID {
+			if agents.Agents[agentID].Alias != agents.ALIAS_NOT_SET {
+				agentHasAlias = true
+			}
 			shellAgent = agentID
 			prompt.Config.AutoComplete = getCompleter("agent")
-			prompt.SetPrompt("\033[31mMerlin[\033[32magent\033[31m][\033[33m" + shellAgent.String() + "\033[31m]»\033[0m ")
+			if agentHasAlias {
+				prompt.SetPrompt("\033[31mMerlin[\033[32magent\033[31m][\033[33m" + agents.Agents[agentID].Alias + "\033[31m]»\033[0m ")
+			} else {
+				prompt.SetPrompt("\033[31mMerlin[\033[32magent\033[31m][\033[33m" + shellAgent.String() + "\033[31m]»\033[0m ")
+			}
 			shellMenuContext = "agent"
 		}
 	}
@@ -388,6 +409,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("kill"),
 		readline.PcItem("main"),
 		readline.PcItem("set",
+			readline.PcItem("alias"),
 			readline.PcItem("maxretry"),
 			readline.PcItem("padding"),
 			readline.PcItem("skew"),

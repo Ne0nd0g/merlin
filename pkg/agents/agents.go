@@ -48,10 +48,13 @@ import (
 
 // Agents contains all of the instantiated agent object that are accessed by other modules
 var Agents = make(map[uuid.UUID]*agent)
+var AgentAliasToID = make(map[string] uuid.UUID)
+var ALIAS_NOT_SET = ""
 var paddingMax = 4096
 
 type agent struct {
 	ID            uuid.UUID
+	Alias 		  string
 	Platform      string
 	Architecture  string
 	UserName      string
@@ -77,7 +80,6 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
 	//serverLog.WriteString(fmt.Sprintf("[%s]Received new agent checkin from %s\r\n", time.Now(), j.ID))
 	if core.Verbose {
-		message("info", fmt.Sprintf("Host ID: %s", j.ID))
 		message("info", fmt.Sprintf("Host ID: %s", j.ID))
 		message("info", fmt.Sprintf("Activity: %s", j.Type))
 		message("info", fmt.Sprintf("Payload: %s", j.Payload))
@@ -107,7 +109,7 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 		panic(err)
 	}
 	// Add custom agent struct to global agents map
-	Agents[j.ID] = &agent{ID: j.ID, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
+	Agents[j.ID] = &agent{ID: j.ID, Alias: ALIAS_NOT_SET, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
 		Architecture: p.Architecture, Ips: p.Ips,
 		HostName: p.HostName, Pid: p.Pid, channel: make(chan []string, 10),
 		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
@@ -384,7 +386,11 @@ func GetAgentList() func(string) []string {
 	return func(line string) []string {
 		a := make([]string, 0)
 		for k := range Agents {
-			a = append(a, k.String())
+			if Agents[k].Alias != ALIAS_NOT_SET {
+				a = append(a, Agents[k].Alias)
+			} else {
+				a = append(a, k.String())
+			}
 		}
 		return a
 	}
@@ -436,6 +442,7 @@ func ShowInfo(agentID uuid.UUID){
 
 	data := [][]string{
 		{"ID", Agents[agentID].ID.String()},
+		{"Alias", Agents[agentID].Alias},
 		{"Platform", Agents[agentID].Platform},
 		{"Architecture", Agents[agentID].Architecture},
 		{"UserName", Agents[agentID].UserName},
@@ -457,6 +464,36 @@ func ShowInfo(agentID uuid.UUID){
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+}
+
+func SetAlias (agentID uuid.UUID, value []string) (error) {
+	// Delete old alias if agent had one
+	if Agents[agentID].Alias != ALIAS_NOT_SET {
+		delete(AgentAliasToID, Agents[agentID].Alias)
+	}
+	// Now set the alias
+	if len(value) == 1{
+		// Check if alias already exists
+		if _, ok := AgentAliasToID[value[0]]; !ok {
+			Agents[agentID].Alias = value[0]
+		} else {
+			return fmt.Errorf("alias: %s can only be used once", value[0])
+		}
+	} else {
+		var inputAlias = ""
+		for x := range value {
+			inputAlias += value[x] + "_"
+		}
+		inputAlias = strings.TrimSuffix(inputAlias, "_")
+		// Check if alias already exists
+		if _, ok := AgentAliasToID[inputAlias]; !ok {
+			Agents[agentID].Alias = inputAlias
+		} else {
+			return fmt.Errorf("alias: %s can only be used once", inputAlias)
+		}
+	}
+	AgentAliasToID[Agents[agentID].Alias] = agentID
+	return nil
 }
 
 // message is used to print a message to the command line

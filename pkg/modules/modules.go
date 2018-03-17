@@ -36,6 +36,7 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/agents"
 )
 
 // Module is a structure containing the base information or template for modules
@@ -114,14 +115,21 @@ func (m *Module) Run() ([]string, error) {
 
 // ShowOptions function is used to display only a module's configurable options
 func (m *Module) ShowOptions(){
-	color.Cyan(fmt.Sprintf("\r\nAgent: %s\r\n", m.Agent.String()))
+	color.Cyan(fmt.Sprintf("\r\nAgent UUID: %s\r\n", m.Agent.String()))
 	color.Yellow("\r\nModule options(" + m.Name + ")\r\n\r\n")
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
-	// TODO add option for agent alias here
-	table.Append([]string{"Agent", m.Agent.String(), strconv.FormatBool(true), "Agent on which to run module " + m.Name })
+
+	// Check for all agent value first, or else we get a null pointer dereference error
+	if m.Agent.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
+	} else if agents.Agents[m.Agent].Alias != agents.ALIAS_NOT_SET {
+		table.Append([]string{"Agent", agents.Agents[m.Agent].Alias, "true", "Agent on which to run module " + m.Name })
+	} else {
+		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
+	}
 	for _, v := range m.Options {
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
@@ -181,15 +189,21 @@ func (m *Module) SetOption(option string, value string) (string, error){
 }
 
 // SetAgent is used to set the agent associated with the module.
-func (m *Module) SetAgent(agentUUID string) (string, error){
-	if strings.ToLower(agentUUID) == "all"{
-		agentUUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+func (m *Module) SetAgent(agentValue string) (string, error){
+	if strings.ToLower(agentValue) == "all"{
+		agentValue = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	}
-	i, err := uuid.FromString(agentUUID)
+	i, err := uuid.FromString(agentValue)
 	if err != nil {
-		return "", fmt.Errorf("invalid UUID")
+		if val, ok := agents.AgentAliasToID[agentValue]; ok {
+			m.Agent = val
+			return fmt.Sprintf("agent set to %s", agentValue), nil
+		} else {
+			return "", fmt.Errorf("invalid UUID or Alias")
+		}
+	} else {
+		m.Agent = i
 	}
-	m.Agent = i
 	return fmt.Sprintf("agent set to %s", m.Agent.String()), nil
 }
 
