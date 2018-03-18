@@ -529,3 +529,6 @@ func executeCommand(name string, arg []string) {
 	}
 }
 
+// TODO add command "agents" to list all connected agents
+// TODO add command "info" for agent and module menu in addition to "show info"
+// TODO create a function to display an agent's status; Green = active, Yellow = missed checkin, Red = missed max retry

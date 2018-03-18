@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Module reload command to instantiate a new, clean object
 - windows/x64/powershell/privesc/psgetsystem.json module
-- linux/x64/bash/credentials/MimiPenguin.json module by @ahhh
-- linux/x64/bash/troll/Prank.json module by @ahhh
-- windows/x64/powershell/persistence/Invoke-ADSBackdoor.json
+- linux/x64/bash/credentials/MimiPenguin.json module (@ahhh)
+- linux/x64/bash/troll/Prank.json module (@ahhh)
+- windows/x64/powershell/persistence/Invoke-ADSBackdoor.json module (@ahhh)
 - Merlin agent DLL
 - Invoke-Merlin PowerShell script
 
@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 pkg/agent/main.go
 - Renamed pkg/agent/agent.go to pkg/agent/exec.go
 - Version numbers to follow semantic versioning
+- Added "agent" to the table for a module's options (@0xada4d)
 
 ### Fixed
 - Null use command caused shell to exit

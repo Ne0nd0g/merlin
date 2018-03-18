@@ -100,3 +100,29 @@ for future development.
  disableav | bool | Should Windows Defender be disabled prior to running the command? | "disableav" : true
  obfuscate | bool | Should the PowerShell command be obfuscated? | "obfuscate": false
  base64     | bool | Should the command be Base64 encoded? | "base64": true
+
+
+ ### TODO
+ * Add persistence module for PowerShell $PROFILE
+ * Add persistence module for Windows Startup
+ * Add persistence module for scheduled task
+ * Add PowerView
+ * Add BloodHound
+ * Create tool download 3rd party scripts by name into /data/src by name or all
+ * Add Invoke-Mimikittenz module
+ * Add Power-Memory module
+ * Add PowerShell-Suite module
+ * Add Inviegh module
+ * Add Invoke-TheHash modules
+ * Add PowerSploit modules
+ * Add Nishang modules
+ * Add Linux Exploit Suggester module pentestmonkey, penturalabs
+ * Add windows-exploit-suggester
+ * Add winsploit as a non-basic Merlin module by porting functionality
+ * https://github.com/slimm609/checksec.sh
+ * Tater.ps1
+ * Create a module for every MITRE ATT&CK
+ * Create a persistence module from https://bohops.com/2018/02/26/leveraging-inf-sct-fetch-execute-techniques-for-bypass-evasion-persistence/
+ * Port this to a Merlin Script https://github.com/harleyQu1nn/AggressorScripts/blob/master/EDR.cna
+ * Add letmein.ps1 from https://github.com/0xdea/tactical-exploitation
+ * Add modules for these code execution methods where applicable https://github.com/pwndizzle/CodeExecutionOnWindows
