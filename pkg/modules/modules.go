@@ -120,7 +120,8 @@ func (m *Module) ShowOptions(){
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
-
+	// TODO add option for agent alias here
+	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
 	for _, v := range m.Options {
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
