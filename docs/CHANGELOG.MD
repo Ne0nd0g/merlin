@@ -17,13 +17,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Updated existing linux modules to use the /bin/sh shell
-- Updated module template file base.json
+- Updated module template file base.json to include _credits_
 - Make file to support compiling DLL
 - cmd/merlinagent/main.go into several packages and struct in
 pkg/agent/main.go
 - Renamed pkg/agent/agent.go to pkg/agent/exec.go
 - Version numbers to follow semantic versioning
 - Added "agent" to the table for a module's options (@0xada4d)
+- Added _credits_ to modules.go
 
 ### Fixed
 - Null use command caused shell to exit
