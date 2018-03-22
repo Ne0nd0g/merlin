@@ -2,7 +2,8 @@
     "base": {
       "type": "standard",
       "name": "Invoke-ADSBackdoor",
-      "author": ["Matt Nelson (@enigma0x3)"],
+      "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+      "credits": ["Matt Nelson (@enigma0x3)"],
       "path": ["windows", "x64", "powershell", "persistence", "Invoke-ADSBackdoor.json"],
       "platform": "windows",
       "arch": "x64",

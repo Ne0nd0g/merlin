@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "Get-InjectedThread",
-    "author": ["Jared Atkinson (@jaredcatkinson)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Jared Atkinson (@jaredcatkinson)"],
     "path": ["windows", "x64", "powershell", "detection", "Get-InectedThread"],
     "platform": "windows",
     "arch": "x64",

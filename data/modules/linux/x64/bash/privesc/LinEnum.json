@@ -1,7 +1,8 @@
 {
   "base": {
     "name": "LinEnum",
-    "author": ["Owen (@rebootuser)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Owen (@rebootuser)"],
     "path": ["linux", "x64", "bash", "privesc", "LinEnum.json"],
     "platform": "linux",
     "arch": "x64",

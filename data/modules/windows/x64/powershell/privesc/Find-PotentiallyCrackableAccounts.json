@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "Find-PotentiallyCrackableAccounts",
-    "author": ["Matan Hart (@machosec)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Matan Hart (@machosec)"],
     "path": ["windows", "x64", "powershell", "privesc", "Find-PotentiallyCrackableAccounts.json"],
     "platform": "windows",
     "arch": "x64",

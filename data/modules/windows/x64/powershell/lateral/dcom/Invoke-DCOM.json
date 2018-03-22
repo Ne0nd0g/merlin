@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "Invoke-DCOM",
-    "author": ["Steve Borosh (@rvrsh3ll)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Steve Borosh (@rvrsh3ll)"],
     "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOM.json"],
     "platform": "windows",
     "arch": "x64",
