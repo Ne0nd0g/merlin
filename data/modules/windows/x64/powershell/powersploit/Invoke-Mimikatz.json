@@ -1,10 +1,8 @@
 {
   "base": {
     "name": "Invoke-Mimikatz",
-    "author": [
-      "Joe Bialek (@JosephBialek)",
-      "Benjamin Delpy (@gentilkiwi)"
-    ],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Joe Bialek (@JosephBialek)", "Benjamin Delpy (@gentilkiwi)"],
     "path": ["windows", "x64", "powershell", "powersploit", "Invoke-Mimikatz.json"],
     "platform": "windows",
     "arch": "x64",

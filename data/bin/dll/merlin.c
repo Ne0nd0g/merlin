@@ -2,5 +2,6 @@
 #include "main.h"
 
 int main() {
-	VoidFunc();
+    Run();
+    return 0;
 }

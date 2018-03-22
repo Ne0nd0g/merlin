@@ -15,7 +15,8 @@ module and its function.
  Name   | Type  | Description | Example
  ---    | ---   | ---   | ---
  name   | string | The name of the module | "name": "MyModuleName"
- author | array of strings  | A list of the module's authors | "author": ["Russel Van Tuyl (@Ne0ndog)", "Victor Garcia"]
+ author | array of strings  | The names of the people that created the Merlin module | "author": ["Russel Van Tuyl (@Ne0ndog)"]
+ credits | array of strings | A list of people to credit for underlying tools or techniques | "credits": ["Will Schroeder (@harmj0y)"]
  path   | array of strings | The file path to the module| "path": ["C", "windows", "system32"]
  platform   | string | The target platform the module can run on | "platform": "linux"
  arch   | string | The target architecture the module can run on | "arch": "x64"

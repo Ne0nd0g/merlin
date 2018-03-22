@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "psgetsystem",
-    "author": ["decoder (@decoder_it)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["decoder (@decoder_it)"],
     "path": ["windows", "x64", "powershell", "privesc", "psgetsystem.json"],
     "platform": "windows",
     "arch": "x64",

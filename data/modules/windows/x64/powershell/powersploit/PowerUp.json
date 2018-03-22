@@ -1,7 +1,8 @@
 {
   "base": {
     "name": "PowerUp",
-    "author": ["Will Schroeder (@harmj0y)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Will Schroeder (@harmj0y)"],
     "path": ["windows", "x64", "powershell", "powersploit", "PowerUp.json"],
     "platform": "windows",
     "arch": "x64",
