@@ -122,10 +122,14 @@ func (m *Module) ShowOptions(){
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
 
-	// Check for all agent value first, or else we get a null pointer dereference error
-	if m.Agent.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+
+	if m.Agent.String() == "00000000-0000-0000-0000-000000000000" {
+		// Account for case when we have no agent
 		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
-	} else if agents.Agents[m.Agent].Alias != agents.AliasNotSet {
+	} else if m.Agent.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		// Check for all agent value first, or else we get a null pointer dereference error
+		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
+	} else if agents.Agents[m.Agent].Alias != "" {
 		table.Append([]string{"Agent", agents.Agents[m.Agent].Alias, "true", "Agent on which to run module " + m.Name })
 	} else {
 		table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })

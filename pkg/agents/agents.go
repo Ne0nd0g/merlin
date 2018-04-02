@@ -50,10 +50,8 @@ import (
 var Agents = make(map[uuid.UUID]*agent)
 // AgentAliasToID contains a mapping of each agent alias to its corresponding UUID
 var AgentAliasToID = make(map[string] uuid.UUID)
-// AliasNotSet is the default alias value given to each agent upon creation
-var AliasNotSet = ""
 var paddingMax = 4096
-
+// Change to name
 type agent struct {
 	ID            uuid.UUID
 	Alias 		  string
@@ -111,7 +109,7 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 		panic(err)
 	}
 	// Add custom agent struct to global agents map
-	Agents[j.ID] = &agent{ID: j.ID, Alias: AliasNotSet, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
+	Agents[j.ID] = &agent{ID: j.ID, Alias: "", UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
 		Architecture: p.Architecture, Ips: p.Ips,
 		HostName: p.HostName, Pid: p.Pid, channel: make(chan []string, 10),
 		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
@@ -388,7 +386,7 @@ func GetAgentList() func(string) []string {
 	return func(line string) []string {
 		a := make([]string, 0)
 		for k := range Agents {
-			if Agents[k].Alias != AliasNotSet {
+			if Agents[k].Alias != "" {
 				a = append(a, Agents[k].Alias)
 			} else {
 				a = append(a, k.String())
@@ -471,7 +469,7 @@ func ShowInfo(agentID uuid.UUID){
 // SetAlias is used to set the Agent alias to a unique value specified by the user
 func SetAlias (agentID uuid.UUID, value []string) (error) {
 	// Delete old alias if agent had one
-	if Agents[agentID].Alias != AliasNotSet {
+	if Agents[agentID].Alias != "" {
 		delete(AgentAliasToID, Agents[agentID].Alias)
 	}
 	// Now set the alias
