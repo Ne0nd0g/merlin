@@ -15,24 +15,6 @@
 			"revisionTime": "2016-10-25T12:05:01Z"
 		},
 		{
-			"checksumSHA1": "bGl82/H2WdwCxhmG1+YViHJsWUE=",
-			"path": "github.com/mattn/go-colorable",
-			"revision": "d228849504861217f796da67fae4f6e347643f15",
-			"revisionTime": "2016-11-03T16:00:40Z"
-		},
-		{
-			"checksumSHA1": "kum8izZy1+pVfDiApW5hT2HoH1w=",
-			"path": "github.com/mattn/go-isatty",
-			"revision": "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c",
-			"revisionTime": "2017-11-07T05:05:31Z"
-		},
-		{
-			"checksumSHA1": "b64yVZEKG21+a/xvcKEvqfai1ik=",
-			"path": "github.com/mattn/go-runewidth",
-			"revision": "97311d9f7767e3d6f422ea06661bc2c7a19e8a5d",
-			"revisionTime": "2017-05-10T07:48:58Z"
-		},
-		{
 			"checksumSHA1": "+a74DVHv7qMIr5BEg1PnPOdgaT4=",
 			"path": "github.com/mattn/go-shellwords",
 			"revision": "95c860c1895b21b58903abdd1d9c591560b0601c",
