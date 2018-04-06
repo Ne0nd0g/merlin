@@ -439,7 +439,6 @@ func menuHelpModule(){
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	// table.SetCaption(true, "Module Menu Help") // TODO Need to upgrade library first
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
@@ -462,7 +461,6 @@ func menuHelpAgent() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	// table.SetCaption(true, "Agent Menu Help") // TODO Need to upgrade library first
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
