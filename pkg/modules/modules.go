@@ -43,6 +43,7 @@ type Module struct {
 	Agent 	 uuid.UUID // The Agent that will later be associated with this module prior to execution
 	Name     string  	`json:"name"` 	// Name of the module
 	Author   []string 	`json:"author"`	// A list of module authors
+	Credits	 []string	`json:"credits"` // A list of people to credit for underlying tool or techniques
 	Path     []string 	`json:"path"`	// Path to the module (i.e. data/modules/powershell/powerview)
 	Platform string 	`json:"platform"`	// Platform the module can run on (i.e. Windows, Linux, Darwin, or ALL)
 	Arch     string 	`json:"arch"`	// The Architecture the module can run on (i.e. x86, x64, MIPS, ARM, or ALL)
@@ -120,7 +121,8 @@ func (m *Module) ShowOptions(){
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
-
+	// TODO add option for agent alias here
+	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
 	for _, v := range m.Options {
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
@@ -200,11 +202,14 @@ func (m *Module) ShowInfo(){
 	for a := range m.Author {
 		color.Yellow("\t%s", m.Author[a])
 	}
+	color.Yellow("Credits:")
+	for c := range m.Credits {
+		color.Yellow("\t%s", m.Credits[c])
+	}
 	color.Yellow("Description:\r\n\t%s", m.Description)
 	m.ShowOptions()
 	fmt.Println()
 	color.Yellow("Notes: %s", m.Notes)
-
 }
 
 // Create is module function used to instantiate a module object using the provided file path to a module's json file

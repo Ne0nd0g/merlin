@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "Invoke-ExcelMacroPivot",
-    "author": ["Matt Nelson (@enigma0x3)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Matt Nelson (@enigma0x3)"],
     "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-ExcelMacroPivot"],
     "platform": "windows",
     "arch": "x64",

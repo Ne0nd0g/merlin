@@ -3,6 +3,7 @@
 [![Release](https://img.shields.io/github/release/Ne0nd0g/merlin.svg)](https://github.com/Ne0nd0g/merlin/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Ne0nd0g/merlin/total.svg)](https://github.com/Ne0nd0g/merlin/releases)
 [![Slack](https://img.shields.io/badge/Slack-Sign--Up-blue.svg)](https://communityinviter.com/apps/merlin-go/merlin)
+[![AppVeyor](https://ci.appveyor.com/api/projects/status/github/Ne0nd0g/merlin?branch=dev&svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin)
 
 # Merlin (BETA)
 Merlin is a cross-platform post-exploitation HTTP/2 Command & Control 
@@ -122,6 +123,7 @@ These are the commands to configure and execute a module. Tab completion
  help   | Print help screen
  main | Return to the main menu
  quit   | Exit and close the Merlin server
+ reload | Reloads the module to a fresh clean state
  run | Run or execute the module
  set | Set the value for one of the module's options
  show | Show information about a module or its options (show options or show info)

@@ -2,6 +2,7 @@
   "base": {
     "type": "standard",
     "name": "Grouper",
+    "credits": ["Russel Van Tuyl (@Ne0nd0g)"],
     "author": ["Mike Loss (@l0ss)"],
     "path": ["windows", "x64", "powershell", "lateral", "gpo", "grouper.json"],
     "platform": "windows",

