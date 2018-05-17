@@ -6,6 +6,11 @@
 [![AppVeyor](https://ci.appveyor.com/api/projects/status/github/Ne0nd0g/merlin?branch=dev&svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin)
 
 # Merlin (BETA)
+
+<p align="center">
+  <img src="https://i.imgur.com/4iKuvuj.jpg" height="30%" width="30%">
+</p>
+
 Merlin is a cross-platform post-exploitation HTTP/2 Command & Control 
 server and agent written in golang.
 
