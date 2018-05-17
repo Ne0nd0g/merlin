@@ -41,8 +41,8 @@ import (
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	if core.Verbose {
-		message("note", fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.Host))
-		logging.Server(fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.Host))
+		message("note", fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.RemoteAddr))
+		logging.Server(fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.RemoteAddr))
 	}
 
 	if core.Debug {
