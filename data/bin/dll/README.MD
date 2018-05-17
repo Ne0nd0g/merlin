@@ -31,7 +31,7 @@ execution you would like.
 The DLL can be executed on a Windows host using the rundll32.exe
 program. An example of using `rundll32` is:
 
-`rundll32 merlin.dll,man` or `rundll32 merlin.dll,Run`
+`rundll32 merlin.dll,main` or `rundll32 merlin.dll,Run`
 
 A different Merlin server _can_ be provided when executing the DLL by
 suppling the target URL as an argument. An example is:
