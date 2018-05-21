@@ -27,6 +27,19 @@ Alternatively, it can be compiled without Make by following these steps:
 You will now have DLL file that you can use with whatever method of
 execution you would like.
 
+## DLL Entry Points
+This table catalogs the exported functions for `merlin.dll` that can be
+used as an entry point when executing the DLL.
+
+| Exported Function | Status | Notes
+--- | --- | ---
+| Run | Working | Main function to execute Merlin agent
+| DllInstall | Partial | Used with regsvr32.exe /i . Handling for `/i` not implemented
+| DllRegisterServer | Working | Used with regsvr32.exe
+| DllUnregisterServer | Working | Used with regsvr32.exe /u
+| ReflectiveLoader | Broken | Used with Metasploit's windows/manage/reflective_dll_inject module
+| VoidFunc | Working | Used with PowerSploit's Invoke-ReflectivePEInjection.ps1
+
 ## Execution with Rundll32.exe
 The DLL can be executed on a Windows host using the rundll32.exe
 program. An example of using `rundll32` is:
