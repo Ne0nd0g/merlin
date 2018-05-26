@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "Get-InjectedThread",
-    "author": ["Jared Atkinson (@jaredcatkinson)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Jared Atkinson (@jaredcatkinson)"],
     "path": ["windows", "x64", "powershell", "detection", "Get-InectedThread"],
     "platform": "windows",
     "arch": "x64",
@@ -18,7 +19,7 @@
       "-nop",
       "-w 0",
       "\"IEX (New-Object Net.WebClient).DownloadString('https://gist.githubusercontent.com/jaredcatkinson/23905d34537ce4b5b1818c3e6405c1d2/raw/c5e20d54c35d0ef6736793d2504d29b8610e9727/Get-InjectedThread.ps1');",
-      "Get-InjectedThread.ps1",
+      "Get-InjectedThread",
       "\""
     ]
   },

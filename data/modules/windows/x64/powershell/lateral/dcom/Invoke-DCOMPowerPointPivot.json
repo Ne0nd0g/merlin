@@ -2,7 +2,8 @@
   "base": {
     "type": "standard",
     "name": "Invoke-DCOMPowerPointPivot",
-    "author": ["(@_nephalem_)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["(@_nephalem_)"],
     "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOMPowerPointPivot"],
     "platform": "windows",
     "arch": "x64",

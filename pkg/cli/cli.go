@@ -151,6 +151,8 @@ func Shell() {
 							if err != nil {message("warn", err.Error())} else {message("success", s)}
 						}
 					}
+				case "reload":
+					menuSetModule(strings.TrimSuffix(strings.Join(shellModule.Path, "/"), ".json"))
 				case "run":
 					r, err := shellModule.Run()
 					if err != nil {
@@ -257,11 +259,19 @@ func Shell() {
 }
 
 func menuUse(cmd []string) {
-	switch cmd[0] {
-	case "module":
-		menuSetModule(cmd[1:])
-	case "":
-	default:
+	if len(cmd) > 0 {
+		switch cmd[0] {
+		case "module":
+			if len(cmd) > 1 {
+				menuSetModule(cmd[1])
+			} else {
+				message("warn", "Invalid module")
+			}
+		case "":
+		default:
+			color.Yellow("[-]Invalid 'use' command")
+		}
+	} else {
 		color.Yellow("[-]Invalid 'use' command")
 	}
 }
@@ -302,9 +312,9 @@ func menuSetAgent(agentID uuid.UUID) {
 	}
 }
 
-func menuSetModule(cmd []string) {
+func menuSetModule(cmd string) {
 	if len(cmd) > 0 {
-		var mPath = path.Join(core.CurrentDir, "data", "modules", cmd[0] + ".json")
+		var mPath = path.Join(core.CurrentDir, "data", "modules", cmd + ".json")
 		s, errModule := modules.Create(mPath)
 		if errModule != nil {
 			message("warn", errModule.Error())
@@ -353,6 +363,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("back"),
 		readline.PcItem("help"),
 		readline.PcItem("main"),
+		readline.PcItem("reload"),
 		readline.PcItem("run"),
 		readline.PcItem("show",
 			readline.PcItem("options"),
@@ -434,6 +445,7 @@ func menuHelpModule(){
 	data := [][]string{
 		{"back", "Return to the main menu", ""},
 		{"main", "Return to the main menu", ""},
+		{"reload", "Reloads the module to a fresh clean state"},
 		{"run","Run or execute the module", ""},
 		{"set", "Set the value for one of the module's options", "<option name> <option value>"},
 		{"show", "Show information about a module or its options", "info, options"},
@@ -517,3 +529,6 @@ func executeCommand(name string, arg []string) {
 	}
 }
 
+// TODO add command "agents" to list all connected agents
+// TODO add command "info" for agent and module menu in addition to "show info"
+// TODO create a function to display an agent's status; Green = active, Yellow = missed checkin, Red = missed max retry

