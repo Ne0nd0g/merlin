@@ -84,39 +84,41 @@ agent-darwin:
 
 # Make directory 'data' and then agents, db, log, x509; Copy src folder, README, and requirements
 package-server-windows:
-	${PACKAGE} ${DIR}/${MSERVER}-${W}-v${VERSION}.7z ${F}
+	${PACKAGE} ${DIR}${MSERVER}-${W}-v${VERSION}.7z ${F}
 	cd ${DIR};${PACKAGE} ${MSERVER}-${W}-v${VERSION}.7z ${MSERVER}-${W}.exe
 
 package-server-linux:
-	${PACKAGE} ${DIR}/${MSERVER}-${L}-v${VERSION}.7z ${F}
+	${PACKAGE} ${DIR}${MSERVER}-${L}-v${VERSION}.7z ${F}
 	cd ${DIR};${PACKAGE} ${MSERVER}-${L}-v${VERSION}.7z ${MSERVER}-${L}
 
 package-server-darwin:
-	${PACKAGE} ${DIR}/${MSERVER}-${D}-v${VERSION}.7z ${F}
+	${PACKAGE} ${DIR}${MSERVER}-${D}-v${VERSION}.7z ${F}
 	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}.dmg
 
 package-agent-windows:
-	${PACKAGE} ${DIR}/${MAGENT}-${W}-v${VERSION}.7z ${F2}
+	${PACKAGE} ${DIR}${MAGENT}-${W}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
 	cp ${DIR}${MAGENT}-${W}.exe ${BIN}windows
 
 package-agent-linux:
-	${PACKAGE} ${DIR}/${MAGENT}-${L}-v${VERSION}.7z ${F2}
+	${PACKAGE} ${DIR}${MAGENT}-${L}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
 	cp ${DIR}${MAGENT}-${L} ${BIN}linux
 	
 package-agent-darwin:
-	${PACKAGE} ${DIR}/${MAGENT}-${D}-v${VERSION}.7z ${F2}
+	${PACKAGE} ${DIR}${MAGENT}-${D}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}.dmg
 	cp ${DIR}${MAGENT}-${D}.dmg ${BIN}darwin
 
 package-agent-dll:
+	${PACKAGE} ${DIR}${MAGENT}-DLL-v${VERSION}.7z ${F2}
+	cd ${DIR};${PACKAGE} ${MAGENT}-DLL-v${VERSION}.7z merlin.dll
 	cp ${DIR}merlin.dll ${BIN}dll
 
-package-all: package-agent-windows package-agent-linux package-agent-darwin package-server-windows package-server-linux package-server-darwin
+package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-server-windows package-server-linux package-server-darwin
 
 clean:
-	$(RM) ${DIR}/merlin*
+	rm -rf ${DIR}*
 
 #Build all files for release distribution
 distro: clean all package-all
