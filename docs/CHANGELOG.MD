@@ -31,6 +31,7 @@ pkg/agent/main.go
 
 ### Fixed
 - Null use command caused shell to exit
+- Module set option verbose output to new value instead of original
 
 ## [0.1.4] - 2018-03-02
 ### Added
