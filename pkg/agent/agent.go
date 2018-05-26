@@ -368,7 +368,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					} else {
 						errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
 						if errF != nil {
-							c.Stderr = err.Error()
+							c.Stderr = errF.Error()
 							if a.Verbose {
 								message("warn", fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
 								message("warn", fmt.Sprintf("%s", errF.Error()))

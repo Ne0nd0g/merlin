@@ -97,7 +97,7 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 		os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
 
 		if core.Verbose {
-			message("note",fmt.Sprintf("[-]Created agent log file at: %s agent_log.txt",
+			message("note",fmt.Sprintf("Created agent log file at: %s agent_log.txt",
 				path.Join(agentsDir, j.ID.String())))
 		}
 	}
