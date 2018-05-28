@@ -33,43 +33,35 @@ import (
 )
 
 // GLOBAL VARIABLES
-var debug = false
-var verbose = false
 var url = "https://127.0.0.1:443/"
-var waitTime = 30000 * time.Millisecond
 var build = "nonRelease"
-var version = false
-var protocol = "h2"
 
 
 func main() {
-
-	flag.BoolVar(&verbose, "v", false, "Enable verbose output")
-	flag.BoolVar(&version, "version", false, "Print the agent version and exit")
-	flag.BoolVar(&debug, "debug", false, "Enable debug output")
+	verbose := flag.Bool("v", false, "Enable verbose output")
+	version := flag.Bool("version", false, "Print the agent version and exit")
+	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
-	flag.StringVar(&protocol, "proto", protocol, "Protocol for the agent to connect with [h2, hq]")
-	flag.DurationVar(&waitTime, "sleep", 30000*time.Millisecond, "Time for agent to sleep")
+	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
+	sleep := flag.Duration( "sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
 
-	if version {
+	if *version {
 		color.Blue(fmt.Sprintf("Merlin Agent Version: %s", merlin.Version))
 		color.Blue(fmt.Sprintf("Merlin Agent Build: %s", build))
 		os.Exit(0)
 	}
 
-	a := agent.New(protocol, verbose, debug)
-	a.WaitTime = waitTime
+	// Setup and run agent
+	a := agent.New(*protocol, *verbose, *debug)
+	a.WaitTime = *sleep
 	a.Run(url)
 }
 
-
-
+// usage prints command line options
 func usage() {
 	fmt.Printf("Merlin Agent\r\n")
 	flag.PrintDefaults()
 	os.Exit(0)
 }
-
-// TODO make flag variables like Merlin Server so they don't need global variables
