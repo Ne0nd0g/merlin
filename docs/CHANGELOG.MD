@@ -4,11 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.5.1] - 2018-05-26
+## [0.6.0] - 2018-05-26
 ### Added
 - Added DSCompromised-Configure-Victim module
 - Added Create-HotKeyLN module
 - Added Get-OSTokenInformation module
+- Added support for QUIC protocol version Q39 to both Server and Agent
+- Added `-proto` command line flag for both Server and Agent
+- Added Server struct with New and Run methods to http2 lib
+- Added `github.com/lucas-clemente/quic-go` & supporting libs to Vendor
+
+
+### Changed
+- Server CLI starts first, then web server
+- Renamed http2 `handler` function to `agentHandler`
+- Agent struct to have `Client` and `UserAgen` fields
+- Default User-Agent for client connections to `Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36`
+- Renamed agent `getH2WebClient` function to `getClient`
 
 ## [0.5.0] - 2018-05-26
 Version numbers changed drastically to start following semantic versioning

