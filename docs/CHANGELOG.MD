@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added DSCompromised-Configure-Victim module
 - Added Create-HotKeyLN module
 - Added Get-OSTokenInformation module
+- Added Invoke-WMILM module
 
 ## [0.5.0] - 2018-05-26
 Version numbers changed drastically to start following semantic versioning
