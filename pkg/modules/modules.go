@@ -175,7 +175,7 @@ func (m *Module) SetOption(option string, value string) (string, error){
 	for k, v := range m.Options {
 		if option == v.Name {
 			m.Options[k].Value = value
-			return fmt.Sprintf("%s set to %s", v.Name, v.Value), nil
+			return fmt.Sprintf("%s set to %s", v.Name, m.Options[k].Value), nil
 		}
 	}
 	return "", fmt.Errorf("invalid module option: %s", option)

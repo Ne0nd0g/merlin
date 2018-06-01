@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
-## [Unreleased] [0.5.0]
+## [0.5.0] - 2018-05-26
+Version numbers changed drastically to start following semantic versioning
 ### Added
 - Module reload command to instantiate a new, clean object
 - windows/x64/powershell/privesc/psgetsystem.json module
@@ -14,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - windows/x64/powershell/persistence/Invoke-ADSBackdoor.json module (@ahhh)
 - Merlin agent DLL
 - Invoke-Merlin PowerShell script
+- Package compiled agents with releases in data/bin directory
 
 ### Changed
 - Updated existing linux modules to use the /bin/sh shell
@@ -25,9 +27,12 @@ pkg/agent/main.go
 - Version numbers to follow semantic versioning
 - Added "agent" to the table for a module's options (@0xada4d)
 - Added _credits_ to modules.go
+- Updated main README.MD
 
 ### Fixed
 - Null use command caused shell to exit
+- Module set option verbose output to new value instead of original
+- Agent upload error message invalid memory address or nil pointer dereference
 
 ## [0.1.4] - 2018-03-02
 ### Added

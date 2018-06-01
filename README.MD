@@ -6,6 +6,11 @@
 [![AppVeyor](https://ci.appveyor.com/api/projects/status/github/Ne0nd0g/merlin?branch=dev&svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin)
 
 # Merlin (BETA)
+
+<p align="center">
+  <img src="https://i.imgur.com/4iKuvuj.jpg" height="30%" width="30%">
+</p>
+
 Merlin is a cross-platform post-exploitation HTTP/2 Command & Control 
 server and agent written in golang.
 
@@ -15,49 +20,28 @@ https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a
 
 [![asciicast](https://asciinema.org/a/166722.png)](https://asciinema.org/a/166722&speed=2)
 
-## Getting Started
-The quickest and easiest way to start using Merlin is download the
-pre-compiled binary files found in the
-[Releases](https://github.com/Ne0nd0g/merlin/releases) section. The
-files are compressed into 7z archives and are password protected to
-prevent Anti-Virus inspection when downloading. The password is
-`merlin`.
+## Quick Start
+1. Download the latest version of Merlin Server from the [releases](https://github.com/Ne0nd0g/merlin/releases) section
+2. Extract the files with 7zip using the `x` function. **The password is: `merlin`**
+3. Start Merlin
+4. Deploy an agent. See [Agent Execution Quick Start Guide](https://github.com/Ne0nd0g/merlin/wiki/Agent-Execution-Quick-Start-Guide) for examples
+5. Pwn, Pivot, Profit
 
-## Install GO
-In order to run Merlin from source, or to compile Merlin yourself, the
-Go programing language must be installed on the system. However, if you
- just want to run a pre-compiled version, you _do not_ need to install
- Go.
+```
+mkdir /opt/merlin;cd /opt/merlin
+wget https://github.com/Ne0nd0g/merlin/releases/download/v0.1.4/merlinServer-Linux-x64-v0.1.4.7z
+7z x merlinServer-Linux-x64-v0.1.4.7z
+sudo ./merlinServer-Linux-x64
+```
 
-Download and install GO: `https://golang.org/doc/install`
+## Misc.
+* To compile Merlin from source, view the [Building or Running from Source](https://github.com/Ne0nd0g/merlin/wiki/Building-or-Running-from-Source) wiki page
+* For a full list of available commands view the [Main Menu](https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Main-Menu), [Agent Menu](https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu), and [Module Menu](https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Module-Menu) wiki pages
+* View the [FAQ](https://github.com/Ne0nd0g/merlin/wiki/FAQ) wiki page for Frequently Asked Questions
+* View the [Blog Posts](https://github.com/Ne0nd0g/merlin/wiki/Blog-Posts) page for additional information
 
-## Download Merlin Server
-> It is recommended to download the compiled binaries from the
-[Releases](https://github.com/Ne0nd0g/merlin/releases) section
-
->Ensure your GOPATH environment variable is
-[set](https://github.com/golang/go/wiki/SettingGOPATH)
-
-Download Merlin with Go
-
-`go get github.com/Ne0nd0g/merlin`
-
-If you want to use git instead of Go, merlin must be in your GOPATH i.e.
-`$GOPATH/src/github.com/Ne0nd0g/merlin`
-
-`cd $GOPATH/src/github.com/Ne0nd0g;git clone https://github.com/Ne0nd0g/merlin/`
-
-## Run Merlin Server
-Merlin Server can be run as a script or compiled and run as a standalone
- binary file.
-
-`go run cmd/merlinserver/main.go`
-
-## Compile Merlin Server
-Compile Merlin into an executable using Make
-`make server-windows` or `make server-linux` or `make server-darwin`
-
-### Merlin Server Usage
+## Merlin Server Command Line Flags
+`./merlinServer-Linux-x64 -h`
 ```
   -debug
         Enable debug output
@@ -72,99 +56,8 @@ Compile Merlin into an executable using Make
         The x509 certificate key for the HTTPS listener (default "C:\\Merlin\\data\\x509\\server.key")
 ```
 
-## Merlin Server Commands
-Merlin is equipped with a tab completion system that can be used to see
-what commands are available at any given time. Hit double tab to get a
-list of all available commands.
-
- Name   | Description
- ---    | ---
- agent   | Interact with agents or list agents
- banner | Print the Merlin banner
- exit   | Exit and close the Merlin server
- help   | Print help screen
- interact | Interact with an agent. Alias for Empire users
- quit   | Exit and close the Merlin server
- sessions | List all agents session information. Alias for MSF users
- use    | Use a function of Merlin (i.e modules)
- version | Print the Merlin server version
- ?      | Print help screen
- `*`    | Anything else will be execute on the host operating system
-
-## Agent Commands
-These are the commands to control an agent from the server. Tab
-completion can be used to select an Agent's identifier.
-
- Name   | Description
- ---    | ---
- cmd   | Execute a command on the agent", "cmd ping -c 3 8.8.8.8"
- back   | Return to the main menu
- download | Download a file from the agent
- exit   | Exit and close the Merlin server
- help   | Print help screen
- info | Display all information about the agent
- kill | Instruct the agent to die or quit
- main | Return to the main menu
- quit   | Exit and close the Merlin server
- set | Set the value for one of the agent's options (maxretry, padding, skew, sleep)
- show | Show information about a module or its options (show options or show info)
- upload | Upload a file to the agent
-  ?      | Print help screen
-  `*`    | Anything else will be execute on the host operating system
-
-## Module Commands
-These are the commands to configure and execute a module. Tab completion
- can be used to select options and agents.
-
- Name   | Description
- ---    | ---
- back   | Return to the main menu
- exit   | Exit and close the Merlin server
- help   | Print help screen
- main | Return to the main menu
- quit   | Exit and close the Merlin server
- reload | Reloads the module to a fresh clean state
- run | Run or execute the module
- set | Set the value for one of the module's options
- show | Show information about a module or its options (show options or show info)
- ?      | Print help screen
- `*`    | Anything else will be execute on the host operating system
-
-### TLS Certificates
-By default, Merlin will load server.crt and server.key from the
-`data/x509/` directory. You must generate your own certificate pair and
-place them in this directory.
-
-### Third Party Libraries
-The 3rd party libraries used with Merlin are kept in the _vendor_
-directory. This project will default to using the library files in that
-folder.
-
-## Running Merlin Agent
-The agent portion of Merlin should be run as a compiled binary file on
-a target host.
-
-> It is recommended to download the compiled binaries from the
-[Releases](https://github.com/Ne0nd0g/merlin/releases) section
-
->Ensure your GOPATH environment variable is set!
-
-Compile Merlin Agent into an executable
-
-`make agent-windows` or `make agent-linux` or `make agent-darwin`
-
-Merlin Agent can also be compiled without Make, using just go. To
-compile Merlin Agent with your hard coded Merlin Server's address, so it
- doesn't have to specified on the command line, include `-ldflags
- -X main.url=https://acme.com:443/`
-
->Example: `go build -o merlinagent.exe -ldflags
-"-X main.url=https://acme.com:443/" cmd/merlinagent/main.go`
-
-Run Merlin Agent as script: `go run cmd/merlinagent/main.go`
-
-### USAGE
-
+## Merlin Agent Command Line Flags
+`./merlinAgent-Linux-x64 -h`
 ```
   -debug
         Enable debug output
@@ -176,3 +69,8 @@ Run Merlin Agent as script: `go run cmd/merlinagent/main.go`
         Full URL for agent to connect to (default "https://127.0.0.1:443")
   -v    Enable verbose output
 ```
+
+## TLS Certificates
+### **`WARNING: You should generate your own TLS certificates and replace the default certificates that ship with Merlin`**
+
+To facilitate ease of use, a TLS X.509 private and public certificate is distributed with Merlin. This allows a user to start using Merlin right away. However, this key is widely distributed and is considered public knowledge. You should generate your own certificates and replace the default certificates that ship with Merlin. The default location for the certificates is the `data/x509` directory. The `openssl` command can be used from a Linux system to generate a key pair.
