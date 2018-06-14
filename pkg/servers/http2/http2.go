@@ -30,6 +30,10 @@ import (
 	"crypto/tls"
 	"strconv"
 	"log"
+	"encoding/pem"
+	"crypto/x509"
+	"crypto/sha1"
+	"encoding/hex"
 
 	// 3rd Party
 	"github.com/fatih/color"
@@ -89,6 +93,38 @@ func New(iface string, port int, protocol string, key string, certificate string
 		message("warn", err.Error())
 		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s",err.Error()))
 		return s, err
+	}
+
+	// Read x.509 Public Key into a variable
+	PEMData, err := ioutil.ReadFile(certificate)
+	if err != nil {
+		message("warn", "There was an error reading the SSL/TLS x509 certificate file")
+		message("warn", err.Error())
+		return s, err
+	}
+
+	// Decode the x.509 Public Key from PEM
+	block, _ := pem.Decode(PEMData)
+	if block == nil {
+		message("warn", "failed to decode PEM block from public key")
+	}
+
+	// Convert the PEM block into a Certificate object
+	pubCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		message("warn", err.Error())
+	}
+
+	// Create SHA1 fingerprint from Certificate
+	sha1Fingerprint := sha1.Sum(pubCert.Raw)
+
+	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+	merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"
+
+	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+	if merlinCRT == hex.EncodeToString(sha1Fingerprint[:]) {
+		message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
 	}
 
 	// Configure TLS
@@ -307,5 +343,3 @@ func message (level string, message string) {
 		color.Red("[_-_]Invalid message level: " + message)
 	}
 }
-
-// TODO print warning if X.509 certificate matches the one distributed with Merlin

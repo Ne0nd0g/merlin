@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - 2018-05-26
+## [0.6.0] - 2018-XX-XX
 ### Added
 - Added DSCompromised-Configure-Victim module
 - Added Create-HotKeyLN module
@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `-proto` command line flag for both Server and Agent
 - Added Server struct with New and Run methods to http2 lib
 - Added `github.com/lucas-clemente/quic-go` & supporting libs to Vendor
+- Added check for publicly distributed Merlin x.509 testing certificate
 
 
 ### Changed
