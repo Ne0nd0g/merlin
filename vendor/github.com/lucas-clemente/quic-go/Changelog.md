@@ -1,9 +1,12 @@
 # Changelog
 
-## v0.8.0 (unreleased)
+## v0.8.0 (2018-06-26)
 
 - Add support for unidirectional streams (for IETF QUIC).
 - Add a `quic.Config` option for the maximum number of incoming streams.
+- Add support for QUIC 42 and 43.
+- Add dial functions that use a context.
+- Multiplex clients on a net.PacketConn, when using Dial(conn).
 
 ## v0.7.0 (2018-02-03)
 

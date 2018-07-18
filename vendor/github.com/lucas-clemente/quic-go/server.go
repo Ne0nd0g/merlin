@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/lucas-clemente/quic-go/internal/crypto"
@@ -19,14 +18,40 @@ import (
 
 // packetHandler handles packets
 type packetHandler interface {
-	Session
-	getCryptoStream() cryptoStreamI
-	handshakeStatus() <-chan error
 	handlePacket(*receivedPacket)
+	Close(error) error
+}
+
+type packetHandlerManager interface {
+	Add(protocol.ConnectionID, packetHandler)
+	Get(protocol.ConnectionID) (packetHandler, bool)
+	Remove(protocol.ConnectionID)
+	Close(error)
+}
+
+type quicSession interface {
+	Session
+	handlePacket(*receivedPacket)
+	getCryptoStream() cryptoStreamI
 	GetVersion() protocol.VersionNumber
 	run() error
 	closeRemote(error)
 }
+
+type sessionRunner interface {
+	onHandshakeComplete(Session)
+	removeConnectionID(protocol.ConnectionID)
+}
+
+type runner struct {
+	onHandshakeCompleteImpl func(Session)
+	removeConnectionIDImpl  func(protocol.ConnectionID)
+}
+
+func (r *runner) onHandshakeComplete(s Session)              { r.onHandshakeCompleteImpl(s) }
+func (r *runner) removeConnectionID(c protocol.ConnectionID) { r.removeConnectionIDImpl(c) }
+
+var _ sessionRunner = &runner{}
 
 // A Listener of QUIC
 type server struct {
@@ -41,17 +66,16 @@ type server struct {
 	certChain crypto.CertChain
 	scfg      *handshake.ServerConfig
 
-	sessionsMutex sync.RWMutex
-	sessions      map[string] /* string(ConnectionID)*/ packetHandler
-	closed        bool
+	sessionHandler packetHandlerManager
 
-	serverError  error
+	serverError error
+
 	sessionQueue chan Session
 	errorChan    chan struct{}
 
-	// set as members, so they can be set in the tests
-	newSession                func(conn connection, v protocol.VersionNumber, connectionID protocol.ConnectionID, sCfg *handshake.ServerConfig, tlsConf *tls.Config, config *Config, logger utils.Logger) (packetHandler, error)
-	deleteClosedSessionsAfter time.Duration
+	sessionRunner sessionRunner
+	// set as a member, so they can be set in the tests
+	newSession func(connection, sessionRunner, protocol.VersionNumber, protocol.ConnectionID, *handshake.ServerConfig, *tls.Config, *Config, utils.Logger) (quicSession, error)
 
 	logger utils.Logger
 }
@@ -59,7 +83,6 @@ type server struct {
 var _ Listener = &server{}
 
 // ListenAddr creates a QUIC server listening on a given address.
-// The listener is not active until Serve() is called.
 // The tls.Config must not be nil, the quic.Config may be nil.
 func ListenAddr(addr string, tlsConf *tls.Config, config *Config) (Listener, error) {
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
@@ -74,7 +97,6 @@ func ListenAddr(addr string, tlsConf *tls.Config, config *Config) (Listener, err
 }
 
 // Listen listens for QUIC connections on a given net.PacketConn.
-// The listener is not active until Serve() is called.
 // The tls.Config must not be nil, the quic.Config may be nil.
 func Listen(conn net.PacketConn, tlsConf *tls.Config, config *Config) (Listener, error) {
 	certChain := crypto.NewCertChain(tlsConf)
@@ -101,19 +123,19 @@ func Listen(conn net.PacketConn, tlsConf *tls.Config, config *Config) (Listener,
 	}
 
 	s := &server{
-		conn:                      conn,
-		tlsConf:                   tlsConf,
-		config:                    config,
-		certChain:                 certChain,
-		scfg:                      scfg,
-		sessions:                  map[string]packetHandler{},
-		newSession:                newSession,
-		deleteClosedSessionsAfter: protocol.ClosedSessionDeleteTimeout,
-		sessionQueue:              make(chan Session, 5),
-		errorChan:                 make(chan struct{}),
-		supportsTLS:               supportsTLS,
-		logger:                    utils.DefaultLogger,
+		conn:           conn,
+		tlsConf:        tlsConf,
+		config:         config,
+		certChain:      certChain,
+		scfg:           scfg,
+		newSession:     newSession,
+		sessionHandler: newPacketHandlerMap(),
+		sessionQueue:   make(chan Session, 5),
+		errorChan:      make(chan struct{}),
+		supportsTLS:    supportsTLS,
+		logger:         utils.DefaultLogger.WithPrefix("server"),
 	}
+	s.setup()
 	if supportsTLS {
 		if err := s.setupTLS(); err != nil {
 			return nil, err
@@ -124,12 +146,19 @@ func Listen(conn net.PacketConn, tlsConf *tls.Config, config *Config) (Listener,
 	return s, nil
 }
 
+func (s *server) setup() {
+	s.sessionRunner = &runner{
+		onHandshakeCompleteImpl: func(sess Session) { s.sessionQueue <- sess },
+		removeConnectionIDImpl:  s.sessionHandler.Remove,
+	}
+}
+
 func (s *server) setupTLS() error {
 	cookieHandler, err := handshake.NewCookieHandler(s.config.AcceptCookie, s.logger)
 	if err != nil {
 		return err
 	}
-	serverTLS, sessionChan, err := newServerTLS(s.conn, s.config, cookieHandler, s.tlsConf, s.logger)
+	serverTLS, sessionChan, err := newServerTLS(s.conn, s.config, s.sessionRunner, cookieHandler, s.tlsConf, s.logger)
 	if err != nil {
 		return err
 	}
@@ -141,16 +170,9 @@ func (s *server) setupTLS() error {
 			case <-s.errorChan:
 				return
 			case tlsSession := <-sessionChan:
-				connID := tlsSession.connID
-				sess := tlsSession.sess
-				s.sessionsMutex.Lock()
-				if _, ok := s.sessions[string(connID)]; ok { // drop this session if it already exists
-					s.sessionsMutex.Unlock()
-					continue
-				}
-				s.sessions[string(connID)] = sess
-				s.sessionsMutex.Unlock()
-				s.runHandshakeAndSession(sess, connID)
+				// The connection ID is a randomly chosen 8 byte value.
+				// It is safe to assume that it doesn't collide with other randomly chosen values.
+				s.sessionHandler.Add(tlsSession.connID, tlsSession.sess)
 			}
 		}
 	}()
@@ -247,7 +269,7 @@ func (s *server) serve() {
 			return
 		}
 		data = data[:n]
-		if err := s.handlePacket(s.conn, remoteAddr, data); err != nil {
+		if err := s.handlePacket(remoteAddr, data); err != nil {
 			s.logger.Errorf("error handling packet: %s", err.Error())
 		}
 	}
@@ -266,27 +288,7 @@ func (s *server) Accept() (Session, error) {
 
 // Close the server
 func (s *server) Close() error {
-	s.sessionsMutex.Lock()
-	if s.closed {
-		s.sessionsMutex.Unlock()
-		return nil
-	}
-	s.closed = true
-
-	var wg sync.WaitGroup
-	for _, session := range s.sessions {
-		if session != nil {
-			wg.Add(1)
-			go func(sess packetHandler) {
-				// session.Close() blocks until the CONNECTION_CLOSE has been sent and the run-loop has stopped
-				_ = sess.Close(nil)
-				wg.Done()
-			}(session)
-		}
-	}
-	s.sessionsMutex.Unlock()
-	wg.Wait()
-
+	s.sessionHandler.Close(nil)
 	err := s.conn.Close()
 	<-s.errorChan // wait for serve() to return
 	return err
@@ -297,7 +299,7 @@ func (s *server) Addr() net.Addr {
 	return s.conn.LocalAddr()
 }
 
-func (s *server) handlePacket(pconn net.PacketConn, remoteAddr net.Addr, packet []byte) error {
+func (s *server) handlePacket(remoteAddr net.Addr, packet []byte) error {
 	rcvTime := time.Now()
 
 	r := bytes.NewReader(packet)
@@ -308,51 +310,71 @@ func (s *server) handlePacket(pconn net.PacketConn, remoteAddr net.Addr, packet 
 	hdr.Raw = packet[:len(packet)-r.Len()]
 	packetData := packet[len(packet)-r.Len():]
 
+	if hdr.IsPublicHeader {
+		return s.handleGQUICPacket(hdr, packetData, remoteAddr, rcvTime)
+	}
+	return s.handleIETFQUICPacket(hdr, packetData, remoteAddr, rcvTime)
+}
+
+func (s *server) handleIETFQUICPacket(hdr *wire.Header, packetData []byte, remoteAddr net.Addr, rcvTime time.Time) error {
 	if hdr.IsLongHeader {
+		if !s.supportsTLS {
+			return errors.New("Received an IETF QUIC Long Header")
+		}
 		if protocol.ByteCount(len(packetData)) < hdr.PayloadLen {
 			return fmt.Errorf("packet payload (%d bytes) is smaller than the expected payload length (%d bytes)", len(packetData), hdr.PayloadLen)
 		}
 		packetData = packetData[:int(hdr.PayloadLen)]
 		// TODO(#1312): implement parsing of compound packets
+
+		switch hdr.Type {
+		case protocol.PacketTypeInitial:
+			go s.serverTLS.HandleInitial(remoteAddr, hdr, packetData)
+			return nil
+		case protocol.PacketTypeHandshake:
+			// nothing to do here. Packet will be passed to the session.
+		default:
+			// Note that this also drops 0-RTT packets.
+			return fmt.Errorf("Received unsupported packet type: %s", hdr.Type)
+		}
 	}
 
-	if hdr.Type == protocol.PacketTypeInitial {
-		if s.supportsTLS {
-			go s.serverTLS.HandleInitial(remoteAddr, hdr, packetData)
-		}
+	session, sessionKnown := s.sessionHandler.Get(hdr.DestConnectionID)
+	if sessionKnown && session == nil {
+		// Late packet for closed session
+		return nil
+	}
+	if !sessionKnown {
+		s.logger.Debugf("Received %s packet for unknown connection %s.", hdr.Type, hdr.DestConnectionID)
 		return nil
 	}
 
-	s.sessionsMutex.RLock()
-	session, sessionKnown := s.sessions[string(hdr.DestConnectionID)]
-	s.sessionsMutex.RUnlock()
+	session.handlePacket(&receivedPacket{
+		remoteAddr: remoteAddr,
+		header:     hdr,
+		data:       packetData,
+		rcvTime:    rcvTime,
+	})
+	return nil
+}
 
+func (s *server) handleGQUICPacket(hdr *wire.Header, packetData []byte, remoteAddr net.Addr, rcvTime time.Time) error {
+	// ignore all Public Reset packets
+	if hdr.ResetFlag {
+		s.logger.Infof("Received unexpected Public Reset for connection %s.", hdr.DestConnectionID)
+		return nil
+	}
+
+	session, sessionKnown := s.sessionHandler.Get(hdr.DestConnectionID)
 	if sessionKnown && session == nil {
 		// Late packet for closed session
 		return nil
 	}
 
-	// ignore all Public Reset packets
-	if hdr.ResetFlag {
-		if sessionKnown {
-			var pr *wire.PublicReset
-			pr, err = wire.ParsePublicReset(r)
-			if err != nil {
-				s.logger.Infof("Received a Public Reset for connection %s. An error occurred parsing the packet.", hdr.DestConnectionID)
-			} else {
-				s.logger.Infof("Received a Public Reset for connection %s, rejected packet number: 0x%x.", hdr.DestConnectionID, pr.RejectedPacketNumber)
-			}
-		} else {
-			s.logger.Infof("Received Public Reset for unknown connection %s.", hdr.DestConnectionID)
-		}
-		return nil
-	}
-
 	// If we don't have a session for this connection, and this packet cannot open a new connection, send a Public Reset
 	// This should only happen after a server restart, when we still receive packets for connections that we lost the state for.
-	// TODO(#943): implement sending of IETF draft style stateless resets
-	if !sessionKnown && (!hdr.VersionFlag && hdr.Type != protocol.PacketTypeInitial) {
-		_, err = pconn.WriteTo(wire.WritePublicReset(hdr.DestConnectionID, 0, 0), remoteAddr)
+	if !sessionKnown && !hdr.VersionFlag {
+		_, err := s.conn.WriteTo(wire.WritePublicReset(hdr.DestConnectionID, 0, 0), remoteAddr)
 		return err
 	}
 
@@ -367,29 +389,30 @@ func (s *server) handlePacket(pconn net.PacketConn, remoteAddr net.Addr, packet 
 	// since the client send a Public Header (only gQUIC has a Version Flag), we need to send a gQUIC Version Negotiation Packet
 	if hdr.VersionFlag && !protocol.IsSupportedVersion(s.config.Versions, hdr.Version) {
 		// drop packets that are too small to be valid first packets
-		if len(packet) < protocol.MinClientHelloSize+len(hdr.Raw) {
+		if len(packetData) < protocol.MinClientHelloSize {
 			return errors.New("dropping small packet with unknown version")
 		}
 		s.logger.Infof("Client offered version %s, sending Version Negotiation Packet", hdr.Version)
-		_, err := pconn.WriteTo(wire.ComposeGQUICVersionNegotiation(hdr.SrcConnectionID, s.config.Versions), remoteAddr)
+		_, err := s.conn.WriteTo(wire.ComposeGQUICVersionNegotiation(hdr.DestConnectionID, s.config.Versions), remoteAddr)
 		return err
 	}
 
-	// This is (potentially) a Client Hello.
-	// Make sure it has the minimum required size before spending any more ressources on it.
-	if !sessionKnown && len(packet) < protocol.MinClientHelloSize+len(hdr.Raw) {
-		return errors.New("dropping small packet for unknown connection")
-	}
-
 	if !sessionKnown {
+		// This is (potentially) a Client Hello.
+		// Make sure it has the minimum required size before spending any more ressources on it.
+		if len(packetData) < protocol.MinClientHelloSize {
+			return errors.New("dropping small packet for unknown connection")
+		}
+
 		version := hdr.Version
 		if !protocol.IsSupportedVersion(s.config.Versions, version) {
 			return errors.New("Server BUG: negotiated version not supported")
 		}
 
 		s.logger.Infof("Serving new connection: %s, version %s from %v", hdr.DestConnectionID, version, remoteAddr)
-		session, err = s.newSession(
-			&conn{pconn: pconn, currentAddr: remoteAddr},
+		sess, err := s.newSession(
+			&conn{pconn: s.conn, currentAddr: remoteAddr},
+			s.sessionRunner,
 			version,
 			hdr.DestConnectionID,
 			s.scfg,
@@ -400,12 +423,12 @@ func (s *server) handlePacket(pconn net.PacketConn, remoteAddr net.Addr, packet 
 		if err != nil {
 			return err
 		}
-		s.sessionsMutex.Lock()
-		s.sessions[string(hdr.DestConnectionID)] = session
-		s.sessionsMutex.Unlock()
+		s.sessionHandler.Add(hdr.DestConnectionID, sess)
 
-		s.runHandshakeAndSession(session, hdr.DestConnectionID)
+		go sess.run()
+		session = sess
 	}
+
 	session.handlePacket(&receivedPacket{
 		remoteAddr: remoteAddr,
 		header:     hdr,
@@ -413,31 +436,4 @@ func (s *server) handlePacket(pconn net.PacketConn, remoteAddr net.Addr, packet 
 		rcvTime:    rcvTime,
 	})
 	return nil
-}
-
-func (s *server) runHandshakeAndSession(session packetHandler, connID protocol.ConnectionID) {
-	go func() {
-		_ = session.run()
-		// session.run() returns as soon as the session is closed
-		s.removeConnection(connID)
-	}()
-
-	go func() {
-		if err := <-session.handshakeStatus(); err != nil {
-			return
-		}
-		s.sessionQueue <- session
-	}()
-}
-
-func (s *server) removeConnection(id protocol.ConnectionID) {
-	s.sessionsMutex.Lock()
-	s.sessions[string(id)] = nil
-	s.sessionsMutex.Unlock()
-
-	time.AfterFunc(s.deleteClosedSessionsAfter, func() {
-		s.sessionsMutex.Lock()
-		delete(s.sessions, string(id))
-		s.sessionsMutex.Unlock()
-	})
 }
