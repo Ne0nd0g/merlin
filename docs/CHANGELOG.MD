@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Job struct, GetMessageForJob function, and AddJob function to agents.go
 - Added GetAgentStatus function to agents.go
 - Added proto and status to table output for agent or session information
+- Added RemoveAgent fuction to agents.go
+- Added remove command to main menu to remove DEAD agents
 
 ### Changed
 - Server CLI starts first, then web server

@@ -432,7 +432,10 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
-		delete(Agents, agentID)
+		err := RemoveAgent(agentID)
+		if err != nil{
+			message("warn",fmt.Sprintf("%s", err.Error()))
+		} else{message("success",fmt.Sprintf("Agent %s was removed from the server", agentID.String()))}
 	case "maxretry":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -533,6 +536,23 @@ func GetAgentStatus(agentID uuid.UUID) string {
 	return status
 }
 
+// RemoveAgent deletes the agent object from Agents map by its ID
+func RemoveAgent(agentID uuid.UUID) error {
+	// Range over to make sure it exists, return error
+	isAgent := false
+	// Verify the passed in agent is known
+	for k := range Agents {
+		if Agents[k].ID == agentID {
+			isAgent = true
+		}
+	}
+	if isAgent {
+		delete(Agents, agentID)
+		return nil
+	}
+	return errors.New(fmt.Sprintf("%s is not a known agent and was not removed", agentID.String()))
+
+}
 // Job is a structure for holding data for single task assigned to a single agent
 type Job struct {
 	ID		string

@@ -114,6 +114,12 @@ func Shell() {
 					}
 				case "quit":
 					exit()
+				case "remove":
+					if len(cmd) > 1 {
+						i := []string{"remove"}
+						i = append(i, cmd[1])
+						menuAgent(i)
+					}
 				case "sessions":
 					menuAgent([]string{"list"})
 				case "use":
@@ -321,6 +327,18 @@ func menuAgent(cmd []string){
 				menuSetAgent(i)
 			}
 		}
+	case "remove":
+		if len(cmd) > 1 {
+			i, errUUID := uuid.FromString(cmd[1])
+			if errUUID != nil {
+				message("warn", fmt.Sprintf("There was an error interacting with agent %s", cmd[1]))
+			} else {
+				errRemove := agents.RemoveAgent(i)
+				if errRemove != nil{
+					message("warn",fmt.Sprintf("%s", errRemove.Error()))
+				} else{message("success",fmt.Sprintf("Agent %s was removed from the server", cmd[1]))}
+			}
+		}
 	}
 }
 
@@ -369,6 +387,9 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("banner"),
 		readline.PcItem("help"),
 		readline.PcItem("interact",
+			readline.PcItemDynamic(agents.GetAgentList()),
+		),
+		readline.PcItem("remove",
 			readline.PcItemDynamic(agents.GetAgentList()),
 		),
 		readline.PcItem("sessions"),
@@ -437,6 +458,7 @@ func menuHelpMain() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
+	table.SetCaption(true, "Main Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
@@ -445,6 +467,7 @@ func menuHelpMain() {
 		{"exit", "Exit and close the Merlin server", ""},
 		{"interact", "Interact with an agent. Alias for Empire users", ""},
 		{"quit", "Exit and close the Merlin server", ""},
+		{"remove", "Remove or delete a DEAD agent from the server"},
 		{"sessions", "List all agents session information. Alias for MSF users", ""},
 		{"use", "Use a function of Merlin", "module"},
 		{"version", "Print the Merlin server version", ""},
@@ -462,7 +485,7 @@ func menuHelpModule(){
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	// table.SetCaption(true, "Module Menu Help") // TODO Need to upgrade library first
+	table.SetCaption(true, "Module Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
@@ -485,7 +508,7 @@ func menuHelpAgent() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	// table.SetCaption(true, "Agent Menu Help") // TODO Need to upgrade library first
+	table.SetCaption(true, "Agent Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
