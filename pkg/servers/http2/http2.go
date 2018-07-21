@@ -157,7 +157,8 @@ func New(iface string, port int, protocol string, key string, certificate string
 			Server: srv,
 			QuicConfig: &quic.Config{
 				KeepAlive: false,
-				IdleTimeout: 2 * time.Minute,
+				IdleTimeout: 168 * time.Hour,
+				RequestConnectionIDOmission: false,
 			},
 		}
 
@@ -245,9 +246,12 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 
 		case "StatusCheckIn":
 			w.Header().Set("Content-Type", "application/json")
-			x := agents.StatusCheckIn(j)
+			x, err := agents.StatusCheckIn(j)
 			if core.Verbose {
 				message("note", fmt.Sprintf("Sending " + x.Type + " message type to agent"))
+			}
+			if err != nil {
+				message("warn", err.Error())
 			}
 			json.NewEncoder(w).Encode(x)
 
@@ -297,9 +301,10 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 						message("warn",fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
 						message("warn",writingErr.Error())
 					} else {
-						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent to %s",
+						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
 							p.FileLocation,
 							len(downloadBlob),
+							j.ID.String(),
 							downloadFile))
 						agents.Log(j.ID, fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from" +
 							" agent to %s",

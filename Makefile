@@ -1,7 +1,7 @@
 # !!!MAKE SURE YOUR GOPATH ENVIRONMENT VARIABLE IS SET FIRST!!!
 
 # Merlin Server & Agent version number
-VERSION=0.5.0
+VERSION=0.6.0
 
 MSERVER=merlinServer
 MAGENT=merlinAgent

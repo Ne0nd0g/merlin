@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Server struct with New and Run methods to http2 lib
 - Added `github.com/lucas-clemente/quic-go` & supporting libs to Vendor
 - Added check for publicly distributed Merlin x.509 testing certificate
-
+- Add Job struct, GetMessageForJob function, and AddJob function to agents.go
 
 ### Changed
 - Server CLI starts first, then web server
@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Agent struct to have `Client` and `UserAgen` fields
 - Default User-Agent for client connections to `Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36`
 - Renamed agent `getH2WebClient` function to `getClient`
+- channel type to Job for agent struct in agents.go
+- agents.StatusCheckIn to return error type
+- QUIC idle timeout to 1 week
+
+### Removed
+- Removed AddChannel function from agents.go
 
 ## [0.5.0] - 2018-05-26
 Version numbers changed drastically to start following semantic versioning

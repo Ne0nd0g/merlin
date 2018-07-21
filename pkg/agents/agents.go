@@ -60,7 +60,7 @@ type agent struct {
 	Ips           []string
 	Pid           int
 	agentLog      *os.File
-	channel       chan []string
+	channel       chan []Job
 	iCheckIn      time.Time
 	sCheckIn      time.Time
 	Version       string
@@ -75,7 +75,6 @@ type agent struct {
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
 func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
-	//serverLog.WriteString(fmt.Sprintf("[%s]Received new agent checkin from %s\r\n", time.Now(), j.ID))
 	if core.Verbose {
 		message("info", fmt.Sprintf("Host ID: %s", j.ID))
 		message("info", fmt.Sprintf("Host ID: %s", j.ID))
@@ -109,7 +108,7 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 	// Add custom agent struct to global agents map
 	Agents[j.ID] = &agent{ID: j.ID, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
 		Architecture: p.Architecture, Ips: p.Ips,
-		HostName: p.HostName, Pid: p.Pid, channel: make(chan []string, 10),
+		HostName: p.HostName, Pid: p.Pid, channel: make(chan []Job, 10),
 		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
 
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now(), j.ID))
@@ -125,28 +124,20 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 }
 
 // StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
-func StatusCheckIn(j messages.Base) messages.Base {
+func StatusCheckIn(j messages.Base) (messages.Base, error) {
 	// Check to make sure agent UUID is in dataset
 	_, ok := Agents[j.ID]
 	if !ok {
 		message("warn", fmt.Sprintf("Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String()))
 		logging.Server(fmt.Sprintf("[Orphaned agent %s has checked in", j.ID.String()))
-		jobID := core.RandStringBytesMaskImprSrc(10)
-		message("note", fmt.Sprintf("Created job %s for agent %s", jobID, j.ID))
-		g := messages.Base{
-			Version: 1.0,
-			ID:      j.ID,
-			Type:    "AgentControl",
-			Padding: core.RandStringBytesMaskImprSrc(paddingMax),
+		job := Job{
+			ID: core.RandStringBytesMaskImprSrc(10),
+			Type: "initialize",
+			Created: time.Now(),
+			Status: "created",
 		}
-		p := messages.AgentControl{
-			Command: "initialize",
-			Job:     jobID,
-		}
-
-		k := marshalMessage(p)
-		g.Payload = (*json.RawMessage)(&k)
-		return g
+		m, mErr := GetMessageForJob(j.ID, job)
+		return m, mErr
 	}
 
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n", time.Now()))
@@ -160,174 +151,26 @@ func StatusCheckIn(j messages.Base) messages.Base {
 	}
 
 	Agents[j.ID].sCheckIn = time.Now()
+	// Check to see if there are any jobs
 	if len(Agents[j.ID].channel) >= 1 {
-		command := <-Agents[j.ID].channel
-		if core.Debug{message("debug",fmt.Sprintf("Channel command string: %s", command))}
-		jobID := core.RandStringBytesMaskImprSrc(10)
-		message("note", fmt.Sprintf("Created job %s for agent %s", jobID, j.ID))
-
-		Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command Type: %s\r\n", time.Now(), command[0]))
-		Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Command: %s\r\n", time.Now(), command[1:]))
-		Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Created job %s for agent %s\r\n", time.Now(), jobID, j.ID))
-
-		m := messages.Base{
-			Version: 1.0,
-			ID:      j.ID,
-			Padding: core.RandStringBytesMaskImprSrc(paddingMax),
-		}
-
+		job := <-Agents[j.ID].channel
 		if core.Debug {
-			message("debug", fmt.Sprintf("Agent command type: %s", command[1]))
+			message("debug", fmt.Sprintf("Channel command string: %s", job))
+			message("debug", fmt.Sprintf("Agent command type: %s", job[0].Type))
 		}
 
-		switch command[0] {
-		case "upload":
-			// TODO add error handling
-			uploadFile, uploadFileErr := ioutil.ReadFile(command[1])
-			if uploadFileErr != nil {
-				message("warn", fmt.Sprintf("There was an error reading %s", command[1]))
-				message("warn", uploadFileErr.Error())
-				m.Type = "ServerOk"
-				return m
-			}
-			fileHash := sha1.New()
-			io.WriteString(fileHash, string(uploadFile))
-			Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d" +
-				" bytes and SHA-1: %x to agent at %s\r\n",
-				time.Now(),
-				command[1],
-				len(uploadFile),
-				fileHash.Sum(nil),
-				command[2]))
-
-			p := messages.FileTransfer{
-				FileLocation: command[2],
-				FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
-				IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
-				Job:          jobID,
-			}
-
-			k := marshalMessage(p)
-			m.Type = "FileTransfer"
-			m.Payload = (*json.RawMessage)(&k)
-
-			return m
-		case "download":
-			Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
-				time.Now(),
-				command[1]))
-
-			p := messages.FileTransfer{
-				FileLocation:	command[1],
-				Job:      		jobID,
-				IsDownload: false,
-			}
-
-			k := marshalMessage(p)
-			m.Type = "FileTransfer"
-			m.Payload = (*json.RawMessage)(&k)
-
-			return m
-		case "cmd":
-			p := messages.CmdPayload{
-				Command: command[1],
-				Job:     jobID,
-			}
-			if len(command) > 2 {
-				p.Args = strings.Join(command[2:], " ")
-			}
-
-			k := marshalMessage(p)
-			m.Type = "CmdPayload"
-			m.Payload = (*json.RawMessage)(&k)
-
-			return m
-		case "AgentControl":
-			switch command[1] {
-			case "skew":
-				p := messages.AgentControl{
-					Command: command[1],
-					Job:     jobID,
-				}
-
-				if len(command) == 3 {
-					p.Args = command[2]
-				}
-				k := marshalMessage(p)
-				m.Type = "AgentControl"
-				m.Payload = (*json.RawMessage)(&k)
-				return m
-			case "sleep":
-				p := messages.AgentControl{
-					Command: command[1],
-					Job:     jobID,
-				}
-
-				if len(command) == 3 {
-					p.Args = command[2]
-				}
-				k := marshalMessage(p)
-				m.Type = "AgentControl"
-				m.Payload = (*json.RawMessage)(&k)
-				return m
-			case "padding":
-				p := messages.AgentControl{
-					Command: command[1],
-					Job:     jobID,
-				}
-
-				if len(command) == 3 {
-					p.Args = command[2]
-				}
-				k := marshalMessage(p)
-				m.Type = "AgentControl"
-				m.Payload = (*json.RawMessage)(&k)
-				return m
-			case "maxretry":
-				p := messages.AgentControl{
-					Command: command[1],
-					Job:     jobID,
-				}
-
-				if len(command) == 3 {
-					p.Args = command[2]
-				}
-				k := marshalMessage(p)
-				m.Type = "AgentControl"
-				m.Payload = (*json.RawMessage)(&k)
-				return m
-			}
-			m.Type = "ServerOk"
-			return m
-		case "kill":
-			p := messages.AgentControl{
-				Command: command[1],
-				Job:     jobID,
-			}
-
-			k := marshalMessage(p)
-			m.Type = "AgentControl"
-			m.Payload = (*json.RawMessage)(&k)
-
-			delete(Agents, j.ID)
-
-			return m
-
-		default:
-			m.Type = "ServerOk"
-			return m
-		}
+		m, mErr := GetMessageForJob(j.ID, job[0])
+		return m, mErr
 	} else {
-		g := messages.Base{
+		m := messages.Base{
 			Version: 1.0,
 			ID:      j.ID,
 			Type:    "ServerOk",
 			Padding: core.RandStringBytesMaskImprSrc(paddingMax),
 		}
-		return g
+		return m,nil
 	}
-
-}
+	}
 
 func marshalMessage(m interface{}) []byte {
 	k, err := json.Marshal(m)
@@ -390,44 +233,6 @@ func GetAgentList() func(string) []string {
 	}
 }
 
-// AddChannel is the function used to add commands for an agent to run into the channel
-func AddChannel(agentID uuid.UUID, cmdType string, cmd []string) (error) {
-	if core.Debug{
-		message("debug", fmt.Sprintf("In agents.AddChannel function for agent: %s", agentID.String()))
-		message("debug", fmt.Sprintf("In agents.AddChannel function for type: %s", cmdType))
-		message("debug", fmt.Sprintf("In agents.AddChannel function for command: %s", cmd))
-	}
-
-	isAgent := false
-
-	for k := range Agents {
-		if Agents[k].ID == agentID {
-			isAgent = true
-		}
-	}
-	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{isAgent = true}
-
-	if isAgent {
-		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{
-			for k := range Agents {
-				s := Agents[k].channel
-				c := []string{cmdType}
-				c = append(c, cmd...)
-				s <- c
-			}
-			return nil
-		}
-		s := Agents[agentID].channel
-		c := []string{cmdType}
-		c = append(c, cmd...)
-		s <- c
-		return nil
-	}
-	return errors.New("invalid agent ID")
-}
-
-// TODO turn this into a method of the agent struct
-
 // ShowInfo lists all of the agent's structure value in a table
 func ShowInfo(agentID uuid.UUID){
 
@@ -477,4 +282,194 @@ func message (level string, message string) {
 	}
 }
 
+// AddJob creates a job and adds it to the specified agent's channel and return the Job ID or an error
+func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error){
+	// TODO turn this into a method of the agent struct
+	if core.Debug{
+		message("debug", fmt.Sprintf("In agents.AddJob function for agent: %s", agentID.String()))
+		message("debug", fmt.Sprintf("In agents.AddJob function for type: %s", jobType))
+		message("debug", fmt.Sprintf("In agents.AddJob function for command: %s", jobArgs))
+	}
+
+	isAgent := false
+	// Verify the passed in agent is known
+	for k := range Agents {
+		if Agents[k].ID == agentID {
+			isAgent = true
+		}
+	}
+	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{isAgent = true}
+
+	if isAgent {
+		job := Job{
+			Type: jobType,
+			Status: "created",
+			Args: jobArgs,
+			Created: time.Now(),
+		}
+
+		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{
+			for k := range Agents {
+				s := Agents[k].channel
+				job.ID = core.RandStringBytesMaskImprSrc(10)
+				s <- []Job{job}
+				Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, " +
+					"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
+			}
+			return job.ID, nil
+		}
+		job.ID = core.RandStringBytesMaskImprSrc(10)
+		s := Agents[agentID].channel
+		s <- []Job{job}
+		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, " +
+			"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
+		return job.ID, nil
+	}
+	return "", errors.New("invalid agent ID")
+}
+
+// GetMessageForJob returns a Message Base structure for the provided job type
+func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
+	// TODO should be moved to messages library
+	m := messages.Base{
+		Version: 1.0,
+		ID:      agentID,
+		Padding: core.RandStringBytesMaskImprSrc(paddingMax), // TODO shouldn't this be the agent.PaddingMax?
+	}
+	switch job.Type {
+	case "cmd":
+		m.Type = "CmdPayload"
+		p := messages.CmdPayload{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+		if len(job.Args) > 1 {
+			p.Args = strings.Join(job.Args[1:], " ")
+		}
+
+		k := marshalMessage(p)
+		m.Type = "CmdPayload"
+		m.Payload = (*json.RawMessage)(&k)
+	case "download":
+		m.Type = "FileTransfer"
+		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
+			time.Now(),
+			job.Args[0]))
+
+		p := messages.FileTransfer{
+			FileLocation:	job.Args[0],
+			Job:      		job.ID,
+			IsDownload: false,
+		}
+
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "initialize":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Type,
+			Job:     job.ID,
+		}
+		// TODO I think I can move these last two steps to outside the case statement
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "kill":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+		delete(Agents, agentID)
+	case "maxretry":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+		k := marshalMessage(p)
+
+		m.Payload = (*json.RawMessage)(&k)
+	case "padding":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "skew":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "sleep":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "upload":
+		m.Type = "FileTransfer"
+		// TODO add error handling; check 2 args (src, dst)
+		uploadFile, uploadFileErr := ioutil.ReadFile(job.Args[0])
+		if uploadFileErr != nil {
+			// TODO send "ServerOK"
+			return m, errors.New(fmt.Sprintf("There was an error reading %s: %s", job.Type, uploadFileErr.Error()))
+		}
+		fileHash := sha1.New()
+		io.WriteString(fileHash, string(uploadFile))
+		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d" +
+			" bytes and SHA-1: %x to agent at %s\r\n",
+			time.Now(),
+			job.Args[0],
+			len(uploadFile),
+			fileHash.Sum(nil),
+			job.Args[1]))
+
+		p := messages.FileTransfer{
+			FileLocation: job.Args[1],
+			FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
+			IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
+			Job:          job.ID,
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	default:
+		m.Type = "ServerOk"
+		return m, errors.New("invalid job type, sending ServerOK")
+	}
+	return m, nil
+}
+
+// Job is a structure for holding data for single task assigned to a single agent
+type Job struct {
+	ID		string
+	Type 	string
+	Status 	string		// Valid Statuses are created, sent, returned //TODO this might not be needed
+	Args 	[]string
+	Created	time.Time
+}
 // TODO configure all message to be displayed on the CLI to be returned as errors and not written to the CLI here

