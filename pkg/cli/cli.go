@@ -147,6 +147,8 @@ func Shell() {
 							shellModule.ShowOptions()
 						}
 					}
+				case "info":
+					shellModule.ShowInfo()
 				case "set":
 					if len(cmd) > 2 {
 						if cmd[1] == "agent"{
@@ -406,6 +408,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 	var module = readline.NewPrefixCompleter(
 		readline.PcItem("back"),
 		readline.PcItem("help"),
+		readline.PcItem("info"),
 		readline.PcItem("main"),
 		readline.PcItem("reload"),
 		readline.PcItem("run"),
@@ -490,6 +493,7 @@ func menuHelpModule(){
 
 	data := [][]string{
 		{"back", "Return to the main menu", ""},
+		{"info", "Show information about a module"},
 		{"main", "Return to the main menu", ""},
 		{"reload", "Reloads the module to a fresh clean state"},
 		{"run","Run or execute the module", ""},

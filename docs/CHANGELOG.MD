@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added proto and status to table output for agent or session information
 - Added RemoveAgent fuction to agents.go
 - Added remove command to main menu to remove DEAD agents
+- Added info command to module menu as a shortcut for show info
 
 ### Changed
 - Server CLI starts first, then web server
