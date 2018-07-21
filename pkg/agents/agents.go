@@ -61,8 +61,8 @@ type agent struct {
 	Pid           int
 	agentLog      *os.File
 	channel       chan []Job
-	iCheckIn      time.Time
-	sCheckIn      time.Time
+	InitialCheckIn      time.Time
+	StatusCheckIn      time.Time
 	Version       string
 	Build         string
 	WaitTime      string
@@ -70,20 +70,55 @@ type agent struct {
 	MaxRetry      int
 	FailedCheckin int
 	Skew		  int64
+	Proto		  string
 }
 
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
-func InitialCheckIn(j messages.Base, p messages.SysInfo) {
+func InitialCheckIn(j messages.Base) {
+	if core.Debug{
+		message("debug", "Entering into agents.InitialCheckIn function")
+		message("debug", fmt.Sprintf("Base Message Type: %s", j.Type))
+		message("debug", fmt.Sprintf("Base Message Payload: %s", j.Payload))
+}
 	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
+
+	// Unmarshal AgentInfo from Base
+	var agentInfo messages.AgentInfo
+	agentInfoPayload, errAgentInfoPayload := json.Marshal(j.Payload)
+	if errAgentInfoPayload != nil{
+		message("warn", fmt.Sprintf("There was an error marshalling the messages.Base Payload: %s",
+			errAgentInfoPayload.Error()))
+		return
+	}
+	errA := json.Unmarshal(agentInfoPayload, &agentInfo)
+	if errA != nil{
+		message("warn", fmt.Sprintf("There was an error unmarshaling the AgentInfo message: %s", errA.Error()))
+		return
+	}
+
+	// Unmarshal SysInfo from AgentInfo
+	var sysInfo messages.SysInfo
+	sysInfoPayload, errSysInfoPayload := json.Marshal(agentInfo.SysInfo)
+	if errSysInfoPayload != nil{
+		message("warn", fmt.Sprintf("There was an error marshalling the SysInfo Payload of the AgentInfo" +
+			" message: %s", errSysInfoPayload.Error()))
+		return
+	}
+	errS := json.Unmarshal(sysInfoPayload, &sysInfo)
+	if errS != nil{
+		message("warn", fmt.Sprintf("There was an error unmarshaling the SysInfo message: %s",
+			errS.Error()))
+		return
+	}
+
 	if core.Verbose {
-		message("info", fmt.Sprintf("Host ID: %s", j.ID))
-		message("info", fmt.Sprintf("Host ID: %s", j.ID))
-		message("info", fmt.Sprintf("Activity: %s", j.Type))
-		message("info", fmt.Sprintf("Payload: %s", j.Payload))
-		message("info", fmt.Sprintf("Platform: %s", p.Platform))
-		message("info", fmt.Sprintf("Architecture: %s", p.Architecture))
-		message("info", fmt.Sprintf("Username: %s", p.UserName))
-		message("info", fmt.Sprintf("IpAddrs: %v", p.Ips))
+		message("info", fmt.Sprintf("Agent UUID: %s", j.ID))
+		message("info", fmt.Sprintf("Agent Proto: %s", agentInfo.Proto))
+		message("info", fmt.Sprintf("Platform: %s", sysInfo.Platform))
+		message("info", fmt.Sprintf("Architecture: %s", sysInfo.Architecture))
+		message("info", fmt.Sprintf("Hostname: %s", sysInfo.HostName))
+		message("info", fmt.Sprintf("Username: %s", sysInfo.UserName))
+		message("info", fmt.Sprintf("IpAddrs: %v", sysInfo.Ips))
 	}
 	// TODO move currentDir to a core library
 	agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
@@ -106,21 +141,32 @@ func InitialCheckIn(j messages.Base, p messages.SysInfo) {
 		panic(err)
 	}
 	// Add custom agent struct to global agents map
-	Agents[j.ID] = &agent{ID: j.ID, UserName: p.UserName, UserGUID: p.UserGUID, Platform: p.Platform,
-		Architecture: p.Architecture, Ips: p.Ips,
-		HostName: p.HostName, Pid: p.Pid, channel: make(chan []Job, 10),
-		agentLog: f, iCheckIn: time.Now(), sCheckIn: time.Now()}
+	Agents[j.ID] = &agent{
+		Version: agentInfo.Version, Build: agentInfo.Build, WaitTime: agentInfo.WaitTime, 
+		PaddingMax: agentInfo.PaddingMax, MaxRetry: agentInfo.MaxRetry, FailedCheckin: agentInfo.FailedCheckin,
+		Skew: agentInfo.Skew, Proto: agentInfo.Proto,
+		ID: j.ID, UserName: sysInfo.UserName, UserGUID: sysInfo.UserGUID, Platform: sysInfo.Platform,
+		Architecture: sysInfo.Architecture, Ips: sysInfo.Ips,
+		HostName: sysInfo.HostName, Pid: sysInfo.Pid, channel: make(chan []Job, 10),
+		agentLog: f, InitialCheckIn: time.Now(), StatusCheckIn: time.Now()}
 
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now(), j.ID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), p.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), p.Architecture))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), p.HostName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), p.UserName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), p.UserGUID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), p.Pid))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now(), p.Ips))
-
-	// Add code here to create db record
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Version: %s\r\n", time.Now(), agentInfo.Version))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Build: %s\r\n", time.Now(), agentInfo.Build))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]WaitTime: %s\r\n", time.Now(), agentInfo.WaitTime))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]PaddingMax: %d\r\n", time.Now(), agentInfo.PaddingMax))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]MaxRetry: %d\r\n", time.Now(), agentInfo.MaxRetry))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]FailedCheckin: %d\r\n", time.Now(), agentInfo.FailedCheckin))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Skew: %d\r\n", time.Now(), agentInfo.Skew))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Proto: %s\r\n", time.Now(), agentInfo.Proto))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), sysInfo.Platform))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), sysInfo.Platform))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), sysInfo.Architecture))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), sysInfo.HostName))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), sysInfo.UserName))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), sysInfo.UserGUID))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), sysInfo.Pid))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now(), sysInfo.Ips))
 }
 
 // StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
@@ -150,7 +196,7 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		message("debug", fmt.Sprintf("Channel content: %s", Agents[j.ID].channel))
 	}
 
-	Agents[j.ID].sCheckIn = time.Now()
+	Agents[j.ID].StatusCheckIn = time.Now()
 	// Check to see if there are any jobs
 	if len(Agents[j.ID].channel) >= 1 {
 		job := <-Agents[j.ID].channel
@@ -181,8 +227,8 @@ func marshalMessage(m interface{}) []byte {
 	return k
 }
 
-// Info is used to update an agent's information with the passed in message data
-func Info(j messages.Base, p messages.AgentInfo) {
+// UpdateInfo is used to update an agent's information with the passed in message data
+func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 	_, ok := Agents[j.ID]
 
 	if !ok {
@@ -198,6 +244,7 @@ func Info(j messages.Base, p messages.AgentInfo) {
 		message("debug",fmt.Sprintf("Agent paddingMax: %d", p.PaddingMax))
 		message("debug",fmt.Sprintf("Agent maxRetry: %d", p.MaxRetry))
 		message("debug",fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
+		message("debug",fmt.Sprintf("Agent proto: %s", p.Proto))
 	}
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("Processing AgentInfo message:\r\n"))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
@@ -207,6 +254,7 @@ func Info(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent paddingMax: %d \r\n", p.PaddingMax))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent maxRetry: %d \r\n", p.MaxRetry))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent failedCheckin: %d \r\n", p.FailedCheckin))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent proto: %s \r\n", p.Proto))
 
 	Agents[j.ID].Version = p.Version
 	Agents[j.ID].Build = p.Build
@@ -215,6 +263,7 @@ func Info(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].PaddingMax = p.PaddingMax
 	Agents[j.ID].MaxRetry = p.MaxRetry
 	Agents[j.ID].FailedCheckin = p.FailedCheckin
+	Agents[j.ID].Proto = p.Proto
 }
 
 // Log is used to write log messages to the agent's log file
@@ -240,6 +289,7 @@ func ShowInfo(agentID uuid.UUID){
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 
 	data := [][]string{
+		{"Status", GetAgentStatus(agentID)},
 		{"ID", Agents[agentID].ID.String()},
 		{"Platform", Agents[agentID].Platform},
 		{"Architecture", Agents[agentID].Architecture},
@@ -248,15 +298,16 @@ func ShowInfo(agentID uuid.UUID){
 		{"Hostname", Agents[agentID].HostName},
 		{"Process ID", strconv.Itoa(Agents[agentID].Pid)},
 		{"IP", fmt.Sprintf("%v", Agents[agentID].Ips)},
-		{"Initial Check In", Agents[agentID].iCheckIn.String()},
-		{"Last Check In", Agents[agentID].sCheckIn.String()},
+		{"Initial Check In", Agents[agentID].InitialCheckIn.String()},
+		{"Last Check In", Agents[agentID].StatusCheckIn.String()},
 		{"Agent Version", Agents[agentID].Version},
 		{"Agent Build", Agents[agentID].Build},
 		{"Agent Wait Time", Agents[agentID].WaitTime},
 		{"Agent Wait Time Skew", fmt.Sprintf(strconv.FormatInt(Agents[agentID].Skew, 10))},
 		{"Agent Message Padding Max", strconv.Itoa(Agents[agentID].PaddingMax)},
 		{"Agent Max Retries", strconv.Itoa(Agents[agentID].MaxRetry)},
-		{"Agent Failed Logins", strconv.Itoa(Agents[agentID].FailedCheckin)},
+		{"Agent Failed Check In", strconv.Itoa(Agents[agentID].FailedCheckin)},
+		{"Agent Communication Protocol", Agents[agentID].Proto},
 	}
 	table.AppendBulk(data)
 	fmt.Println()
@@ -282,7 +333,7 @@ func message (level string, message string) {
 	}
 }
 
-// AddJob creates a job and adds it to the specified agent's channel and return the Job ID or an error
+// AddJob creates a job and adds it to the specified agent's channel and returns the Job ID or an error
 func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error){
 	// TODO turn this into a method of the agent struct
 	if core.Debug{
@@ -462,6 +513,24 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		return m, errors.New("invalid job type, sending ServerOK")
 	}
 	return m, nil
+}
+
+// GetAgentStatus evaluates the agent's last check in time and max wait time to determine if it is active, delayed, or dead
+func GetAgentStatus(agentID uuid.UUID) string {
+	var status string
+	dur, errDur := time.ParseDuration(Agents[agentID].WaitTime)
+	if errDur != nil{
+		message("warn", fmt.Sprintf("Error converting %s to a time duration: %s", Agents[agentID].WaitTime,
+			errDur.Error()))
+	}
+	if Agents[agentID].StatusCheckIn.Add(dur).After(time.Now()){
+		status = "Active"
+	} else if Agents[agentID].StatusCheckIn.Add(dur * time.Duration(Agents[agentID].MaxRetry + 1)).After(time.Now()){ // +1 to account for skew
+		status = "Delayed"
+	} else{
+		status = "Dead"
+		}
+	return status
 }
 
 // Job is a structure for holding data for single task assigned to a single agent

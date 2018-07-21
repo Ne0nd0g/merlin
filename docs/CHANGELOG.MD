@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Server struct with New and Run methods to http2 lib
 - Added `github.com/lucas-clemente/quic-go` & supporting libs to Vendor
 - Added check for publicly distributed Merlin x.509 testing certificate
-- Add Job struct, GetMessageForJob function, and AddJob function to agents.go
+- Added Job struct, GetMessageForJob function, and AddJob function to agents.go
+- Added GetAgentStatus function to agents.go
+- Added proto and status to table output for agent or session information
 
 ### Changed
 - Server CLI starts first, then web server
@@ -25,6 +27,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - channel type to Job for agent struct in agents.go
 - agents.StatusCheckIn to return error type
 - QUIC idle timeout to 1 week
+- agent struct to export initial and status check in values
+- agent struct to have communication protocol value
+- AgentInfo struct to have proto and embeded SysInfo struct
+- Updated tablewriter library to latest version.
 
 ### Removed
 - Removed AddChannel function from agents.go

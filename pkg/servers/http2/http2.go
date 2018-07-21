@@ -240,9 +240,9 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 		switch j.Type {
 
 		case "InitialCheckIn":
-			var p messages.SysInfo
-			json.Unmarshal(payload, &p)
-			agents.InitialCheckIn(j, p)
+			//var p messages.AgentInfo
+			//json.Unmarshal(payload, &p)
+			agents.InitialCheckIn(j)
 
 		case "StatusCheckIn":
 			w.Header().Set("Content-Type", "application/json")
@@ -277,7 +277,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			if core.Debug {
 				message("debug", fmt.Sprintf("AgentInfo JSON object: %s", p))
 			}
-			agents.Info(j, p)
+			agents.UpdateInfo(j, p)
 		case "FileTransfer":
 			var p messages.FileTransfer
 			json.Unmarshal(payload, &p)

@@ -183,9 +183,6 @@ func (a *Agent) Run(server string) {
 			a.statusCheckIn(server, a.Client)
 		} else {
 			initial = a.initialCheckIn(server, a.Client)
-			if initial {
-				a.agentInfo(server, a.Client)
-			}
 		}
 		if a.FailedCheckin >= a.MaxRetry {
 			if a.Debug{message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")}
@@ -205,8 +202,9 @@ func (a *Agent) Run(server string) {
 func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 
 	if a.Debug {message("debug","Entering initialCheckIn function")}
+
 	// JSON "initial" payload object
-	i := messages.SysInfo{
+	s := messages.SysInfo{
 		Platform:     a.Platform,
 		Architecture: a.Architecture,
 		UserName:     a.UserName,
@@ -216,7 +214,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		Ips:          a.Ips,
 	}
 
-	payload, errP := json.Marshal(i)
+	sysInfoPayload, errP := json.Marshal(s)
 
 	if errP != nil {
 		if a.Debug {
@@ -225,12 +223,33 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		}
 	}
 
+	i := messages.AgentInfo{
+		Version:       merlin.Version,
+		Build:         build,
+		WaitTime:      a.WaitTime.String(),
+		PaddingMax:    a.PaddingMax,
+		MaxRetry:      a.MaxRetry,
+		FailedCheckin: a.FailedCheckin,
+		Skew:		   a.Skew,
+		Proto:		   a.Proto,
+		SysInfo:	   (*json.RawMessage)(&sysInfoPayload),
+	}
+
+	agentInfoPayload, errA := json.Marshal(i)
+
+	if errA != nil {
+		if a.Debug {
+			message("warn", "There was an error marshaling the JSON object")
+			message("warn", fmt.Sprintf("%s", errA.Error()))
+		}
+	}
+
 	// JSON message to be sent to the server
 	g := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
 		Type:    "InitialCheckIn", // TODO Can set this to a constant in messages.go
-		Payload: (*json.RawMessage)(&payload),
+		Payload: (*json.RawMessage)(&agentInfoPayload),
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
@@ -666,6 +685,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		MaxRetry:      a.MaxRetry,
 		FailedCheckin: a.FailedCheckin,
 		Skew:		   a.Skew,
+		Proto:		   a.Proto,
 	}
 
 	payload, errP := json.Marshal(i)

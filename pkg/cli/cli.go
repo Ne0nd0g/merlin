@@ -298,11 +298,16 @@ func menuAgent(cmd []string){
 	switch cmd[0] {
 	case "list":
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+		table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"})
 		table.SetAlignment(tablewriter.ALIGN_CENTER)
 		for k, v := range agents.Agents {
+			// Convert proto (i.e. h2 or hq) to user friendly string
+			var proto string
+			if v.Proto == "h2"{proto = "HTTP/2 (h2)"}
+			if v.Proto == "hq"{proto = "QUIC (hq)"}
+
 			table.Append([]string{k.String(), v.Platform + "/" + v.Architecture, v.UserName,
-				v.HostName, "HTTP/2"})
+				v.HostName, proto, agents.GetAgentStatus(k)})
 		}
 		fmt.Println()
 		table.Render()
