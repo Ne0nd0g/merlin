@@ -435,7 +435,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		err := RemoveAgent(agentID)
 		if err != nil{
 			message("warn",fmt.Sprintf("%s", err.Error()))
-		} else{message("success",fmt.Sprintf("Agent %s was removed from the server", agentID.String()))}
+		} else{message("info",fmt.Sprintf("Agent %s was removed from the server", agentID.String()))}
 	case "maxretry":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
