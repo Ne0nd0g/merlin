@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - 2018-07-29
+## 0.6.0 - 2018-07-29
 ### Added
 - Added support for QUIC protocol version Q39 to both Server and Agent
 - Added `-proto` command line flag for both Server and Agent
@@ -41,16 +41,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
 - Removed AddChannel function from agents.go
 
-## [0.5.4] - 2018-07-17
+## 0.5.4 - 2018-07-17
 ### Added
 - Added Get-ScheduledTaskComHandler module
 - Added Invoke-PowerThIEf module
 
-## [0.5.3] - 2018-07-04
+## 0.5.3 - 2018-07-04
 ### Fixed
 - Fixed #21 by changing `strings.TrimRight()` to `strings.TrimSuffix()`
 
-## [0.5.2] - 2018-06-13
+## 0.5.2 - 2018-06-13
 ### Added
 - Added 4 modules from @HarmJ0y's Discretionary ACL Modification Project (DAMP)
 - Added Add-RemoteRegBackdoor module
@@ -58,14 +58,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added Get-RemoteLocalAccountHash module
 - Added Get-RemoteMachineAccountHash module
 
-## [0.5.1] - 2018-05-26
+## 0.5.1 - 2018-05-26
 ### Added
 - Added DSCompromised-Configure-Victim module
 - Added Create-HotKeyLN module
 - Added Get-OSTokenInformation module
 - Added Invoke-WMILM module
 
-## [0.5.0] - 2018-05-26
+## 0.5.0 - 2018-05-26
 Version numbers changed drastically to start following semantic versioning
 ### Added
 - Module reload command to instantiate a new, clean object
@@ -94,7 +94,7 @@ pkg/agent/main.go
 - Module set option verbose output to new value instead of original
 - Agent upload error message invalid memory address or nil pointer dereference
 
-## [0.1.4] - 2018-03-02
+## 0.1.4 - 2018-03-02
 ### Added
 - Time skew to sleep by @ahhh
 - IP address information from agents by @ahhh
