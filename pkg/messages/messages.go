@@ -81,4 +81,6 @@ type AgentInfo struct {
 	MaxRetry      int    `json:"maxretry,omitempty"`
 	FailedCheckin int    `json:"failedcheckin,omitempty"`
 	Skew		  int64	 `json:"skew,omitempty"`
+	Proto 		  string `json:"proto,omitempty"`
+	SysInfo		  interface{} `json:"sysinfo,omitempty"`
 }

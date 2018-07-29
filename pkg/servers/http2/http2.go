@@ -28,9 +28,17 @@ import (
 	"io/ioutil"
 	"time"
 	"crypto/tls"
+	"strconv"
+	"log"
+	"encoding/pem"
+	"crypto/x509"
+	"crypto/sha1"
+	"encoding/hex"
 
 	// 3rd Party
 	"github.com/fatih/color"
+	"github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go/h2quic"
 	
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
@@ -39,7 +47,154 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
+type Server struct {
+	Interface	string
+	Port		int
+	Protocol	string
+	Key 		string
+	Certificate string
+	Server 		interface{}
+	Mux 		*http.ServeMux
+}
+
+// New instantiates a new server object and returns it
+func New(iface string, port int, protocol string, key string, certificate string ) (Server, error) {
+	s := Server{
+		Protocol: protocol,
+		Interface: iface,
+		Port: port,
+		Mux: http.NewServeMux(),
+	}
+
+	// Check to make sure files exist
+	_, errCrt := os.Stat(certificate)
+	if errCrt != nil {
+		message("warn", "There was an error importing the SSL/TLS x509 certificate")
+		message("warn", errCrt.Error())
+		return  s, errCrt
+	} else {
+		s.Certificate = certificate
+	}
+
+	_, errKey := os.Stat(key)
+	if errKey != nil {
+		message("warn","There was an error importing the SSL/TLS x509 key")
+		message("warn", errKey.Error())
+		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key\r\n%s", errKey.Error()))
+		return s, errKey
+	} else {
+		s.Key = key
+	}
+
+	cer, err := tls.LoadX509KeyPair(certificate, key)
+	if err != nil {
+		message("warn", "There was an error importing the SSL/TLS x509 key pair")
+		message("warn", "Ensure a keypair is located in the data/x509 directory")
+		message("warn", err.Error())
+		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s",err.Error()))
+		return s, err
+	}
+
+	// Read x.509 Public Key into a variable
+	PEMData, err := ioutil.ReadFile(certificate)
+	if err != nil {
+		message("warn", "There was an error reading the SSL/TLS x509 certificate file")
+		message("warn", err.Error())
+		return s, err
+	}
+
+	// Decode the x.509 Public Key from PEM
+	block, _ := pem.Decode(PEMData)
+	if block == nil {
+		message("warn", "failed to decode PEM block from public key")
+	}
+
+	// Convert the PEM block into a Certificate object
+	pubCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		message("warn", err.Error())
+	}
+
+	// Create SHA1 fingerprint from Certificate
+	sha1Fingerprint := sha1.Sum(pubCert.Raw)
+
+	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+	merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"
+
+	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+	if merlinCRT == hex.EncodeToString(sha1Fingerprint[:]) {
+		message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+	}
+
+	// Configure TLS
+	TLSConfig := &tls.Config{
+		Certificates: []tls.Certificate{cer},
+		MinVersion:   tls.VersionTLS12,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		},
+		NextProtos: []string{protocol},
+	}
+
+	s.Mux.HandleFunc("/", agentHandler)
+
+	srv := &http.Server{
+		Addr:           s.Interface + ":" + strconv.Itoa(s.Port),
+		Handler:        s.Mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+		TLSConfig:      TLSConfig,
+	}
+
+	if s.Protocol == "h2"{
+		s.Server = srv
+	} else if s.Protocol == "hq"{
+		s.Server = &h2quic.Server{
+			Server: srv,
+			QuicConfig: &quic.Config{
+				KeepAlive: false,
+				IdleTimeout: 168 * time.Hour,
+				RequestConnectionIDOmission: false,
+			},
+		}
+
+	} else {
+		return s, fmt.Errorf("%s is an invalid server protocol", s.Protocol)
+	}
+	return s, nil
+}
+
+// Run function starts the server on the preconfigured port for the preconfigured service
+func (s *Server) Run() error {
+	logging.Server(fmt.Sprintf("Starting %s Listener", s.Protocol))
+	logging.Server(fmt.Sprintf("Address: %s:%d/", s.Interface, s.Port))
+	logging.Server(fmt.Sprintf("x.509 Certificate %s", s.Certificate))
+	logging.Server(fmt.Sprintf("x.509 Key %s", s.Key))
+
+	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
+	message("note", fmt.Sprintf("Starting %s listener on %s:%d", s.Protocol, s.Interface, s.Port))
+
+
+	if s.Protocol == "h2"{
+		server := s.Server.(*http.Server)
+		defer server.Close()
+		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
+		return nil
+	} else if s.Protocol == "hq"{
+		server := s.Server.(*h2quic.Server)
+		defer server.Close()
+		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
+		return nil
+	}
+	return fmt.Errorf("%s is an invalid server protocol", s.Protocol)
+}
+
+// agentHandler function is responsible for all Merlin agent traffic
+func agentHandler(w http.ResponseWriter, r *http.Request) {
 	if core.Verbose {
 		message("note", fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.RemoteAddr))
 		logging.Server(fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.RemoteAddr))
@@ -85,15 +240,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		switch j.Type {
 
 		case "InitialCheckIn":
-			var p messages.SysInfo
-			json.Unmarshal(payload, &p)
-			agents.InitialCheckIn(j, p)
+			//var p messages.AgentInfo
+			//json.Unmarshal(payload, &p)
+			agents.InitialCheckIn(j)
 
 		case "StatusCheckIn":
 			w.Header().Set("Content-Type", "application/json")
-			x := agents.StatusCheckIn(j)
+			x, err := agents.StatusCheckIn(j)
 			if core.Verbose {
 				message("note", fmt.Sprintf("Sending " + x.Type + " message type to agent"))
+			}
+			if err != nil {
+				message("warn", err.Error())
 			}
 			json.NewEncoder(w).Encode(x)
 
@@ -119,7 +277,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			if core.Debug {
 				message("debug", fmt.Sprintf("AgentInfo JSON object: %s", p))
 			}
-			agents.Info(j, p)
+			agents.UpdateInfo(j, p)
 		case "FileTransfer":
 			var p messages.FileTransfer
 			json.Unmarshal(payload, &p)
@@ -143,9 +301,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 						message("warn",fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
 						message("warn",writingErr.Error())
 					} else {
-						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent to %s",
+						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
 							p.FileLocation,
 							len(downloadBlob),
+							j.ID.String(),
 							downloadFile))
 						agents.Log(j.ID, fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from" +
 							" agent to %s",
@@ -170,74 +329,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(404)
 	}
-}
-
-// StartListener starts an instance of the HTTP/2 server
-func StartListener(port string, ip string, crt string, key string, webpath string) {
-
-	logging.Server("Starting HTTP/2 Listener")
-	logging.Server(fmt.Sprintf("Address: %s:%s%s", ip, port, webpath))
-	logging.Server(fmt.Sprintf("x.509 Certificate %s", crt))
-	logging.Server(fmt.Sprintf("x.509 Key %s", key))
-
-	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
-	// Check to make sure files exist
-	_, errCrt := os.Stat(crt)
-	if errCrt != nil {
-		message("warn", "There was an error importing the SSL/TLS x509 certificate")
-		message("warn", errCrt.Error())
-		return
-	}
-
-	_, errKey := os.Stat(key)
-	if errKey != nil {
-		message("warn","There was an error importing the SSL/TLS x509 key")
-		message("warn", errKey.Error())
-		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key\r\n%s", errKey.Error()))
-		return
-	}
-
-	cer, err := tls.LoadX509KeyPair(crt, key)
-
-	if err != nil {
-		message("warn", "There was an error importing the SSL/TLS x509 key pair")
-		message("warn", "Ensure a keypair is located in the data/x509 directory")
-		message("warn", err.Error())
-		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s",err.Error()))
-		return
-	}
-
-	// Configure TLS
-	config := &tls.Config{
-		Certificates: []tls.Certificate{cer},
-		MinVersion:   tls.VersionTLS12,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-		},
-		NextProtos: []string{"h2"},
-	}
-	http.HandleFunc(webpath, handler)
-
-	s := &http.Server{
-		Addr:           ip + ":" + port,
-		Handler:        nil,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-		TLSConfig:      config,
-	}
-
-	// I shouldn't need to specify the certs as they are in the config
-	message("note", fmt.Sprintf("HTTPS Listener Started on %s:%s", ip, port))
-	err2 := s.ListenAndServeTLS(crt, key)
-	if err2 != nil {
-		message("warn", "There was an error starting the web server")
-		logging.Server(fmt.Sprintf("There was an error starting the web server\r\n%s", err2.Error()))
-		return
-	}
-	// TODO determine scripts path and load certs by their absolute path
 }
 
 // message is used to print a message to the command line

