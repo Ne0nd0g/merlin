@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updated merlin.js agent to use new embeded SysInfo struct
 - Updated Make file to output files in folder of the build number
 - Updated MerlinAgentDLL main.go functions to use correct params
+- Merlin Server listens on 127.0.0.1 by default
 
 ### Removed
 - Removed AddChannel function from agents.go
