@@ -34,7 +34,7 @@ type Base struct {
 type FileTransfer struct {
 	FileLocation    string `json:"dest"`
 	FileBlob 		string `json:"blob"`
-	IsDownload		bool `json:download`
+	IsDownload		bool `json:"download"`
 	Job      		string `json:"job"`
 }
 

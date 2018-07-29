@@ -91,14 +91,14 @@ function initialCheckIn (){
     if (debug){console.log("[DEBUG]Sending InitialCheckIn XHR")}
     x.onerror = function(e) {
         failedCheckin++;
-        verboseMessage("warn", failedCheckin + " out of " + maxRetry + " total failed checkins")
+        verboseMessage("warn", failedCheckin + " out of " + maxRetry + " total failed checkins");
         if (debug){
-            console.log("[DEBUG]initialCheckIn POST request error:")
+            console.log("[DEBUG]initialCheckIn POST request error:");
             console.log(e)
         }
     };
     if (debug){
-        console.log("[DEBUG]Sending initialCheckIn XHR payload:")
+        console.log("[DEBUG]Sending initialCheckIn XHR payload:");
         console.log(b)
     }
     x.send(JSON.stringify(b));
@@ -152,7 +152,8 @@ function statusCheckIn (){
     if (debug){console.log("[DEBUG]Sending StatusCheckIn XHR")}
     x.onerror = function(e) {
         failedCheckin++;
-        verboseMessage("warn", failedCheckin + " out of " + maxRetry + " total failed checkins")
+        verboseMessage("warn", failedCheckin + " out of " + maxRetry + " total failed checkins");
+        verboseMessage("warn", "Error: " + e.message)
     };
     x.send(JSON.stringify(b));
 }
@@ -172,7 +173,8 @@ function cmdResults(job, stdOut, stdErr){
     x.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
     if (debug){console.log("[DEBUG]Sending cmdResults XHR")}
     x.onerror = function(e) {
-        verboseMessage("warn", "There was an error sending the CmdResults message.")
+        verboseMessage("warn", "There was an error sending the CmdResults message.");
+        verboseMessage("warn", "Error: " + e.message)
     };
     x.send(JSON.stringify(b));
 }
