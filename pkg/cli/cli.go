@@ -338,7 +338,7 @@ func menuAgent(cmd []string){
 				errRemove := agents.RemoveAgent(i)
 				if errRemove != nil{
 					message("warn",fmt.Sprintf("%s", errRemove.Error()))
-				} else{message("success",fmt.Sprintf("Agent %s was removed from the server", cmd[1]))}
+				} else{message("info",fmt.Sprintf("Agent %s was removed from the server", cmd[1]))}
 			}
 		}
 	}

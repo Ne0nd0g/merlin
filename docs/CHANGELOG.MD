@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added RemoveAgent fuction to agents.go
 - Added remove command to main menu to remove DEAD agents
 - Added info command to module menu as a shortcut for show info
+- Added data/html to server distrobution files
+- Added agent-javascript to Make file to update version and build info
 
 ### Changed
 - Server CLI starts first, then web server
@@ -33,7 +35,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - agent struct to export initial and status check in values
 - agent struct to have communication protocol value
 - AgentInfo struct to have proto and embeded SysInfo struct
-- Updated tablewriter library to latest version.
+- Updated tablewriter library to latest version
+- Updated merlin.js agent to use new embeded SysInfo struct
+- Updated Make file to output files in folder of the build number
+- Updated MerlinAgentDLL main.go functions to use correct params
 
 ### Removed
 - Removed AddChannel function from agents.go
