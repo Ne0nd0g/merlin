@@ -21,7 +21,6 @@ import (
 	// Standard
 	"flag"
 	"path/filepath"
-	"strconv"
 
 	// 3rd Party
 	"github.com/fatih/color"
@@ -44,7 +43,8 @@ func main() {
 	flag.BoolVar(&core.Verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&core.Debug, "debug", false, "Enable debug output")
 	port := flag.Int("p", 443, "Merlin Server Port")
-	ip := flag.String("i", "0.0.0.0", "The IP address of the interface to bind to")
+	ip := flag.String("i", "127.0.0.1", "The IP address of the interface to bind to")
+	proto := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
 	crt := flag.String("x509cert", filepath.Join(string(core.CurrentDir), "data", "x509", "server.crt"),
 		"The x509 certificate for the HTTPS listener")
 	key := flag.String("x509key", filepath.Join(string(core.CurrentDir), "data", "x509", "server.key"),
@@ -62,8 +62,16 @@ func main() {
 	color.Blue("\t\t   Version: %s", merlin.Version)
 	color.Blue("\t\t   Build: %s", build)
 
-	go http2.StartListener(strconv.Itoa(*port), *ip, *crt, *key, "/")
-	cli.Shell()
+	// Start Merlin Command Line Interface
+	go cli.Shell()
+
+	// Start Merlin Server to listen for agents
+	server, err := http2.New(*ip, *port, *proto, *key, *crt)
+	if err != nil {
+		color.Red(err.Error())
+	} else {
+		server.Run()
+	}
 }
 
 // TODO Add session ID

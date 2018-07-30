@@ -34,7 +34,7 @@ type Base struct {
 type FileTransfer struct {
 	FileLocation    string `json:"dest"`
 	FileBlob 		string `json:"blob"`
-	IsDownload		bool `json:download`
+	IsDownload		bool `json:"download"`
 	Job      		string `json:"job"`
 }
 
@@ -81,4 +81,6 @@ type AgentInfo struct {
 	MaxRetry      int    `json:"maxretry,omitempty"`
 	FailedCheckin int    `json:"failedcheckin,omitempty"`
 	Skew		  int64	 `json:"skew,omitempty"`
+	Proto 		  string `json:"proto,omitempty"`
+	SysInfo		  interface{} `json:"sysinfo,omitempty"`
 }

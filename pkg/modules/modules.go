@@ -156,7 +156,7 @@ func GetModuleList() func(string) []string {
 				if len(d) > 0 {
 					m := d[1]
 					m = strings.TrimLeft(m, "/")
-					m = strings.TrimRight(m, ".json")
+					m = strings.TrimSuffix(m, ".json")
 					if !strings.Contains(m, "templates"){
 						o = append(o, m)
 					}
