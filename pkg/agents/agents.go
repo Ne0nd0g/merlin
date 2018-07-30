@@ -207,15 +207,14 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 
 		m, mErr := GetMessageForJob(j.ID, job[0])
 		return m, mErr
-	} else {
-		m := messages.Base{
-			Version: 1.0,
-			ID:      j.ID,
-			Type:    "ServerOk",
-			Padding: core.RandStringBytesMaskImprSrc(paddingMax),
-		}
-		return m,nil
 	}
+	m := messages.Base{
+		Version: 1.0,
+		ID:      j.ID,
+		Type:    "ServerOk",
+		Padding: core.RandStringBytesMaskImprSrc(paddingMax),
+	}
+	return m,nil
 	}
 
 func marshalMessage(m interface{}) []byte {
@@ -491,7 +490,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		uploadFile, uploadFileErr := ioutil.ReadFile(job.Args[0])
 		if uploadFileErr != nil {
 			// TODO send "ServerOK"
-			return m, errors.New(fmt.Sprintf("There was an error reading %s: %s", job.Type, uploadFileErr.Error()))
+			return m, fmt.Errorf("there was an error reading %s: %v", job.Type, uploadFileErr)
 		}
 		fileHash := sha1.New()
 		io.WriteString(fileHash, string(uploadFile))
@@ -550,7 +549,7 @@ func RemoveAgent(agentID uuid.UUID) error {
 		delete(Agents, agentID)
 		return nil
 	}
-	return errors.New(fmt.Sprintf("%s is not a known agent and was not removed", agentID.String()))
+	return fmt.Errorf("%s is not a known agent and was not removed", agentID.String())
 
 }
 // Job is a structure for holding data for single task assigned to a single agent
