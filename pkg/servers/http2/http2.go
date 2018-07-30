@@ -47,6 +47,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
+// Server is a structure for creating and instantiating new server objects
 type Server struct {
 	Interface	string
 	Port		int
@@ -72,9 +73,8 @@ func New(iface string, port int, protocol string, key string, certificate string
 		message("warn", "There was an error importing the SSL/TLS x509 certificate")
 		message("warn", errCrt.Error())
 		return  s, errCrt
-	} else {
-		s.Certificate = certificate
 	}
+	s.Certificate = certificate
 
 	_, errKey := os.Stat(key)
 	if errKey != nil {
@@ -82,9 +82,8 @@ func New(iface string, port int, protocol string, key string, certificate string
 		message("warn", errKey.Error())
 		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key\r\n%s", errKey.Error()))
 		return s, errKey
-	} else {
-		s.Key = key
 	}
+	s.Key = key
 
 	cer, err := tls.LoadX509KeyPair(certificate, key)
 	if err != nil {
