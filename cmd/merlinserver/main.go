@@ -53,7 +53,8 @@ func main() {
 		color.Blue("#################################################")
 		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
 		color.Blue("#################################################")
-		color.Blue("Version: " + merlin.Version + " Build: " + build)
+		color.Blue("Version: " + merlin.Version)
+		color.Blue("Build: " + build)
 		flag.PrintDefaults()
 	}
 	flag.Parse()

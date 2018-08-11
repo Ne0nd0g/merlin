@@ -198,7 +198,7 @@ func (m *Module) SetAgent(agentUUID string) (string, error){
 func (m *Module) ShowInfo(){
 	color.Yellow("Module:\r\n\t%s\r\n", m.Name)
 	color.Yellow("Platform:\r\n\t%s\\%s\\%s\r\n", m.Platform, m.Arch, m.Lang)
-	color.Yellow("Authors:")
+	color.Yellow("Module Authors:")
 	for a := range m.Author {
 		color.Yellow("\t%s", m.Author[a])
 	}
