@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## 0.6.2 - 2018-09-02
 ### Changed
 - Added Twitter badge to README
+- Configured agent status check in to use a go routine
+- Removed unnecessary global variables from agent.go
+- Documented agent.Agent struct fields
+- Added "initial" field to agent.Agent struct
 
 ### Fixed
 - [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23)Error writing an agent log entry when agent was set to 'all'
+- Out of range error when setting module options in Run function
 
 ## 0.6.1 - 2018-08-11
 ### Added

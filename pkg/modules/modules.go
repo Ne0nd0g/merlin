@@ -93,20 +93,30 @@ func (m *Module) Run() ([]string, error) {
 	command := make([]string, len(m.Commands))
 	copy(command, m.Commands)
 
-	for k := len(command) - 1; k >= 0; k-- {
-		for _, o := range m.Options {
-			if o.Value != "" && strings.Contains(command[k], "{{" + o.Name + "}}" ){
-				command[k] = strings.Replace(command[k], "{{" + o.Name + "}}", o.Flag + " " + o.Value, -1)
-			} else if o.Value == "" && strings.Contains(command[k], "{{" + o.Name + "}}"){
-				command = append(command[:k], command[k+1:]...)
-			} else if strings.ToLower(o.Value) == "true" && strings.Contains(command[k], "{{" + o.Name + ".Flag}}" ){
-				command[k] = strings.Replace(command[k], "{{" + o.Name + ".Flag}}", o.Flag, -1)
-			} else if strings.ToLower(o.Value) != "true" && strings.Contains(command[k], "{{" + o.Name + ".Flag}}" ){
-				command = append(command[:k], command[k+1:]...)
-			} else if o.Value != "" && strings.Contains(command[k], "{{" + o.Name + ".Value}}" ){
-				command[k] = strings.Replace(command[k], "{{" + o.Name + ".Value}}", o.Value, -1)
-			} else if o.Value == "" && strings.Contains(command[k], "{{" + o.Name + ".Value}}"){
-				command = append(command[:k], command[k+1:]...)
+
+	for _, o := range m.Options {
+		for k := len(command) - 1; k >= 0; k-- {
+			// Check if an option was set WITHOUT the Flag or Value qualifiers
+			if strings.Contains(command[k], "{{" + o.Name + "}}"){
+				if o.Value != ""{
+					command[k] = strings.Replace(command[k], "{{" + o.Name + "}}", o.Flag + " " + o.Value, -1)
+				} else {
+					command = append(command[:k], command[k+1:]...)
+				}
+			// Check if an option was set WITH just the Flag qualifier
+			} else if strings.Contains(command[k], "{{" + o.Name + ".Flag}}"){
+				if strings.ToLower(o.Value) == "true"{
+					command[k] = strings.Replace(command[k], "{{" + o.Name + ".Flag}}", o.Flag, -1)
+				} else {
+					command = append(command[:k], command[k+1:]...)
+				}
+			// Check if an option was set WITH just the Value qualifier
+			} else if strings.Contains(command[k], "{{" + o.Name + ".Value}}"){
+				if o.Value != ""{
+					command[k] = strings.Replace(command[k], "{{" + o.Name + ".Value}}", o.Value, -1)
+				} else {
+					command = append(command[:k], command[k+1:]...)
+				}
 			}
 		}
 	}

