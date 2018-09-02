@@ -36,12 +36,12 @@ import (
 	// 3rd Party
 	"github.com/satori/go.uuid"
 	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/olekukonko/tablewriter"
 )
 
 // Global Variables
@@ -359,11 +359,12 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 		}
 
 		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{
+			if len(Agents) <= 0 {return "", errors.New("there are 0 available agents, no jobs were created")}
 			for k := range Agents {
 				s := Agents[k].channel
 				job.ID = core.RandStringBytesMaskImprSrc(10)
 				s <- []Job{job}
-				Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, " +
+				Agents[k].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, " +
 					"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
 			}
 			return job.ID, nil
