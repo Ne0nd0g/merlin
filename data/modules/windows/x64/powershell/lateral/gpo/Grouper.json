@@ -2,14 +2,14 @@
   "base": {
     "type": "standard",
     "name": "Grouper",
-    "credits": ["Russel Van Tuyl (@Ne0nd0g)"],
-    "author": ["Mike Loss (@l0ss)"],
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Mike Loss (@mikeloss)"],
     "path": ["windows", "x64", "powershell", "lateral", "gpo", "grouper.json"],
     "platform": "windows",
     "arch": "x64",
     "lang": "PowerShell",
     "privilege": false,
-    "notes": "Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.",
+    "notes": "-Grouper was created by Mike Loss (@mikeloss) and can be found at https://github.com/l0ss/Grouper.\r\n-Grouper is a slightly wobbly PowerShell module designed for pentesters and redteamers (although probably also useful for sysadmins) which sifts through the (usually very noisy) XML output from the Get-GPOReport cmdlet (part of Microsoft's Group Policy module) and identifies all the settings defined in Group Policy Objects (GPOs) that might prove useful to someone trying to do something fun/evil.",
     "remote": "https://raw.githubusercontent.com/l0ss/Grouper/master/grouper.psm1",
     "local": ["data", "src", "l0ss", "Grouper", "grouper.psm1"],
     "options": [

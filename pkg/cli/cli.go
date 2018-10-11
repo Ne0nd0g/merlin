@@ -114,6 +114,12 @@ func Shell() {
 					}
 				case "quit":
 					exit()
+				case "remove":
+					if len(cmd) > 1 {
+						i := []string{"remove"}
+						i = append(i, cmd[1])
+						menuAgent(i)
+					}
 				case "sessions":
 					menuAgent([]string{"list"})
 				case "use":
@@ -141,6 +147,8 @@ func Shell() {
 							shellModule.ShowOptions()
 						}
 					}
+				case "info":
+					shellModule.ShowInfo()
 				case "set":
 					if len(cmd) > 2 {
 						if cmd[1] == "agent"{
@@ -158,8 +166,10 @@ func Shell() {
 					if err != nil {
 						message("warn", err.Error())
 					} else {
-						err := agents.AddChannel(shellModule.Agent, "cmd", r)
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellModule.Agent, "cmd", r)
+						if err != nil {message("warn", err.Error())} else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellModule.Agent))
+						}
 					}
 				case "back":
 					menuSetMain()
@@ -188,13 +198,17 @@ func Shell() {
 					menuSetMain()
 				case "cmd":
 					if len(cmd) >1{
-						err := agents.AddChannel(shellAgent, "cmd", cmd[1:])
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "cmd", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				case "download":
 					if len(cmd) >1{
-						err := agents.AddChannel(shellAgent, "download", cmd[1:])
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "download", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				case "exit":
 					exit()
@@ -206,8 +220,10 @@ func Shell() {
 					agents.ShowInfo(shellAgent)
 				case "kill":
 					if len(cmd) >0{
-						err := agents.AddChannel(shellAgent, "kill", cmd[0:]);menuSetMain()
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "kill", cmd[0:]);menuSetMain()
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				case "main":
 					menuSetMain()
@@ -218,30 +234,40 @@ func Shell() {
 						switch cmd[1]{
 						case "maxretry":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "maxretry", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						case "padding":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "padding", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						case "sleep":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "sleep", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						case "skew":
 							if len(cmd) >2{
-								err := agents.AddChannel(shellAgent, "AgentControl", cmd[1:])
-								if err != nil {message("warn", err.Error())}
+								m, err := agents.AddJob(shellAgent, "skew", cmd[1:])
+								if err != nil {message("warn", err.Error())}else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
 							}
 						}
 					}
 				case "upload":
 					if len(cmd) >1{
-						agents.AddChannel(shellAgent, "upload", cmd[1:])
-						if err != nil {message("warn", err.Error())}
+						m, err := agents.AddJob(shellAgent, "upload", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
 					}
 				default:
 					message("info", "Executing system command...")
@@ -280,11 +306,16 @@ func menuAgent(cmd []string){
 	switch cmd[0] {
 	case "list":
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport"})
+		table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"})
 		table.SetAlignment(tablewriter.ALIGN_CENTER)
 		for k, v := range agents.Agents {
+			// Convert proto (i.e. h2 or hq) to user friendly string
+			var proto string
+			if v.Proto == "h2"{proto = "HTTP/2 (h2)"}
+			if v.Proto == "hq"{proto = "QUIC (hq)"}
+
 			table.Append([]string{k.String(), v.Platform + "/" + v.Architecture, v.UserName,
-				v.HostName, "HTTP/2"})
+				v.HostName, proto, agents.GetAgentStatus(k)})
 		}
 		fmt.Println()
 		table.Render()
@@ -296,6 +327,18 @@ func menuAgent(cmd []string){
 				message("warn", fmt.Sprintf("There was an error interacting with agent %s", cmd[1]))
 			} else {
 				menuSetAgent(i)
+			}
+		}
+	case "remove":
+		if len(cmd) > 1 {
+			i, errUUID := uuid.FromString(cmd[1])
+			if errUUID != nil {
+				message("warn", fmt.Sprintf("There was an error interacting with agent %s", cmd[1]))
+			} else {
+				errRemove := agents.RemoveAgent(i)
+				if errRemove != nil{
+					message("warn",fmt.Sprintf("%s", errRemove.Error()))
+				} else{message("info",fmt.Sprintf("Agent %s was removed from the server", cmd[1]))}
 			}
 		}
 	}
@@ -348,6 +391,9 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("interact",
 			readline.PcItemDynamic(agents.GetAgentList()),
 		),
+		readline.PcItem("remove",
+			readline.PcItemDynamic(agents.GetAgentList()),
+		),
 		readline.PcItem("sessions"),
 		readline.PcItem("use",
 			readline.PcItem("module",
@@ -362,6 +408,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 	var module = readline.NewPrefixCompleter(
 		readline.PcItem("back"),
 		readline.PcItem("help"),
+		readline.PcItem("info"),
 		readline.PcItem("main"),
 		readline.PcItem("reload"),
 		readline.PcItem("run"),
@@ -414,6 +461,7 @@ func menuHelpMain() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
+	table.SetCaption(true, "Main Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
@@ -422,6 +470,7 @@ func menuHelpMain() {
 		{"exit", "Exit and close the Merlin server", ""},
 		{"interact", "Interact with an agent. Alias for Empire users", ""},
 		{"quit", "Exit and close the Merlin server", ""},
+		{"remove", "Remove or delete a DEAD agent from the server"},
 		{"sessions", "List all agents session information. Alias for MSF users", ""},
 		{"use", "Use a function of Merlin", "module"},
 		{"version", "Print the Merlin server version", ""},
@@ -439,11 +488,12 @@ func menuHelpModule(){
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	// table.SetCaption(true, "Module Menu Help") // TODO Need to upgrade library first
+	table.SetCaption(true, "Module Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
 		{"back", "Return to the main menu", ""},
+		{"info", "Show information about a module"},
 		{"main", "Return to the main menu", ""},
 		{"reload", "Reloads the module to a fresh clean state"},
 		{"run","Run or execute the module", ""},
@@ -462,7 +512,7 @@ func menuHelpAgent() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	// table.SetCaption(true, "Agent Menu Help") // TODO Need to upgrade library first
+	table.SetCaption(true, "Agent Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{

