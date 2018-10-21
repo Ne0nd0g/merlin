@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Added "shell" command to agent menu
 
+### Changed
+- [Issue 26](https://github.com/Ne0nd0g/merlin/issues/26) Updated Makefile to remove .dmg file extension for Darwin
+
 ## 0.6.2 - 2018-09-02
 ### Changed
 - Added Twitter badge to README
