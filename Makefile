@@ -76,11 +76,11 @@ agent-linux:
 	
 # Compile Server - Darwin x64
 server-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D}.dmg cmd/merlinserver/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D} cmd/merlinserver/main.go
 
 # Compile Agent - Darwin x64
 agent-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D}.dmg cmd/merlinagent/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D} cmd/merlinagent/main.go
 
 # Update JavaScript Information
 agent-javascript:
@@ -98,22 +98,25 @@ package-server-linux:
 
 package-server-darwin:
 	${PACKAGE} ${DIR}/${MSERVER}-${D}-v${VERSION}.7z ${F}
-	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}.dmg
+	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}
 
 package-agent-windows:
 	${PACKAGE} ${DIR}/${MAGENT}-${W}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
-	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows
+	mkdir -p ${BIN}windows
+	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
 
 package-agent-linux:
 	${PACKAGE} ${DIR}/${MAGENT}-${L}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
-	cp ${DIR}/${MAGENT}-${L} ${BIN}linux
+	mkdir -p ${BIN}linux
+	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
 	
 package-agent-darwin:
 	${PACKAGE} ${DIR}/${MAGENT}-${D}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}.dmg
-	cp ${DIR}/${MAGENT}-${D}.dmg ${BIN}darwin
+	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}
+	mkdir -p ${BIN}darwin/
+	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/
 
 package-agent-dll:
 	${PACKAGE} ${DIR}/${MAGENT}-DLL-v${VERSION}.7z ${F2}
