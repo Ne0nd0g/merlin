@@ -262,6 +262,13 @@ func Shell() {
 							}
 						}
 					}
+				case "shell":
+					if len(cmd) >1{
+						m, err := agents.AddJob(shellAgent, "cmd", cmd[1:])
+						if err != nil {message("warn", err.Error())}else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
+					}
 				case "upload":
 					if len(cmd) >1{
 						m, err := agents.AddJob(shellAgent, "upload", cmd[1:])
@@ -434,6 +441,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
 		readline.PcItem("main"),
+		readline.PcItem("shell"),
 		readline.PcItem("set",
 			readline.PcItem("maxretry"),
 			readline.PcItem("padding"),
@@ -516,13 +524,14 @@ func menuHelpAgent() {
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
-		{"cmd", "Execute a command on the agent", "cmd ping -c 3 8.8.8.8"},
+		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download","Download a file from the agent", "download <remote_file>"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
+		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 	}
 
