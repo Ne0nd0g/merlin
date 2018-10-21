@@ -270,11 +270,14 @@ func Shell() {
 						}
 					}
 				case "upload":
-					if len(cmd) >1{
-						m, err := agents.AddJob(shellAgent, "upload", cmd[1:])
+					if len(cmd) == 3{
+						m, err := agents.AddJob(shellAgent, "upload", cmd[1:3])
 						if err != nil {message("warn", err.Error())}else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 						}
+					} else {
+						message("warn", "Invalid command")
+						message("info", "upload local_file_path remote_file_path")
 					}
 				default:
 					message("info", "Executing system command...")
