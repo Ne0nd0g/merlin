@@ -7,11 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## 0.6.3 - 2018-10-XX
 ### Added
 - Added "shell" command to agent menu
+- Added `-w` compile time link flag to omit the DWARF symbol table
+- Added additional `-X` compile flag to set the build in the Agent package
 
 ### Changed
 - [Issue 26](https://github.com/Ne0nd0g/merlin/issues/26) Updated Makefile to remove .dmg file extension for Darwin
 - [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23) Error when using upload command without specific arguments
 - [Issue 28](https://github.com/Ne0nd0g/merlin/issues/28) Updated MimiPenguin module to use new path to download mimipenguin.sh
+- Modified `cmd/merlinagentdll/main.go` Global variable from `URL` to `url` for consistency across all packages
 
 ## 0.6.2 - 2018-09-02
 ### Changed

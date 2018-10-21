@@ -9,8 +9,8 @@ PASSWORD=merlin
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/temp/v${VERSION}/${BUILD}
 BIN=data/bin/
-LDFLAGS=-ldflags "-s -X main.build=${BUILD}"
-WINAGENTLDFLAGS=-ldflags "-s -X main.build=${BUILD} -H=windowsgui"
+LDFLAGS=-ldflags "-s -w -X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}"
+WINAGENTLDFLAGS=-ldflags "-s -w -X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
 F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
 F2=LICENSE
