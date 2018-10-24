@@ -20,6 +20,7 @@
 package main
 
 import (
+	"C"
 	"os"
 	"strings"
 
