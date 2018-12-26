@@ -20,9 +20,13 @@
 package agent
 
 import (
+	// Standard
+	"errors"
 	"fmt"
-	"github.com/mattn/go-shellwords"
 	"os/exec"
+
+	// 3rd Party
+	"github.com/mattn/go-shellwords"
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
@@ -45,4 +49,9 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 	}
 
 	return stdout, stderr
+}
+
+// ExecuteShellcodeSelf executes provided shellcode in the current process
+func ExecuteShellcodeSelf(shellcode []byte) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
 }

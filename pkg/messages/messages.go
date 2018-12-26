@@ -84,3 +84,10 @@ type AgentInfo struct {
 	Proto 		  string `json:"proto,omitempty"`
 	SysInfo		  interface{} `json:"sysinfo,omitempty"`
 }
+
+// Shellcode is a JSON payload containing shellcode and the method for execution
+type Shellcode struct {
+	Method 		string `json:"method"`
+	Bytes		string `json:"bytes"` // Base64 string of shellcode bytes
+	Job     	string `json:"job"`
+}

@@ -401,6 +401,15 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		k := marshalMessage(p)
 		m.Type = "CmdPayload"
 		m.Payload = (*json.RawMessage)(&k)
+	case "shellcode":
+		m.Type = "Shellcode"
+		p := messages.Shellcode{
+			Method: job.Args[0],
+			Job:	job.ID,
+			Bytes: 	job.Args[1],
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
 	case "download":
 		m.Type = "FileTransfer"
 		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",

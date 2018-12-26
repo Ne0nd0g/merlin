@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 0.6.4 - 2018-11-XX
 
+### Added
+- Execute shellcode inside current process (Windows only)
+  - `execute-shellcode` command from agent menu
+  - executeShellcode function added to agents package
+  - ExecuteShellcodeSelf function added to agents/exec.go
+- parseHex function added to cli package
+- parseShellcodeFile function added to cli package
+- `golang.org/x/sys/windows` to vendor folder
+- Shellcode struct to messages package
+
 ### Changed
 - Updated github.com/mattn/go-shellwords/ package in vendor
 
