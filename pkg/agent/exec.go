@@ -55,3 +55,8 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 func ExecuteShellcodeSelf(shellcode []byte) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
+
+// ExecuteShellcodeRemote executes provided shellcode in the provided target process
+func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
+}

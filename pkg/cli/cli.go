@@ -257,7 +257,53 @@ func Shell() {
 								} else {
 									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 								}
+						case "remote": // TODO condense with self
+						if len(cmd) > 3 {
+							var b64 string
+							f, errF := os.Stat(cmd[3])
+							if errF != nil {
+								if core.Verbose {
+									message("info", "Third argument was not a file; skipping")
+									if core.Debug {
+										message("debug", fmt.Sprintf("%s", errF.Error()))
+									}
+								}
 
+								if core.Verbose {
+									message("info", "Parsing input into hex")
+								}
+
+								h, errH := parseHex(cmd[3:])
+								if errH != nil {
+									message("warn", errH.Error())
+									break
+								} else {
+									b64 = base64.StdEncoding.EncodeToString(h)
+								}
+							} else {
+								if f.IsDir() {
+									message("warn", "A directory was provided instead of a file")
+									break
+								} else {
+									if core.Verbose {
+										message("info", "File passed as parameter")
+									}
+									b, errB := parseShellcodeFile(cmd[3])
+									if errB != nil {
+										message("warn", "There was an error parsing the shellcode file")
+										message("warn", errB.Error())
+										break
+									}
+									b64 = base64.StdEncoding.EncodeToString(b)
+								}
+							}
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
+							if err != nil {
+								message("warn", err.Error())
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+						}
 						default:
 							message("warn", fmt.Sprintf("Invalid shellcode invocation type: %s", cmd[1]))
 						}
@@ -494,6 +540,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("download"),
 		readline.PcItem("execute-shellcode",
 			readline.PcItem("self"),
+			readline.PcItem("remote"),
 		),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
@@ -585,7 +632,7 @@ func menuHelpAgent() {
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download","Download a file from the agent", "download <remote_file>"},
-		{"execute-shellcode", "Execute shellcode", "self"},
+		{"execute-shellcode", "Execute shellcode", "self, remote"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"main", "Return to the main menu", ""},
@@ -647,7 +694,6 @@ func executeCommand(name string, arg []string) {
 		message("success", fmt.Sprintf("%s", out))
 	}
 }
-
 
 // parseHex evaluates a string array to determine its format and returns a byte array of the hex
 func parseHex(str []string) ([]byte, error) {
@@ -723,7 +769,7 @@ func parseShellcodeFile(filePath string) ([]byte, error){
 	h, errH := parseHex([]string{string(b)})
 	if errH != nil {
 		if core.Verbose{
-			message("info", "Error parsing shellcode file for Base64, \\x90\\x00, 0x900x00, or 9000 formats; skipping")
+			message("info", "Error parsing shellcode file for Base64, \\x90\\x00, 0x90,0x00, or 9000 formats; skipping")
 			message("info", errH.Error())
 		}
 	} else {

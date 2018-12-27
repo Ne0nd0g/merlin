@@ -406,7 +406,17 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		p := messages.Shellcode{
 			Method: job.Args[0],
 			Job:	job.ID,
-			Bytes: 	job.Args[1],
+		}
+
+		if p.Method == "self"{
+			p.Bytes = 	job.Args[1]
+		} else if p.Method == "remote" {
+			i, err 	:= 	strconv.Atoi(job.Args[1])
+			if err != nil {
+				return m, err
+			}
+			p.PID = uint32(i)
+			p.Bytes = 	job.Args[2]
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)

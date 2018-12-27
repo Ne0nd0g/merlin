@@ -90,4 +90,5 @@ type Shellcode struct {
 	Method 		string `json:"method"`
 	Bytes		string `json:"bytes"` // Base64 string of shellcode bytes
 	Job     	string `json:"job"`
+	PID			uint32  `json:"pid,omitempty"`  // Process ID for remote injection
 }
