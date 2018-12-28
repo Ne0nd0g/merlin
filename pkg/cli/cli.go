@@ -215,65 +215,43 @@ func Shell() {
 					}
 				case "execute-shellcode":
 					if len(cmd) > 2 {
-						switch cmd[1]{
-							case "self":
-								var b64 string
-								f, errF := os.Stat(cmd[2])
-								if errF != nil {
-									if core.Verbose {
-										message("info", "Third argument was not a file; skipping")
-										if core.Debug {
-											message("debug", fmt.Sprintf("%s", errF.Error()))
-										}
-									}
+						var b64 string
+						i := 0 // position for the file path or inline bytes
+						switch strings.ToLower(cmd[1]){
+						case "self":
+							i = 2
+						case "remote":
+							if len(cmd) > 3{
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						case "rtlcreateuserthread":
+							if len(cmd) > 3{
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						default:
+							message("warn", "Not enough arguments. Try using the help command")
+							break
+						}
 
-									if core.Verbose {message("info", "Parsing input into hex")}
-
-									h, errH := parseHex(cmd[2:])
-									if errH != nil {
-										message("warn", errH.Error())
-										break
-									} else {
-										b64 = base64.StdEncoding.EncodeToString(h)
-									}
-								} else {
-									if f.IsDir(){
-										message("warn", "A directory was provided instead of a file")
-										break
-									} else {
-										if core.Verbose{message("info", "File passed as parameter")}
-										b, errB := parseShellcodeFile(cmd[2])
-										if errB != nil {
-											message("warn", "There was an error parsing the shellcode file")
-											message("warn", errB.Error())
-											break
-										}
-										b64 = base64.StdEncoding.EncodeToString(b)
-									}
-								}
-								m, err := agents.AddJob(shellAgent, "shellcode", []string{"self", b64})
-								if err != nil {
-									message("warn", err.Error())
-								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
-								}
-						case "remote": // TODO condense with self
-						if len(cmd) > 3 {
-							var b64 string
-							f, errF := os.Stat(cmd[3])
+						if i > 0 {
+							f, errF := os.Stat(cmd[i])
 							if errF != nil {
 								if core.Verbose {
-									message("info", "Third argument was not a file; skipping")
+									message("info", "Valid file not provided as argument, parsing bytes")
 									if core.Debug {
 										message("debug", fmt.Sprintf("%s", errF.Error()))
 									}
 								}
 
-								if core.Verbose {
-									message("info", "Parsing input into hex")
-								}
+								if core.Verbose {message("info", "Parsing input into hex")}
 
-								h, errH := parseHex(cmd[3:])
+								h, errH := parseHex(cmd[i:])
 								if errH != nil {
 									message("warn", errH.Error())
 									break
@@ -281,14 +259,12 @@ func Shell() {
 									b64 = base64.StdEncoding.EncodeToString(h)
 								}
 							} else {
-								if f.IsDir() {
+								if f.IsDir(){
 									message("warn", "A directory was provided instead of a file")
 									break
 								} else {
-									if core.Verbose {
-										message("info", "File passed as parameter")
-									}
-									b, errB := parseShellcodeFile(cmd[3])
+									if core.Verbose{message("info", "File passed as parameter")}
+									b, errB := parseShellcodeFile(cmd[i])
 									if errB != nil {
 										message("warn", "There was an error parsing the shellcode file")
 										message("warn", errB.Error())
@@ -297,16 +273,36 @@ func Shell() {
 									b64 = base64.StdEncoding.EncodeToString(b)
 								}
 							}
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						} else {message("warn", "Not enough arguments. Try using the help command");break}
+
+						switch strings.ToLower(cmd[1]){
+							case "self":
+								m, err := agents.AddJob(shellAgent, "shellcode", []string{"self", b64})
+								if err != nil {
+									message("warn", err.Error())
+									break
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
+							case "remote":
+								m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
+								if err != nil {
+									message("warn", err.Error())
+									break
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
+							case "rtlcreateuserthread":
+								m, err := agents.AddJob(shellAgent, "shellcode", []string{"rtlcreateuserthread", cmd[2], b64})
+								if err != nil {
+									message("warn", err.Error())
+									break
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
+							default:
+								message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
 							}
-						}
-						default:
-							message("warn", fmt.Sprintf("Invalid shellcode invocation type: %s", cmd[1]))
-						}
 					}
 				case "exit":
 					exit()

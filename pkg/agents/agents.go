@@ -410,7 +410,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 
 		if p.Method == "self"{
 			p.Bytes = 	job.Args[1]
-		} else if p.Method == "remote" {
+		} else if p.Method == "remote" || p.Method == "rtlcreateuserthread" {
 			i, err 	:= 	strconv.Atoi(job.Args[1])
 			if err != nil {
 				return m, err

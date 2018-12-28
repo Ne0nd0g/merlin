@@ -12,8 +12,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - executeShellcode function added to agents package
   - ExecuteShellcodeSelf function added to agents/exec.go
 - Execute shellcode inside remote process (Windows only)
- - `execute-shellcode remote <PID> <SHELLCODE>` command from agent menu
+  - `execute-shellcode remote <PID> <SHELLCODE>` command from agent menu
   - ExecuteShellcodeRemote function added to agents/exec.go
+- Execute shellcode inside remote process using RtlCreateUserThread (Windows only)
+  - `execute-shellcode rtlcreateuserthread <PID> <SHELLCODE>` command from agent menu
+  - ExecuteShellcodeRtlCreateUserThread function added to agents/exec.go
 - parseHex function added to cli package
 - parseShellcodeFile function added to cli package
 - `golang.org/x/sys/windows` to vendor folder
