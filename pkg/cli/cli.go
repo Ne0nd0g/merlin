@@ -234,6 +234,13 @@ func Shell() {
 								message("warn", "Not enough arguments. Try using the help command")
 								break
 							}
+						case "userapc":
+							if len(cmd) > 3{
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
 						default:
 							message("warn", "Not enough arguments. Try using the help command")
 							break
@@ -300,6 +307,14 @@ func Shell() {
 								} else {
 									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 								}
+						case "userapc":
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"userapc", cmd[2], b64})
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
 							default:
 								message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
 							}

@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Execute shellcode inside remote process using RtlCreateUserThread (Windows only)
   - `execute-shellcode rtlcreateuserthread <PID> <SHELLCODE>` command from agent menu
   - ExecuteShellcodeRtlCreateUserThread function added to agents/exec.go
+- Execute shellcode inside remote process using QueueUserAPC (Windows only)
+  - `execute-shellcode userapc <PID> <SHELLCODE>` command from agent menu
+  - **WARNING**: very unstable and will likely crash process; working on stable implementation
+  - Command intentionally not added to tab completion menu while unstable
 - parseHex function added to cli package
 - parseShellcodeFile function added to cli package
 - `golang.org/x/sys/windows` to vendor folder

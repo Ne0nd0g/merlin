@@ -60,3 +60,7 @@ func ExecuteShellcodeSelf(shellcode []byte) error {
 func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
+
+func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
+}

