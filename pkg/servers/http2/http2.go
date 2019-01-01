@@ -19,52 +19,52 @@ package http2
 
 import (
 	// Standard
-	"net/http"
-	"fmt"
-	"encoding/json"
-	"path/filepath"
-	"os"
-	"encoding/base64"
-	"io/ioutil"
-	"time"
-	"crypto/tls"
-	"strconv"
-	"log"
-	"encoding/pem"
-	"crypto/x509"
 	"crypto/sha1"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"time"
 
 	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
-	
+
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
+	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
 // Server is a structure for creating and instantiating new server objects
 type Server struct {
-	Interface	string
-	Port		int
-	Protocol	string
-	Key 		string
+	Interface   string
+	Port        int
+	Protocol    string
+	Key         string
 	Certificate string
-	Server 		interface{}
-	Mux 		*http.ServeMux
+	Server      interface{}
+	Mux         *http.ServeMux
 }
 
 // New instantiates a new server object and returns it
-func New(iface string, port int, protocol string, key string, certificate string ) (Server, error) {
+func New(iface string, port int, protocol string, key string, certificate string) (Server, error) {
 	s := Server{
-		Protocol: protocol,
+		Protocol:  protocol,
 		Interface: iface,
-		Port: port,
-		Mux: http.NewServeMux(),
+		Port:      port,
+		Mux:       http.NewServeMux(),
 	}
 
 	// Check to make sure files exist
@@ -72,13 +72,13 @@ func New(iface string, port int, protocol string, key string, certificate string
 	if errCrt != nil {
 		message("warn", "There was an error importing the SSL/TLS x509 certificate")
 		message("warn", errCrt.Error())
-		return  s, errCrt
+		return s, errCrt
 	}
 	s.Certificate = certificate
 
 	_, errKey := os.Stat(key)
 	if errKey != nil {
-		message("warn","There was an error importing the SSL/TLS x509 key")
+		message("warn", "There was an error importing the SSL/TLS x509 key")
 		message("warn", errKey.Error())
 		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key\r\n%s", errKey.Error()))
 		return s, errKey
@@ -90,7 +90,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 		message("warn", "There was an error importing the SSL/TLS x509 key pair")
 		message("warn", "Ensure a keypair is located in the data/x509 directory")
 		message("warn", err.Error())
-		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s",err.Error()))
+		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error()))
 		return s, err
 	}
 
@@ -149,14 +149,14 @@ func New(iface string, port int, protocol string, key string, certificate string
 		TLSConfig:      TLSConfig,
 	}
 
-	if s.Protocol == "h2"{
+	if s.Protocol == "h2" {
 		s.Server = srv
-	} else if s.Protocol == "hq"{
+	} else if s.Protocol == "hq" {
 		s.Server = &h2quic.Server{
 			Server: srv,
 			QuicConfig: &quic.Config{
-				KeepAlive: false,
-				IdleTimeout: 168 * time.Hour,
+				KeepAlive:                   false,
+				IdleTimeout:                 168 * time.Hour,
 				RequestConnectionIDOmission: false,
 			},
 		}
@@ -177,13 +177,12 @@ func (s *Server) Run() error {
 	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
 	message("note", fmt.Sprintf("Starting %s listener on %s:%d", s.Protocol, s.Interface, s.Port))
 
-
-	if s.Protocol == "h2"{
+	if s.Protocol == "h2" {
 		server := s.Server.(*http.Server)
 		defer server.Close()
 		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
 		return nil
-	} else if s.Protocol == "hq"{
+	} else if s.Protocol == "hq" {
 		server := s.Server.(*h2quic.Server)
 		defer server.Close()
 		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
@@ -234,7 +233,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&j)
 
 		if core.Debug {
-			message("debug",fmt.Sprintf("[DEBUG]POST DATA: %s", j))
+			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %s", j))
 		}
 		switch j.Type {
 
@@ -247,7 +246,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			x, err := agents.StatusCheckIn(j)
 			if core.Verbose {
-				message("note", fmt.Sprintf("Sending " + x.Type + " message type to agent"))
+				message("note", fmt.Sprintf("Sending "+x.Type+" message type to agent"))
 			}
 			if err != nil {
 				message("warn", err.Error())
@@ -267,7 +266,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if len(p.Stderr) > 0 {
 				agents.Log(j.ID, fmt.Sprintf("Command Results (stderr):\r\n%s", p.Stderr))
-				message("warn",fmt.Sprintf("%s", p.Stderr))
+				message("warn", fmt.Sprintf("%s", p.Stderr))
 			}
 
 		case "AgentInfo":
@@ -284,28 +283,28 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 				agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
 				_, f := filepath.Split(p.FileLocation) // We don't need the directory part for anything
 				if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
-					message("","[!]There was an error locating the agent's directory")
-					message("",errD.Error())
+					message("", "[!]There was an error locating the agent's directory")
+					message("", errD.Error())
 				}
 				message("success", fmt.Sprintf("Results for job %s", p.Job))
 				downloadBlob, downloadBlobErr := base64.StdEncoding.DecodeString(p.FileBlob)
 
 				if downloadBlobErr != nil {
-					message("","[!]There was an error decoding the fileBlob")
-					message("",downloadBlobErr.Error())
+					message("", "[!]There was an error decoding the fileBlob")
+					message("", downloadBlobErr.Error())
 				} else {
 					downloadFile := filepath.Join(agentsDir, j.ID.String(), f)
 					writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
 					if writingErr != nil {
-						message("warn",fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
-						message("warn",writingErr.Error())
+						message("warn", fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
+						message("warn", writingErr.Error())
 					} else {
 						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
 							p.FileLocation,
 							len(downloadBlob),
 							j.ID.String(),
 							downloadFile))
-						agents.Log(j.ID, fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from" +
+						agents.Log(j.ID, fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from"+
 							" agent to %s",
 							p.FileLocation,
 							len(downloadBlob),
@@ -314,7 +313,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		default:
-			message("warn",fmt.Sprintf("Invalid Activity: %s", j.Type))
+			message("warn", fmt.Sprintf("Invalid Activity: %s", j.Type))
 		}
 
 	} else if r.Method == "GET" {
@@ -331,7 +330,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // message is used to print a message to the command line
-func message (level string, message string) {
+func message(level string, message string) {
 	switch level {
 	case "info":
 		color.Cyan("[i]" + message)

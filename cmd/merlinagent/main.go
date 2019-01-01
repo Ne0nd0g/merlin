@@ -36,14 +36,13 @@ import (
 var url = "https://127.0.0.1:443/"
 var build = "nonRelease"
 
-
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
 	version := flag.Bool("version", false, "Print the agent version and exit")
 	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
 	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
-	sleep := flag.Duration( "sleep", 30000*time.Millisecond, "Time for agent to sleep")
+	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
 

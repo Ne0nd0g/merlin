@@ -18,15 +18,17 @@
 package core
 
 import (
+	"math/rand"
 	"os"
 	"time"
-	"math/rand"
 )
 
 // Debug puts Merlin into debug mode and displays debug messages
 var Debug = false
+
 // Verbose puts Merlin into verbose mode and displays verbose messages
 var Verbose = false
+
 // CurrentDir is the current directory where Merlin was executed from
 var CurrentDir, _ = os.Getwd()
 var src = rand.NewSource(time.Now().UnixNano())

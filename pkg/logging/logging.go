@@ -19,11 +19,11 @@ package logging
 
 import (
 	// Standard
+	"fmt"
 	"os"
 	"path/filepath"
-	"fmt"
 	"time"
-	
+
 	// 3rd Party
 	"github.com/fatih/color"
 
@@ -52,12 +52,12 @@ func init() {
 }
 
 // Server writes a log entry into the server's log file
-func Server(logMessage string){
+func Server(logMessage string) {
 	serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", logMessage, time.Now()))
 }
 
 // Message is used to print a message to the command line
-func message (level string, message string) {
+func message(level string, message string) {
 	switch level {
 	case "info":
 		color.Cyan("[i]" + message)

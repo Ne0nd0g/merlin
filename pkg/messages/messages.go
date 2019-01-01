@@ -32,10 +32,10 @@ type Base struct {
 
 // FileTransfer is the JSON payload to transfer files between the server and agent
 type FileTransfer struct {
-	FileLocation    string `json:"dest"`
-	FileBlob 		string `json:"blob"`
-	IsDownload		bool `json:"download"`
-	Job      		string `json:"job"`
+	FileLocation string `json:"dest"`
+	FileBlob     string `json:"blob"`
+	IsDownload   bool   `json:"download"`
+	Job          string `json:"job"`
 }
 
 // CmdPayload is the JSON payload for commands to execute on an agent
@@ -74,21 +74,21 @@ type AgentControl struct {
 
 // AgentInfo is a JSON payload containing information about the agent and its configuration
 type AgentInfo struct {
-	Version       string `json:"version,omitempty"`
-	Build         string `json:"build,omitempty"`
-	WaitTime      string `json:"waittime,omitempty"`
-	PaddingMax    int    `json:"paddingmax,omitempty"`
-	MaxRetry      int    `json:"maxretry,omitempty"`
-	FailedCheckin int    `json:"failedcheckin,omitempty"`
-	Skew		  int64	 `json:"skew,omitempty"`
-	Proto 		  string `json:"proto,omitempty"`
-	SysInfo		  interface{} `json:"sysinfo,omitempty"`
+	Version       string      `json:"version,omitempty"`
+	Build         string      `json:"build,omitempty"`
+	WaitTime      string      `json:"waittime,omitempty"`
+	PaddingMax    int         `json:"paddingmax,omitempty"`
+	MaxRetry      int         `json:"maxretry,omitempty"`
+	FailedCheckin int         `json:"failedcheckin,omitempty"`
+	Skew          int64       `json:"skew,omitempty"`
+	Proto         string      `json:"proto,omitempty"`
+	SysInfo       interface{} `json:"sysinfo,omitempty"`
 }
 
 // Shellcode is a JSON payload containing shellcode and the method for execution
 type Shellcode struct {
-	Method 		string `json:"method"`
-	Bytes		string `json:"bytes"` // Base64 string of shellcode bytes
-	Job     	string `json:"job"`
-	PID			uint32  `json:"pid,omitempty"`  // Process ID for remote injection
+	Method string `json:"method"`
+	Bytes  string `json:"bytes"` // Base64 string of shellcode bytes
+	Job    string `json:"job"`
+	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
 }
