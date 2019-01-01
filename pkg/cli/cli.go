@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@ package cli
 
 import (
 	// Standard
+	"encoding/base64"
+	"encoding/hex"
+	"io/ioutil"
 	"log"
 	"io"
 	"strings"
@@ -209,6 +212,112 @@ func Shell() {
 						if err != nil {message("warn", err.Error())}else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 						}
+					}
+				case "execute-shellcode":
+					if len(cmd) > 2 {
+						var b64 string
+						i := 0 // position for the file path or inline bytes
+						switch strings.ToLower(cmd[1]){
+						case "self":
+							i = 2
+						case "remote":
+							if len(cmd) > 3{
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						case "rtlcreateuserthread":
+							if len(cmd) > 3{
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						case "userapc":
+							if len(cmd) > 3{
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						default:
+							message("warn", "Not enough arguments. Try using the help command")
+							break
+						}
+
+						if i > 0 {
+							f, errF := os.Stat(cmd[i])
+							if errF != nil {
+								if core.Verbose {
+									message("info", "Valid file not provided as argument, parsing bytes")
+									if core.Debug {
+										message("debug", fmt.Sprintf("%s", errF.Error()))
+									}
+								}
+
+								if core.Verbose {message("info", "Parsing input into hex")}
+
+								h, errH := parseHex(cmd[i:])
+								if errH != nil {
+									message("warn", errH.Error())
+									break
+								} else {
+									b64 = base64.StdEncoding.EncodeToString(h)
+								}
+							} else {
+								if f.IsDir(){
+									message("warn", "A directory was provided instead of a file")
+									break
+								} else {
+									if core.Verbose{message("info", "File passed as parameter")}
+									b, errB := parseShellcodeFile(cmd[i])
+									if errB != nil {
+										message("warn", "There was an error parsing the shellcode file")
+										message("warn", errB.Error())
+										break
+									}
+									b64 = base64.StdEncoding.EncodeToString(b)
+								}
+							}
+						} else {message("warn", "Not enough arguments. Try using the help command");break}
+
+						switch strings.ToLower(cmd[1]){
+							case "self":
+								m, err := agents.AddJob(shellAgent, "shellcode", []string{"self", b64})
+								if err != nil {
+									message("warn", err.Error())
+									break
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
+							case "remote":
+								m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
+								if err != nil {
+									message("warn", err.Error())
+									break
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
+							case "rtlcreateuserthread":
+								m, err := agents.AddJob(shellAgent, "shellcode", []string{"rtlcreateuserthread", cmd[2], b64})
+								if err != nil {
+									message("warn", err.Error())
+									break
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								}
+						case "userapc":
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"userapc", cmd[2], b64})
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+							default:
+								message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
+							}
 					}
 				case "exit":
 					exit()
@@ -440,6 +549,11 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("cmd"),
 		readline.PcItem("back"),
 		readline.PcItem("download"),
+		readline.PcItem("execute-shellcode",
+			readline.PcItem("self"),
+			readline.PcItem("remote"),
+			readline.PcItem("RtlCreateUserThread"),
+		),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
@@ -523,13 +637,14 @@ func menuHelpAgent() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	table.SetCaption(true, "Agent Menu Help")
+	table.SetCaption(true, "Agent Help Menu")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download","Download a file from the agent", "download <remote_file>"},
+		{"execute-shellcode", "Execute shellcode", "self, remote"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"main", "Return to the main menu", ""},
@@ -542,6 +657,7 @@ func menuHelpAgent() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu")
 }
 
 func filterInput(r rune) (rune, bool) {
@@ -589,6 +705,95 @@ func executeCommand(name string, arg []string) {
 	} else {
 		message("success", fmt.Sprintf("%s", out))
 	}
+}
+
+// parseHex evaluates a string array to determine its format and returns a byte array of the hex
+func parseHex(str []string) ([]byte, error) {
+
+	if core.Debug{message("debug", "Entering into cli.parseHex function")}
+
+	hexString := strings.Join(str, "")
+
+	if core.Debug{
+		message("debug", "Parsing: ")
+		message("debug", fmt.Sprintf("%s", hexString))
+	}
+
+	data, err := base64.StdEncoding.DecodeString(hexString)
+	if err != nil{
+		if core.Verbose{message("info", "Passed in string was not Base64 encoded")}
+		if core.Debug{message("debug", fmt.Sprintf("%s", err.Error()))}
+	} else {
+		if core.Verbose{message("info", "Passed in string is Base64 encoded")}
+		s := string(data)
+		hexString = s
+	}
+
+	// see if string is prefixed with 0x
+	if hexString[0:2] == "0x" {
+		if core.Verbose{message("info", "Passed in string contains 0x; removing")}
+		hexString = strings.Replace(hexString, "0x", "",-1)
+		if strings.Contains(hexString, ","){
+			if core.Verbose{message("info", "Passed in string is comma separated; removing")}
+			hexString = strings.Replace(hexString, ",", "", -1)
+		}
+		if strings.Contains(hexString, " "){
+			if core.Verbose{message("info", "Passed in string contains spaces; removing")}
+			hexString = strings.Replace(hexString, " ", "", -1)
+		}
+	}
+
+	// see if string is prefixed with \x
+	if hexString[0:2] == "\\x"{
+		if core.Verbose {message("info", "Passed in string contains \\x; removing")}
+		hexString = strings.Replace(hexString, "\\x", "", -1)
+		if strings.Contains(hexString, ","){
+			if core.Verbose{message("info", "Passed in string is comma separated; removing")}
+			hexString = strings.Replace(hexString, ",", "", -1)
+		}
+		if strings.Contains(hexString, " "){
+			if core.Verbose{message("info", "Passed in string contains spaces; removing")}
+			hexString = strings.Replace(hexString, " ", "", -1)
+		}
+	}
+
+	if core.Debug{message("debug", fmt.Sprintf("About to convert to byte array: \r\n%s", hexString))}
+
+	h, errH := hex.DecodeString(hexString)
+
+	if core.Debug{message("debug", "Leaving cli.parseHex function")}
+
+	return h, errH
+
+}
+
+// parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
+func parseShellcodeFile(filePath string) ([]byte, error){
+
+	if core.Debug{message("debug", "Entering into cli.parseShellcodeFile function")}
+
+	b, errB := ioutil.ReadFile(filePath)
+	if errB != nil {
+		if core.Debug{message("debug", "Leaving cli.parseShellcodeFile function")}
+		return nil, errB
+	}
+
+	h, errH := parseHex([]string{string(b)})
+	if errH != nil {
+		if core.Verbose{
+			message("info", "Error parsing shellcode file for Base64, \\x90\\x00, 0x90,0x00, or 9000 formats; skipping")
+			message("info", errH.Error())
+		}
+	} else {
+		if core.Debug{message("debug", "Leaving cli.parseShellcodeFile function")}
+		return h, nil
+	}
+
+
+	if core.Debug{message("debug", "Leaving cli.parseShellcodeFile function")}
+
+	return b, nil
+
 }
 
 // TODO add command "agents" to list all connected agents

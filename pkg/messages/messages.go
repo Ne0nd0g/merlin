@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -83,4 +83,12 @@ type AgentInfo struct {
 	Skew		  int64	 `json:"skew,omitempty"`
 	Proto 		  string `json:"proto,omitempty"`
 	SysInfo		  interface{} `json:"sysinfo,omitempty"`
+}
+
+// Shellcode is a JSON payload containing shellcode and the method for execution
+type Shellcode struct {
+	Method 		string `json:"method"`
+	Bytes		string `json:"bytes"` // Base64 string of shellcode bytes
+	Job     	string `json:"job"`
+	PID			uint32  `json:"pid,omitempty"`  // Process ID for remote injection
 }

