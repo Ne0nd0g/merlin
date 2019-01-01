@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ var debug = false;
 var verbose = true;
 var initial = true;
 var hostUUID = guid();
-var version = "0.0.0";
+var version = "0.6.3.BETA";
 var build = "nonRelease";
 var waitTime = 30000; // in milliseconds
 var maxRetry = 7;

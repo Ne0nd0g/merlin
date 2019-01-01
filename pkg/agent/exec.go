@@ -2,7 +2,7 @@
 
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,9 +20,13 @@
 package agent
 
 import (
+	// Standard
+	"errors"
 	"fmt"
-	"github.com/mattn/go-shellwords"
 	"os/exec"
+
+	// 3rd Party
+	"github.com/mattn/go-shellwords"
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
@@ -45,4 +49,24 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 	}
 
 	return stdout, stderr
+}
+
+// ExecuteShellcodeSelf executes provided shellcode in the current process
+func ExecuteShellcodeSelf(shellcode []byte) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
+}
+
+// ExecuteShellcodeRemote executes provided shellcode in the provided target process
+func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
+}
+
+// ExecuteShellcodeRtlCreateUserThread executes provided shellcode in the provided target process using the Windows RtlCreateUserThread call
+func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
+}
+
+// ExecuteShellcodeQueueUserAPC executes provided shellcode in the provided target process using the Windows QueueUserAPC API call
+func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
+	return errors.New("shellcode execution is not implemented for this operating system")
 }

@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,12 +26,12 @@ import (
 	"github.com/fatih/color"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/banner"
-	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/cli"
 	"github.com/Ne0nd0g/merlin/pkg"
+	"github.com/Ne0nd0g/merlin/pkg/banner"
+	"github.com/Ne0nd0g/merlin/pkg/cli"
+	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
 )
 
 // Global Variables
@@ -53,7 +53,8 @@ func main() {
 		color.Blue("#################################################")
 		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
 		color.Blue("#################################################")
-		color.Blue("Version: " + merlin.Version + " Build: " + build)
+		color.Blue("Version: " + merlin.Version)
+		color.Blue("Build: " + build)
 		flag.PrintDefaults()
 	}
 	flag.Parse()

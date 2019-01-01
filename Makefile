@@ -1,7 +1,7 @@
 # !!!MAKE SURE YOUR GOPATH ENVIRONMENT VARIABLE IS SET FIRST!!!
 
 # Merlin Server & Agent version number
-VERSION=0.6.0
+VERSION=$(shell cat pkg/merlin.go |grep "const Version ="|cut -d"\"" -f2)
 
 MSERVER=merlinServer
 MAGENT=merlinAgent
@@ -9,8 +9,8 @@ PASSWORD=merlin
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/temp/v${VERSION}/${BUILD}
 BIN=data/bin/
-LDFLAGS=-ldflags "-s -X main.build=${BUILD}"
-WINAGENTLDFLAGS=-ldflags "-s -X main.build=${BUILD} -H=windowsgui"
+LDFLAGS=-ldflags "-s -w -X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}"
+WINAGENTLDFLAGS=-ldflags "-s -w -X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
 F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
 F2=LICENSE
@@ -76,11 +76,11 @@ agent-linux:
 	
 # Compile Server - Darwin x64
 server-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D}.dmg cmd/merlinserver/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D} cmd/merlinserver/main.go
 
 # Compile Agent - Darwin x64
 agent-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D}.dmg cmd/merlinagent/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D} cmd/merlinagent/main.go
 
 # Update JavaScript Information
 agent-javascript:
@@ -98,22 +98,25 @@ package-server-linux:
 
 package-server-darwin:
 	${PACKAGE} ${DIR}/${MSERVER}-${D}-v${VERSION}.7z ${F}
-	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}.dmg
+	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}
 
 package-agent-windows:
 	${PACKAGE} ${DIR}/${MAGENT}-${W}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
-	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows
+	mkdir -p ${BIN}windows
+	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
 
 package-agent-linux:
 	${PACKAGE} ${DIR}/${MAGENT}-${L}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
-	cp ${DIR}/${MAGENT}-${L} ${BIN}linux
+	mkdir -p ${BIN}linux
+	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
 	
 package-agent-darwin:
 	${PACKAGE} ${DIR}/${MAGENT}-${D}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}.dmg
-	cp ${DIR}/${MAGENT}-${D}.dmg ${BIN}darwin
+	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}
+	mkdir -p ${BIN}darwin/
+	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/
 
 package-agent-dll:
 	${PACKAGE} ${DIR}/${MAGENT}-DLL-v${VERSION}.7z ${F2}

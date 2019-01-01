@@ -163,10 +163,10 @@
 			"revisionTime": "2017-05-10T07:48:58Z"
 		},
 		{
-			"checksumSHA1": "+a74DVHv7qMIr5BEg1PnPOdgaT4=",
+			"checksumSHA1": "WQqrnuGxgaUtEyOAPNsUoPd0ej0=",
 			"path": "github.com/mattn/go-shellwords",
-			"revision": "95c860c1895b21b58903abdd1d9c591560b0601c",
-			"revisionTime": "2017-08-28T04:11:23Z"
+			"revision": "3c0603ff9671145648171317c30371d805656003",
+			"revisionTime": "2018-10-23T06:56:52Z"
 		},
 		{
 			"checksumSHA1": "5nZYvCIgyAKCIwyzUhKYDIaFn30=",
@@ -227,6 +227,12 @@
 			"path": "golang.org/x/sys/unix",
 			"revision": "abf9c25f54453410d0c6668e519582a9e1115027",
 			"revisionTime": "2017-07-10T15:57:01Z"
+		},
+		{
+			"checksumSHA1": "Y7nctMxT58lRM78VtElPerhcnEs=",
+			"path": "golang.org/x/sys/windows",
+			"revision": "b4a75ba826a64a70990f11a225237acd6ef35c9f",
+			"revisionTime": "2018-12-21T10:19:52Z"
 		},
 		{
 			"checksumSHA1": "faFDXp++cLjLBlvsr+izZ+go1WU=",

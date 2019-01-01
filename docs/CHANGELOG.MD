@@ -4,6 +4,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.6.4 - 2019-01-01
+
+### Added
+- Execute shellcode inside current process (Windows only)
+  - `execute-shellcode self <SHELLCODE>` command from agent menu
+  - executeShellcode function added to agents package
+  - ExecuteShellcodeSelf function added to agents/exec.go
+- Execute shellcode inside remote process (Windows only)
+  - `execute-shellcode remote <PID> <SHELLCODE>` command from agent menu
+  - ExecuteShellcodeRemote function added to agents/exec.go
+- Execute shellcode inside remote process using RtlCreateUserThread (Windows only)
+  - `execute-shellcode rtlcreateuserthread <PID> <SHELLCODE>` command from agent menu
+  - ExecuteShellcodeRtlCreateUserThread function added to agents/exec.go
+- Execute shellcode inside remote process using QueueUserAPC (Windows only)
+  - `execute-shellcode userapc <PID> <SHELLCODE>` command from agent menu
+  - **WARNING**: very unstable and will likely crash process; working on stable implementation
+  - Command intentionally not added to tab completion menu while unstable
+- parseHex function added to cli package
+- parseShellcodeFile function added to cli package
+- `golang.org/x/sys/windows` to vendor folder
+- Shellcode struct to messages package
+- .gitattributes file to detect project as Go
+
+### Changed
+- Updated github.com/mattn/go-shellwords/ package in vendor
+
+## 0.6.3 - 2018-10-24
+### Added
+- Added "shell" command to agent menu
+- Added `-w` compile time link flag to omit the DWARF symbol table
+- Added additional `-X` compile flag to set the build in the Agent package
+
+### Changed
+- [Issue 26](https://github.com/Ne0nd0g/merlin/issues/26) Updated Makefile to remove .dmg file extension for Darwin
+- [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23) Error when using upload command without specific arguments
+- [Issue 28](https://github.com/Ne0nd0g/merlin/issues/28) Updated MimiPenguin module to use new path to download mimipenguin.sh
+- Modified `cmd/merlinagentdll/main.go` Global variable from `URL` to `url` for consistency across all packages
+
+## 0.6.2 - 2018-09-02
+### Changed
+- Added Twitter badge to README
+- Configured agent status check in to use a go routine
+- Removed unnecessary global variables from agent.go
+- Documented agent.Agent struct fields
+- Added "initial" field to agent.Agent struct
+
+### Fixed
+- [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23) Error writing an agent log entry when agent was set to 'all'
+- Out of range error when setting module options in Run function
+
+## 0.6.1 - 2018-08-11
+### Added
+- Added Merlin Cheat Sheet to docs/MerlinCheatSheet.pdf
+- Added module for GhostPack's Seatbelt
+- Added module for GhostPack's SafetyKatz
+- Added module for GhostPack's SharpDump
+- Added module for GhostPack's SharpRoast
+- Added module for GhostPack's SharpUp
+- Added Compiler-CSharp module
+- Added Inveigh module
+
+### Changed
+- Make file extracts version number from pkg/merlin.go
+
 ## 0.6.0 - 2018-07-29
 ### Added
 - Added support for QUIC protocol version Q39 to both Server and Agent

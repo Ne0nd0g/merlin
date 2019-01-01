@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,27 +19,30 @@ package cli
 
 import (
 	// Standard
-	"log"
+	"encoding/base64"
+	"encoding/hex"
+	"fmt"
 	"io"
-	"strings"
+	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
-	"fmt"
-	"time"
 	"path"
+	"strings"
+	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
-	"github.com/olekukonko/tablewriter"
 	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/modules"
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
+	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 // Global Variables
@@ -139,7 +142,7 @@ func Shell() {
 			case "module":
 				switch cmd[0] {
 				case "show":
-					if len(cmd) > 1{
+					if len(cmd) > 1 {
 						switch cmd[1] {
 						case "info":
 							shellModule.ShowInfo()
@@ -151,12 +154,20 @@ func Shell() {
 					shellModule.ShowInfo()
 				case "set":
 					if len(cmd) > 2 {
-						if cmd[1] == "agent"{
+						if cmd[1] == "agent" {
 							s, err := shellModule.SetAgent(cmd[2])
-							if err != nil {message("warn", err.Error())} else {message("success", s)}
+							if err != nil {
+								message("warn", err.Error())
+							} else {
+								message("success", s)
+							}
 						} else {
 							s, err := shellModule.SetOption(cmd[1], cmd[2])
-							if err != nil {message("warn", err.Error())} else {message("success", s)}
+							if err != nil {
+								message("warn", err.Error())
+							} else {
+								message("success", s)
+							}
 						}
 					}
 				case "reload":
@@ -167,7 +178,9 @@ func Shell() {
 						message("warn", err.Error())
 					} else {
 						m, err := agents.AddJob(shellModule.Agent, "cmd", r)
-						if err != nil {message("warn", err.Error())} else {
+						if err != nil {
+							message("warn", err.Error())
+						} else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellModule.Agent))
 						}
 					}
@@ -197,17 +210,134 @@ func Shell() {
 				case "back":
 					menuSetMain()
 				case "cmd":
-					if len(cmd) >1{
+					if len(cmd) > 1 {
 						m, err := agents.AddJob(shellAgent, "cmd", cmd[1:])
-						if err != nil {message("warn", err.Error())}else {
+						if err != nil {
+							message("warn", err.Error())
+						} else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 						}
 					}
 				case "download":
-					if len(cmd) >1{
+					if len(cmd) > 1 {
 						m, err := agents.AddJob(shellAgent, "download", cmd[1:])
-						if err != nil {message("warn", err.Error())}else {
+						if err != nil {
+							message("warn", err.Error())
+						} else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
+					}
+				case "execute-shellcode":
+					if len(cmd) > 2 {
+						var b64 string
+						i := 0 // position for the file path or inline bytes
+						switch strings.ToLower(cmd[1]) {
+						case "self":
+							i = 2
+						case "remote":
+							if len(cmd) > 3 {
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						case "rtlcreateuserthread":
+							if len(cmd) > 3 {
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						case "userapc":
+							if len(cmd) > 3 {
+								i = 3
+							} else {
+								message("warn", "Not enough arguments. Try using the help command")
+								break
+							}
+						default:
+							message("warn", "Not enough arguments. Try using the help command")
+							break
+						}
+
+						if i > 0 {
+							f, errF := os.Stat(cmd[i])
+							if errF != nil {
+								if core.Verbose {
+									message("info", "Valid file not provided as argument, parsing bytes")
+									if core.Debug {
+										message("debug", fmt.Sprintf("%s", errF.Error()))
+									}
+								}
+
+								if core.Verbose {
+									message("info", "Parsing input into hex")
+								}
+
+								h, errH := parseHex(cmd[i:])
+								if errH != nil {
+									message("warn", errH.Error())
+									break
+								} else {
+									b64 = base64.StdEncoding.EncodeToString(h)
+								}
+							} else {
+								if f.IsDir() {
+									message("warn", "A directory was provided instead of a file")
+									break
+								} else {
+									if core.Verbose {
+										message("info", "File passed as parameter")
+									}
+									b, errB := parseShellcodeFile(cmd[i])
+									if errB != nil {
+										message("warn", "There was an error parsing the shellcode file")
+										message("warn", errB.Error())
+										break
+									}
+									b64 = base64.StdEncoding.EncodeToString(b)
+								}
+							}
+						} else {
+							message("warn", "Not enough arguments. Try using the help command")
+							break
+						}
+
+						switch strings.ToLower(cmd[1]) {
+						case "self":
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"self", b64})
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+						case "remote":
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+						case "rtlcreateuserthread":
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"rtlcreateuserthread", cmd[2], b64})
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+						case "userapc":
+							m, err := agents.AddJob(shellAgent, "shellcode", []string{"userapc", cmd[2], b64})
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+						default:
+							message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
 						}
 					}
 				case "exit":
@@ -219,9 +349,12 @@ func Shell() {
 				case "info":
 					agents.ShowInfo(shellAgent)
 				case "kill":
-					if len(cmd) >0{
-						m, err := agents.AddJob(shellAgent, "kill", cmd[0:]);menuSetMain()
-						if err != nil {message("warn", err.Error())}else {
+					if len(cmd) > 0 {
+						m, err := agents.AddJob(shellAgent, "kill", cmd[0:])
+						menuSetMain()
+						if err != nil {
+							message("warn", err.Error())
+						} else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 						}
 					}
@@ -230,44 +363,66 @@ func Shell() {
 				case "quit":
 					exit()
 				case "set":
-					if len(cmd) >1{
-						switch cmd[1]{
+					if len(cmd) > 1 {
+						switch cmd[1] {
 						case "maxretry":
-							if len(cmd) >2{
+							if len(cmd) > 2 {
 								m, err := agents.AddJob(shellAgent, "maxretry", cmd[1:])
-								if err != nil {message("warn", err.Error())}else {
+								if err != nil {
+									message("warn", err.Error())
+								} else {
 									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 								}
 							}
 						case "padding":
-							if len(cmd) >2{
+							if len(cmd) > 2 {
 								m, err := agents.AddJob(shellAgent, "padding", cmd[1:])
-								if err != nil {message("warn", err.Error())}else {
+								if err != nil {
+									message("warn", err.Error())
+								} else {
 									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 								}
 							}
 						case "sleep":
-							if len(cmd) >2{
+							if len(cmd) > 2 {
 								m, err := agents.AddJob(shellAgent, "sleep", cmd[1:])
-								if err != nil {message("warn", err.Error())}else {
+								if err != nil {
+									message("warn", err.Error())
+								} else {
 									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 								}
 							}
 						case "skew":
-							if len(cmd) >2{
+							if len(cmd) > 2 {
 								m, err := agents.AddJob(shellAgent, "skew", cmd[1:])
-								if err != nil {message("warn", err.Error())}else {
+								if err != nil {
+									message("warn", err.Error())
+								} else {
 									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 								}
 							}
 						}
 					}
-				case "upload":
-					if len(cmd) >1{
-						m, err := agents.AddJob(shellAgent, "upload", cmd[1:])
-						if err != nil {message("warn", err.Error())}else {
+				case "shell":
+					if len(cmd) > 1 {
+						m, err := agents.AddJob(shellAgent, "cmd", cmd[1:])
+						if err != nil {
+							message("warn", err.Error())
+						} else {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 						}
+					}
+				case "upload":
+					if len(cmd) == 3 {
+						m, err := agents.AddJob(shellAgent, "upload", cmd[1:3])
+						if err != nil {
+							message("warn", err.Error())
+						} else {
+							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+						}
+					} else {
+						message("warn", "Invalid command")
+						message("info", "upload local_file_path remote_file_path")
 					}
 				default:
 					message("info", "Executing system command...")
@@ -302,7 +457,7 @@ func menuUse(cmd []string) {
 	}
 }
 
-func menuAgent(cmd []string){
+func menuAgent(cmd []string) {
 	switch cmd[0] {
 	case "list":
 		table := tablewriter.NewWriter(os.Stdout)
@@ -311,8 +466,12 @@ func menuAgent(cmd []string){
 		for k, v := range agents.Agents {
 			// Convert proto (i.e. h2 or hq) to user friendly string
 			var proto string
-			if v.Proto == "h2"{proto = "HTTP/2 (h2)"}
-			if v.Proto == "hq"{proto = "QUIC (hq)"}
+			if v.Proto == "h2" {
+				proto = "HTTP/2 (h2)"
+			}
+			if v.Proto == "hq" {
+				proto = "QUIC (hq)"
+			}
 
 			table.Append([]string{k.String(), v.Platform + "/" + v.Architecture, v.UserName,
 				v.HostName, proto, agents.GetAgentStatus(k)})
@@ -336,16 +495,18 @@ func menuAgent(cmd []string){
 				message("warn", fmt.Sprintf("There was an error interacting with agent %s", cmd[1]))
 			} else {
 				errRemove := agents.RemoveAgent(i)
-				if errRemove != nil{
-					message("warn",fmt.Sprintf("%s", errRemove.Error()))
-				} else{message("info",fmt.Sprintf("Agent %s was removed from the server", cmd[1]))}
+				if errRemove != nil {
+					message("warn", fmt.Sprintf("%s", errRemove.Error()))
+				} else {
+					message("info", fmt.Sprintf("Agent %s was removed from the server", cmd[1]))
+				}
 			}
 		}
 	}
 }
 
 func menuSetAgent(agentID uuid.UUID) {
-	for k := range agents.Agents{
+	for k := range agents.Agents {
 		if agentID == agents.Agents[k].ID {
 			shellAgent = agentID
 			prompt.Config.AutoComplete = getCompleter("agent")
@@ -357,7 +518,7 @@ func menuSetAgent(agentID uuid.UUID) {
 
 func menuSetModule(cmd string) {
 	if len(cmd) > 0 {
-		var mPath = path.Join(core.CurrentDir, "data", "modules", cmd + ".json")
+		var mPath = path.Join(core.CurrentDir, "data", "modules", cmd+".json")
 		s, errModule := modules.Create(mPath)
 		if errModule != nil {
 			message("warn", errModule.Error())
@@ -370,7 +531,7 @@ func menuSetModule(cmd string) {
 	}
 }
 
-func menuSetMain(){
+func menuSetMain() {
 	prompt.Config.AutoComplete = getCompleter("main")
 	prompt.SetPrompt("\033[31mMerlin»\033[0m ")
 	shellMenuContext = "main"
@@ -403,7 +564,6 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("version"),
 	)
 
-
 	// Module Menu
 	var module = readline.NewPrefixCompleter(
 		readline.PcItem("back"),
@@ -430,10 +590,16 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("cmd"),
 		readline.PcItem("back"),
 		readline.PcItem("download"),
+		readline.PcItem("execute-shellcode",
+			readline.PcItem("self"),
+			readline.PcItem("remote"),
+			readline.PcItem("RtlCreateUserThread"),
+		),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
 		readline.PcItem("main"),
+		readline.PcItem("shell"),
 		readline.PcItem("set",
 			readline.PcItem("maxretry"),
 			readline.PcItem("padding"),
@@ -484,7 +650,7 @@ func menuHelpMain() {
 }
 
 // The help menu while in the modules menu
-func menuHelpModule(){
+func menuHelpModule() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
@@ -496,7 +662,7 @@ func menuHelpModule(){
 		{"info", "Show information about a module"},
 		{"main", "Return to the main menu", ""},
 		{"reload", "Reloads the module to a fresh clean state"},
-		{"run","Run or execute the module", ""},
+		{"run", "Run or execute the module", ""},
 		{"set", "Set the value for one of the module's options", "<option name> <option value>"},
 		{"show", "Show information about a module or its options", "info, options"},
 	}
@@ -512,17 +678,19 @@ func menuHelpAgent() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	table.SetCaption(true, "Agent Menu Help")
+	table.SetCaption(true, "Agent Help Menu")
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
-		{"cmd", "Execute a command on the agent", "cmd ping -c 3 8.8.8.8"},
+		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
-		{"download","Download a file from the agent", "download <remote_file>"},
+		{"download", "Download a file from the agent", "download <remote_file>"},
+		{"execute-shellcode", "Execute shellcode", "self, remote"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
+		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 	}
 
@@ -530,6 +698,7 @@ func menuHelpAgent() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu")
 }
 
 func filterInput(r rune) (rune, bool) {
@@ -542,7 +711,7 @@ func filterInput(r rune) (rune, bool) {
 }
 
 // Message is used to print a message to the command line
-func message (level string, message string) {
+func message(level string, message string) {
 	switch level {
 	case "info":
 		color.Cyan("[i]" + message)
@@ -559,7 +728,7 @@ func message (level string, message string) {
 	}
 }
 
-func exit(){
+func exit() {
 	color.Red("[!]Quitting")
 	serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
 	os.Exit(0)
@@ -577,6 +746,126 @@ func executeCommand(name string, arg []string) {
 	} else {
 		message("success", fmt.Sprintf("%s", out))
 	}
+}
+
+// parseHex evaluates a string array to determine its format and returns a byte array of the hex
+func parseHex(str []string) ([]byte, error) {
+
+	if core.Debug {
+		message("debug", "Entering into cli.parseHex function")
+	}
+
+	hexString := strings.Join(str, "")
+
+	if core.Debug {
+		message("debug", "Parsing: ")
+		message("debug", fmt.Sprintf("%s", hexString))
+	}
+
+	data, err := base64.StdEncoding.DecodeString(hexString)
+	if err != nil {
+		if core.Verbose {
+			message("info", "Passed in string was not Base64 encoded")
+		}
+		if core.Debug {
+			message("debug", fmt.Sprintf("%s", err.Error()))
+		}
+	} else {
+		if core.Verbose {
+			message("info", "Passed in string is Base64 encoded")
+		}
+		s := string(data)
+		hexString = s
+	}
+
+	// see if string is prefixed with 0x
+	if hexString[0:2] == "0x" {
+		if core.Verbose {
+			message("info", "Passed in string contains 0x; removing")
+		}
+		hexString = strings.Replace(hexString, "0x", "", -1)
+		if strings.Contains(hexString, ",") {
+			if core.Verbose {
+				message("info", "Passed in string is comma separated; removing")
+			}
+			hexString = strings.Replace(hexString, ",", "", -1)
+		}
+		if strings.Contains(hexString, " ") {
+			if core.Verbose {
+				message("info", "Passed in string contains spaces; removing")
+			}
+			hexString = strings.Replace(hexString, " ", "", -1)
+		}
+	}
+
+	// see if string is prefixed with \x
+	if hexString[0:2] == "\\x" {
+		if core.Verbose {
+			message("info", "Passed in string contains \\x; removing")
+		}
+		hexString = strings.Replace(hexString, "\\x", "", -1)
+		if strings.Contains(hexString, ",") {
+			if core.Verbose {
+				message("info", "Passed in string is comma separated; removing")
+			}
+			hexString = strings.Replace(hexString, ",", "", -1)
+		}
+		if strings.Contains(hexString, " ") {
+			if core.Verbose {
+				message("info", "Passed in string contains spaces; removing")
+			}
+			hexString = strings.Replace(hexString, " ", "", -1)
+		}
+	}
+
+	if core.Debug {
+		message("debug", fmt.Sprintf("About to convert to byte array: \r\n%s", hexString))
+	}
+
+	h, errH := hex.DecodeString(hexString)
+
+	if core.Debug {
+		message("debug", "Leaving cli.parseHex function")
+	}
+
+	return h, errH
+
+}
+
+// parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
+func parseShellcodeFile(filePath string) ([]byte, error) {
+
+	if core.Debug {
+		message("debug", "Entering into cli.parseShellcodeFile function")
+	}
+
+	b, errB := ioutil.ReadFile(filePath)
+	if errB != nil {
+		if core.Debug {
+			message("debug", "Leaving cli.parseShellcodeFile function")
+		}
+		return nil, errB
+	}
+
+	h, errH := parseHex([]string{string(b)})
+	if errH != nil {
+		if core.Verbose {
+			message("info", "Error parsing shellcode file for Base64, \\x90\\x00, 0x90,0x00, or 9000 formats; skipping")
+			message("info", errH.Error())
+		}
+	} else {
+		if core.Debug {
+			message("debug", "Leaving cli.parseShellcodeFile function")
+		}
+		return h, nil
+	}
+
+	if core.Debug {
+		message("debug", "Leaving cli.parseShellcodeFile function")
+	}
+
+	return b, nil
+
 }
 
 // TODO add command "agents" to list all connected agents

