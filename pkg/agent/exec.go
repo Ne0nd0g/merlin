@@ -61,6 +61,7 @@ func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
+// ExecuteShellcodeQueueUserAPC executes provided shellcode in the provided target process using the Windows QueueUserAPC API call
 func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }

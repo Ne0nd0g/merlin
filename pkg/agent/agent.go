@@ -816,7 +816,7 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 		if a.Verbose{
 			message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", shellcode.Method))
 		}
-		return errors.New(fmt.Sprintf("invalid shellcode execution method %s", shellcode.Method))
+		return fmt.Errorf("invalid shellcode execution method %s", shellcode.Method)
 	}
 }
 
