@@ -18,7 +18,7 @@ An introductory blog post can be found here:
 https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a
 
 
-[![asciicast](https://asciinema.org/a/166722.png)](https://asciinema.org/a/166722&speed=2)
+[![asciicast](https://asciinema.org/a/166722.png)](https://asciinema.org/a/166722?speed=2)
 
 ## Quick Start
 1. Download the latest version of Merlin Server from the [releases](https://github.com/Ne0nd0g/merlin/releases) section
