@@ -2,3 +2,4 @@
 vendor/* linguist-vendored
 docs/* linguist-documentation
 data/bin/powershell/Invoke-Merlin.ps1 linguist-detectable=false
+data/bin/modules/* linguist-detectable=true
