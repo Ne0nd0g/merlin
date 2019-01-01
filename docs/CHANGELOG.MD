@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 0.6.4 - 2018-11-XX
+## 0.6.4 - 2019-01-01
 
 ### Added
 - Execute shellcode inside current process (Windows only)
@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - parseShellcodeFile function added to cli package
 - `golang.org/x/sys/windows` to vendor folder
 - Shellcode struct to messages package
+- .gitattributes file to detect project as Go
 
 ### Changed
 - Updated github.com/mattn/go-shellwords/ package in vendor
