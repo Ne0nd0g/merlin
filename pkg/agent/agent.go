@@ -637,7 +637,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("There was an error: %s", se))
 				}
 			} else {
-				so = "Shellcode executed sucessfully"
+				so = "Shellcode executed successfully"
 				se = ""
 			}
 

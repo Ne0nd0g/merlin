@@ -552,6 +552,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("execute-shellcode",
 			readline.PcItem("self"),
 			readline.PcItem("remote"),
+			readline.PcItem("RtlCreateUserThread"),
 		),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
