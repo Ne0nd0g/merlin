@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.6.5 - 2019-01-10
+
+### Fixed
+- [Issue 41](https://github.com/Ne0nd0g/merlin/issues/41) Error when downloading a file using a path containing a space
+
+### Changed
+- Updated `download` command to correctly parse a remote file path containing a space
+- Removed `data\x509` from .gitignore so that certificates WILL be distributed when cloning the repository to facilitate easy testing
+
 ## 0.6.4 - 2019-01-01
 
 ### Added

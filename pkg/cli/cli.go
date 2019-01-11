@@ -36,6 +36,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
+	"github.com/mattn/go-shellwords"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
@@ -219,13 +220,25 @@ func Shell() {
 						}
 					}
 				case "download":
-					if len(cmd) > 1 {
-						m, err := agents.AddJob(shellAgent, "download", cmd[1:])
-						if err != nil {
-							message("warn", err.Error())
-						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+					if len(cmd) >= 2 {
+						arg := strings.Join(cmd[1:]," ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn",fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							break
 						}
+						if len(argS) >= 1 {
+							m, err := agents.AddJob(shellAgent, "download", argS[0:1])
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
+						}
+					} else {
+						message("warn", "Invalid command")
+						message("info", "download <remote_file_path>")
 					}
 				case "execute-shellcode":
 					if len(cmd) > 2 {
@@ -413,12 +426,26 @@ func Shell() {
 						}
 					}
 				case "upload":
-					if len(cmd) == 3 {
-						m, err := agents.AddJob(shellAgent, "upload", cmd[1:3])
-						if err != nil {
-							message("warn", err.Error())
-						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+					if len(cmd) >= 3 {
+						arg := strings.Join(cmd[1:]," ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn",fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							break
+						}
+						if len(argS) >= 2 {
+							_, errF := os.Stat(argS[0])
+							if errF != nil{
+								message("warn", fmt.Sprintf("There was an error accessing the source upload file:\r\n%s", errF.Error()))
+								break
+							}
+							m, err := agents.AddJob(shellAgent, "upload", argS[0:2])
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							}
 						}
 					} else {
 						message("warn", "Invalid command")
@@ -647,6 +674,7 @@ func menuHelpMain() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Main-Menu")
 }
 
 // The help menu while in the modules menu
@@ -671,6 +699,7 @@ func menuHelpModule() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Module-Menu")
 }
 
 // The help menu while in the agent menu
