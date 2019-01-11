@@ -3,7 +3,6 @@ data/agents
 data/temp
 data/db
 data/log
-data/x509
 data/bin/darwin
 data/bin/dll/merlin.dll
 data/bin/linux
