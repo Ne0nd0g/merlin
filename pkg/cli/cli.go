@@ -674,6 +674,7 @@ func menuHelpMain() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Main-Menu")
 }
 
 // The help menu while in the modules menu
@@ -698,6 +699,7 @@ func menuHelpModule() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Module-Menu")
 }
 
 // The help menu while in the agent menu
