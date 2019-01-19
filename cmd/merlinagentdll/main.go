@@ -28,7 +28,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agent"
 )
 
-var url = "https://127.0.0.1:443/"
+var url = "https://127.0.0.1:443"
 
 func main() {}
 
