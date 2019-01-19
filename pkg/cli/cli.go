@@ -34,9 +34,9 @@ import (
 	// 3rd Party
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
+	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
-	"github.com/mattn/go-shellwords"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
@@ -155,7 +155,7 @@ func Shell() {
 					shellModule.ShowInfo()
 				case "set":
 					if len(cmd) > 2 {
-						if cmd[1] == "agent" {
+						if cmd[1] == "Agent" {
 							s, err := shellModule.SetAgent(cmd[2])
 							if err != nil {
 								message("warn", err.Error())
@@ -221,10 +221,10 @@ func Shell() {
 					}
 				case "download":
 					if len(cmd) >= 2 {
-						arg := strings.Join(cmd[1:]," ")
+						arg := strings.Join(cmd[1:], " ")
 						argS, errS := shellwords.Parse(arg)
 						if errS != nil {
-							message("warn",fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							message("warn", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
 							break
 						}
 						if len(argS) >= 1 {
@@ -427,15 +427,15 @@ func Shell() {
 					}
 				case "upload":
 					if len(cmd) >= 3 {
-						arg := strings.Join(cmd[1:]," ")
+						arg := strings.Join(cmd[1:], " ")
 						argS, errS := shellwords.Parse(arg)
 						if errS != nil {
-							message("warn",fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							message("warn", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
 							break
 						}
 						if len(argS) >= 2 {
 							_, errF := os.Stat(argS[0])
-							if errF != nil{
+							if errF != nil {
 								message("warn", fmt.Sprintf("There was an error accessing the source upload file:\r\n%s", errF.Error()))
 								break
 							}
@@ -604,7 +604,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("info"),
 		),
 		readline.PcItem("set",
-			readline.PcItem("agent",
+			readline.PcItem("Agent",
 				readline.PcItem("all"),
 				readline.PcItemDynamic(agents.GetAgentList()),
 			),
