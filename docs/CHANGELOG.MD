@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+#
+## 0.6.6 - 2019-01-20
+
+### Fixed
+- [Pull 44](https://github.com/Ne0nd0g/merlin/pull/44) Fixes case-sensitive autocompletion of `agent`
+  on the module menu
+
+
 
 ## 0.6.5 - 2019-01-10
 
