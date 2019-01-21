@@ -33,7 +33,7 @@ import (
 )
 
 // GLOBAL VARIABLES
-var url = "https://127.0.0.1:443/"
+var url = "https://127.0.0.1:443"
 var build = "nonRelease"
 
 func main() {
