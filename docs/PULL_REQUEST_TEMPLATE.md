@@ -7,6 +7,7 @@
 - [ ] Passes linting checks and unit tests
 - [ ] Updated [CHANGELOG](../CHANGELOG.MD)
 - [ ] Updated README documentation (if applicable)
+- [ ] Update Merlin version number in `pkg/merlin.go` (if applicable)
 
 ### Change Type
 - [ ] Addition
