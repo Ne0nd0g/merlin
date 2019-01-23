@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 - Modified http2.go to remove `[+]` & `[!]` from shell command results printed to the terminal
-- Modified agents.go so the log files and agent info contain time in RFC13999 compliant UTC
+- Modified agents.go so the log files and agent info contain time in [RFC 3339](https://tools.ietf.org/html/rfc3339) compliant UTC
 - Replaced SHA-1 hash with SHA-256 in log file when using upload command
 - Updated agents.go with missing error checking
 
