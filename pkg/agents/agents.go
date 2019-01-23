@@ -18,8 +18,7 @@
 package agents
 
 import (
-	// Standard
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -124,11 +123,21 @@ func InitialCheckIn(j messages.Base) {
 	agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
 
 	if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
-		os.Mkdir(agentsDir, os.ModeDir)
+		err := os.Mkdir(agentsDir, os.ModeDir)
+		if err != nil {
+			message("warn", fmt.Sprintf("There was an error creating a folder in the agents directory at %s:\r\n%s", agentsDir, err.Error()))
+		}
 	}
 	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
-		os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
-		os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
+		errM := os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
+		if errM != nil {
+			message("warn", fmt.Sprintf("There was an error creating a directory for agent %s:\r\n%s", j.ID.String(), err.Error()))
+		}
+
+		_, errC := os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
+		if errC != nil {
+			message("warn", fmt.Sprintf("There was an error creating the agent_log.txt file for agnet %s:\r\n%s", j.ID.String(), err.Error()))
+		}
 
 		if core.Verbose {
 			message("note", fmt.Sprintf("Created agent log file at: %s agent_log.txt",
@@ -150,23 +159,20 @@ func InitialCheckIn(j messages.Base) {
 		HostName: sysInfo.HostName, Pid: sysInfo.Pid, channel: make(chan []Job, 10),
 		agentLog: f, InitialCheckIn: time.Now().UTC(), StatusCheckIn: time.Now().UTC()}
 
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now().UTC().Format(time.RFC3339), j.ID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Version: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Version))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Build: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Build))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]WaitTime: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.WaitTime))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]PaddingMax: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.PaddingMax))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]MaxRetry: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.MaxRetry))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]FailedCheckin: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.FailedCheckin))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Skew: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Skew))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Proto: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Proto))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Architecture))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.HostName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.UserName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.UserGUID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Pid))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Ips))
+	Log(j.ID, fmt.Sprintf("Initial check in for agent %s", agentInfo.Build))
+	Log(j.ID, fmt.Sprintf("WaitTime: %s", agentInfo.WaitTime))
+	Log(j.ID, fmt.Sprintf("PaddingMax: %d", agentInfo.PaddingMax))
+	Log(j.ID, fmt.Sprintf("MaxRetry: %d", agentInfo.MaxRetry))
+	Log(j.ID, fmt.Sprintf("FailedCheckin: %d", agentInfo.FailedCheckin))
+	Log(j.ID, fmt.Sprintf("Skew: %d", agentInfo.Skew))
+	Log(j.ID, fmt.Sprintf("Proto: %s", agentInfo.Proto))
+	Log(j.ID, fmt.Sprintf("Platform: %s", sysInfo.Platform))
+	Log(j.ID, fmt.Sprintf("Architecture: %s", sysInfo.Architecture))
+	Log(j.ID, fmt.Sprintf("HostName: %s", sysInfo.HostName))
+	Log(j.ID, fmt.Sprintf("UserName: %s", sysInfo.UserName))
+	Log(j.ID, fmt.Sprintf("UserGUID: %s", sysInfo.UserGUID))
+	Log(j.ID, fmt.Sprintf("Process ID: %s", sysInfo.Pid))
+	Log(j.ID, fmt.Sprintf("IPs: %v", sysInfo.Ips))
 }
 
 // StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
@@ -186,7 +192,7 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		return m, mErr
 	}
 
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n", time.Now().UTC().Format(time.RFC3339)))
+	Log(j.ID, "Agent status check in")
 	if core.Verbose {
 		message("success", fmt.Sprintf("Received agent status checkin from %s", j.ID))
 	}
@@ -245,15 +251,15 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 		message("debug", fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
 		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
 	}
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("Processing AgentInfo message:\r\n"))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Build: %s \r\n", p.Build))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent waitTime: %s \r\n", p.WaitTime))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent skew: %d \r\n", p.Skew))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent paddingMax: %d \r\n", p.PaddingMax))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent maxRetry: %d \r\n", p.MaxRetry))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent failedCheckin: %d \r\n", p.FailedCheckin))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent proto: %s \r\n", p.Proto))
+	Log(j.ID, fmt.Sprintf("Processing AgentInfo message:"))
+	Log(j.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
+	Log(j.ID, fmt.Sprintf("\tAgent Build: %s ", p.Build))
+	Log(j.ID, fmt.Sprintf("\tAgent waitTime: %s ", p.WaitTime))
+	Log(j.ID, fmt.Sprintf("\tAgent skew: %d ", p.Skew))
+	Log(j.ID, fmt.Sprintf("\tAgent paddingMax: %d ", p.PaddingMax))
+	Log(j.ID, fmt.Sprintf("\tAgent maxRetry: %d ", p.MaxRetry))
+	Log(j.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
+	Log(j.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
 
 	Agents[j.ID].Version = p.Version
 	Agents[j.ID].Build = p.Build
@@ -267,7 +273,10 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 
 // Log is used to write log messages to the agent's log file
 func Log(agentID uuid.UUID, logMessage string) {
-	Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
+	_, err := Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
+	if err != nil {
+		message("warn", fmt.Sprintf("There was an error writing to the agent log agents.Log:\r\n%s", err.Error()))
+	}
 }
 
 // GetAgentList returns a list of agents that exist and is used for command line tab completion
@@ -368,16 +377,22 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 				s := Agents[k].channel
 				job.ID = core.RandStringBytesMaskImprSrc(10)
 				s <- []Job{job}
-				Agents[k].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
-					"Args:%s \r\n", time.Now().UTC().Format(time.RFC3339), job.Type, job.ID, job.Status, job.Args))
+				Log(k, fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
+					job.Type,
+					job.ID,
+					job.Status,
+					job.Args))
 			}
 			return job.ID, nil
 		}
 		job.ID = core.RandStringBytesMaskImprSrc(10)
 		s := Agents[agentID].channel
 		s <- []Job{job}
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
-			"Args:%s \r\n", time.Now().UTC().Format(time.RFC3339), job.Type, job.ID, job.Status, job.Args))
+		Log(agentID, fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
+			job.Type,
+			job.ID,
+			job.Status,
+			job.Args))
 		return job.ID, nil
 	}
 	return "", errors.New("invalid agent ID")
@@ -426,9 +441,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		m.Payload = (*json.RawMessage)(&k)
 	case "download":
 		m.Type = "FileTransfer"
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
-			time.Now().UTC().Format(time.RFC3339),
-			job.Args[0]))
+		Log(agentID, fmt.Sprintf("Downloading file from agent at %s\n", job.Args[0]))
 
 		p := messages.FileTransfer{
 			FileLocation: job.Args[0],
@@ -518,11 +531,12 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			// TODO send "ServerOK"
 			return m, fmt.Errorf("there was an error reading %s: %v", job.Type, uploadFileErr)
 		}
-		fileHash := sha1.New()
-		io.WriteString(fileHash, string(uploadFile))
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d"+
-			" bytes and SHA-1: %x to agent at %s\r\n",
-			time.Now().UTC().Format(time.RFC3339),
+		fileHash := sha256.New()
+		_, err := io.WriteString(fileHash, string(uploadFile))
+		if err != nil {
+			message("warn", fmt.Sprintf("There was an error generating file hash:\r\n%s", err.Error()))
+		}
+		Log(agentID, fmt.Sprintf("Uploading file from server at %s of size %d bytes and SHA-256: %x to agent at %s",
 			job.Args[0],
 			len(uploadFile),
 			fileHash.Sum(nil),
