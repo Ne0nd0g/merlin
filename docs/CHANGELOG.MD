@@ -4,16 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.6.7 - 2019-01-XX
+
+### Added
+- [Pull 45](https://github.com/Ne0nd0g/merlin/pull/45) - Added a module for Python-based SOCKS proxying (@klusitc)
+
+### Changed
+- Modified http2.go to remove `[+]` & `[!]` from shell command results printed to the terminal
+- Modified agents.go so the log files and agent info contain time in RFC13999 compliant UTC
+
 ## 0.6.6 - 2019-01-21
 
 ### Changed
 
 - [Pull 43](https://github.com/Ne1nd0g/merlin/pull/43) - Gives users the ability to dynamically
-assign the callback URL variable at compile time by setting the URL= var in the make command
+assign the callback URL variable at compile time by setting the URL= var in the make command by Alex Flores (@audibleblink)
 
 ### Fixed
 - [Pull 44](https://github.com/Ne0nd0g/merlin/pull/44) Fixes case-sensitive autocompletion of `agent`
-  on the module menu
+  on the module menu (@audibleblink)
 
 ## 0.6.5 - 2019-01-10
 

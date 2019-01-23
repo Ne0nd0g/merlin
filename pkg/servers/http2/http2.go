@@ -262,11 +262,11 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			message("success", fmt.Sprintf("Results for job %s", p.Job))
 			if len(p.Stdout) > 0 {
 				agents.Log(j.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
-				message("success", fmt.Sprintf("%s", p.Stdout))
+				color.Green(fmt.Sprintf("%s", p.Stdout))
 			}
 			if len(p.Stderr) > 0 {
 				agents.Log(j.ID, fmt.Sprintf("Command Results (stderr):\r\n%s", p.Stderr))
-				message("warn", fmt.Sprintf("%s", p.Stderr))
+				color.Red(fmt.Sprintf("%s", p.Stderr))
 			}
 
 		case "AgentInfo":

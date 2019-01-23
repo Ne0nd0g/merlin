@@ -148,25 +148,25 @@ func InitialCheckIn(j messages.Base) {
 		ID: j.ID, UserName: sysInfo.UserName, UserGUID: sysInfo.UserGUID, Platform: sysInfo.Platform,
 		Architecture: sysInfo.Architecture, Ips: sysInfo.Ips,
 		HostName: sysInfo.HostName, Pid: sysInfo.Pid, channel: make(chan []Job, 10),
-		agentLog: f, InitialCheckIn: time.Now(), StatusCheckIn: time.Now()}
+		agentLog: f, InitialCheckIn: time.Now().UTC(), StatusCheckIn: time.Now().UTC()}
 
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now(), j.ID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Version: %s\r\n", time.Now(), agentInfo.Version))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Build: %s\r\n", time.Now(), agentInfo.Build))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]WaitTime: %s\r\n", time.Now(), agentInfo.WaitTime))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]PaddingMax: %d\r\n", time.Now(), agentInfo.PaddingMax))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]MaxRetry: %d\r\n", time.Now(), agentInfo.MaxRetry))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]FailedCheckin: %d\r\n", time.Now(), agentInfo.FailedCheckin))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Skew: %d\r\n", time.Now(), agentInfo.Skew))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Proto: %s\r\n", time.Now(), agentInfo.Proto))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), sysInfo.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), sysInfo.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), sysInfo.Architecture))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), sysInfo.HostName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), sysInfo.UserName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), sysInfo.UserGUID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), sysInfo.Pid))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now(), sysInfo.Ips))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now().UTC().Format(time.RFC3339), j.ID))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Version: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Version))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Build: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Build))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]WaitTime: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.WaitTime))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]PaddingMax: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.PaddingMax))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]MaxRetry: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.MaxRetry))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]FailedCheckin: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.FailedCheckin))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Skew: %d\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Skew))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Proto: %s\r\n", time.Now().UTC().Format(time.RFC3339), agentInfo.Proto))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Platform))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Platform))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Architecture))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.HostName))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.UserName))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.UserGUID))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Pid))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now().UTC().Format(time.RFC3339), sysInfo.Ips))
 }
 
 // StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
@@ -186,7 +186,7 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		return m, mErr
 	}
 
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n", time.Now()))
+	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n", time.Now().UTC().Format(time.RFC3339)))
 	if core.Verbose {
 		message("success", fmt.Sprintf("Received agent status checkin from %s", j.ID))
 	}
@@ -196,7 +196,7 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		message("debug", fmt.Sprintf("Channel content: %s", Agents[j.ID].channel))
 	}
 
-	Agents[j.ID].StatusCheckIn = time.Now()
+	Agents[j.ID].StatusCheckIn = time.Now().UTC()
 	// Check to see if there are any jobs
 	if len(Agents[j.ID].channel) >= 1 {
 		job := <-Agents[j.ID].channel
@@ -267,7 +267,7 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 
 // Log is used to write log messages to the agent's log file
 func Log(agentID uuid.UUID, logMessage string) {
-	Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now(), logMessage))
+	Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
 }
 
 // GetAgentList returns a list of agents that exist and is used for command line tab completion
@@ -297,8 +297,8 @@ func ShowInfo(agentID uuid.UUID) {
 		{"Hostname", Agents[agentID].HostName},
 		{"Process ID", strconv.Itoa(Agents[agentID].Pid)},
 		{"IP", fmt.Sprintf("%v", Agents[agentID].Ips)},
-		{"Initial Check In", Agents[agentID].InitialCheckIn.String()},
-		{"Last Check In", Agents[agentID].StatusCheckIn.String()},
+		{"Initial Check In", Agents[agentID].InitialCheckIn.Format(time.RFC3339)},
+		{"Last Check In", Agents[agentID].StatusCheckIn.Format(time.RFC3339)},
 		{"Agent Version", Agents[agentID].Version},
 		{"Agent Build", Agents[agentID].Build},
 		{"Agent Wait Time", Agents[agentID].WaitTime},
@@ -357,7 +357,7 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 			Type:    jobType,
 			Status:  "created",
 			Args:    jobArgs,
-			Created: time.Now(),
+			Created: time.Now().UTC(),
 		}
 
 		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
@@ -369,7 +369,7 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 				job.ID = core.RandStringBytesMaskImprSrc(10)
 				s <- []Job{job}
 				Agents[k].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
-					"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
+					"Args:%s \r\n", time.Now().UTC().Format(time.RFC3339), job.Type, job.ID, job.Status, job.Args))
 			}
 			return job.ID, nil
 		}
@@ -377,7 +377,7 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 		s := Agents[agentID].channel
 		s <- []Job{job}
 		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
-			"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
+			"Args:%s \r\n", time.Now().UTC().Format(time.RFC3339), job.Type, job.ID, job.Status, job.Args))
 		return job.ID, nil
 	}
 	return "", errors.New("invalid agent ID")
@@ -427,7 +427,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 	case "download":
 		m.Type = "FileTransfer"
 		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
-			time.Now(),
+			time.Now().UTC().Format(time.RFC3339),
 			job.Args[0]))
 
 		p := messages.FileTransfer{
@@ -522,7 +522,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		io.WriteString(fileHash, string(uploadFile))
 		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d"+
 			" bytes and SHA-1: %x to agent at %s\r\n",
-			time.Now(),
+			time.Now().UTC().Format(time.RFC3339),
 			job.Args[0],
 			len(uploadFile),
 			fileHash.Sum(nil),
