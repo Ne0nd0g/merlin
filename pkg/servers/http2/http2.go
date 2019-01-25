@@ -169,8 +169,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 
 // Run function starts the server on the preconfigured port for the preconfigured service
 func (s *Server) Run() error {
-	logging.Server(fmt.Sprintf("Starting %s Listener", s.Protocol))
-	logging.Server(fmt.Sprintf("Address: %s:%d/", s.Interface, s.Port))
+	logging.Server(fmt.Sprintf("Starting %s Listener at %s:%d", s.Protocol, s.Interface, s.Port))
 	logging.Server(fmt.Sprintf("x.509 Certificate %s", s.Certificate))
 	logging.Server(fmt.Sprintf("x.509 Key %s", s.Key))
 

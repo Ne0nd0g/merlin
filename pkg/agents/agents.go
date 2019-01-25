@@ -79,6 +79,7 @@ func InitialCheckIn(j messages.Base) {
 		message("debug", fmt.Sprintf("Base Message Type: %s", j.Type))
 		message("debug", fmt.Sprintf("Base Message Payload: %s", j.Payload))
 	}
+	logging.Server(fmt.Sprintf("Received new agent checkin from %s", j.ID))
 	message("success", fmt.Sprintf("Received new agent checkin from %s at %s", j.ID, time.Now().UTC().Format(time.RFC3339)))
 
 	// Unmarshal AgentInfo from Base

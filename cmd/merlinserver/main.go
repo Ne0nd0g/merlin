@@ -38,7 +38,7 @@ import (
 var build = "nonRelease"
 
 func main() {
-	logging.Server("Starting Merlin Server")
+	logging.Server("Starting Merlin Server version " + merlin.Version + " build " + merlin.Build)
 
 	flag.BoolVar(&core.Verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&core.Debug, "debug", false, "Enable debug output")
@@ -71,7 +71,10 @@ func main() {
 	if err != nil {
 		color.Red(err.Error())
 	} else {
-		server.Run()
+		err := server.Run()
+		if err != nil {
+			color.Red("[!]There was an error starting the server")
+		}
 	}
 }
 

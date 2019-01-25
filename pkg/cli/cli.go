@@ -43,11 +43,11 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 // Global Variables
-var serverLog *os.File
 var shellModule modules.Module
 var shellAgent uuid.UUID
 var prompt *readline.Instance
@@ -786,7 +786,7 @@ func message(level string, message string) {
 
 func exit() {
 	color.Red("[!]Quitting")
-	serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
+	logging.Server("Shutting down Merlin Server due to user input")
 	os.Exit(0)
 }
 
