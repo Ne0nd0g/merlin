@@ -425,6 +425,17 @@ func Shell() {
 							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
 						}
 					}
+				case "status":
+					status := agents.GetAgentStatus(shellAgent)
+					if status == "Active" {
+						color.Green("Active")
+					} else if status == "Delayed" {
+						color.Yellow("Delayed")
+					} else if status == "Dead" {
+						color.Red("Dead")
+					} else {
+						color.Blue(status)
+					}
 				case "upload":
 					if len(cmd) >= 3 {
 						arg := strings.Join(cmd[1:], " ")
@@ -633,6 +644,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("skew"),
 			readline.PcItem("sleep"),
 		),
+		readline.PcItem("status"),
 		readline.PcItem("upload"),
 	)
 
@@ -720,6 +732,7 @@ func menuHelpAgent() {
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
+		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 	}
 
