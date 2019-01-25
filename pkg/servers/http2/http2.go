@@ -28,7 +28,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -179,12 +178,12 @@ func (s *Server) Run() error {
 	if s.Protocol == "h2" {
 		server := s.Server.(*http.Server)
 		defer server.Close()
-		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
+		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
 		return nil
 	} else if s.Protocol == "hq" {
 		server := s.Server.(*h2quic.Server)
 		defer server.Close()
-		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
+		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
 		return nil
 	}
 	return fmt.Errorf("%s is an invalid server protocol", s.Protocol)

@@ -172,7 +172,7 @@ func InitialCheckIn(j messages.Base) {
 	Log(j.ID, fmt.Sprintf("HostName: %s", sysInfo.HostName))
 	Log(j.ID, fmt.Sprintf("UserName: %s", sysInfo.UserName))
 	Log(j.ID, fmt.Sprintf("UserGUID: %s", sysInfo.UserGUID))
-	Log(j.ID, fmt.Sprintf("Process ID: %s", sysInfo.Pid))
+	Log(j.ID, fmt.Sprintf("Process ID: %d", sysInfo.Pid))
 	Log(j.ID, fmt.Sprintf("IPs: %v", sysInfo.Ips))
 }
 
