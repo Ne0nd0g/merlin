@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.6.8 - 2019-01-26
+
+### Added
+- The `status` command while in the agent menu to see if agent is Active, Delayed, or Dead
+- Messages printed to the CLI now include a UTC timestamp
+- Added Merlin version number and new agent checkins to Merlin Server log file
+
+### Fixed
+- Formatting error placing time stamp and message in wrong spot in the Merlin Server log file
+- Error checking in logging.go
+- Server shutdown was not actually being logged
+
 ## 0.6.7 - 2019-01-22
 
 ### Added

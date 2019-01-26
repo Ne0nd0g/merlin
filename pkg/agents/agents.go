@@ -79,7 +79,8 @@ func InitialCheckIn(j messages.Base) {
 		message("debug", fmt.Sprintf("Base Message Type: %s", j.Type))
 		message("debug", fmt.Sprintf("Base Message Payload: %s", j.Payload))
 	}
-	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
+	logging.Server(fmt.Sprintf("Received new agent checkin from %s", j.ID))
+	message("success", fmt.Sprintf("Received new agent checkin from %s at %s", j.ID, time.Now().UTC().Format(time.RFC3339)))
 
 	// Unmarshal AgentInfo from Base
 	var agentInfo messages.AgentInfo
@@ -171,7 +172,7 @@ func InitialCheckIn(j messages.Base) {
 	Log(j.ID, fmt.Sprintf("HostName: %s", sysInfo.HostName))
 	Log(j.ID, fmt.Sprintf("UserName: %s", sysInfo.UserName))
 	Log(j.ID, fmt.Sprintf("UserGUID: %s", sysInfo.UserGUID))
-	Log(j.ID, fmt.Sprintf("Process ID: %s", sysInfo.Pid))
+	Log(j.ID, fmt.Sprintf("Process ID: %d", sysInfo.Pid))
 	Log(j.ID, fmt.Sprintf("IPs: %v", sysInfo.Ips))
 }
 
@@ -180,7 +181,8 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 	// Check to make sure agent UUID is in dataset
 	_, ok := Agents[j.ID]
 	if !ok {
-		message("warn", fmt.Sprintf("Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String()))
+		message("warn", fmt.Sprintf("Orphaned agent %s has checked in at %s. Instructing agent to re-initialize...",
+			time.Now().UTC().Format(time.RFC3339), j.ID.String()))
 		logging.Server(fmt.Sprintf("[Orphaned agent %s has checked in", j.ID.String()))
 		job := Job{
 			ID:      core.RandStringBytesMaskImprSrc(10),

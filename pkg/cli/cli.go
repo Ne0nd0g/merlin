@@ -43,11 +43,11 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 // Global Variables
-var serverLog *os.File
 var shellModule modules.Module
 var shellAgent uuid.UUID
 var prompt *readline.Instance
@@ -182,7 +182,8 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellModule.Agent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
 						}
 					}
 				case "back":
@@ -216,7 +217,8 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
 					}
 				case "download":
@@ -233,7 +235,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						}
 					} else {
@@ -323,7 +326,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						case "remote":
 							m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
@@ -331,7 +335,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						case "rtlcreateuserthread":
 							m, err := agents.AddJob(shellAgent, "shellcode", []string{"rtlcreateuserthread", cmd[2], b64})
@@ -339,7 +344,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						case "userapc":
 							m, err := agents.AddJob(shellAgent, "shellcode", []string{"userapc", cmd[2], b64})
@@ -347,7 +353,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						default:
 							message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
@@ -368,7 +375,8 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
 					}
 				case "main":
@@ -384,7 +392,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						case "padding":
@@ -393,7 +402,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						case "sleep":
@@ -402,7 +412,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						case "skew":
@@ -411,7 +422,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						}
@@ -422,8 +434,20 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
+					}
+				case "status":
+					status := agents.GetAgentStatus(shellAgent)
+					if status == "Active" {
+						color.Green("Active")
+					} else if status == "Delayed" {
+						color.Yellow("Delayed")
+					} else if status == "Dead" {
+						color.Red("Dead")
+					} else {
+						color.Blue(status)
 					}
 				case "upload":
 					if len(cmd) >= 3 {
@@ -444,7 +468,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						}
 					} else {
@@ -525,7 +550,8 @@ func menuAgent(cmd []string) {
 				if errRemove != nil {
 					message("warn", fmt.Sprintf("%s", errRemove.Error()))
 				} else {
-					message("info", fmt.Sprintf("Agent %s was removed from the server", cmd[1]))
+					message("info", fmt.Sprintf("Agent %s was removed from the server at %s",
+						cmd[1], time.Now().UTC().Format(time.RFC3339)))
 				}
 			}
 		}
@@ -633,6 +659,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("skew"),
 			readline.PcItem("sleep"),
 		),
+		readline.PcItem("status"),
 		readline.PcItem("upload"),
 	)
 
@@ -646,7 +673,6 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 	default:
 		return main
 	}
-	return main
 }
 
 func menuHelpMain() {
@@ -720,6 +746,7 @@ func menuHelpAgent() {
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
+		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 	}
 
@@ -759,7 +786,7 @@ func message(level string, message string) {
 
 func exit() {
 	color.Red("[!]Quitting")
-	serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
+	logging.Server("Shutting down Merlin Server due to user input")
 	os.Exit(0)
 }
 
