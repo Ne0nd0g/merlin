@@ -92,3 +92,10 @@ type Shellcode struct {
 	Job    string `json:"job"`
 	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
 }
+
+// FileIO is a JSON payload to send filesystem-related commands to the agent (ps, cd, cat, ls)
+type FileIO struct {
+	Job     string `json:"job"`
+	Command string `json:"command"`
+	Args    string `json:"args,omitempty"`
+}

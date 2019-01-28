@@ -420,7 +420,6 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 
 		k := marshalMessage(p)
-		m.Type = "CmdPayload"
 		m.Payload = (*json.RawMessage)(&k)
 	case "shellcode":
 		m.Type = "Shellcode"
@@ -476,6 +475,22 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		} else {
 			message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
 		}
+
+	case "ls":
+		m.Type = "FileIO"
+		p := messages.FileIO{
+			Job:     job.ID,
+			Command: job.Args[0],
+		}
+
+		if len(job.Args) > 1 {
+			p.Args = job.Args[1]
+		} else {
+			p.Args = "./"
+		}
+
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
 	case "maxretry":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
