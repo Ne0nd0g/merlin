@@ -39,13 +39,13 @@ import (
 
 	// 3rd Party
 	"github.com/fatih/color"
-	"github.com/lucas-clemente/quic-go"
+	quic "github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
@@ -290,7 +290,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	}
 	if a.Debug {
 		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("%s", resp))
+		message("debug", fmt.Sprintf("%+v", resp))
 	}
 	if resp.StatusCode != 200 {
 		a.FailedCheckin++
@@ -353,7 +353,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	if a.Debug {
 		message("debug", "HTTP Response:")
 		message("debug", fmt.Sprintf("ContentLength: %d", resp.ContentLength))
-		message("debug", fmt.Sprintf("%s", resp))
+		message("debug", fmt.Sprintf("%+v", resp))
 	}
 
 	if resp.StatusCode != 200 {
@@ -907,7 +907,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 	}
 	if a.Debug {
 		message("debug", "HTTP Response:")
-		message("warn", fmt.Sprintf("%s", resp))
+		message("warn", fmt.Sprintf("%+v", resp))
 	}
 	if resp.StatusCode != 200 {
 		a.FailedCheckin++

@@ -6,8 +6,7 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
-	//	testserver "github.com/Ne0nd0g/merlin/pkg/agent/testServer" //uncomment when working etc
-	testserver "github.com/c-sto/merlin/pkg/agent/testServer"
+	testserver "github.com/Ne0nd0g/merlin/pkg/agent/testServer" //uncomment when working etc
 )
 
 func getTestAgent(proto string) Agent {
@@ -58,7 +57,8 @@ func TestInitialh2(t *testing.T) {
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
 	ended := make(chan struct{})
-	go testserver.TestServer{}.Start("8081", ended, setup, t)
+	port := "8081"
+	go testserver.TestServer{}.Start(port, ended, setup, t)
 	//wait until set up
 	<-setup
 	//~~~~ the above can proabbly be copied into each test function
@@ -66,7 +66,7 @@ func TestInitialh2(t *testing.T) {
 	//do the test stuff
 
 	//simulate a.Run()
-	server := "https://127.0.0.1:8081"
+	server := "https://127.0.0.1:" + port
 
 	// Do initial checkin
 	if a.initial {
@@ -94,21 +94,20 @@ func TestInitialh2(t *testing.T) {
 func TestBrokenJson(t *testing.T) {
 	//create a new agent with default params and h2 proto
 	a := getTestAgent("h2")
-
-	a.UserAgent = "BrokenJSON" //signal to the test server to send broken json
 	//create a server for the agent to interact with locally
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
 	ended := make(chan struct{})
-	go testserver.TestServer{}.Start("8081", ended, setup, t)
+	port := "8082"
+	go testserver.TestServer{}.Start(port, ended, setup, t)
 	//wait until set up
 	<-setup
 	//~~~~ the above can proabbly be copied into each test function
 
-	//do the test stuff
+	a.UserAgent = "BrokenJSON" //signal to the test server to send broken json
 
 	//simulate a.Run()
-	server := "https://127.0.0.1:8081"
+	server := "https://127.0.0.1:" + port
 
 	// Do initial checkin
 	if a.initial {
