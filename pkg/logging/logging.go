@@ -37,8 +37,14 @@ func init() {
 
 	// Server Logging
 	if _, err := os.Stat(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
-		os.Mkdir(filepath.Join(core.CurrentDir, "data", "log"), os.ModeDir)
-		os.Create(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt"))
+		errM := os.Mkdir(filepath.Join(core.CurrentDir, "data", "log"), os.ModeDir)
+		if errM != nil {
+			message("warn", "There was an error creating the log directory")
+		}
+		_, errC := os.Create(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt"))
+		if errC != nil {
+			message("warn", "[!]There was an error creating the merlinServerLog.txt file")
+		}
 		if core.Debug {
 			message("debug", fmt.Sprintf("Created server log file at: %s\\data\\log\\merlinServerLog.txt", core.CurrentDir))
 		}
@@ -53,7 +59,10 @@ func init() {
 
 // Server writes a log entry into the server's log file
 func Server(logMessage string) {
-	serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", logMessage, time.Now()))
+	_, err := serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
+	if err != nil {
+		message("warn", "There was an error writing to the Merlin Server log file")
+	}
 }
 
 // Message is used to print a message to the command line

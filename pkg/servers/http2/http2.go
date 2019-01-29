@@ -28,7 +28,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -169,8 +168,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 
 // Run function starts the server on the preconfigured port for the preconfigured service
 func (s *Server) Run() error {
-	logging.Server(fmt.Sprintf("Starting %s Listener", s.Protocol))
-	logging.Server(fmt.Sprintf("Address: %s:%d/", s.Interface, s.Port))
+	logging.Server(fmt.Sprintf("Starting %s Listener at %s:%d", s.Protocol, s.Interface, s.Port))
 	logging.Server(fmt.Sprintf("x.509 Certificate %s", s.Certificate))
 	logging.Server(fmt.Sprintf("x.509 Key %s", s.Key))
 
@@ -180,12 +178,12 @@ func (s *Server) Run() error {
 	if s.Protocol == "h2" {
 		server := s.Server.(*http.Server)
 		defer server.Close()
-		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
+		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
 		return nil
 	} else if s.Protocol == "hq" {
 		server := s.Server.(*h2quic.Server)
 		defer server.Close()
-		go log.Print(server.ListenAndServeTLS(s.Certificate, s.Key))
+		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
 		return nil
 	}
 	return fmt.Errorf("%s is an invalid server protocol", s.Protocol)
@@ -259,14 +257,14 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			json.Unmarshal(payload, &p)
 			agents.Log(j.ID, fmt.Sprintf("Results for job: %s", p.Job))
 
-			message("success", fmt.Sprintf("Results for job %s", p.Job))
+			message("success", fmt.Sprintf("Results for job %s at %s", p.Job, time.Now().UTC().Format(time.RFC3339)))
 			if len(p.Stdout) > 0 {
 				agents.Log(j.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
-				message("success", fmt.Sprintf("%s", p.Stdout))
+				color.Green(fmt.Sprintf("%s", p.Stdout))
 			}
 			if len(p.Stderr) > 0 {
 				agents.Log(j.ID, fmt.Sprintf("Command Results (stderr):\r\n%s", p.Stderr))
-				message("warn", fmt.Sprintf("%s", p.Stderr))
+				color.Red(fmt.Sprintf("%s", p.Stderr))
 			}
 
 		case "AgentInfo":

