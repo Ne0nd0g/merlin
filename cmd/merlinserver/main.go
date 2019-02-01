@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,19 +26,19 @@ import (
 	"github.com/fatih/color"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/banner"
-	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/cli"
 	"github.com/Ne0nd0g/merlin/pkg"
+	"github.com/Ne0nd0g/merlin/pkg/banner"
+	"github.com/Ne0nd0g/merlin/pkg/cli"
+	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
 )
 
 // Global Variables
 var build = "nonRelease"
 
 func main() {
-	logging.Server("Starting Merlin Server")
+	logging.Server("Starting Merlin Server version " + merlin.Version + " build " + merlin.Build)
 
 	flag.BoolVar(&core.Verbose, "v", false, "Enable verbose output")
 	flag.BoolVar(&core.Debug, "debug", false, "Enable debug output")
@@ -71,7 +71,10 @@ func main() {
 	if err != nil {
 		color.Red(err.Error())
 	} else {
-		server.Run()
+		err := server.Run()
+		if err != nil {
+			color.Red("[!]There was an error starting the server")
+		}
 	}
 }
 

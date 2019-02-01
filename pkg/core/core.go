@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,15 +18,17 @@
 package core
 
 import (
+	"math/rand"
 	"os"
 	"time"
-	"math/rand"
 )
 
 // Debug puts Merlin into debug mode and displays debug messages
 var Debug = false
+
 // Verbose puts Merlin into verbose mode and displays verbose messages
 var Verbose = false
+
 // CurrentDir is the current directory where Merlin was executed from
 var CurrentDir, _ = os.Getwd()
 var src = rand.NewSource(time.Now().UnixNano())

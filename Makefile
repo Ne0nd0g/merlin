@@ -9,8 +9,11 @@ PASSWORD=merlin
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/temp/v${VERSION}/${BUILD}
 BIN=data/bin/
-LDFLAGS=-ldflags "-s -X main.build=${BUILD}"
-WINAGENTLDFLAGS=-ldflags "-s -X main.build=${BUILD} -H=windowsgui"
+XBUILD=-X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}
+URL ?= https://127.0.0.1:443
+XURL=-X main.url=${URL}
+LDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL}"
+WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
 F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
 F2=LICENSE
@@ -54,7 +57,7 @@ agent-windows:
 # Compile Agent - Windows x64 DLL
 agent-dll:
 	export GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CGO_ENABLED=1; \
-	go build -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
+	go build ${LDFLAGS} -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
 	cp data/bin/dll/merlin.c ${DIR}; \
 	x86_64-w64-mingw32-gcc -shared -pthread -o ${DIR}/merlin.dll ${DIR}/merlin.c ${DIR}/main.a -lwinmm -lntdll -lws2_32
 
@@ -76,16 +79,17 @@ agent-linux:
 	
 # Compile Server - Darwin x64
 server-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D}.dmg cmd/merlinserver/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D} cmd/merlinserver/main.go
 
 # Compile Agent - Darwin x64
 agent-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D}.dmg cmd/merlinagent/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D} cmd/merlinagent/main.go
 
 # Update JavaScript Information
 agent-javascript:
 	sed -i 's/var build = ".*"/var build = "${BUILD}"/' data/html/scripts/merlin.js
 	sed -i 's/var version = ".*"/var version = "${VERSION}"/' data/html/scripts/merlin.js
+	sed -i 's|var url = ".*"|var url = "${URL}"|' data/html/scripts/merlin.js
 
 # Make directory 'data' and then agents, db, log, x509; Copy src folder, README, and requirements
 package-server-windows:
@@ -98,22 +102,25 @@ package-server-linux:
 
 package-server-darwin:
 	${PACKAGE} ${DIR}/${MSERVER}-${D}-v${VERSION}.7z ${F}
-	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}.dmg
+	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}
 
 package-agent-windows:
 	${PACKAGE} ${DIR}/${MAGENT}-${W}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
-	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows
+	mkdir -p ${BIN}windows
+	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
 
 package-agent-linux:
 	${PACKAGE} ${DIR}/${MAGENT}-${L}-v${VERSION}.7z ${F2}
 	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
-	cp ${DIR}/${MAGENT}-${L} ${BIN}linux
+	mkdir -p ${BIN}linux
+	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
 	
 package-agent-darwin:
 	${PACKAGE} ${DIR}/${MAGENT}-${D}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}.dmg
-	cp ${DIR}/${MAGENT}-${D}.dmg ${BIN}darwin
+	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}
+	mkdir -p ${BIN}darwin/
+	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/
 
 package-agent-dll:
 	${PACKAGE} ${DIR}/${MAGENT}-DLL-v${VERSION}.7z ${F2}

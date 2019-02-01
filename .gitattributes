@@ -1,0 +1,5 @@
+*.go linguist-language=Go
+*.json linguist-language=Javascript
+vendor/* linguist-vendored
+docs/* linguist-documentation
+data/bin/powershell/Invoke-Merlin.ps1 linguist-detectable=false

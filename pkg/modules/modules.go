@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,15 +19,15 @@ package modules
 
 import (
 	// Standard
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
-	"strings"
-	"errors"
 	"os"
-	"strconv"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	// 3rd Party
 	"github.com/fatih/color"
@@ -40,38 +40,38 @@ import (
 
 // Module is a structure containing the base information or template for modules
 type Module struct {
-	Agent 	 uuid.UUID // The Agent that will later be associated with this module prior to execution
-	Name     string  	`json:"name"` 	// Name of the module
-	Author   []string 	`json:"author"`	// A list of module authors
-	Credits	 []string	`json:"credits"` // A list of people to credit for underlying tool or techniques
-	Path     []string 	`json:"path"`	// Path to the module (i.e. data/modules/powershell/powerview)
-	Platform string 	`json:"platform"`	// Platform the module can run on (i.e. Windows, Linux, Darwin, or ALL)
-	Arch     string 	`json:"arch"`	// The Architecture the module can run on (i.e. x86, x64, MIPS, ARM, or ALL)
-	Lang     string 	`json:"lang"`	// What language does the module execute in (i.e. PowerShell, Python, or Perl)
-	Priv     bool		`json:"privilege"` // Does this module required a privileged level account like root or SYSTEM?
-	Description string 	`json:"description"`	// A description of what the module does
-	Notes    string 	`json:"notes"`	// Additional information or notes about the module
-	Commands []string 	`json:"commands"`	// A list of commands to be run on the agent
-	SourceRemote string `json:"remote"`	// Online or remote source code for a module (i.e. https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1)
-	SourceLocal	[]string 	`json:"local"`	// The local file path to the script or payload
-	Options []Option 	`json:"options"`	// A list of configurable options/arguments for the module
-	Powershell interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
+	Agent        uuid.UUID   // The Agent that will later be associated with this module prior to execution
+	Name         string      `json:"name"`                 // Name of the module
+	Author       []string    `json:"author"`               // A list of module authors
+	Credits      []string    `json:"credits"`              // A list of people to credit for underlying tool or techniques
+	Path         []string    `json:"path"`                 // Path to the module (i.e. data/modules/powershell/powerview)
+	Platform     string      `json:"platform"`             // Platform the module can run on (i.e. Windows, Linux, Darwin, or ALL)
+	Arch         string      `json:"arch"`                 // The Architecture the module can run on (i.e. x86, x64, MIPS, ARM, or ALL)
+	Lang         string      `json:"lang"`                 // What language does the module execute in (i.e. PowerShell, Python, or Perl)
+	Priv         bool        `json:"privilege"`            // Does this module required a privileged level account like root or SYSTEM?
+	Description  string      `json:"description"`          // A description of what the module does
+	Notes        string      `json:"notes"`                // Additional information or notes about the module
+	Commands     []string    `json:"commands"`             // A list of commands to be run on the agent
+	SourceRemote string      `json:"remote"`               // Online or remote source code for a module (i.e. https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1)
+	SourceLocal  []string    `json:"local"`                // The local file path to the script or payload
+	Options      []Option    `json:"options"`              // A list of configurable options/arguments for the module
+	Powershell   interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
 }
 
 // Option is a structure containing the keys for the object
 type Option struct {
-	Name 		string		`json:"name"` 		// Name of the option
-	Value 		string		`json:"value"` 		// Value of the option
-	Required 	bool		`json:"required"` 	// Is this a required option?
-	Flag 		string		`json:"flag"`		// The command line flag used for the option
-	Description string		`json:"description"`// A description of the option
+	Name        string `json:"name"`        // Name of the option
+	Value       string `json:"value"`       // Value of the option
+	Required    bool   `json:"required"`    // Is this a required option?
+	Flag        string `json:"flag"`        // The command line flag used for the option
+	Description string `json:"description"` // A description of the option
 }
 
 // PowerShell structure is used to describe additional PowerShell features for modules that leverage PowerShell
 type PowerShell struct {
-	DisableAV bool // Disable Windows Real Time "Set-MpPreference -DisableRealtimeMonitoring $true"
+	DisableAV   bool // Disable Windows Real Time "Set-MpPreference -DisableRealtimeMonitoring $true"
 	Obfuscation bool // Unimplemented command to obfuscated powershell
-	Base64 bool // Base64 encode the powershell command?
+	Base64      bool // Base64 encode the powershell command?
 }
 
 // Run function returns an array of commands to execute the module on an agent
@@ -93,27 +93,26 @@ func (m *Module) Run() ([]string, error) {
 	command := make([]string, len(m.Commands))
 	copy(command, m.Commands)
 
-
 	for _, o := range m.Options {
 		for k := len(command) - 1; k >= 0; k-- {
 			// Check if an option was set WITHOUT the Flag or Value qualifiers
-			if strings.Contains(command[k], "{{" + o.Name + "}}"){
-				if o.Value != ""{
-					command[k] = strings.Replace(command[k], "{{" + o.Name + "}}", o.Flag + " " + o.Value, -1)
+			if strings.Contains(command[k], "{{"+o.Name+"}}") {
+				if o.Value != "" {
+					command[k] = strings.Replace(command[k], "{{"+o.Name+"}}", o.Flag+" "+o.Value, -1)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
-			// Check if an option was set WITH just the Flag qualifier
-			} else if strings.Contains(command[k], "{{" + o.Name + ".Flag}}"){
-				if strings.ToLower(o.Value) == "true"{
-					command[k] = strings.Replace(command[k], "{{" + o.Name + ".Flag}}", o.Flag, -1)
+				// Check if an option was set WITH just the Flag qualifier
+			} else if strings.Contains(command[k], "{{"+o.Name+".Flag}}") {
+				if strings.ToLower(o.Value) == "true" {
+					command[k] = strings.Replace(command[k], "{{"+o.Name+".Flag}}", o.Flag, -1)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
-			// Check if an option was set WITH just the Value qualifier
-			} else if strings.Contains(command[k], "{{" + o.Name + ".Value}}"){
-				if o.Value != ""{
-					command[k] = strings.Replace(command[k], "{{" + o.Name + ".Value}}", o.Value, -1)
+				// Check if an option was set WITH just the Value qualifier
+			} else if strings.Contains(command[k], "{{"+o.Name+".Value}}") {
+				if o.Value != "" {
+					command[k] = strings.Replace(command[k], "{{"+o.Name+".Value}}", o.Value, -1)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
@@ -124,7 +123,7 @@ func (m *Module) Run() ([]string, error) {
 }
 
 // ShowOptions function is used to display only a module's configurable options
-func (m *Module) ShowOptions(){
+func (m *Module) ShowOptions() {
 	color.Cyan(fmt.Sprintf("\r\nAgent: %s\r\n", m.Agent.String()))
 	color.Yellow("\r\nModule options(" + m.Name + ")\r\n\r\n")
 	table := tablewriter.NewWriter(os.Stdout)
@@ -132,7 +131,7 @@ func (m *Module) ShowOptions(){
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
 	// TODO add option for agent alias here
-	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name })
+	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name})
 	for _, v := range m.Options {
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
@@ -161,26 +160,28 @@ func GetModuleList() func(string) []string {
 				fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", ModuleDir, err)
 				return err
 			}
-			if strings.HasSuffix(f.Name(), ".json"){
+			if strings.HasSuffix(f.Name(), ".json") {
 				d := strings.SplitAfter(filepath.ToSlash(path), ModuleDir)
 				if len(d) > 0 {
 					m := d[1]
 					m = strings.TrimLeft(m, "/")
 					m = strings.TrimSuffix(m, ".json")
-					if !strings.Contains(m, "templates"){
+					if !strings.Contains(m, "templates") {
 						o = append(o, m)
 					}
 				}
 			}
 			return nil
 		})
-		if err != nil {fmt.Printf("error walking the path %q: %v\n", ModuleDir, err)}
+		if err != nil {
+			fmt.Printf("error walking the path %q: %v\n", ModuleDir, err)
+		}
 		return o
 	}
 }
 
 // SetOption is used to change the passed in module option's value. Used when a user is configuring a module
-func (m *Module) SetOption(option string, value string) (string, error){
+func (m *Module) SetOption(option string, value string) (string, error) {
 	// Verify this option exists
 	for k, v := range m.Options {
 		if option == v.Name {
@@ -192,8 +193,8 @@ func (m *Module) SetOption(option string, value string) (string, error){
 }
 
 // SetAgent is used to set the agent associated with the module.
-func (m *Module) SetAgent(agentUUID string) (string, error){
-	if strings.ToLower(agentUUID) == "all"{
+func (m *Module) SetAgent(agentUUID string) (string, error) {
+	if strings.ToLower(agentUUID) == "all" {
 		agentUUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	}
 	i, err := uuid.FromString(agentUUID)
@@ -205,7 +206,7 @@ func (m *Module) SetAgent(agentUUID string) (string, error){
 }
 
 // ShowInfo function displays all of the information about a module to include items such as authors and options
-func (m *Module) ShowInfo(){
+func (m *Module) ShowInfo() {
 	color.Yellow("Module:\r\n\t%s\r\n", m.Name)
 	color.Yellow("Platform:\r\n\t%s\\%s\\%s\r\n", m.Platform, m.Arch, m.Lang)
 	color.Yellow("Module Authors:")
@@ -242,12 +243,12 @@ func Create(modulePath string) (Module, error) {
 	// Determine all message types
 	var keys []string
 	for k := range moduleJSON {
-		keys = append(keys,k)
+		keys = append(keys, k)
 	}
 
 	// Validate that module's JSON contains at least the base message
 	var containsBase bool
-	for i := range keys{
+	for i := range keys {
 		if keys[i] == "base" {
 			containsBase = true
 		}
@@ -263,8 +264,8 @@ func Create(modulePath string) (Module, error) {
 	}
 
 	// Check for PowerShell configuration options
-	for k := range keys{
-		switch keys[k]{
+	for k := range keys {
+		switch keys[k] {
 		case "base":
 		case "powershell":
 			k := marshalMessage(*moduleJSON["powershell"])
@@ -294,7 +295,7 @@ func validateModule(m Module) (bool, error) {
 	}
 
 	// Validate Architecture
-	switch strings.ToUpper(m.Arch){
+	switch strings.ToUpper(m.Arch) {
 	case "X64":
 	case "X32":
 	default:

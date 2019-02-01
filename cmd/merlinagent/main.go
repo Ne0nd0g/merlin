@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2018  Russel Van Tuyl
+// Copyright (C) 2019  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,9 +33,8 @@ import (
 )
 
 // GLOBAL VARIABLES
-var url = "https://127.0.0.1:443/"
+var url = "https://127.0.0.1:443"
 var build = "nonRelease"
-
 
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
@@ -43,7 +42,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
 	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
-	sleep := flag.Duration( "sleep", 30000*time.Millisecond, "Time for agent to sleep")
+	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
 

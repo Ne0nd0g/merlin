@@ -4,6 +4,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.6.8 - 2019-01-26
+
+### Added
+- The `status` command while in the agent menu to see if agent is Active, Delayed, or Dead
+- Messages printed to the CLI now include a UTC timestamp
+- Added Merlin version number and new agent checkins to Merlin Server log file
+
+### Fixed
+- Formatting error placing time stamp and message in wrong spot in the Merlin Server log file
+- Error checking in logging.go
+- Server shutdown was not actually being logged
+
+## 0.6.7 - 2019-01-22
+
+### Added
+- [Pull 45](https://github.com/Ne0nd0g/merlin/pull/45) - Added a module for Python-based SOCKS proxying (@klusitc)
+
+### Changed
+- Modified http2.go to remove `[+]` & `[!]` from shell command results printed to the terminal
+- Modified agents.go so the log files and agent info contain time in [RFC 3339](https://tools.ietf.org/html/rfc3339) compliant UTC
+- Replaced SHA-1 hash with SHA-256 in log file when using upload command
+- Updated agents.go with missing error checking
+
+## 0.6.6 - 2019-01-21
+
+### Changed
+
+- [Pull 43](https://github.com/Ne1nd0g/merlin/pull/43) - Gives users the ability to dynamically
+assign the callback URL variable at compile time by setting the URL= var in the make command by Alex Flores (@audibleblink)
+
+### Fixed
+- [Pull 44](https://github.com/Ne0nd0g/merlin/pull/44) Fixes case-sensitive autocompletion of `agent`
+  on the module menu (@audibleblink)
+
+## 0.6.5 - 2019-01-10
+
+### Fixed
+- [Issue 41](https://github.com/Ne0nd0g/merlin/issues/41) Error when downloading a file using a path containing a space
+
+### Changed
+- Updated `download` command to correctly parse a remote file path containing a space
+- Removed `data\x509` from .gitignore so that certificates WILL be distributed when cloning the repository to facilitate easy testing
+
+## 0.6.4 - 2019-01-01
+
+### Added
+- Execute shellcode inside current process (Windows only)
+  - `execute-shellcode self <SHELLCODE>` command from agent menu
+  - executeShellcode function added to agents package
+  - ExecuteShellcodeSelf function added to agents/exec.go
+- Execute shellcode inside remote process (Windows only)
+  - `execute-shellcode remote <PID> <SHELLCODE>` command from agent menu
+  - ExecuteShellcodeRemote function added to agents/exec.go
+- Execute shellcode inside remote process using RtlCreateUserThread (Windows only)
+  - `execute-shellcode rtlcreateuserthread <PID> <SHELLCODE>` command from agent menu
+  - ExecuteShellcodeRtlCreateUserThread function added to agents/exec.go
+- Execute shellcode inside remote process using QueueUserAPC (Windows only)
+  - `execute-shellcode userapc <PID> <SHELLCODE>` command from agent menu
+  - **WARNING**: very unstable and will likely crash process; working on stable implementation
+  - Command intentionally not added to tab completion menu while unstable
+- parseHex function added to cli package
+- parseShellcodeFile function added to cli package
+- `golang.org/x/sys/windows` to vendor folder
+- Shellcode struct to messages package
+- .gitattributes file to detect project as Go
+
+### Changed
+- Updated github.com/mattn/go-shellwords/ package in vendor
+
+## 0.6.3 - 2018-10-24
+### Added
+- Added "shell" command to agent menu
+- Added `-w` compile time link flag to omit the DWARF symbol table
+- Added additional `-X` compile flag to set the build in the Agent package
+
+### Changed
+- [Issue 26](https://github.com/Ne0nd0g/merlin/issues/26) Updated Makefile to remove .dmg file extension for Darwin
+- [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23) Error when using upload command without specific arguments
+- [Issue 28](https://github.com/Ne0nd0g/merlin/issues/28) Updated MimiPenguin module to use new path to download mimipenguin.sh
+- Modified `cmd/merlinagentdll/main.go` Global variable from `URL` to `url` for consistency across all packages
+
 ## 0.6.2 - 2018-09-02
 ### Changed
 - Added Twitter badge to README
@@ -13,7 +94,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added "initial" field to agent.Agent struct
 
 ### Fixed
-- [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23)Error writing an agent log entry when agent was set to 'all'
+- [Issue 23](https://github.com/Ne0nd0g/merlin/issues/23) Error writing an agent log entry when agent was set to 'all'
 - Out of range error when setting module options in Run function
 
 ## 0.6.1 - 2018-08-11
