@@ -36,8 +36,6 @@ import (
 var url = "https://127.0.0.1:443"
 var build = "nonRelease"
 
-//var killdate = 0 // killdate is an epoch timestamp that the payload will not execute after
-
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
 	version := flag.Bool("version", false, "Print the agent version and exit")
