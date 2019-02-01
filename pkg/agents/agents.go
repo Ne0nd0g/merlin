@@ -70,6 +70,7 @@ type agent struct {
 	FailedCheckin  int
 	Skew           int64
 	Proto          string
+	killdate       int
 }
 
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object

