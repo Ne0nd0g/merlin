@@ -35,7 +35,7 @@ import (
 	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
@@ -522,6 +522,14 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "lsassdump":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Type,
+			Job:     job.ID,
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
