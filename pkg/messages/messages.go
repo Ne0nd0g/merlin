@@ -18,7 +18,7 @@
 package messages
 
 import (
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Base is the base JSON Object for HTTP POST payloads
@@ -91,4 +91,12 @@ type Shellcode struct {
 	Bytes  string `json:"bytes"` // Base64 string of shellcode bytes
 	Job    string `json:"job"`
 	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
+}
+
+// Module is a JSON payload used to send module directives.
+type Module struct {
+	Job     string   `json:"job"`
+	Command string   `json:"command"`
+	Args    []string `json:"args,omitempty"`
+	Result  string   `json:"result"`
 }

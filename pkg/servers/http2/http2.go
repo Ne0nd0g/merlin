@@ -19,6 +19,7 @@ package http2
 
 import (
 	// Standard
+	"bytes"
 	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
@@ -228,11 +229,22 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 		j := messages.Base{
 			Payload: &payload,
 		}
-		json.NewDecoder(r.Body).Decode(&j)
 
+		//reading the body before parsing json seems to resolve the receiving error on large bodies for some reason, unsure why
+		b, e := ioutil.ReadAll(r.Body)
+		if e != nil {
+			message("warn", e.Error())
+			return
+		}
+		e = json.NewDecoder(bytes.NewReader(b)).Decode(&j)
+		if e != nil {
+			message("warn", e.Error())
+			return
+		}
 		if core.Debug {
 			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %s", j))
 		}
+
 		switch j.Type {
 
 		case "InitialCheckIn":

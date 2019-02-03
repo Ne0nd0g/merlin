@@ -70,3 +70,7 @@ func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
+
+func miniDump(process string, pid uint32) ([]byte, error) {
+	return []byte{}, errors.New("Minidump doesn't work on non-windows hosts.")
+}

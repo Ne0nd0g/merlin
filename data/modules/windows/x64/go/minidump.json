@@ -1,0 +1,22 @@
+{
+    "base": {
+      "name": "Minidump",
+      "type": "standard",
+      "author": ["Cameron Stokes (@C__Sto)"],
+      "credits": [""],
+      "path": [""],
+      "platform": "WINDOWS",
+      "arch": "x64",
+      "lang": "Go",
+      "privilege": true,
+      "remote": "",
+      "local": [""],
+      "options": [
+        {"name": "Process", "value": "lsass.exe", "required": true, "flag": "", "description":"Name of the process to obtain a minidump of. If multiple processes exist with this name, it's likely the lowest PID will be used."},
+        {"name": "PID", "value": "0", "required": false, "flag": "", "description":"Specific PID to dump. Will ignore process name if this value is set."}
+      ],
+      "description": "Calls minidump on the provided process, dumps out to a temporary file and uploads the minidump file to the server.",
+      "notes": "Written in native go - the only disk access is when writing out the file to the temp location. Must be elevated to run, and automatically sets the correct token privileges required to access other processes memory.",
+      "commands": ["Minidump", "{{Process}}", "{{PID}}"]
+    }
+}

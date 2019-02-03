@@ -525,11 +525,13 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
-	case "lsassdump":
-		m.Type = "AgentControl"
-		p := messages.AgentControl{
+	case "Minidump":
+		fmt.Println("aaa", "minidump")
+		m.Type = "Module"
+		p := messages.Module{
 			Command: job.Type,
 			Job:     job.ID,
+			Args:    job.Args,
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
