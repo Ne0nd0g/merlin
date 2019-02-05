@@ -380,13 +380,21 @@ func Shell() {
 						}
 					}
 				case "ls":
-					m, err := agents.AddJob(shellAgent, "ls", cmd)
-					if err != nil {
-						message("warn", err.Error())
-						break
+					var m string
+					if len(cmd) > 1 {
+						arg := strings.Join(cmd[1:], " ")
+						joinedArgs := []string{cmd[0], arg}
+						m, err = agents.AddJob(shellAgent, cmd[0], joinedArgs)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					} else {
+						m, err = agents.AddJob(shellAgent, cmd[0], cmd)
 					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+
 				case "main":
 					menuSetMain()
 				case "quit":

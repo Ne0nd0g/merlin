@@ -714,8 +714,8 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				}
 			}
 
-		case "FileIO":
-			var p messages.FileIO
+		case "NativeCmd":
+			var p messages.NativeCmd
 			json.Unmarshal(payload, &p)
 
 			switch p.Command {

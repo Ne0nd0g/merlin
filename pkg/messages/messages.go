@@ -93,8 +93,8 @@ type Shellcode struct {
 	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
 }
 
-// FileIO is a JSON payload to send filesystem-related commands to the agent (ps, cd, cat, ls)
-type FileIO struct {
+// NativeCmd is a JSON payload to send filesystem-related commands to the agent (ps, cd, cat, ls)
+type NativeCmd struct {
 	Job     string `json:"job"`
 	Command string `json:"command"`
 	Args    string `json:"args,omitempty"`

@@ -477,8 +477,8 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 
 	case "ls":
-		m.Type = "FileIO"
-		p := messages.FileIO{
+		m.Type = "NativeCmd"
+		p := messages.NativeCmd{
 			Job:     job.ID,
 			Command: job.Args[0],
 		}
