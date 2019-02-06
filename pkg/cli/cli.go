@@ -379,6 +379,26 @@ func Shell() {
 								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
 					}
+				case "ls":
+					var m string
+					if len(cmd) > 1 {
+						arg := strings.Join(cmd[0:], " ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							break
+						}
+						m, err = agents.AddJob(shellAgent, "ls", argS)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					} else {
+						m, err = agents.AddJob(shellAgent, cmd[0], cmd)
+					}
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+
 				case "main":
 					menuSetMain()
 				case "quit":
@@ -651,6 +671,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("help"),
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
+		readline.PcItem("ls"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
@@ -743,6 +764,7 @@ func menuHelpAgent() {
 		{"execute-shellcode", "Execute shellcode", "self, remote"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
+		{"ls", "List directory contents", "ls /etc"},
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
