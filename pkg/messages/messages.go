@@ -93,7 +93,8 @@ type Shellcode struct {
 	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
 }
 
-// NativeCmd is a JSON payload to send filesystem-related commands to the agent (ps, cd, cat, ls)
+// NativeCmd is a JSON payload to execute commands native inside of Merlin using go instead of executing the binary
+// program on the host (i.e. ls)
 type NativeCmd struct {
 	Job     string `json:"job"`
 	Command string `json:"command"`
