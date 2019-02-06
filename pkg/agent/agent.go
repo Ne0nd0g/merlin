@@ -966,7 +966,18 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 }
 
 func (a *Agent) list(path string) (string, error) {
+	if a.Debug {
+		message("debug", fmt.Sprintf("Received input parameter for list command function: %s", path))
+
+	} else if a.Verbose {
+		message("success", fmt.Sprintf("listing directory contents for: %s", path))
+	}
 	files, err := ioutil.ReadDir(path)
+
+	if err != nil {
+		return "", err
+	}
+
 	details := ""
 
 	for _, f := range files {
@@ -976,7 +987,7 @@ func (a *Agent) list(path string) (string, error) {
 		name := f.Name()
 		details = details + perms + "\t" + modTime + "\t" + size + "\t" + name + "\n"
 	}
-	return details, err
+	return details, nil
 }
 
 // TODO Make a generic function to send a JSON message; Keep basic so protocols can be switched (i.e. DNS)
