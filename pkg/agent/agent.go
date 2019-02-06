@@ -39,13 +39,13 @@ import (
 
 	// 3rd Party
 	"github.com/fatih/color"
-	quic "github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
 	// Merlin
-	merlin "github.com/Ne0nd0g/merlin/pkg"
+	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
