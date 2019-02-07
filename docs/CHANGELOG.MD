@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Added `ls` command to agent & agent menu. Uses go code native to Merlin instead of executing `ls` or `dir` binary
 - New `NativeCmd` message struct for commands native to Merlin
+- [Pull 49](https://github.com/Ne0nd0g/merlin/pull/4) - Added tests for agent package and new `/test` directory for test HTTP server
 
 ## 0.6.8 - 2019-01-26
 

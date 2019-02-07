@@ -290,7 +290,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	}
 	if a.Debug {
 		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("%s", resp))
+		message("debug", fmt.Sprintf("%+v", resp))
 	}
 	if resp.StatusCode != 200 {
 		a.FailedCheckin++
@@ -353,7 +353,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	if a.Debug {
 		message("debug", "HTTP Response:")
 		message("debug", fmt.Sprintf("ContentLength: %d", resp.ContentLength))
-		message("debug", fmt.Sprintf("%s", resp))
+		message("debug", fmt.Sprintf("%+v", resp))
 	}
 
 	if resp.StatusCode != 200 {
@@ -949,7 +949,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 	}
 	if a.Debug {
 		message("debug", "HTTP Response:")
-		message("warn", fmt.Sprintf("%s", resp))
+		message("warn", fmt.Sprintf("%+v", resp))
 	}
 	if resp.StatusCode != 200 {
 		a.FailedCheckin++
