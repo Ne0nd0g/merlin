@@ -1,6 +1,7 @@
 package testserver
 
 import (
+	// Standard
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
@@ -25,7 +27,10 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	j := messages.Base{
 		Payload: &payload,
 	}
-	json.NewDecoder(r.Body).Decode(&j)
+	err := json.NewDecoder(r.Body).Decode(&j)
+	if err != nil {
+		log.Fatalf("There was an error:\r\n%s", err.Error())
+	}
 
 	switch r.UserAgent() {
 	case "BrokenJSON":
@@ -37,7 +42,10 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	respCode := http.StatusOK
 	//perform logic here to determine if the agent is behaving as expected
 	w.WriteHeader(respCode)
-	fmt.Fprintln(w, bod)
+	_, errF := fmt.Fprintln(w, bod)
+	if errF != nil {
+		log.Fatalf("There was an error writing the message:\r\n%s", errF)
+	}
 }
 
 //TestServer is a webserver instance that facilitates functional testing of code that requires the ability to send web requests
@@ -45,7 +53,7 @@ type TestServer struct {
 	tes *testing.T
 }
 
-//since tls/pki is such a pain in the ass, and I'm morally against storing certs on the repo - let's generate them every time :)
+//since tls/pki is such a pain this generate them every time
 func generateTLSConfig() *tls.Config {
 	//https://golang.org/src/crypto/tls/generate_cert.go taken from here mostly
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -62,7 +70,7 @@ func generateTLSConfig() *tls.Config {
 		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
 		DNSNames:              []string{"127.0.0.1", "localhost"},
 		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour * 24), //like 24 hours? idk, it's irrelevant anyway
+		NotAfter:              time.Now().Add(time.Minute * 20),
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
@@ -107,7 +115,6 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 		}
 		tlsListener := tls.NewListener(ln, srv.TLSConfig)
 		e = srv.Serve(tlsListener)
-		//e := srv.ListenAndServeTLS("", "")
 		if e != nil { //should be set by the tls config
 			panic(e)
 		}
@@ -123,7 +130,10 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 		if err != nil {
 			continue
 		}
-		resp.Body.Close()
+		errC := resp.Body.Close()
+		if errC != nil {
+			log.Fatalf("There was an error closing the body:\r\n%s", errC)
+		}
 		if resp.StatusCode != http.StatusOK {
 			continue
 		}

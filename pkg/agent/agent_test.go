@@ -1,22 +1,25 @@
 package agent
 
 import (
+	// Standard
 	"testing"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
+	// 3rd Party
+	"github.com/satori/go.uuid"
 
-	testserver "github.com/Ne0nd0g/merlin/pkg/agent/testServer" //uncomment when working etc
+	// Merlin
+	"github.com/Ne0nd0g/merlin/test/testServer"
 )
 
 func getTestAgent(proto string) Agent {
 	//creates a reproducible agent to ensure no jiggery pokery during generation
 
 	a := Agent{
-		Platform:     "testplatform",      //runtime.GOOS,
-		Architecture: "testarch",          //runtime.GOARCH,
-		Pid:          1337,                //os.Getpid(),
-		Version:      "testmerlinversion", //merlin.Version,
+		Platform:     "linux", //runtime.GOOS,
+		Architecture: "amd64", //runtime.GOARCH,
+		Pid:          1337,    //os.Getpid(),
+		Version:      "0.0.0", //merlin.Version,
 		WaitTime:     300 * time.Millisecond,
 		PaddingMax:   4096,
 		MaxRetry:     2,
@@ -61,7 +64,7 @@ func TestInitialh2(t *testing.T) {
 	go testserver.TestServer{}.Start(port, ended, setup, t)
 	//wait until set up
 	<-setup
-	//~~~~ the above can proabbly be copied into each test function
+	//~~~~ the above can probably be copied into each test function
 
 	//do the test stuff
 
@@ -102,7 +105,7 @@ func TestBrokenJson(t *testing.T) {
 	go testserver.TestServer{}.Start(port, ended, setup, t)
 	//wait until set up
 	<-setup
-	//~~~~ the above can proabbly be copied into each test function
+	//~~~~ the above can probably be copied into each test function
 
 	a.UserAgent = "BrokenJSON" //signal to the test server to send broken json
 
