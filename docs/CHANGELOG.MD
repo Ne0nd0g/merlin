@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Pull 48](https://github.com/Ne0nd0g/merlin/pull/48) - Added `ls` command to agent & agent menu. Uses go code native to Merlin instead of executing `ls` or `dir` binary
 - New `NativeCmd` message struct for commands native to Merlin
 - [Pull 49](https://github.com/Ne0nd0g/merlin/pull/49) - Added tests for agent package and new `/test` directory for test HTTP server
-- [Pull 50] (https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
+- [Pull 50](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
+  - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
 
 ## 0.6.8 - 2019-01-26
 
