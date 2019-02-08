@@ -415,7 +415,11 @@ func Shell() {
 					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
-
+				case "pwd":
+					var m string
+					m, err = agents.AddJob(shellAgent, "pwd", cmd)
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "main":
 					menuSetMain()
 				case "quit":
@@ -711,6 +715,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
 		readline.PcItem("ls"),
+		readline.PcItem("pwd"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
@@ -805,6 +810,7 @@ func menuHelpAgent() {
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc"},
+		{"pwd", "Display the current working directory", ""},
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
