@@ -21,6 +21,10 @@ import (
 )
 
 func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet && r.RequestURI == "/isup" {
+		w.WriteHeader(200)
+		return
+	}
 	bod := ""
 
 	var payload json.RawMessage
@@ -126,7 +130,7 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 		}
-		resp, err := client.Get("https://localhost:" + port)
+		resp, err := client.Get("https://localhost:" + port + "/isup")
 		if err != nil {
 			continue
 		}
