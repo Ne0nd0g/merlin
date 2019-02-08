@@ -72,5 +72,5 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 }
 
 func miniDump(process string, pid uint32) ([]byte, error) {
-	return []byte{}, errors.New("minidump doesn't work on non-windows hosts.")
+	return []byte{}, errors.New("minidump doesn't work on non-windows hosts")
 }
