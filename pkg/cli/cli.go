@@ -415,6 +415,25 @@ func Shell() {
 					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+				case "cd":
+					var m string
+					if len(cmd) > 1 {
+						arg := strings.Join(cmd[0:], " ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							break
+						}
+						m, err = agents.AddJob(shellAgent, "cd", argS)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					} else {
+						m, err = agents.AddJob(shellAgent, "cd", cmd)
+					}
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "pwd":
 					var m string
 					m, err = agents.AddJob(shellAgent, "pwd", cmd)
@@ -715,6 +734,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
 		readline.PcItem("ls"),
+		readline.PcItem("cd"),
 		readline.PcItem("pwd"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
@@ -810,6 +830,7 @@ func menuHelpAgent() {
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc"},
+		{"cd", "Change directories", "cd c:\\\\users"},
 		{"pwd", "Display the current working directory", ""},
 		{"main", "Return to the main menu", ""},
 		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},

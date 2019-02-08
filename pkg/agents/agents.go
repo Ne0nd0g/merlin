@@ -507,6 +507,16 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
 		}
+	case "cd":
+		m.Type = "NativeCmd"
+		p := messages.NativeCmd{
+			Job:     job.ID,
+			Command: job.Args[0],
+			Args:    strings.Join(job.Args[1:], " "),
+		}
+
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
 	case "pwd":
 		m.Type = "NativeCmd"
 		p := messages.NativeCmd{
