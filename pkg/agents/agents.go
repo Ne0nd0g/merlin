@@ -203,7 +203,7 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 	if core.Debug {
 		message("debug", fmt.Sprintf("Received agent status checkin from %s", j.ID))
 		message("debug", fmt.Sprintf("Channel length: %d", len(Agents[j.ID].channel)))
-		message("debug", fmt.Sprintf("Channel content: %s", Agents[j.ID].channel))
+		message("debug", fmt.Sprintf("Channel content: %v", Agents[j.ID].channel))
 	}
 
 	Agents[j.ID].StatusCheckIn = time.Now().UTC()
