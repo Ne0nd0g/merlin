@@ -368,14 +368,17 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		return
 	}
 
-	a.FailedCheckin = 0
-
 	if resp.ContentLength != 0 {
 		var payload json.RawMessage
 		j := messages.Base{
 			Payload: &payload,
 		}
-		json.NewDecoder(resp.Body).Decode(&j)
+		err := json.NewDecoder(resp.Body).Decode(&j)
+		if err != nil {
+			a.FailedCheckin++
+			return
+		}
+		a.FailedCheckin = 0
 
 		if a.Debug {
 			message("debug", fmt.Sprintf("Agent ID: %s", j.ID))
