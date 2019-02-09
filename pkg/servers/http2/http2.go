@@ -19,7 +19,7 @@ package http2
 
 import (
 	// Standard
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 - This library is required to check X.509 certificates using SHA1 hash
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -94,7 +94,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 	}
 
 	// Read x.509 Public Key into a variable
-	PEMData, err := ioutil.ReadFile(certificate)
+	PEMData, err := ioutil.ReadFile(certificate) // #nosec G304 - Users can specify any file or path for X.509 cert
 	if err != nil {
 		message("warn", "There was an error reading the SSL/TLS x509 certificate file")
 		message("warn", err.Error())
@@ -113,8 +113,9 @@ func New(iface string, port int, protocol string, key string, certificate string
 		message("warn", err.Error())
 	}
 
+	// TODO switch to SHA256
 	// Create SHA1 fingerprint from Certificate
-	sha1Fingerprint := sha1.Sum(pubCert.Raw)
+	sha1Fingerprint := sha1.Sum(pubCert.Raw) // #nosec G401 - Required to handle certificates with no SHA256 hash
 
 	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
 	merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"
@@ -177,12 +178,28 @@ func (s *Server) Run() error {
 
 	if s.Protocol == "h2" {
 		server := s.Server.(*http.Server)
-		defer server.Close()
+
+		defer func() {
+			err := server.Close()
+			if err != nil {
+				message("warn", fmt.Sprintf("There was an error starting the h2 server:\r\n%s",
+					err.Error()))
+				return
+			}
+		}()
 		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
 		return nil
 	} else if s.Protocol == "hq" {
 		server := s.Server.(*h2quic.Server)
-		defer server.Close()
+
+		defer func() {
+			err := server.Close()
+			if err != nil {
+				message("warn", fmt.Sprintf("There was an error starting the hq server:\r\n%s",
+					err.Error()))
+				return
+			}
+		}()
 		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
 		return nil
 	}
@@ -228,10 +245,15 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 		j := messages.Base{
 			Payload: &payload,
 		}
-		json.NewDecoder(r.Body).Decode(&j)
+		err1 := json.NewDecoder(r.Body).Decode(&j)
+		if err1 != nil {
+			message("warn", fmt.Sprintf("There was an error decoding a POST message sent by an "+
+				"agent:\r\n%s", err1))
+			return
+		}
 
 		if core.Debug {
-			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %s", j))
+			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
 		}
 		switch j.Type {
 
@@ -249,12 +271,22 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				message("warn", err.Error())
 			}
-			json.NewEncoder(w).Encode(x)
+			err2 := json.NewEncoder(w).Encode(x)
+			if err2 != nil {
+				message("warn", fmt.Sprintf("There was an error encoding the StatusCheckIn JSON "+
+					"message:\r\n%s", err2))
+				return
+			}
 
 		case "CmdResults":
 			// TODO move to its own function
 			var p messages.CmdResults
-			json.Unmarshal(payload, &p)
+			err3 := json.Unmarshal(payload, &p)
+			if err3 != nil {
+				message("warn", fmt.Sprintf("There was an error unmarshalling the CmdResults JSON "+
+					"object:\r\n%s", err3))
+				return
+			}
 			agents.Log(j.ID, fmt.Sprintf("Results for job: %s", p.Job))
 
 			message("success", fmt.Sprintf("Results for job %s at %s", p.Job, time.Now().UTC().Format(time.RFC3339)))
@@ -269,14 +301,23 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 
 		case "AgentInfo":
 			var p messages.AgentInfo
-			json.Unmarshal(payload, &p)
+			err4 := json.Unmarshal(payload, &p)
+			if err4 != nil {
+				message("warn", fmt.Sprintf("There was an error unmarshalling the AgentInfo "+
+					"JSON object:\r\n%s", err4))
+				return
+			}
 			if core.Debug {
-				message("debug", fmt.Sprintf("AgentInfo JSON object: %s", p))
+				message("debug", fmt.Sprintf("AgentInfo JSON object: %v", p))
 			}
 			agents.UpdateInfo(j, p)
 		case "FileTransfer":
 			var p messages.FileTransfer
-			json.Unmarshal(payload, &p)
+			err5 := json.Unmarshal(payload, &p)
+			if err5 != nil {
+				message("warn", fmt.Sprintf("There was an error unmarshalling the FileTransfer JSON "+
+					"object:\r\n%s", err5))
+			}
 			if p.IsDownload {
 				agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
 				_, f := filepath.Split(p.FileLocation) // We don't need the directory part for anything
@@ -297,13 +338,14 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 						message("warn", fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
 						message("warn", writingErr.Error())
 					} else {
-						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
+						message("success", fmt.Sprintf("Successfully downloaded file %s with a size of "+
+							"%d bytes from agent %s to %s",
 							p.FileLocation,
 							len(downloadBlob),
 							j.ID.String(),
 							downloadFile))
-						agents.Log(j.ID, fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from"+
-							" agent to %s",
+						agents.Log(j.ID, fmt.Sprintf("Successfully downloaded file %s with a size of %d "+
+							"bytes from agent to %s",
 							p.FileLocation,
 							len(downloadBlob),
 							downloadFile))
@@ -344,3 +386,5 @@ func message(level string, message string) {
 		color.Red("[_-_]Invalid message level: " + message)
 	}
 }
+
+// TODO make sure all errors are logged to server log
