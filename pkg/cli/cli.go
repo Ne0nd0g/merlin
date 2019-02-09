@@ -37,10 +37,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 
 	// Merlin
-	merlin "github.com/Ne0nd0g/merlin/pkg"
+	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/core"

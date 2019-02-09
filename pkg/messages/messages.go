@@ -18,7 +18,7 @@
 package messages
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 )
 
 // Base is the base JSON Object for HTTP POST payloads

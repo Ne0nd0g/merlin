@@ -35,7 +35,7 @@ import (
 	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
