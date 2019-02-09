@@ -18,6 +18,9 @@
 package http2
 
 import (
+	"errors"
+
+	"github.com/Ne0nd0g/merlin/pkg/util"
 	// Standard
 	"crypto/sha1"
 	"crypto/tls"
@@ -65,64 +68,83 @@ func New(iface string, port int, protocol string, key string, certificate string
 		Port:      port,
 		Mux:       http.NewServeMux(),
 	}
-
-	// Check to make sure files exist
+	var cer tls.Certificate
+	var err error
+	// Check if certificate exists on disk
 	_, errCrt := os.Stat(certificate)
-	if errCrt != nil {
-		message("warn", "There was an error importing the SSL/TLS x509 certificate")
-		message("warn", errCrt.Error())
-		return s, errCrt
-	}
-	s.Certificate = certificate
-
-	_, errKey := os.Stat(key)
-	if errKey != nil {
-		message("warn", "There was an error importing the SSL/TLS x509 key")
-		message("warn", errKey.Error())
-		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key\r\n%s", errKey.Error()))
-		return s, errKey
-	}
-	s.Key = key
-
-	cer, err := tls.LoadX509KeyPair(certificate, key)
-	if err != nil {
-		message("warn", "There was an error importing the SSL/TLS x509 key pair")
-		message("warn", "Ensure a keypair is located in the data/x509 directory")
-		message("warn", err.Error())
-		logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error()))
-		return s, err
-	}
-
-	// Read x.509 Public Key into a variable
-	PEMData, err := ioutil.ReadFile(certificate)
-	if err != nil {
-		message("warn", "There was an error reading the SSL/TLS x509 certificate file")
-		message("warn", err.Error())
-		return s, err
-	}
-
-	// Decode the x.509 Public Key from PEM
-	block, _ := pem.Decode(PEMData)
-	if block == nil {
-		message("warn", "failed to decode PEM block from public key")
-	}
-
-	// Convert the PEM block into a Certificate object
-	pubCert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		message("warn", err.Error())
-	}
-
-	// Create SHA1 fingerprint from Certificate
-	sha1Fingerprint := sha1.Sum(pubCert.Raw)
-
-	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
-	merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"
-
-	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
-	if merlinCRT == hex.EncodeToString(sha1Fingerprint[:]) {
-		message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+	if os.IsNotExist(errCrt) {
+		// generate a new ephemeral certificate
+		message("warn", "No certificate found at the provided path, creating certificate in-memory for this session only.")
 		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+		cerp, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //ec certs not supported (yet) :(
+		if err != nil {
+			message("warn", "There was an error generating the SSL/TLS certificate")
+			message("warn", err.Error())
+			return s, err
+		}
+		cer = *cerp
+	} else {
+		if errCrt != nil {
+			message("warn", "There was an error importing the SSL/TLS x509 certificate")
+			message("warn", errCrt.Error())
+			return s, errCrt
+		}
+		s.Certificate = certificate
+
+		_, errKey := os.Stat(key)
+		if errKey != nil {
+			message("warn", "There was an error importing the SSL/TLS x509 key")
+			message("warn", errKey.Error())
+			logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key\r\n%s", errKey.Error()))
+			return s, errKey
+		}
+		s.Key = key
+
+		cer, err = tls.LoadX509KeyPair(certificate, key)
+		if err != nil {
+			message("warn", "There was an error importing the SSL/TLS x509 key pair")
+			message("warn", "Ensure a keypair is located in the data/x509 directory")
+			message("warn", err.Error())
+			logging.Server(fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error()))
+			return s, err
+		}
+
+		// Read x.509 Public Key into a variable
+		PEMData, err := ioutil.ReadFile(certificate)
+		if err != nil {
+			message("warn", "There was an error reading the SSL/TLS x509 certificate file")
+			message("warn", err.Error())
+			return s, err
+		}
+
+		// Decode the x.509 Public Key from PEM
+		block, _ := pem.Decode(PEMData)
+		if block == nil {
+			message("warn", "failed to decode PEM block from public key")
+		}
+
+		// Convert the PEM block into a Certificate object
+		pubCert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			message("warn", err.Error())
+		}
+
+		// Create SHA1 fingerprint from Certificate
+		sha1Fingerprint := sha1.Sum(pubCert.Raw)
+
+		// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+		merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"
+
+		// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+		if merlinCRT == hex.EncodeToString(sha1Fingerprint[:]) {
+			message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+			message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+		}
+	}
+
+	if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
+		message("warn", "Unable to import certificate for use in Merlin: empty certificate structure.")
+		return s, errors.New("Empty certificate structure")
 	}
 
 	// Configure TLS
