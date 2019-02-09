@@ -59,7 +59,7 @@ func main() {
 	}
 	flag.Parse()
 
-	color.Blue(banner.Banner1)
+	color.Blue(banner.MerlinBanner1)
 	color.Blue("\t\t   Version: %s", merlin.Version)
 	color.Blue("\t\t   Build: %s", build)
 
