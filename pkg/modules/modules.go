@@ -228,7 +228,7 @@ func Create(modulePath string) (Module, error) {
 	var m Module
 
 	// Read in the module's JSON configuration file
-	f, err := ioutil.ReadFile(modulePath)
+	f, err := ioutil.ReadFile(modulePath) // #nosec - G304 - User should be able to read in any file
 	if err != nil {
 		return m, err
 	}
@@ -271,7 +271,10 @@ func Create(modulePath string) (Module, error) {
 			k := marshalMessage(*moduleJSON["powershell"])
 			m.Powershell = (*json.RawMessage)(&k)
 			var p PowerShell
-			json.Unmarshal(k, &p)
+			err := json.Unmarshal(k, &p)
+			if err != nil {
+				return m, errors.New("there was an error unmarshaling the powershell JSON object")
+			}
 		}
 	}
 
