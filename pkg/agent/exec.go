@@ -78,6 +78,9 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
+// miniDump is a Windows only module function to dump the memory of the provided process
 func miniDump(process string, pid uint32) ([]byte, error) {
+	process = ""
+	pid = 0
 	return []byte{}, errors.New("minidump doesn't work on non-windows hosts")
 }
