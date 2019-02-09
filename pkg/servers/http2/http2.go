@@ -242,7 +242,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if core.Debug {
-			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %s", j))
+			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
 		}
 
 		switch j.Type {
@@ -283,7 +283,7 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 			var p messages.AgentInfo
 			json.Unmarshal(payload, &p)
 			if core.Debug {
-				message("debug", fmt.Sprintf("AgentInfo JSON object: %s", p))
+				message("debug", fmt.Sprintf("AgentInfo JSON object: %v", p))
 			}
 			agents.UpdateInfo(j, p)
 		case "FileTransfer":

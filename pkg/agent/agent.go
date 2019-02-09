@@ -82,6 +82,7 @@ type Agent struct {
 	Client        *http.Client  // Client is an http.Client object used to make HTTP connections for agent communications
 	UserAgent     string        // UserAgent is the user agent string used with HTTP connections
 	initial       bool          // initial identifies if the agent has successfully completed the first initial check in
+	KillDate      int64         // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
 }
 
 // New creates a new agent struct with specific values and returns the object
@@ -104,6 +105,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		Proto:        protocol,
 		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
 		initial:      false,
+		KillDate:     0,
 	}
 
 	u, errU := user.Current()
@@ -180,19 +182,28 @@ func (a *Agent) Run(server string) {
 	}
 
 	for {
-		if a.initial {
-			if a.Verbose {
-				message("note", "Checking in")
+		// Check killdate to see if the agent should checkin
+		if (a.KillDate == 0) || (time.Now().Unix() < a.KillDate) {
+			if a.initial {
+				if a.Verbose {
+					message("note", "Checking in")
+				}
+				go a.statusCheckIn(server, a.Client)
+			} else {
+				a.initial = a.initialCheckIn(server, a.Client)
 			}
-			go a.statusCheckIn(server, a.Client)
+			if a.FailedCheckin >= a.MaxRetry {
+				if a.Debug {
+					message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")
+				}
+				os.Exit(0)
+			}
 		} else {
-			a.initial = a.initialCheckIn(server, a.Client)
-		}
-		if a.FailedCheckin >= a.MaxRetry {
-			if a.Debug {
-				message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")
+			if a.Verbose {
+				message("warn", fmt.Sprintf("Quitting. Agent Kill Date has been exceeded: %s",
+					time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
 			}
-			os.Exit(1)
+			os.Exit(0)
 		}
 
 		timeSkew := time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
@@ -241,6 +252,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		Skew:          a.Skew,
 		Proto:         a.Proto,
 		SysInfo:       (*json.RawMessage)(&sysInfoPayload),
+		KillDate:      a.KillDate,
 	}
 
 	agentInfoPayload, errA := json.Marshal(i)
@@ -515,7 +527,6 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
 				}
 			}
-
 		case "CmdPayload":
 			var p messages.CmdPayload
 			json.Unmarshal(payload, &p)
@@ -723,6 +734,21 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				}
 				a.MaxRetry = t
 				a.agentInfo(host, client)
+			case "killdate":
+				d, err := strconv.Atoi(p.Args)
+				if err != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error converting the kill date to an "+
+							"integer:\r\n%s", err.Error()))
+					}
+					break
+				}
+				a.KillDate = int64(d)
+				if a.Verbose {
+					message("info", fmt.Sprintf("Set Kill Date to: %s",
+						time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
+				}
+				a.agentInfo(host, client)
 			default:
 				if a.Verbose {
 					message("warn", fmt.Sprintf("Unknown AgentControl message type received %s", p.Command))
@@ -810,7 +836,6 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
 				}
 			}
-
 		case "NativeCmd":
 			var p messages.NativeCmd
 			json.Unmarshal(payload, &p)
@@ -1007,6 +1032,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		FailedCheckin: a.FailedCheckin,
 		Skew:          a.Skew,
 		Proto:         a.Proto,
+		KillDate:      a.KillDate,
 	}
 
 	payload, errP := json.Marshal(i)

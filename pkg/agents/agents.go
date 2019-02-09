@@ -70,6 +70,7 @@ type agent struct {
 	FailedCheckin  int
 	Skew           int64
 	Proto          string
+	KillDate       int64
 }
 
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
@@ -154,7 +155,7 @@ func InitialCheckIn(j messages.Base) {
 	Agents[j.ID] = &agent{
 		Version: agentInfo.Version, Build: agentInfo.Build, WaitTime: agentInfo.WaitTime,
 		PaddingMax: agentInfo.PaddingMax, MaxRetry: agentInfo.MaxRetry, FailedCheckin: agentInfo.FailedCheckin,
-		Skew: agentInfo.Skew, Proto: agentInfo.Proto,
+		Skew: agentInfo.Skew, Proto: agentInfo.Proto, KillDate: agentInfo.KillDate,
 		ID: j.ID, UserName: sysInfo.UserName, UserGUID: sysInfo.UserGUID, Platform: sysInfo.Platform,
 		Architecture: sysInfo.Architecture, Ips: sysInfo.Ips,
 		HostName: sysInfo.HostName, Pid: sysInfo.Pid, channel: make(chan []Job, 10),
@@ -167,6 +168,7 @@ func InitialCheckIn(j messages.Base) {
 	Log(j.ID, fmt.Sprintf("FailedCheckin: %d", agentInfo.FailedCheckin))
 	Log(j.ID, fmt.Sprintf("Skew: %d", agentInfo.Skew))
 	Log(j.ID, fmt.Sprintf("Proto: %s", agentInfo.Proto))
+	Log(j.ID, fmt.Sprintf("Kill Date: %s", time.Unix(agentInfo.KillDate, 0).UTC().Format(time.RFC3339)))
 	Log(j.ID, fmt.Sprintf("Platform: %s", sysInfo.Platform))
 	Log(j.ID, fmt.Sprintf("Architecture: %s", sysInfo.Architecture))
 	Log(j.ID, fmt.Sprintf("HostName: %s", sysInfo.HostName))
@@ -201,7 +203,7 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 	if core.Debug {
 		message("debug", fmt.Sprintf("Received agent status checkin from %s", j.ID))
 		message("debug", fmt.Sprintf("Channel length: %d", len(Agents[j.ID].channel)))
-		message("debug", fmt.Sprintf("Channel content: %s", Agents[j.ID].channel))
+		message("debug", fmt.Sprintf("Channel content: %v", Agents[j.ID].channel))
 	}
 
 	Agents[j.ID].StatusCheckIn = time.Now().UTC()
@@ -252,6 +254,7 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 		message("debug", fmt.Sprintf("Agent maxRetry: %d", p.MaxRetry))
 		message("debug", fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
 		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
+		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 	}
 	Log(j.ID, fmt.Sprintf("Processing AgentInfo message:"))
 	Log(j.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
@@ -262,6 +265,7 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 	Log(j.ID, fmt.Sprintf("\tAgent maxRetry: %d ", p.MaxRetry))
 	Log(j.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
 	Log(j.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
+	Log(j.ID, fmt.Sprintf("\tAgent KillDate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 
 	Agents[j.ID].Version = p.Version
 	Agents[j.ID].Build = p.Build
@@ -271,6 +275,7 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].MaxRetry = p.MaxRetry
 	Agents[j.ID].FailedCheckin = p.FailedCheckin
 	Agents[j.ID].Proto = p.Proto
+	Agents[j.ID].KillDate = p.KillDate
 }
 
 // Log is used to write log messages to the agent's log file
@@ -317,6 +322,7 @@ func ShowInfo(agentID uuid.UUID) {
 		{"Agent Message Padding Max", strconv.Itoa(Agents[agentID].PaddingMax)},
 		{"Agent Max Retries", strconv.Itoa(Agents[agentID].MaxRetry)},
 		{"Agent Failed Check In", strconv.Itoa(Agents[agentID].FailedCheckin)},
+		{"Agent Kill Date", time.Unix(Agents[agentID].KillDate, 0).UTC().Format(time.RFC3339)},
 		{"Agent Communication Protocol", Agents[agentID].Proto},
 	}
 	table.AppendBulk(data)
@@ -489,6 +495,17 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			p.Args = "./"
 		}
 
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "killdate":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
 	case "maxretry":

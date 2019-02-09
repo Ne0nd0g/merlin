@@ -28,6 +28,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -412,6 +413,23 @@ func Shell() {
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
+						case "killdate":
+							if len(cmd) > 2 {
+								_, errU := strconv.ParseInt(cmd[2], 10, 64)
+								if errU != nil {
+									message("warn", fmt.Sprintf("There was an error converting %s to an int64", cmd[2]))
+									message("info", "Kill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995")
+									break
+								}
+								m, err := agents.AddJob(shellAgent, "killdate", cmd[1:])
+								if err != nil {
+									message("warn", fmt.Sprintf("There was an error adding a killdate "+
+										"agent control message:\r\n%s", err.Error()))
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+								}
+							}
 						case "maxretry":
 							if len(cmd) > 2 {
 								m, err := agents.AddJob(shellAgent, "maxretry", cmd[1:])
@@ -681,6 +699,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
+			readline.PcItem("killdate"),
 			readline.PcItem("maxretry"),
 			readline.PcItem("padding"),
 			readline.PcItem("skew"),
@@ -772,7 +791,7 @@ func menuHelpAgent() {
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc"},
 		{"main", "Return to the main menu", ""},
-		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
+		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
