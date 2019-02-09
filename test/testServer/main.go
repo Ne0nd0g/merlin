@@ -128,9 +128,11 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 	}()
 	for {
 		time.Sleep(time.Second * 1)
+		/* #nosec G402 */
+		// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
 		client := &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec - G402 - Allowed for testing
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 		}
 		resp, err := client.Get("https://localhost:" + port)

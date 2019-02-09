@@ -20,7 +20,7 @@ package agent
 import (
 	// Standard
 	"bytes"
-	"crypto/sha1" // #nosec
+	"crypto/sha1" // #nosec G505
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -525,7 +525,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					g.Payload = (*json.RawMessage)(&k)
 
 				} else {
-					fileHash := sha1.New() // #nosec // Use SHA1 because it is what many Blue Team tools use
+					fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
 					_, errW := io.WriteString(fileHash, string(fileData))
 					if errW != nil {
 						if a.Verbose {
@@ -900,10 +900,12 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 // getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
 func getClient(protocol string) (*http.Client, error) {
 
+	/* #nosec G402 */
+	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
 	// Setup TLS configuration
 	TLSConfig := &tls.Config{
 		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: true, // #nosec G402 - see https://github.com/Ne0nd0g/merlin/issues/59 TODO fix this
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,

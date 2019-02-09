@@ -849,7 +849,7 @@ func exit() {
 func executeCommand(name string, arg []string) {
 	var cmd *exec.Cmd
 
-	cmd = exec.Command(name, arg...) // #nosec - G204 -Users can execute any arbitrary command by design
+	cmd = exec.Command(name, arg...) // #nosec G204 Users can execute any arbitrary command by design
 
 	out, err := cmd.CombinedOutput()
 
@@ -951,7 +951,7 @@ func parseShellcodeFile(filePath string) ([]byte, error) {
 		message("debug", "Entering into cli.parseShellcodeFile function")
 	}
 
-	b, errB := ioutil.ReadFile(filePath) // #nosec - G304 - Users can include any file from anywhere
+	b, errB := ioutil.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
 	if errB != nil {
 		if core.Debug {
 			message("debug", "Leaving cli.parseShellcodeFile function")

@@ -228,7 +228,7 @@ func Create(modulePath string) (Module, error) {
 	var m Module
 
 	// Read in the module's JSON configuration file
-	f, err := ioutil.ReadFile(modulePath) // #nosec - G304 - User should be able to read in any file
+	f, err := ioutil.ReadFile(modulePath) // #nosec G304 - User should be able to read in any file
 	if err != nil {
 		return m, err
 	}

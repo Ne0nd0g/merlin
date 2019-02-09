@@ -19,7 +19,7 @@ package http2
 
 import (
 	// Standard
-	"crypto/sha1" // #nosec - G505 - This library is required to check X.509 certificates using SHA1 hash
+	"crypto/sha1" // #nosec G505 - This library is required to check X.509 certificates using SHA1 hash
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"

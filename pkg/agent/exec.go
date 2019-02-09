@@ -38,7 +38,7 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 		return "", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", arg, errS.Error())
 	}
 
-	cmd = exec.Command(name, argS...) // #nosec
+	cmd = exec.Command(name, argS...) // #nosec G204
 
 	out, err := cmd.CombinedOutput()
 	stdout = string(out)
