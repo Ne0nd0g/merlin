@@ -109,7 +109,14 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 	srv.Addr = "127.0.0.1:" + port
 	go func() {
 		ln, e := net.Listen("tcp", srv.Addr)
-		defer ln.Close()
+
+		defer func() {
+			err := ln.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+
 		if e != nil {
 			panic(e)
 		}
@@ -123,7 +130,7 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 		time.Sleep(time.Second * 1)
 		client := &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec - G402 - Allowed for testing
 			},
 		}
 		resp, err := client.Get("https://localhost:" + port)
