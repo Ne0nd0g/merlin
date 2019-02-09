@@ -109,7 +109,7 @@ func Shell() {
 						menuAgent(cmd[1:])
 					}
 				case "banner":
-					color.Blue(banner.Banner1)
+					color.Blue(banner.MerlinBanner1)
 					color.Blue("\t\t   Version: %s", merlin.Version)
 				case "help":
 					menuHelpMain()

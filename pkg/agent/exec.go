@@ -53,20 +53,27 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 
 // ExecuteShellcodeSelf executes provided shellcode in the current process
 func ExecuteShellcodeSelf(shellcode []byte) error {
+	shellcode = nil
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
 // ExecuteShellcodeRemote executes provided shellcode in the provided target process
 func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
+	shellcode = nil
+	pid = 0
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
 // ExecuteShellcodeRtlCreateUserThread executes provided shellcode in the provided target process using the Windows RtlCreateUserThread call
 func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
+	shellcode = nil
+	pid = 0
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
 // ExecuteShellcodeQueueUserAPC executes provided shellcode in the provided target process using the Windows QueueUserAPC API call
 func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
+	shellcode = nil
+	pid = 0
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
