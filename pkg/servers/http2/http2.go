@@ -246,23 +246,18 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 		j := messages.Base{
 			Payload: &payload,
 		}
-    
-		err1 := json.NewDecoder(r.Body).Decode(&j)
-		if err1 != nil {
-			message("warn", fmt.Sprintf("There was an error decoding a POST message sent by an "+
-				"agent:\r\n%s", err1))
-			return
-		}
-
 		//reading the body before parsing json seems to resolve the receiving error on large bodies for some reason, unsure why
 		b, e := ioutil.ReadAll(r.Body)
 		if e != nil {
-			message("warn", e.Error())
+			message("warn", fmt.Sprintf("There was an error reading a POST message sent by an "+
+				"agent:\r\n%s", e))
 			return
 		}
+
 		e = json.NewDecoder(bytes.NewReader(b)).Decode(&j)
 		if e != nil {
-			message("warn", e.Error())
+			message("warn", fmt.Sprintf("There was an error decoding a POST message sent by an "+
+				"agent:\r\n%s", e))
 			return
 		}
 		if core.Debug {
