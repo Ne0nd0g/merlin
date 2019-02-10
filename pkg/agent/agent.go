@@ -191,8 +191,8 @@ func (a *Agent) Run(server string) {
 				a.initial = a.initialCheckIn(server, a.Client)
 			}
 			if a.FailedCheckin >= a.MaxRetry {
-				if a.Debug {
-					message("debug", "Failed Checkin is greater than or equal to max retries. Quitting")
+				if a.Verbose {
+					message("warn", "Failed Checkin is greater than or equal to max retries. Quitting")
 				}
 				os.Exit(0)
 			}
@@ -323,7 +323,13 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		}
 		return false
 	}
-	a.FailedCheckin = 0
+	if a.FailedCheckin > 0 && a.FailedCheckin < a.MaxRetry {
+		if a.Verbose {
+			message("note", fmt.Sprintf("Updating server with failed checkins from %d to 0", a.FailedCheckin))
+		}
+		a.FailedCheckin = 0
+		go a.agentInfo(host, a.Client)
+	}
 	if a.Debug {
 		message("debug", "Leaving initialCheckIn function, returning True")
 	}
@@ -390,20 +396,23 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		return
 	}
 
-	a.FailedCheckin = 0
-
 	if resp.ContentLength != 0 {
 		var payload json.RawMessage
 		j := messages.Base{
 			Payload: &payload,
 		}
+
 		errD := json.NewDecoder(resp.Body).Decode(&j)
 		if errD != nil {
 			if a.Verbose {
 				message("warn", fmt.Sprintf("There was an error decoding the JSON message:\r\n%s",
 					errD.Error()))
 			}
+			a.FailedCheckin++
+			return
 		}
+
+		a.FailedCheckin = 0
 
 		if a.Debug {
 			message("debug", fmt.Sprintf("Agent ID: %s", j.ID))

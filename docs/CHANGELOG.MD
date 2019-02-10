@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Pull 50](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
   - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
 
+### Fixed
+- [Pull 51](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
+
 ## 0.6.8 - 2019-01-26
 
 ### Added
