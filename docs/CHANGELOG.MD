@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New `NativeCmd` message struct for commands native to Merlin
 - [Pull 49](https://github.com/Ne0nd0g/merlin/pull/49) - Added tests for agent package and new `/test` directory for test HTTP server
 - [Pull 50](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
-  - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
+- Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
+- [Pull 51](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a Go native `minidump` module for Windows agents to create and receive a minidump file of a specified process (requires elevation)
 
 ## 0.6.8 - 2019-01-26
 

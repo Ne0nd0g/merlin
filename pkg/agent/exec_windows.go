@@ -396,7 +396,7 @@ func miniDump(process string, pid uint32) ([]byte, error) {
 		);
 	*/
 	//load up our minidump function
-	k32 := syscall.NewLazyDLL("Dbgcore.dll")
+	k32 := windows.NewLazySystemDLL("Dbgcore.dll")
 	m := k32.NewProc("MiniDumpWriteDump")
 
 	//set up the tempfile to write to, automatically remove it once done
@@ -486,7 +486,7 @@ func sePrivEnable(s string) error {
 		Privileges     [1]LUID_AND_ATTRIBUTES
 	}
 
-	modadvapi32 := syscall.NewLazyDLL("advapi32.dll")
+	modadvapi32 := windows.NewLazySystemDLL("advapi32.dll")
 	procAdjustTokenPrivileges := modadvapi32.NewProc("AdjustTokenPrivileges")
 
 	procLookupPriv := modadvapi32.NewProc("LookupPrivilegeValueW")

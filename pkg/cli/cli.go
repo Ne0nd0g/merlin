@@ -37,10 +37,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/core"
@@ -193,6 +193,7 @@ func Shell() {
 						m, err = agents.AddJob(shellModule.Agent, "cmd", r)
 					}
 					if err != nil {
+						message("warn", "There was an error adding the job to the specified agent")
 						message("warn", err.Error())
 					} else {
 						message("note", fmt.Sprintf("Created job %s for agent %s at %s",
