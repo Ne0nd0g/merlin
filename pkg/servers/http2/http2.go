@@ -18,6 +18,7 @@
 package http2
 
 import (
+	"github.com/olekukonko/tablewriter"
 	// Standard
 	"crypto/sha1" // #nosec G505 - This library is required to check X.509 certificates using SHA1 hash
 	"crypto/tls"
@@ -55,6 +56,40 @@ type Server struct {
 	Certificate string
 	Server      interface{}
 	Mux         *http.ServeMux
+	agentConfig agentConfig
+	Options     map[string]Option
+}
+
+type Option struct {
+	Name        string
+	Value       string
+	Required    bool
+	Description string
+}
+
+// ShowOptions function is used to display only a module's configurable options
+func (s *Server) ShowOptions() {
+	color.Cyan(fmt.Sprintf("\r\nListener: %s\r\n", "http2"))
+	color.Yellow("\r\nListener options\r\n\r\n")
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
+	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
+	table.SetBorder(false)
+	for _, v := range s.Options {
+		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
+	}
+	table.Render()
+}
+
+// GetOptionsList generates and returns a list of the server's configurable options. Used with tab completion
+func (s *Server) GetOptionsList() func(string) []string {
+	return func(line string) []string {
+		o := make([]string, 0)
+		for _, v := range s.Options {
+			o = append(o, v.Name)
+		}
+		return o
+	}
 }
 
 // New instantiates a new server object and returns it
@@ -164,6 +199,33 @@ func New(iface string, port int, protocol string, key string, certificate string
 	} else {
 		return s, fmt.Errorf("%s is an invalid server protocol", s.Protocol)
 	}
+
+	defaultURL := fmt.Sprintf("https://0.0.0.0:%d", s.Port)
+	if s.Port == 443 {
+		defaultURL = "https://0.0.0.0"
+	}
+	//set up options
+	s.Options = map[string]Option{
+		"URL": Option{
+			Name:        "URL",
+			Value:       defaultURL,
+			Required:    true,
+			Description: "URL of the merlin server. This should be the URL the agent will use to interact with the server.",
+		},
+		"protocol": Option{
+			Name:        "protocol",
+			Value:       s.Protocol,
+			Required:    true,
+			Description: "Elected protocol to use",
+		},
+		"sleep": Option{
+			Name:        "sleep",
+			Value:       "30000",
+			Required:    true,
+			Description: "Time to wait between interactions with the agent",
+		},
+	}
+
 	return s, nil
 }
 
@@ -367,6 +429,20 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(404)
 	}
+}
+
+//SetOption will assign a value to the corresponding option in the server object
+func (s *Server) SetOption(name, value string) error {
+	opt := s.Options[name]
+	opt.Value = value
+	s.Options[name] = opt
+	return nil
+}
+
+//GetOption will retreive a server option as specified by the string. If the option is not found, an error is returned.
+func (s *Server) GetOptionValue(opt string) (string, error) {
+	o := s.Options[opt]
+	return o.Value, nil
 }
 
 // message is used to print a message to the command line

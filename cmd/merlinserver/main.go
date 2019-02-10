@@ -63,11 +63,10 @@ func main() {
 	color.Blue("\t\t   Version: %s", merlin.Version)
 	color.Blue("\t\t   Build: %s", build)
 
-	// Start Merlin Command Line Interface
-	go cli.Shell()
-
 	// Start Merlin Server to listen for agents
 	server, err := http2.New(*ip, *port, *proto, *key, *crt)
+	// Start Merlin Command Line Interface
+	go cli.Shell(&server)
 	if err != nil {
 		color.Red(err.Error())
 	} else {

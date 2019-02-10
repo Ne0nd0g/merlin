@@ -46,6 +46,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
+	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
 )
 
 // Global Variables
@@ -54,10 +55,11 @@ var shellAgent uuid.UUID
 var prompt *readline.Instance
 var shellCompleter *readline.PrefixCompleter
 var shellMenuContext = "main"
+var serv *http2.Server
 
 // Shell is the exported function to start the command line interface
-func Shell() {
-
+func Shell(srv *http2.Server) {
+	serv = srv
 	shellCompleter = getCompleter("main")
 
 	p, err := readline.NewEx(&readline.Config{
@@ -537,6 +539,24 @@ func Shell() {
 						executeCommand(cmd[0], x)
 					}
 				}
+			case "generate":
+				switch cmd[0] {
+				case "set":
+					//need at least 3 (set URL https://supershady.ru)
+					if len(cmd) < 3 {
+						message("warn", "Invalid command")
+						message("info", "set <option> <value>")
+					}
+					serv.SetOption(cmd[1], cmd[2])
+				case "show":
+					serv.ShowOptions()
+				case "generate":
+					serv.GenerateAgent()
+				case "back":
+					fallthrough
+				case "main":
+					menuSetMain()
+				}
 			}
 		}
 
@@ -607,6 +627,23 @@ func menuAgent(cmd []string) {
 				}
 			}
 		}
+	case "generate":
+		prompt.Config.AutoComplete = getCompleter("generate")
+		prompt.SetPrompt("\033[31mAgent Generation»\033[0m ")
+		shellMenuContext = "generate"
+		//todo do generate things
+	}
+}
+
+func menuGenerateAgent(cmd []string) {
+	switch cmd[0] {
+	case "set":
+		//url
+		//protocol
+		//sleep
+		//outputformat
+	case "show":
+	case "generate":
 	}
 }
 
@@ -651,6 +688,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("interact",
 				readline.PcItemDynamic(agents.GetAgentList()),
 			),
+			readline.PcItem("generate"),
 		),
 		readline.PcItem("banner"),
 		readline.PcItem("help"),
@@ -717,6 +755,15 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("upload"),
 	)
 
+	//generate menu
+	var generate = readline.NewPrefixCompleter(
+		readline.PcItem("set"),
+		readline.PcItem("show"),
+		readline.PcItem("generate"),
+		readline.PcItem("main"),
+		readline.PcItem("back"),
+	)
+
 	switch completer {
 	case "main":
 		return main
@@ -724,6 +771,8 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		return module
 	case "agent":
 		return agent
+	case "generate":
+		return generate
 	default:
 		return main
 	}
