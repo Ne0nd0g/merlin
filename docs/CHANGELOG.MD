@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
 - [Pull 51](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a Go native `minidump` module for Windows agents to create and receive a minidump file of a specified process (requires elevation)
 
+### Fixed
+- [Pull 51](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
+
 ## 0.6.8 - 2019-01-26
 
 ### Added
