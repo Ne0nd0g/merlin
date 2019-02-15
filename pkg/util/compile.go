@@ -3,13 +3,14 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
+
+	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
-//greetz 2 moloch--
-var validCompilerTargets = map[string]bool{
+//ValidCompilerTargets is all the valid compiler targets? greetz 2 moloch--
+var ValidCompilerTargets = map[string]bool{
 	"darwin/386":      true,
 	"darwin/amd64":    true,
 	"dragonfly/amd64": true,
@@ -41,18 +42,51 @@ var validCompilerTargets = map[string]bool{
 	"windows/amd64":   true,
 }
 
-type GoConfig struct {
-	CGO     string
-	GOOS    string
-	GOARCH  string
-	GOROOT  string
-	GOPATH  string
-	LDFLAGS []string
+//ValidGoos returns a list of valid Goos compiler targets
+func ValidGoos(string) []string {
+	return []string{
+		"darwin",
+		"dragonfly",
+		"freebsd",
+		"linux",
+		"netbsd",
+		"openbsd",
+		"plan9",
+		"solaris",
+		"windows",
+	}
 }
 
+//ValidGoarch returns a list of valid goarch compiler targets
+func ValidGoarch(string) []string {
+	return []string{
+		"386",
+		"amd64",
+		"arm",
+		"arm64",
+		"ppc64",
+		"ppc64le",
+		"mips",
+		"mipsle",
+		"mips64",
+		"mips64le",
+		"s390x",
+	}
+}
+
+//GoConfig is a configuration of values useful to the go compiler
+type GoConfig struct {
+	CGO    string
+	GOOS   string
+	GOARCH string
+	GOROOT string
+	GOPATH string
+}
+
+//GoCmd runs a command with the provided env config, in the specified directory
 func GoCmd(config GoConfig, cwd string, command []string) error {
 	target := fmt.Sprintf("%s/%s", config.GOOS, config.GOARCH)
-	if _, ok := validCompilerTargets[target]; !ok {
+	if _, ok := ValidCompilerTargets[target]; !ok {
 		return fmt.Errorf(fmt.Sprintf("Invalid compiler target: %s", target))
 	}
 	ldf := "-w -s"
@@ -62,8 +96,7 @@ func GoCmd(config GoConfig, cwd string, command []string) error {
 	command = append(command, "-ldflags")
 	command = append(command, ldf)
 
-	command = append(command) //strip binary
-	fmt.Println("Executing: go", command)
+	command = append(command, "") //strip binary
 	cmd := exec.Command("go", command...)
 	cmd.Dir = cwd
 	cmd.Env = os.Environ()
@@ -75,18 +108,22 @@ func GoCmd(config GoConfig, cwd string, command []string) error {
 		fmt.Sprintf("GOPATH=%s", config.GOPATH),
 		fmt.Sprintf("PATH=%sbin", config.GOROOT),
 	}...)
-
+	messages.Message("info", "Executing the following command:")
+	messages.Message("info", fmt.Sprintf("go %v", command))
+	messages.Message("info", "with env:")
+	messages.Message("info", fmt.Sprintf("%+v", config))
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
-	if err != nil {
-		log.Printf("--- stdout ---\n%s\n", stdout.String())
-		log.Printf("--- stderr ---\n%s\n", stderr.String())
-		log.Print(err)
+	if err != nil { //if err,
+		messages.Message("info", fmt.Sprintf("--- stdout ---\n%s\n", stdout.String()))
+		messages.Message("info", fmt.Sprintf("--- stderr ---\n%s\n", stderr.String()))
+		messages.Message("error", err.Error())
+	} else {
+		messages.Message("info", fmt.Sprintf("Agent successfully generated at: %s", cwd))
 	}
-
 	return err
 }

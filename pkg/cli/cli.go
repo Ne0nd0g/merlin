@@ -47,6 +47,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
 	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
+	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
 // Global Variables
@@ -546,6 +547,7 @@ func Shell(srv *http2.Server) {
 					if len(cmd) < 3 {
 						message("warn", "Invalid command")
 						message("info", "set <option> <value>")
+						break
 					}
 					serv.SetOption(cmd[1], cmd[2])
 				case "show":
@@ -556,6 +558,8 @@ func Shell(srv *http2.Server) {
 					fallthrough
 				case "main":
 					menuSetMain()
+				case "quit":
+					exit()
 				}
 			}
 		}
@@ -632,18 +636,6 @@ func menuAgent(cmd []string) {
 		prompt.SetPrompt("\033[31mAgent Generation»\033[0m ")
 		shellMenuContext = "generate"
 		//todo do generate things
-	}
-}
-
-func menuGenerateAgent(cmd []string) {
-	switch cmd[0] {
-	case "set":
-		//url
-		//protocol
-		//sleep
-		//outputformat
-	case "show":
-	case "generate":
 	}
 }
 
@@ -757,7 +749,11 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 
 	//generate menu
 	var generate = readline.NewPrefixCompleter(
-		readline.PcItem("set"),
+		readline.PcItem("set",
+			readline.PcItemDynamic(serv.GetAgentOptionStrings()),
+			readline.PcItem("Goos", readline.PcItemDynamic(util.ValidGoos)),
+			readline.PcItem("Goarch", readline.PcItemDynamic(util.ValidGoarch)),
+		),
 		readline.PcItem("show"),
 		readline.PcItem("generate"),
 		readline.PcItem("main"),

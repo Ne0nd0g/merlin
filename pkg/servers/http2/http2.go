@@ -75,8 +75,8 @@ func (s *Server) ShowOptions() {
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
-	for _, v := range s.Options {
-		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
+	for k, v := range s.Options {
+		table.Append([]string{k, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
 	table.Render()
 }
@@ -439,9 +439,12 @@ func (s *Server) SetOption(name, value string) error {
 	return nil
 }
 
-//GetOption will retreive a server option as specified by the string. If the option is not found, an error is returned.
+//GetOptionValue will retreive a server option as specified by the string. If the option is not found, an error is returned.
 func (s *Server) GetOptionValue(opt string) (string, error) {
-	o := s.Options[opt]
+	o, exists := s.Options[opt]
+	if !exists {
+		return "", fmt.Errorf("Option %s does not exist", opt)
+	}
 	return o.Value, nil
 }
 

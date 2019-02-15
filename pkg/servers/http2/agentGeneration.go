@@ -15,9 +15,18 @@ import (
 )
 
 type agentConfig struct {
-	URL      string
-	Protocol string
-	Sleep    string
+	URL,
+	Protocol,
+	Sleep,
+	Goos,
+	Cgo,
+	Outfile,
+	Goarch string
+}
+
+func (s *Server) GetAgentOptionStrings() func(string) []string {
+	//can probably do reflect to make this easier to manage
+	return func(string) []string { return []string{"URL", "Protocol", "Sleep", "Cgo", "Outfile"} }
 }
 
 func (s *Server) GenerateAgent() []byte {
@@ -31,7 +40,7 @@ func (s *Server) GenerateAgent() []byte {
 	codeStruct.URL = "*/\"" + URL + "\"//"
 	codeStruct.Protocol = "*/\"" + protocol + "\"//"
 	codeStruct.Sleep = "*/" + sleep + "//"
-	folder := filepath.Join("..", "..", "..", "data", "src", "agenttemplates") //this value is relative to the compiled file - it's held in-memory, so doesn't need to be relative to the _current_ directory
+	folder := filepath.Join("..", "..", "..", "data", "src", "agenttemplates") //this value is relative to the compiled file - so doesn't need to be relative to the _current_ directory. The content is included in the merlin server binary
 	file := "agent.go"
 	boxs, err := packr.NewBox(folder).MustString(file)
 	if err != nil {
@@ -59,13 +68,11 @@ func (s *Server) GenerateAgent() []byte {
 	}
 	workingDir := path.Join(binDir, "agent.go")
 
-	fmt.Println("working", workingDir)
+	message("info", fmt.Sprintf("Using working directory: %s", workingDir))
 	codeFile, err := os.Create(workingDir)
 	if err != nil {
 		fmt.Println(err)
 	}
-
-	fmt.Println("Generating code to: " + codeFile.Name())
 
 	err = code.Execute(codeFile, codeStruct)
 
@@ -73,20 +80,20 @@ func (s *Server) GenerateAgent() []byte {
 		fmt.Println(err)
 	}
 
-	cgo, err := s.GetOptionValue("cgo")
+	cgo, err := s.GetOptionValue("Cgo")
 	if err != nil {
 		cgo = "0"
 	}
-	goos, err := s.GetOptionValue("goos")
+	goos, err := s.GetOptionValue("Goos")
 	if err != nil {
 		goos = "windows"
 	}
-	goarch, err := s.GetOptionValue("goarch")
+	goarch, err := s.GetOptionValue("Goarch")
 	if err != nil {
 		goarch = "amd64"
 	}
 
-	outfile, _ := s.GetOptionValue("outfile")
+	outfile, _ := s.GetOptionValue("Outfile")
 
 	buildr := []string{"build"}
 	if outfile != "" {
@@ -112,5 +119,5 @@ func (s *Server) GenerateAgent() []byte {
 		return []byte{}
 	}
 
-	return []byte{} //buf.Bytes()*/
+	return []byte{}
 }
