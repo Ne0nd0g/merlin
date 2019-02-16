@@ -396,7 +396,7 @@ func miniDump(process string, pid uint32) ([]byte, error) {
 		);
 	*/
 	//load up our minidump function
-	k32 := windows.NewLazySystemDLL("Dbgcore.dll")
+	k32 := windows.NewLazySystemDLL("DbgHelp.dll")
 	m := k32.NewProc("MiniDumpWriteDump")
 
 	//set up the tempfile to write to, automatically remove it once done
