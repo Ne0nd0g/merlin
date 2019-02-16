@@ -695,7 +695,8 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					pid = uint32(pidInt)
 				}
 				//get minidump
-				fileData, fileDataErr := miniDump(process, pid)
+				miniD, fileDataErr := miniDump("", process, pid)
+				fileData := miniD.FileContent
 
 				//copied and pasted from upload func, modified appropriately
 				if fileDataErr != nil {
@@ -738,7 +739,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							fileHash.Sum(nil)))
 					}
 					c := messages.FileTransfer{
-						FileLocation: process + ".dmp",
+						FileLocation: fmt.Sprintf("%s.%d.dmp", miniD.ProcName, miniD.ProcID),
 						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
 						IsDownload:   true,
 						Job:          p.Job,

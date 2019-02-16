@@ -23,7 +23,8 @@ func TestGetPrcID(t *testing.T) {
 func TestMinidump(t *testing.T) {
 
 	//check a good minidump works
-	byts, err := miniDump("go.exe", 0)
+	md, err := miniDump("", "go.exe", 0)
+	byts := md.FileContent
 	if err != nil {
 		t.Error("Failed minidump on known process (possible false positive if run in non-windows environment somehow):", err)
 	}
@@ -32,27 +33,39 @@ func TestMinidump(t *testing.T) {
 	}
 
 	//check a minidump on an unknown proc doesn't work
-	_, err = miniDump("notarealprocess.exe", 0)
+	_, err = miniDump("", "notarealprocess.exe", 0)
 	if err == nil {
 		t.Error("Found process when it shouldn't have...")
 	}
 
 	//check a minidump providing a pid with blank string works
-	pid := getProcID("go.exe")
-	byts, err = miniDump("", pid)
+	pid, err := getProcID("go.exe")
+	md, err = miniDump("", "", pid)
+	byts = md.FileContent
 	if err != nil || len(byts) == 0 {
 		t.Error("Minidump using pid failed")
 	}
+	//verify proc name matches
+	if md.ProcName != "go.exe" {
+		t.Error("Minidump proc name does not match: ", "go.exe", md.ProcName)
+	}
 
 	//check a minidump with a valid pid but invalid string works (pid should take priority)
-	byts, err = miniDump("notarealprocess.exe", pid)
+	md, err = miniDump("", "notarealprocess.exe", pid)
+	byts = md.FileContent
 	if err != nil || len(byts) == 0 {
 		t.Error("Minidump using valid pid and invalid proc name failed")
 	}
+	//verify proc name matches
+	if md.ProcName != "go.exe" {
+		t.Error("Minidump proc name does not match: ", "go.exe", md.ProcName)
+	}
 
 	//check a minidump with a valid proc name, but invalid pid fails
-	byts, err = miniDump("go.exe", 123456789)
+	md, err = miniDump("", "go.exe", 123456789)
+	byts = md.FileContent
 	if err == nil {
 		t.Error("Minidump dumped a process even though provided pid was invalid")
 	}
+
 }
