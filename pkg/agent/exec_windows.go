@@ -377,6 +377,7 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 
 // TODO always close handle during exception handling
 
+//MinidumpFile holds the structure of of a Minidump operation to report back to merlin
 type MinidumpFile struct {
 	ProcName    string
 	ProcID      uint32
