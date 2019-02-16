@@ -9,13 +9,13 @@ import (
 
 func TestGetPrcID(t *testing.T) {
 	//ensure proces that definitely exists returns a value
-	lsassPid := getProcID("lsass.exe")
-	if lsassPid == 0 {
+	lsassPid, err := getProcID("lsass.exe")
+	if lsassPid == 0 || err != nil {
 		t.Error("Couldn't find lsass.exe")
 	}
 	//ensure process that definitely doesn't exist returns a 0 value
-	garbagePid := getProcID("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.exe")
-	if garbagePid != 0 {
+	garbagePid, err := getProcID("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.exe")
+	if garbagePid != 0 || err == nil {
 		t.Error("Got a non zero return for a garbage process")
 	}
 }
@@ -68,4 +68,29 @@ func TestMinidump(t *testing.T) {
 		t.Error("Minidump dumped a process even though provided pid was invalid")
 	}
 
+	//check for non-existing path (dir)
+	md, err = miniDump("C:\\thispathbetternot\\exist\\", "go.exe", 0)
+	if err == nil {
+		t.Error("Didn't get an error on non-existing path (check to make sure hte path doesn't actually exist)")
+	}
+
+	//check for existing path (dir)
+	md, err = miniDump("C:\\temp\\", "go.exe", 0)
+	if err != nil {
+		t.Error("Got an error on existing path (check to make sure the path actually exists)")
+		t.Error(err)
+	}
+
+	//check for existing file
+	md, err = miniDump("C:\\Windows\\System32\\calc.exe", "go.exe", 0)
+	if err == nil {
+		t.Error("Didn't get an error on existing file (check to make sure the path & file actually exist)")
+	}
+
+	//check for non- existing file
+	md, err = miniDump("C:\\temp\\hopethefilenothere", "go.exe", 0)
+	if err != nil {
+		t.Error("Got an error on non-existing file (check to make sure the file actually doesn't exist)")
+		t.Error(err)
+	}
 }

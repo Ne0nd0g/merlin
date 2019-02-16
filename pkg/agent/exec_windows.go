@@ -26,6 +26,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -405,13 +407,52 @@ func miniDump(tempfile, process string, inPid uint32) (MinidumpFile, error) {
 	k32 := windows.NewLazySystemDLL("DbgHelp.dll")
 	m := k32.NewProc("MiniDumpWriteDump")
 
-	//set up the tempfile to write to, automatically remove it once done
-	// TODO: Work out how to do this in memory
-	f, e := ioutil.TempFile(os.TempDir(), "")
-	if e != nil {
-		return ret, e
+	var f *os.File
+	var e error
+	if tempfile == "" {
+		//set up the tempfile to write to, automatically remove it once done
+		// TODO: Work out how to do this in memory
+		f, e = ioutil.TempFile(os.TempDir(), "")
+		if e != nil {
+			return ret, e
+		}
+	} else {
+		var dirpath string
+		var filename string
+		//if the supplied path ends with a "\" or a "/", assume user provided a directory
+		if strings.HasSuffix(tempfile, "/") || strings.HasSuffix(tempfile, "\\") {
+			dirpath = tempfile
+		} else {
+			dirpath = filepath.Dir(tempfile)
+			fmt.Println(dirpath)
+			filename = filepath.Base(tempfile)
+		}
+		//check the path to the specified place exists
+		if _, serr := os.Stat(dirpath); serr != nil {
+			return ret, fmt.Errorf("Directory doesn't exist")
+		}
+
+		//if the file is provided, first check if it exists:
+		if filename != "" {
+			if _, serr := os.Stat(tempfile); serr == nil {
+				return ret, fmt.Errorf("File exists")
+			}
+			//otherwise, create new file
+			f, e = os.OpenFile(tempfile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+			if e != nil {
+				return ret, e
+			}
+		} else {
+			//user provided a directory, create a tempfile in the specified location
+			f, e = ioutil.TempFile(tempfile, "")
+			if e != nil {
+				return ret, e
+			}
+		}
 	}
+	//remove the file after the function exits, regardless of error nor not
 	defer os.Remove(f.Name())
+
 	stdOutHandle := f.Fd()
 
 	//get our proc ID, and get a handle to the process. If PID is not provided, search for the PID
