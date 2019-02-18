@@ -1,3 +1,20 @@
+// Merlin is a post-exploitation command and control framework.
+// This file is part of Merlin.
+// Copyright (C) 2019  Russel Van Tuyl
+
+// Merlin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+
+// Merlin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package test
 
 import (
@@ -22,9 +39,9 @@ import (
 )
 
 //test files for the exported functions in the 'util' package
-
+// TestTLSCertGeneration tests certificate generation from the util package
 func TestTLSCertGeneration(t *testing.T) {
-	//test setting values works
+	// Setup
 	//serial
 	serial := big.NewInt(1337)
 	//subject
@@ -33,7 +50,7 @@ func TestTLSCertGeneration(t *testing.T) {
 		CommonName: cnString,
 	}
 	//dnsNames
-	dnsName := "asioagents.com.au"
+	dnsName := "HackThePlanet.org"
 	dnsNames := []string{dnsName}
 	//time (before and after)
 	notBefore := time.Now().AddDate(0, 0, -5) // 5 days ago
@@ -44,11 +61,14 @@ func TestTLSCertGeneration(t *testing.T) {
 		t.Fatal("Couldn't generate EC key", err)
 	}
 	pk := crypto.PrivateKey(ecpk)
+
+	// Create certificate
 	certSetVals, err := util.GenerateTLSCert(serial, &subj, dnsNames, &notBefore, &notAfter, pk, false)
 	if err != nil {
 		t.Fatal("Certificate generation[1] error:" + err.Error())
 	}
 
+	// Tests
 	x5certSetVals, err := x509.ParseCertificate(certSetVals.Certificate[0])
 	//serial
 	if x5certSetVals.SerialNumber.Cmp(serial) != 0 {
@@ -61,7 +81,8 @@ func TestTLSCertGeneration(t *testing.T) {
 
 	//dnsNames
 	if len(x5certSetVals.DNSNames) < 1 || x5certSetVals.DNSNames[0] != dnsName {
-		t.Error(fmt.Sprintf("dnsnames failed assignment: should be a length 1 string slice with the only contents:\n%s\nbut is:\n%v", dnsName, x5certSetVals.DNSNames))
+		t.Error(fmt.Sprintf("dnsnames failed assignment: should be a length 1 string slice with the only "+
+			"contents:\n%s\nbut is:\n%v", dnsName, x5certSetVals.DNSNames))
 	}
 
 	//times
@@ -96,13 +117,14 @@ func TestTLSCertGeneration(t *testing.T) {
 	if certSetVals.PrivateKey.(*ecdsa.PrivateKey).Params().Name != "P-521" {
 		t.Error("Incorrect curve name: " + certSetVals.PrivateKey.(*ecdsa.PrivateKey).Params().Name)
 	}
-	//maybe also check bits are expected? unlikely to be more brokener than wrong name though..
 
+	// TODO this should be its own test case
 	//test having unset values works to randomise that attribute
 	x5Certs := []*x509.Certificate{}
 	tlsCerts := []*tls.Certificate{}
 	for i := 0; i < 10; i++ {
-		certRand1, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //making rsa to test enc/dec good
+		certRand1, err := util.GenerateTLSCert(nil, nil, nil, nil, nil,
+			nil, true) //making rsa to test enc/dec good
 		if err != nil {
 			t.Fatal("Certificate generation[2] error:" + err.Error())
 		}
@@ -131,7 +153,8 @@ func TestTLSCertGeneration(t *testing.T) {
 		certYear, certMonth, certDay := cer.NotBefore.Date()
 		acertYear, acertMonth, acertDay := cer.NotAfter.Date()
 		if acertYear != (certYear+2) || certDay != acertDay || certMonth != acertMonth {
-			t.Error("Generated times for cert after inconsistent. Got:", acertYear, acertMonth, acertDay, "Expected:", certYear+2, certMonth, certDay)
+			t.Error("Generated times for cert after inconsistent. Got:", acertYear, acertMonth, acertDay,
+				"Expected:", certYear+2, certMonth, certDay)
 		}
 
 		//comparing certificates against other certificates
@@ -142,7 +165,10 @@ func TestTLSCertGeneration(t *testing.T) {
 			}
 			//check serial is different
 			if cer.SerialNumber.Cmp(cer2.SerialNumber) == 0 { //same value :(
-				t.Error(fmt.Errorf("Serial numbers generated are the same: %d and %d: %v", i, ii, cer.SerialNumber.Int64()))
+				t.Error(fmt.Errorf("serial numbers generated are the same: %d and %d: %v",
+					i,
+					ii,
+					cer.SerialNumber.Int64()))
 			}
 		}
 	}
