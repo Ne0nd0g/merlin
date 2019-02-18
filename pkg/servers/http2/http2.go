@@ -19,13 +19,12 @@ package http2
 
 import (
 	// Standard
-	"crypto/sha1" // #nosec G505 - This library is required to check X.509 certificates using SHA1 hash
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -73,7 +72,12 @@ func New(iface string, port int, protocol string, key string, certificate string
 	_, errCrt := os.Stat(certificate)
 	if os.IsNotExist(errCrt) {
 		// generate a new ephemeral certificate
-		message("warn", "No certificate found at the provided path, creating certificate in-memory for this session only.")
+		m := fmt.Sprintf("No certificate found at %s", certificate)
+		logging.Server(m)
+		message("note", m)
+		t := "Creating in-memory x.509 certificate used for this session only."
+		logging.Server(t)
+		message("note", t)
 		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
 		cerp, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //ec certs not supported (yet) :(
 		if err != nil {
@@ -109,44 +113,6 @@ func New(iface string, port int, protocol string, key string, certificate string
 			message("warn", "Ensure a keypair is located in the data/x509 directory")
 			return s, err
 		}
-
-		// Read x.509 Public Key into a variable
-		PEMData, err := ioutil.ReadFile(certificate)
-		if err != nil {
-			m := fmt.Sprintf("There was an error reading the SSL/TLS x509 certificate file:\r\n%s", err.Error())
-			logging.Server(m)
-			message("warn", m)
-			return s, err
-		}
-
-		// Decode the x.509 Public Key from PEM
-		block, _ := pem.Decode(PEMData)
-		if block == nil {
-			m := "failed to decode PEM block from public key"
-			logging.Server(m)
-			message("warn", m)
-		}
-
-		// Convert the PEM block into a Certificate object
-		pubCert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			m := fmt.Sprintf("There was an error parsing the PEM block:\r\n%s", err.Error())
-			logging.Server(m)
-			message("warn", m)
-		}
-
-		// TODO switch to SHA256
-		// Create SHA1 fingerprint from Certificate
-		sha1Fingerprint := sha1.Sum(pubCert.Raw) // #nosec G401 - Required to handle certificates with no SHA256 hash
-
-		// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
-		merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"
-
-		// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
-		if merlinCRT == hex.EncodeToString(sha1Fingerprint[:]) {
-			message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
-			message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
-		}
 	}
 
 	if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
@@ -155,6 +121,37 @@ func New(iface string, port int, protocol string, key string, certificate string
 		message("warn", m)
 		return s, errors.New("empty certificate structure")
 	}
+
+	// Parse into X.509 format
+	x, errX509 := x509.ParseCertificate(cer.Certificate[0])
+	if errX509 != nil {
+		m := fmt.Sprintf("There was an error parsing the tls.Certificate structure into a x509.Certificate"+
+			" structure:\r\n%s", errX509.Error())
+		logging.Server(m)
+		message("warn", m)
+		return s, errX509
+	}
+	// Create fingerprint
+	S256 := sha256.Sum256(x.Raw)
+	sha256Fingerprint := hex.EncodeToString(S256[:])
+
+	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+	merlinCRT := "4af9224c77821bc8a46503cfc2764b94b1fc8aa2521afc627e835f0b3c449f50"
+
+	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+	if merlinCRT == sha256Fingerprint {
+		message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+	}
+
+	// Log certificate information
+	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a %s signature of %s",
+		x.SignatureAlgorithm.String(), hex.EncodeToString(x.Signature)))
+	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a public key of %v", x.PublicKey))
+	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a serial number of %d", x.SerialNumber))
+	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certifcate with a subject of %s", x.Subject.String()))
+	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a SHA256 hash, "+
+		"calculated by Merlin, of %s", sha256Fingerprint))
 
 	// Configure TLS
 	TLSConfig := &tls.Config{
@@ -200,8 +197,6 @@ func New(iface string, port int, protocol string, key string, certificate string
 // Run function starts the server on the preconfigured port for the preconfigured service
 func (s *Server) Run() error {
 	logging.Server(fmt.Sprintf("Starting %s Listener at %s:%d", s.Protocol, s.Interface, s.Port))
-	logging.Server(fmt.Sprintf("x.509 Certificate %s", s.Certificate))
-	logging.Server(fmt.Sprintf("x.509 Key %s", s.Key))
 
 	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
 	message("note", fmt.Sprintf("Starting %s listener on %s:%d", s.Protocol, s.Interface, s.Port))

@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Pull 49](https://github.com/Ne0nd0g/merlin/pull/49) - Added tests for agent package and new `/test` directory for test HTTP server
 - [Pull 50](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
   - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
+- [Pull 51]
+  - Updated Merlin server log to include certificate information
 
 ### Fixed
 - [Pull 51](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
