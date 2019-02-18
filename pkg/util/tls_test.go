@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
-package test
+package util
 
 import (
 	// Standard
@@ -33,9 +33,6 @@ import (
 	"math/big"
 	"testing"
 	"time"
-
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
 //test files for the exported functions in the 'util' package
@@ -63,7 +60,7 @@ func TestTLSCertGeneration(t *testing.T) {
 	pk := crypto.PrivateKey(ecpk)
 
 	// Create certificate
-	certSetVals, err := util.GenerateTLSCert(serial, &subj, dnsNames, &notBefore, &notAfter, pk, false)
+	certSetVals, err := GenerateTLSCert(serial, &subj, dnsNames, &notBefore, &notAfter, pk, false)
 	if err != nil {
 		t.Fatal("Certificate generation[1] error:" + err.Error())
 	}
@@ -123,7 +120,7 @@ func TestTLSCertGeneration(t *testing.T) {
 	x5Certs := []*x509.Certificate{}
 	tlsCerts := []*tls.Certificate{}
 	for i := 0; i < 10; i++ {
-		certRand1, err := util.GenerateTLSCert(nil, nil, nil, nil, nil,
+		certRand1, err := GenerateTLSCert(nil, nil, nil, nil, nil,
 			nil, true) //making rsa to test enc/dec good
 		if err != nil {
 			t.Fatal("Certificate generation[2] error:" + err.Error())
