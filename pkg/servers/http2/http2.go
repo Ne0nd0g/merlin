@@ -18,9 +18,6 @@
 package http2
 
 import (
-	"errors"
-
-	"github.com/Ne0nd0g/merlin/pkg/util"
 	// Standard
 	"crypto/sha1" // #nosec G505 - This library is required to check X.509 certificates using SHA1 hash
 	"crypto/tls"
@@ -29,6 +26,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -47,6 +45,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
 // Server is a structure for creating and instantiating new server objects
@@ -129,10 +128,9 @@ func New(iface string, port int, protocol string, key string, certificate string
 			message("warn", err.Error())
 		}
 
-
-	// TODO switch to SHA256
-	// Create SHA1 fingerprint from Certificate
-	sha1Fingerprint := sha1.Sum(pubCert.Raw) // #nosec G401 - Required to handle certificates with no SHA256 hash
+		// TODO switch to SHA256
+		// Create SHA1 fingerprint from Certificate
+		sha1Fingerprint := sha1.Sum(pubCert.Raw) // #nosec G401 - Required to handle certificates with no SHA256 hash
 
 		// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
 		merlinCRT := "e2c9fbb41712c15b57b5cbb6e6ec96fb5efed8fd"

@@ -1,6 +1,7 @@
 package test
 
 import (
+	// Standard
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
@@ -16,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
