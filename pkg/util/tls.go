@@ -1,3 +1,20 @@
+// Merlin is a post-exploitation command and control framework.
+// This file is part of Merlin.
+// Copyright (C) 2019  Russel Van Tuyl
+
+// Merlin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+
+// Merlin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package util
 
 import (
@@ -10,9 +27,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"log"
 	"math/big"
-	"net"
 	"time"
 )
 
@@ -25,7 +40,7 @@ If a nil date is passed in for notBefore and notAfter, a random date is picked i
 
 If a nil date is passed in for notAfter, the date is set to be 2 years after the date provided (or generated) in the notBefore parameter.
 
-Please ensure privkey is a proper private key. The go implementaiton of this value is kinda lame, so no type assertion can be made in the function definition :(.
+Please ensure privkey is a proper private key. The go implementation of this value is challenging, so no type assertion can be made in the function definition.
 */
 func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, notBefore, notAfter *time.Time, privKey crypto.PrivateKey, makeRsa bool) (*tls.Certificate, error) {
 	//https://golang.org/src/crypto/tls/generate_cert.go taken from here mostly
@@ -35,16 +50,16 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 		serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128) //128 bits tops
 		serial, err = rand.Int(rand.Reader, serialNumberLimit)
 		if err != nil {
-			log.Fatalf("failed to generate serial number: %s", err)
+			return nil, err
 		}
 	}
 
 	if subject == nil { //pointers make it easier to compare to nils
-		subject = &pkix.Name{} //todo: generate randome subject attributes?
+		subject = &pkix.Name{} //todo: generate random subject attributes?
 	}
 
+	//todo: generate random names?
 	if dnsNames == nil {
-		//todo: generate random names?
 	}
 
 	if notBefore == nil {
@@ -66,7 +81,6 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 	tpl := x509.Certificate{
 		SerialNumber:          serial,
 		Subject:               *subject,
-		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
 		DNSNames:              dnsNames,
 		NotBefore:             *notBefore,
 		NotAfter:              *notAfter,
@@ -76,7 +90,7 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 	}
 	if privKey == nil {
 		if makeRsa {
-			privKey, err = rsa.GenerateKey(rand.Reader, 2048)
+			privKey, err = rsa.GenerateKey(rand.Reader, 4096)
 			if err != nil {
 				return nil, err
 			}
@@ -99,7 +113,7 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 	}, nil
 }
 
-//getPublicKey takes in a private key, and provides the public key from it, since apparently it's too hard for go to have a sane 'private key' interface.
+//getPublicKey takes in a private key, and provides the public key from it.
 //https://golang.org/src/crypto/tls/generate_cert.go
 func getPublicKey(priv interface{}) interface{} {
 	switch k := priv.(type) {
