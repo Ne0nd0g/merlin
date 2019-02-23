@@ -20,6 +20,7 @@
 package agent
 
 import (
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 	// Standard
 	"errors"
 	"fmt"
@@ -79,8 +80,8 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 }
 
 // miniDump is a Windows only module function to dump the memory of the provided process
-func miniDump(process string, pid uint32) ([]byte, error) {
+func miniDump(tempfile, process string, pid uint32) (modules.MinidumpFile, error) {
 	process = ""
 	pid = 0
-	return []byte{}, errors.New("minidump doesn't work on non-windows hosts")
+	return modules.MinidumpFile{}, errors.New("minidump doesn't work on non-windows hosts")
 }
