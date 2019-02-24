@@ -20,7 +20,6 @@
 package agent
 
 import (
-	"github.com/Ne0nd0g/merlin/pkg/modules"
 	// Standard
 	"errors"
 	"fmt"
@@ -28,6 +27,9 @@ import (
 
 	// 3rd Party
 	"github.com/mattn/go-shellwords"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
