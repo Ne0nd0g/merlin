@@ -666,9 +666,8 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			switch p.Command {
 			case "Minidump":
 				//args: []string{process name, pid, temppath}
-				if a.Verbose || true {
+				if a.Verbose {
 					message("note", "Received Minidump request")
-					fmt.Println(p.Args, len(p.Args))
 				}
 				//ensure the provided args are valid
 				if len(p.Args) < 2 {
