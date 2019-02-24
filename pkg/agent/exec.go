@@ -82,8 +82,9 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 }
 
 // miniDump is a Windows only module function to dump the memory of the provided process
-func miniDump(tempfile, process string, pid uint32) (modules.MinidumpFile, error) {
+func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFile, error) {
+	tempDir = ""
 	process = ""
-	pid = 0
+	inPid = 0
 	return modules.MinidumpFile{}, errors.New("minidump doesn't work on non-windows hosts")
 }
