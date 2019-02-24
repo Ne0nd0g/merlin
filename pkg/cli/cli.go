@@ -181,18 +181,25 @@ func Shell() {
 				case "reload":
 					menuSetModule(strings.TrimSuffix(strings.Join(shellModule.Path, "/"), ".json"))
 				case "run":
+					var m string
 					r, err := shellModule.Run()
 					if err != nil {
 						message("warn", err.Error())
-					} else {
-						m, err := agents.AddJob(shellModule.Agent, "cmd", r)
-						if err != nil {
-							message("warn", err.Error())
-						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
-								m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
-						}
+						break
 					}
+					if shellModule.Lang == "Go" {
+						m, err = agents.AddJob(shellModule.Agent, r[0], r[1:])
+					} else {
+						m, err = agents.AddJob(shellModule.Agent, "cmd", r)
+					}
+					if err != nil {
+						message("warn", "There was an error adding the job to the specified agent")
+						message("warn", err.Error())
+					} else {
+						message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+							m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
+					}
+
 				case "back":
 					menuSetMain()
 				case "main":

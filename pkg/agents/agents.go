@@ -18,6 +18,7 @@
 package agents
 
 import (
+	// Standard
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -554,6 +555,15 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "Minidump":
+		m.Type = "Module"
+		p := messages.Module{
+			Command: job.Type,
+			Job:     job.ID,
+			Args:    job.Args,
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
