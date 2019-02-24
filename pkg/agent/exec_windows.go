@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 	"unsafe"
 
@@ -383,8 +382,6 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFile, error) {
 	ret := modules.MinidumpFile{} // []byte{}
 	var err error
-	// TODO fix this on the CLI side
-	tempDir = strings.TrimPrefix(tempDir, " ")
 
 	// Make sure temporary directory exists before executing miniDump functionality
 	if tempDir != "" {

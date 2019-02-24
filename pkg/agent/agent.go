@@ -18,7 +18,6 @@
 package agent
 
 import (
-
 	// Standard
 	"bytes"
 	"crypto/sha1" // #nosec G505
@@ -36,7 +35,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	// 3rd Party
@@ -662,6 +660,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("There was an error encoding the CmdPayload JSON "+
 						"message:\r\n%s", e.Error()))
 				}
+				break
 			}
 			switch p.Command {
 			case "Minidump":
@@ -677,40 +676,33 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					}
 					break
 				}
-				process := p.Args[0] //string TODO: do some validation here I guess
-				//clean the arg - for some reason spaces at the start?
-				process = strings.Trim(process, " ")
-				pid := uint32(0)
-
-				//clean the arg - for some reason spaces at the start?
-				p.Args[1] = strings.Trim(p.Args[1], " ")
-				pidInt, err := strconv.ParseInt(p.Args[1], 0, 32)
+				process := p.Args[0]
+				pid, err := strconv.ParseInt(p.Args[1], 0, 32)
 				if err != nil {
-					//probably not well formatted number
 					if a.Verbose {
-						message("warn", fmt.Sprintf("Could not parse pid value:"+p.Args[1]))
-						message("warn", fmt.Sprintf(err.Error()))
+						message("warn", fmt.Sprintf("Could not parse PID as an integer:%s\r\n%s",
+							p.Args[1], err.Error()))
 					}
 					break
 				}
-				pid = uint32(pidInt)
+
 				tempPath := ""
 				if len(p.Args) == 3 {
 					tempPath = p.Args[2]
 				}
 
-				//get minidump
-				miniD, fileDataErr := miniDump(tempPath, process, pid)
+				// Get minidump
+				miniD, miniDumpErr := miniDump(tempPath, process, uint32(pid))
 				fileData := miniD.FileContent
 
 				//copied and pasted from upload func, modified appropriately
-				if fileDataErr != nil {
+				if miniDumpErr != nil {
 					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error dumping the process"))
-						message("warn", fmt.Sprintf("%s", fileDataErr.Error()))
+						message("warn", fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
+							miniDumpErr.Error()))
 					}
-					errMessage := fmt.Sprintf("There was an error dumping the process\r\n")
-					errMessage += fileDataErr.Error()
+					errMessage := fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
+						miniDumpErr.Error())
 					c := messages.CmdResults{
 						Job:    p.Job,
 						Stderr: errMessage,
@@ -721,8 +713,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					k, err := json.Marshal(c)
 					if err != nil {
 						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error creating the json"))
-							message("warn", fmt.Sprintf("%s", err.Error()))
+							message("warn", fmt.Sprintf("There was an error creating the json:\r\n%s", err.Error()))
 						}
 					}
 					g.Type = "CmdResults"
