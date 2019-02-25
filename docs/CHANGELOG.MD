@@ -4,12 +4,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 0.6.10 - 2019-02-09
-
-### Added
-- Added `pwd` and `cd` command to agent & agent menu. Uses go code native to Merlin instead of
-  executing system binaries or access the system's CLI
-
 ## 0.6.9 - 2019-XX-XX
 
 ### Added
@@ -29,6 +23,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Adds new `pkg/utils/tls.go` package to generate TLS certificates
   - Updated Merlin server log to include certificate information
   - Test case for TLS certificate generation
+- [Pull 60](https://github.com/Ne0nd0g/merlin/pull/60) - Added `pwd` and `cd` command to agent & agent menu. 
+  - Uses go code native to Merlin instead of executing system binaries or access the system's CLI.
 
 ### Fixed
 - [Pull 57](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
