@@ -1353,13 +1353,20 @@ func (a *Agent) list(path string) (string, error) {
 	} else if a.Verbose {
 		message("success", fmt.Sprintf("listing directory contents for: %s", path))
 	}
+	var errPath error
+	if path == "./" {
+		path, errPath = os.Getwd()
+	}
+	if errPath != nil {
+		return "", nil
+	}
 	files, err := ioutil.ReadDir(path)
 
 	if err != nil {
 		return "", err
 	}
 
-	details := ""
+	details := fmt.Sprintf("Directory listing for: %s\r\n\r\n", path)
 
 	for _, f := range files {
 		perms := f.Mode().String()
