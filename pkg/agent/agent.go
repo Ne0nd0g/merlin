@@ -1047,7 +1047,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", fmt.Sprintf("cd command returned STDERR: %s", err.Error()))
 					}
 				} else {
-					stdout = fmt.Sprintf("Moved to %s", p.Args)
+					stdout = fmt.Sprintf("Changed working directory to %s", p.Args)
 				}
 
 				c := messages.CmdResults{
@@ -1107,7 +1107,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 
 				c := messages.CmdResults{
 					Job:    p.Job,
-					Stdout: dir,
+					Stdout: fmt.Sprintf("Current working directory: %s", dir),
 					Stderr: se,
 				}
 
