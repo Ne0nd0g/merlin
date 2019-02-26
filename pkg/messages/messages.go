@@ -94,6 +94,14 @@ type Shellcode struct {
 	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
 }
 
+// Module is a JSON payload used to send module directives.
+type Module struct {
+	Job     string   `json:"job"`
+	Command string   `json:"command"`
+	Args    []string `json:"args,omitempty"`
+	Result  string   `json:"result"`
+}
+
 // NativeCmd is a JSON payload to execute commands native inside of Merlin using go instead of executing the binary
 // program on the host (i.e. ls)
 type NativeCmd struct {

@@ -19,6 +19,7 @@ package http2
 
 import (
 	// Standard
+	"bytes"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -272,17 +273,24 @@ func agentHandler(w http.ResponseWriter, r *http.Request) {
 		j := messages.Base{
 			Payload: &payload,
 		}
-		err1 := json.NewDecoder(r.Body).Decode(&j)
-		if err1 != nil {
-			m := fmt.Sprintf("There was an error decoding a POST message sent by an agent:\r\n%s", err1.Error())
-			logging.Server(m)
-			message("warn", m)
+		//reading the body before parsing json seems to resolve the receiving error on large bodies for some reason, unsure why
+		b, e := ioutil.ReadAll(r.Body)
+		if e != nil {
+			message("warn", fmt.Sprintf("There was an error reading a POST message sent by an "+
+				"agent:\r\n%s", e))
 			return
 		}
 
+		e = json.NewDecoder(bytes.NewReader(b)).Decode(&j)
+		if e != nil {
+			message("warn", fmt.Sprintf("There was an error decoding a POST message sent by an "+
+				"agent:\r\n%s", e))
+			return
+		}
 		if core.Debug {
 			message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
 		}
+
 		switch j.Type {
 
 		case "InitialCheckIn":

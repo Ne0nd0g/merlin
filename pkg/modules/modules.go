@@ -32,7 +32,7 @@ import (
 	// 3rd Party
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
@@ -315,4 +315,11 @@ func marshalMessage(m interface{}) []byte {
 		color.Red(err.Error())
 	}
 	return k
+}
+
+//MinidumpFile holds the structure of of a Minidump operation to report back to merlin
+type MinidumpFile struct {
+	ProcName    string
+	ProcID      uint32
+	FileContent []byte
 }
