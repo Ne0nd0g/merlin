@@ -1376,14 +1376,13 @@ func (a *Agent) list(path string) (string, error) {
 	} else if a.Verbose {
 		message("success", fmt.Sprintf("listing directory contents for: %s", path))
 	}
-	var errPath error
-	if path == "./" {
-		path, errPath = os.Getwd()
-	}
+
+	// Resolve relative path to absolute
+	aPath, errPath := filepath.Abs(path)
 	if errPath != nil {
 		return "", nil
 	}
-	files, err := ioutil.ReadDir(path)
+	files, err := ioutil.ReadDir(aPath)
 
 	if err != nil {
 		return "", err
