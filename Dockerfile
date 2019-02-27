@@ -1,12 +1,14 @@
 FROM golang:stretch
 MAINTAINER @audibleblink
 
-# To just generate binaries, run the following and check your `src` folder for the output:
+# Build the Docker image first
 #  > sudo docker build -t merlin .
-#  > sudo docker run --rm --mount type=bind,src=/tmp,dst=/go/src/github.com/Ne0nd0g/merlin/data/temp merlin make linux
-# > ls /tmp/v0.6.4.BETA
 
-# To run the server, run
+# To just generate Merlin binaries, run the following and check your `src` folder for the output
+#  > sudo docker run --rm --mount type=bind,src=/tmp,dst=/go/src/github.com/Ne0nd0g/merlin/data/temp merlin make linux
+#  > ls /tmp/v0.6.4.BETA
+
+# To start the Merlin Server, run
 #  > sudo docker run -it -p 443:443 merlin
 
 
