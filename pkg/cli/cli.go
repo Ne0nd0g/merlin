@@ -415,7 +415,30 @@ func Shell() {
 					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
-
+				case "cd":
+					var m string
+					if len(cmd) > 1 {
+						arg := strings.Join(cmd[0:], " ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							break
+						}
+						m, err = agents.AddJob(shellAgent, "cd", argS)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					} else {
+						m, err = agents.AddJob(shellAgent, "cd", cmd)
+					}
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+				case "pwd":
+					var m string
+					m, err = agents.AddJob(shellAgent, "pwd", cmd)
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "main":
 					menuSetMain()
 				case "quit":
@@ -711,6 +734,8 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
 		readline.PcItem("ls"),
+		readline.PcItem("cd"),
+		readline.PcItem("pwd"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
@@ -798,14 +823,16 @@ func menuHelpAgent() {
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
+		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
 		{"execute-shellcode", "Execute shellcode", "self, remote"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
-		{"ls", "List directory contents", "ls /etc"},
+		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
 		{"main", "Return to the main menu", ""},
+		{"pwd", "Display the current working directory", "pwd"},
 		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
