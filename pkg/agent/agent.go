@@ -1047,7 +1047,12 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						message("warn", fmt.Sprintf("cd command returned STDERR: %s", err.Error()))
 					}
 				} else {
-					stdout = fmt.Sprintf("Changed working directory to %s", p.Args)
+					path, pathErr := os.Getwd()
+					if pathErr != nil {
+						se = pathErr.Error()
+					} else {
+						stdout = fmt.Sprintf("Changed working directory to %s", path)
+					}
 				}
 
 				c := messages.CmdResults{
@@ -1380,7 +1385,7 @@ func (a *Agent) list(path string) (string, error) {
 	// Resolve relative path to absolute
 	aPath, errPath := filepath.Abs(path)
 	if errPath != nil {
-		return "", nil
+		return "", errPath
 	}
 	files, err := ioutil.ReadDir(aPath)
 
@@ -1388,7 +1393,7 @@ func (a *Agent) list(path string) (string, error) {
 		return "", err
 	}
 
-	details := fmt.Sprintf("Directory listing for: %s\r\n\r\n", path)
+	details := fmt.Sprintf("Directory listing for: %s\r\n\r\n", aPath)
 
 	for _, f := range files {
 		perms := f.Mode().String()
