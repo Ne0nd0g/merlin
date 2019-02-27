@@ -51,6 +51,10 @@ penetration test. As such, the agent should never display any messages
 to user on standard out or standard error *unless* verbose messages are
 enable.
 
+# Agent Availability
+Agent availability is one of the top priorities. Error handling should 
+NOT cause an agent to exit but instead it SHOULD fail open and continue
+to operate. Display error messages only if VERBOSE messages are enabled.
 
 # Pull Requests
 * Pull requests (PR) should be submitted to the `dev` branch

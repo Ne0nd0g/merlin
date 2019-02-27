@@ -12,9 +12,28 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Pull 49](https://github.com/Ne0nd0g/merlin/pull/49) - Added tests for agent package and new `/test` directory for test HTTP server
 - [Pull 50](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
   - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
+- [Pull 51](https://github.com/Ne0nd0g/merlin/pull/51) - Adds a Go native `minidump` module for Windows agents to create and receive a minidump file of a specified process (requires elevation)
+  - windows/x64/go/credentials/minidump.json module (@C__Sto)
+  - getProcess Function to exec_windows.go
+  - sePrivEnable Function to exec_windows.go
+  - MinidumpFile struct to modules.go
+  - Module struct to messages.go
+  - agent_windows_test.go to test miniDump functionality 
+- [Pull 58](https://github.com/Ne0nd0g/merlin/pull/58) - Added feature to generate in-memory TLS certificates one is not provided
+  - Adds new `pkg/utils/tls.go` package to generate TLS certificates
+  - Updated Merlin server log to include certificate information
+  - Test case for TLS certificate generation
+- [Pull 60](https://github.com/Ne0nd0g/merlin/pull/60) - Added `pwd` and `cd` command to agent & agent menu. 
+  - Uses go code native to Merlin instead of executing system binaries or access the system's CLI.
 
 ### Fixed
-- [Pull 51](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
+- [Pull 57](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
+
+### Changed
+- Changed SHA1 library to SHA256 and checks from http2.go for publicly distributed Merlin Server test certificate
+
+### Removed
+- Removed publicly distributed certificates from repository see [Pull 58](https://github.com/Ne0nd0g/merlin/pull/58).
 
 ## 0.6.8 - 2019-01-26
 
