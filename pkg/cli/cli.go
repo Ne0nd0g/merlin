@@ -823,6 +823,7 @@ func menuHelpAgent() {
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
+		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
@@ -830,9 +831,8 @@ func menuHelpAgent() {
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
-		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
-		{"pwd", "Display the current working directory", "pwd"},
 		{"main", "Return to the main menu", ""},
+		{"pwd", "Display the current working directory", "pwd"},
 		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
