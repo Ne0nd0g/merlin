@@ -639,20 +639,38 @@ func GetAgentStatus(agentID uuid.UUID) string {
 
 // RemoveAgent deletes the agent object from Agents map by its ID
 func RemoveAgent(agentID uuid.UUID) error {
-	// Range over to make sure it exists, return error
-	isAgent := false
-	// Verify the passed in agent is known
-	for k := range Agents {
-		if Agents[k].ID == agentID {
-			isAgent = true
-		}
-	}
-	if isAgent {
+	if isAgent(agentID) {
 		delete(Agents, agentID)
 		return nil
 	}
 	return fmt.Errorf("%s is not a known agent and was not removed", agentID.String())
 
+}
+
+// GetAgentFieldValue returns a string value for the field value belonging to the specefied Agent
+func GetAgentFieldValue(agentID uuid.UUID, field string) (string, error) {
+	if isAgent(agentID) {
+		switch strings.ToLower(field) {
+		case "platform":
+			return Agents[agentID].Platform, nil
+		case "architecture":
+			return Agents[agentID].Architecture, nil
+		case "username":
+			return Agents[agentID].UserName, nil
+		}
+		return "", fmt.Errorf("the provided agent field could not be found: %s", field)
+	}
+	return "", fmt.Errorf("%s is not a valid agent", agentID.String())
+}
+
+// isAgent enumerates a map of all instantiated agents and returns true if the provided agent UUID exists
+func isAgent(agentID uuid.UUID) bool {
+	for agent := range Agents {
+		if Agents[agent].ID == agentID {
+			return true
+		}
+	}
+	return false
 }
 
 // Job is a structure for holding data for single task assigned to a single agent

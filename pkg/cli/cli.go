@@ -187,11 +187,17 @@ func Shell() {
 						message("warn", err.Error())
 						break
 					}
-					if shellModule.Lang == "Go" {
-						m, err = agents.AddJob(shellModule.Agent, r[0], r[1:])
-					} else {
-						m, err = agents.AddJob(shellModule.Agent, "cmd", r)
+					if len(r) <= 0 {
+						message("warn", fmt.Sprintf("The %s module did not return a command to task an"+
+							" agent with", shellModule.Name))
+						break
 					}
+					if strings.ToLower(shellModule.Type) == "standard" {
+						m, err = agents.AddJob(shellModule.Agent, "cmd", r)
+					} else {
+						m, err = agents.AddJob(shellModule.Agent, r[0], r[1:])
+					}
+
 					if err != nil {
 						message("warn", "There was an error adding the job to the specified agent")
 						message("warn", err.Error())
