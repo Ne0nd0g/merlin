@@ -1,0 +1,22 @@
+{
+  "base": {
+    "name": "shellcodeInjection",
+    "type": "extended",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": [],
+    "path": ["windows", "x64", "go", "exec", "shellcodeInjection.json"],
+    "platform": "WINDOWS",
+    "arch": "x64",
+    "lang": "Go",
+    "privilege": false,
+    "remote": "",
+    "local": [""],
+    "options": [
+      {"name": "shellcode", "value": "", "required": true, "flag": "", "description":"Path to a raw binary file or a text file containing shellcode in either \\\\x90 OR 0x90 format"},
+      {"name": "pid", "value":  "", "required":  false, "flag": "", "description": "The Windows Process ID to inject the shellcode into"},
+      {"name": "method", "value":  "self", "required":  true, "flag": "", "description": "The method to execute the shellcode: self, remote, or RtlCreateUserThread"}
+    ],
+    "description": "This module will read in shellcode and execute it using the provided method. Shellcode will be injected and executed into the provided PID if the method is NOT self",
+    "notes": "Shellcode itself, instead of a file path, can be set for the shellcode option so long as there are no spaces"
+  }
+}

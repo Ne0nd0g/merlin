@@ -24,9 +24,68 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"os"
+	"strconv"
 	"strings"
 )
+
+// Parse is the initial entry point for all extended modules. All validation checks and processing will be performed here
+// The function input types are limited to strings and therefore require additional processing
+func Parse(options map[string]string) ([]string, error) {
+	if len(options) != 3 {
+		return nil, fmt.Errorf("3 arguments were expected, %d were provided", len(options))
+	}
+	var b64 string
+
+	f, errF := os.Stat(options["shellcode"])
+	if errF != nil {
+		h, errH := parseHex([]string{options["shellcode"]})
+		if errH != nil {
+			return nil, errH
+		}
+		b64 = base64.StdEncoding.EncodeToString(h)
+	} else {
+		if f.IsDir() {
+			return nil, fmt.Errorf("a directory was provided instead of a file: %s", options["shellcode"])
+		}
+		b, errB := parseShellcodeFile(options["shellcode"])
+		if errB != nil {
+			return nil, fmt.Errorf("there was an error parsing the shellcode file:\r\n%s", errB.Error())
+		}
+		b64 = base64.StdEncoding.EncodeToString(b)
+	}
+
+	// Convert PID to integer
+	if options["pid"] != "" {
+		_, errPid := strconv.Atoi(options["pid"])
+		if errPid != nil {
+			return nil, fmt.Errorf("there was an error converting the PID to an integer:\r\n%s", errPid.Error())
+		}
+	}
+
+	if strings.ToLower(options["method"]) != "self" && options["pid"] == "" {
+		return nil, fmt.Errorf("a valid PID must be provided for any method except self")
+	}
+
+	// Verify Method is a valid type
+	switch strings.ToLower(options["method"]) {
+	case "self":
+	case "remote":
+	case "rtlcreateuserthread":
+	case "userapc":
+	default:
+		return nil, fmt.Errorf("invalid shellcode execution method: %s", options["method"])
+
+	}
+	command, errCommand := GetJob(options["method"], b64, options["pid"])
+	if errCommand != nil {
+		return nil, fmt.Errorf("there was an error getting the shellcode job:\r\n%s", errCommand.Error())
+	}
+
+	return command, nil
+}
 
 // GetJob returns a string array containing the commands, in the proper order, to be used with agents.AddJob
 func GetJob(method string, shellcode string, pid string) ([]string, error) {
@@ -46,16 +105,13 @@ func GetJob(method string, shellcode string, pid string) ([]string, error) {
 
 // parseHex evaluates a string array to determine its format and returns a byte array of the hex
 func parseHex(str []string) ([]byte, error) {
-
 	hexString := strings.Join(str, "")
 
 	data, err := base64.StdEncoding.DecodeString(hexString)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		s := string(data)
+		hexString = s
 	}
-
-	s := string(data)
-	hexString = s
 
 	// see if string is prefixed with 0x
 	if hexString[0:2] == "0x" {
@@ -88,16 +144,16 @@ func parseHex(str []string) ([]byte, error) {
 // parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
 func parseShellcodeFile(filePath string) ([]byte, error) {
 
-	b, errB := ioutil.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
-	if errB != nil {
-		return nil, errB
+	fileContents, err := ioutil.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
+	if err != nil {
+		return nil, err
 	}
 
-	h, errH := parseHex([]string{string(b)})
-	if errH != nil {
-		return h, nil
+	hexBytes, errHex := parseHex([]string{string(fileContents)})
+	if errHex != nil {
+		return nil, errHex
 	}
 
-	return b, nil
+	return hexBytes, nil
 
 }

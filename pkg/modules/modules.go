@@ -37,6 +37,7 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
 )
 
@@ -346,6 +347,8 @@ func getExtendedCommand(m *Module) ([]string, error) {
 	switch strings.ToLower(m.Name) {
 	case "srdi":
 		extendedCommand, err = srdi.Parse(m.getMapFromOptions())
+	case "shellcodeinjection":
+		extendedCommand, err = shellcode.Parse(m.getMapFromOptions())
 	default:
 		return nil, fmt.Errorf("the %s module's extended command function was not found", m.Name)
 	}

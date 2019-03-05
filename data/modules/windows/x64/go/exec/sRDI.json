@@ -20,7 +20,6 @@
       {"name": "method", "value":  "self", "required":  true, "flag": "", "description": "The method to execute the shellcode: self, remote, or RtlCreateUserThread"}
     ],
     "description": "This module will convert the provided Windows DLL to position independent shellcode that will be reflectively loaded and executed in the target process",
-    "notes": "Based on the sRDI project at: https://github.com/monoxgas/sRDI",
-    "commands": ["{{dll.Value}}", "{{clearHeader.Value}}", "{{function.Value}}", "{{args.Value}}", "{{pid.Value}}", "{{method.Value}}"]
+    "notes": "Based on the sRDI project at: https://github.com/monoxgas/sRDI"
   }
 }
