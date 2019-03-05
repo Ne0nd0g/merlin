@@ -698,7 +698,6 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 
 				// Get minidump
 				miniD, miniDumpErr := miniDump(tempPath, process, uint32(pid))
-				fileData := miniD.FileContent
 
 				//copied and pasted from upload func, modified appropriately
 				if miniDumpErr != nil {
@@ -726,7 +725,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 
 				} else {
 					fileHash := sha1.New()
-					_, errW := io.WriteString(fileHash, string(fileData))
+					_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
 					if errW != nil {
 						if a.Verbose {
 							message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
@@ -736,12 +735,12 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					if a.Verbose {
 						message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
 							//p.FileLocation,
-							len(fileData),
+							len(miniD["FileContent"].([]byte)),
 							fileHash.Sum(nil)))
 					}
 					c := messages.FileTransfer{
-						FileLocation: fmt.Sprintf("%s.%d.dmp", miniD.ProcName, miniD.ProcID),
-						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+						FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
+						FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
 						IsDownload:   true,
 						Job:          p.Job,
 					}

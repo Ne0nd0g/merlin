@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"io/ioutil"
 	"os"
 	"path"
@@ -345,10 +346,12 @@ func getExtendedCommand(m *Module) ([]string, error) {
 	var extendedCommand []string
 	var err error
 	switch strings.ToLower(m.Name) {
-	case "srdi":
-		extendedCommand, err = srdi.Parse(m.getMapFromOptions())
+	case "minidump":
+		extendedCommand, err = minidump.Parse(m.getMapFromOptions())
 	case "shellcodeinjection":
 		extendedCommand, err = shellcode.Parse(m.getMapFromOptions())
+	case "srdi":
+		extendedCommand, err = srdi.Parse(m.getMapFromOptions())
 	default:
 		return nil, fmt.Errorf("the %s module's extended command function was not found", m.Name)
 	}
@@ -363,11 +366,4 @@ func (m *Module) getMapFromOptions() map[string]string {
 		optionsMap[v.Name] = v.Value
 	}
 	return optionsMap
-}
-
-//MinidumpFile holds the structure of of a Minidump operation to report back to merlin
-type MinidumpFile struct {
-	ProcName    string
-	ProcID      uint32
-	FileContent []byte
 }
