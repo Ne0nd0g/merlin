@@ -18,12 +18,8 @@
 package cli
 
 import (
-	// Standard
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -46,6 +42,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
+	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 )
 
 // Global Variables
@@ -266,121 +263,68 @@ func Shell() {
 					}
 				case "execute-shellcode":
 					if len(cmd) > 2 {
-						var b64 string
-						i := 0 // position for the file path or inline bytes
+						var options map[string]string
+						options = make(map[string]string)
 						switch strings.ToLower(cmd[1]) {
 						case "self":
-							i = 2
+							options["method"] = "self"
+							options["pid"] = ""
+							options["shellcode"] = strings.Join(cmd[2:], " ")
 						case "remote":
 							if len(cmd) > 3 {
-								i = 3
+								options["method"] = "remote"
+								options["pid"] = cmd[2]
+								options["shellcode"] = strings.Join(cmd[3:], " ")
 							} else {
 								message("warn", "Not enough arguments. Try using the help command")
+								message("info", "execute-shellcode remote <pid> <shellcode>")
 								break
 							}
 						case "rtlcreateuserthread":
 							if len(cmd) > 3 {
-								i = 3
+								options["method"] = "rtlcreateuserthread"
+								options["pid"] = cmd[2]
+								options["shellcode"] = strings.Join(cmd[3:], " ")
 							} else {
 								message("warn", "Not enough arguments. Try using the help command")
+								message("info", "execute-shellcode RtlCreateUserThread <pid> <shellcode>")
 								break
 							}
 						case "userapc":
 							if len(cmd) > 3 {
-								i = 3
+								options["method"] = "userapc"
+								options["pid"] = cmd[2]
+								options["shellcode"] = strings.Join(cmd[3:], " ")
 							} else {
 								message("warn", "Not enough arguments. Try using the help command")
+								message("info", "execute-shellcode UserAPC <pid> <shellcode>")
 								break
 							}
 						default:
-							message("warn", "Not enough arguments. Try using the help command")
+							message("warn", "invalid method provided")
 							break
 						}
-
-						if i > 0 {
-							f, errF := os.Stat(cmd[i])
-							if errF != nil {
-								if core.Verbose {
-									message("info", "Valid file not provided as argument, parsing bytes")
-									if core.Debug {
-										message("debug", fmt.Sprintf("%s", errF.Error()))
-									}
-								}
-
-								if core.Verbose {
-									message("info", "Parsing input into hex")
-								}
-
-								h, errH := parseHex(cmd[i:])
-								if errH != nil {
-									message("warn", errH.Error())
-									break
-								} else {
-									b64 = base64.StdEncoding.EncodeToString(h)
-								}
-							} else {
-								if f.IsDir() {
-									message("warn", "A directory was provided instead of a file")
-									break
-								} else {
-									if core.Verbose {
-										message("info", "File passed as parameter")
-									}
-									b, errB := parseShellcodeFile(cmd[i])
-									if errB != nil {
-										message("warn", "There was an error parsing the shellcode file")
-										message("warn", errB.Error())
-										break
-									}
-									b64 = base64.StdEncoding.EncodeToString(b)
-								}
+						if len(options) > 0 {
+							sh, errSh := shellcode.Parse(options)
+							if errSh != nil {
+								message("warn", fmt.Sprintf("there was an error parsing the shellcode:\r\n%s", errSh.Error()))
+								break
 							}
-						} else {
-							message("warn", "Not enough arguments. Try using the help command")
-							break
+							m, err := agents.AddJob(shellAgent, sh[0], sh[1:])
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+							}
 						}
-
-						switch strings.ToLower(cmd[1]) {
-						case "self":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"self", b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
-									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
-							}
-						case "remote":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
-									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
-							}
-						case "rtlcreateuserthread":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"rtlcreateuserthread",
-								cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
-									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
-							}
-						case "userapc":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"userapc", cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
-									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
-							}
-						default:
-							message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
-						}
+					} else {
+						message("warn", "not enough arguments were provided")
+						message("info", "execute-shellcode self <shellcode>")
+						message("info", "execute-shellcode remote <pid> <shellcode>")
+						message("info", "execute-shellcode RtlCreateUserThread <pid> <shellcode>")
+						break
 					}
 				case "exit":
 					exit()
@@ -833,7 +777,7 @@ func menuHelpAgent() {
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
-		{"execute-shellcode", "Execute shellcode", "self, remote"},
+		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
@@ -898,126 +842,6 @@ func executeCommand(name string, arg []string) {
 	} else {
 		message("success", fmt.Sprintf("%s", out))
 	}
-}
-
-// parseHex evaluates a string array to determine its format and returns a byte array of the hex
-func parseHex(str []string) ([]byte, error) {
-
-	if core.Debug {
-		message("debug", "Entering into cli.parseHex function")
-	}
-
-	hexString := strings.Join(str, "")
-
-	if core.Debug {
-		message("debug", "Parsing: ")
-		message("debug", fmt.Sprintf("%s", hexString))
-	}
-
-	data, err := base64.StdEncoding.DecodeString(hexString)
-	if err != nil {
-		if core.Verbose {
-			message("info", "Passed in string was not Base64 encoded")
-		}
-		if core.Debug {
-			message("debug", fmt.Sprintf("%s", err.Error()))
-		}
-	} else {
-		if core.Verbose {
-			message("info", "Passed in string is Base64 encoded")
-		}
-		s := string(data)
-		hexString = s
-	}
-
-	// see if string is prefixed with 0x
-	if hexString[0:2] == "0x" {
-		if core.Verbose {
-			message("info", "Passed in string contains 0x; removing")
-		}
-		hexString = strings.Replace(hexString, "0x", "", -1)
-		if strings.Contains(hexString, ",") {
-			if core.Verbose {
-				message("info", "Passed in string is comma separated; removing")
-			}
-			hexString = strings.Replace(hexString, ",", "", -1)
-		}
-		if strings.Contains(hexString, " ") {
-			if core.Verbose {
-				message("info", "Passed in string contains spaces; removing")
-			}
-			hexString = strings.Replace(hexString, " ", "", -1)
-		}
-	}
-
-	// see if string is prefixed with \x
-	if hexString[0:2] == "\\x" {
-		if core.Verbose {
-			message("info", "Passed in string contains \\x; removing")
-		}
-		hexString = strings.Replace(hexString, "\\x", "", -1)
-		if strings.Contains(hexString, ",") {
-			if core.Verbose {
-				message("info", "Passed in string is comma separated; removing")
-			}
-			hexString = strings.Replace(hexString, ",", "", -1)
-		}
-		if strings.Contains(hexString, " ") {
-			if core.Verbose {
-				message("info", "Passed in string contains spaces; removing")
-			}
-			hexString = strings.Replace(hexString, " ", "", -1)
-		}
-	}
-
-	if core.Debug {
-		message("debug", fmt.Sprintf("About to convert to byte array: \r\n%s", hexString))
-	}
-
-	h, errH := hex.DecodeString(hexString)
-
-	if core.Debug {
-		message("debug", "Leaving cli.parseHex function")
-	}
-
-	return h, errH
-
-}
-
-// parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
-func parseShellcodeFile(filePath string) ([]byte, error) {
-
-	if core.Debug {
-		message("debug", "Entering into cli.parseShellcodeFile function")
-	}
-
-	b, errB := ioutil.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
-	if errB != nil {
-		if core.Debug {
-			message("debug", "Leaving cli.parseShellcodeFile function")
-		}
-		return nil, errB
-	}
-
-	h, errH := parseHex([]string{string(b)})
-	if errH != nil {
-		if core.Verbose {
-			message("info", "Error parsing shellcode file for Base64, \\x90\\x00, 0x90,0x00, or 9000 formats; skipping")
-			message("info", errH.Error())
-		}
-	} else {
-		if core.Debug {
-			message("debug", "Leaving cli.parseShellcodeFile function")
-		}
-		return h, nil
-	}
-
-	if core.Debug {
-		message("debug", "Leaving cli.parseShellcodeFile function")
-	}
-
-	return b, nil
-
 }
 
 // TODO add command "agents" to list all connected agents
