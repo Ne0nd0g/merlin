@@ -116,7 +116,7 @@ func Parse(options map[string]string) ([]string, error) {
 func dllToReflectiveShellcode(dllPath string, functionName string, clearHeader bool, userDataStr string) ([]byte, error) {
 
 	// TODO make sure file exists
-	dllBytes, err := ioutil.ReadFile(dllPath)
+	dllBytes, err := ioutil.ReadFile(dllPath) // #nosec G304 Intended functionality to allow users to specify arbitrary file
 	if err != nil {
 		return nil, err
 	}
