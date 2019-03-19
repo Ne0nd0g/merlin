@@ -52,12 +52,14 @@ func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
 }
 
 // ExecuteShellcodeSelf executes provided shellcode in the current process
+//lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func ExecuteShellcodeSelf(shellcode []byte) error {
 	shellcode = nil
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
 // ExecuteShellcodeRemote executes provided shellcode in the provided target process
+//lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 	shellcode = nil
 	pid = 0
@@ -65,6 +67,7 @@ func ExecuteShellcodeRemote(shellcode []byte, pid uint32) error {
 }
 
 // ExecuteShellcodeRtlCreateUserThread executes provided shellcode in the provided target process using the Windows RtlCreateUserThread call
+//lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 	shellcode = nil
 	pid = 0
@@ -72,6 +75,7 @@ func ExecuteShellcodeRtlCreateUserThread(shellcode []byte, pid uint32) error {
 }
 
 // ExecuteShellcodeQueueUserAPC executes provided shellcode in the provided target process using the Windows QueueUserAPC API call
+//lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	shellcode = nil
 	pid = 0
@@ -79,6 +83,7 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 }
 
 // miniDump is a Windows only module function to dump the memory of the provided process
+//lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func miniDump(tempDir string, process string, inPid uint32) (map[string]interface{}, error) {
 	var mini map[string]interface{}
 	tempDir = ""

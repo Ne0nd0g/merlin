@@ -263,8 +263,7 @@ func Shell() {
 					}
 				case "execute-shellcode":
 					if len(cmd) > 2 {
-						var options map[string]string
-						options = make(map[string]string)
+						options := make(map[string]string)
 						switch strings.ToLower(cmd[1]) {
 						case "self":
 							options["method"] = "self"
@@ -302,7 +301,6 @@ func Shell() {
 							}
 						default:
 							message("warn", "invalid method provided")
-							break
 						}
 						if len(options) > 0 {
 							sh, errSh := shellcode.Parse(options)
@@ -362,6 +360,10 @@ func Shell() {
 						}
 					} else {
 						m, err = agents.AddJob(shellAgent, cmd[0], cmd)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
 					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
@@ -381,12 +383,20 @@ func Shell() {
 						}
 					} else {
 						m, err = agents.AddJob(shellAgent, "cd", cmd)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
 					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "pwd":
 					var m string
 					m, err = agents.AddJob(shellAgent, "pwd", cmd)
+					if err != nil {
+						message("warn", err.Error())
+						break
+					}
 					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "main":
@@ -580,7 +590,7 @@ func menuAgent(cmd []string) {
 			} else {
 				errRemove := agents.RemoveAgent(i)
 				if errRemove != nil {
-					message("warn", fmt.Sprintf("%s", errRemove.Error()))
+					message("warn", errRemove.Error())
 				} else {
 					message("info", fmt.Sprintf("Agent %s was removed from the server at %s",
 						cmd[1], time.Now().UTC().Format(time.RFC3339)))
@@ -831,9 +841,7 @@ func exit() {
 }
 
 func executeCommand(name string, arg []string) {
-	var cmd *exec.Cmd
-
-	cmd = exec.Command(name, arg...) // #nosec G204 Users can execute any arbitrary command by design
+	cmd := exec.Command(name, arg...) // #nosec G204 Users can execute any arbitrary command by design
 
 	out, err := cmd.CombinedOutput()
 

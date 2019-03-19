@@ -67,6 +67,9 @@ func TestTLSCertGeneration(t *testing.T) {
 
 	// Tests
 	x5certSetVals, err := x509.ParseCertificate(certSetVals.Certificate[0])
+	if err != nil {
+		t.Fatal("Could not parse X509 certificate")
+	}
 	//serial
 	if x5certSetVals.SerialNumber.Cmp(serial) != 0 {
 		t.Error("Serial number mismatch")
@@ -198,7 +201,7 @@ func TestTLSCertGeneration(t *testing.T) {
 		t.Error("Error during encrypt/decrypt verification 4: ", err)
 	}
 
-	if bytes.Compare(dec1, plain1) != 0 || bytes.Compare(dec2, plain2) != 0 {
+	if !bytes.Equal(dec1, plain1) || !bytes.Equal(dec2, plain2) {
 		t.Error("Error during encrypt/decrypt verification 5: decrypted values don't match (",
 			string(plain1),
 			string(dec1),

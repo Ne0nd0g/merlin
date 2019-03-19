@@ -21,6 +21,7 @@ import (
 	// Standard
 	"bytes"
 	"crypto/sha1" // #nosec G505
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -110,7 +111,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 	if errU != nil {
 		if a.Debug {
 			message("warn", "There was an error getting the username")
-			message("warn", fmt.Sprintf("%s", errU.Error()))
+			message("warn", errU.Error())
 		}
 	} else {
 		a.UserName = u.Username
@@ -121,7 +122,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 	if errH != nil {
 		if a.Debug {
 			message("warn", "There was an error getting the hostname")
-			message("warn", fmt.Sprintf("%s", errH.Error()))
+			message("warn", errH.Error())
 		}
 	} else {
 		a.HostName = h
@@ -131,7 +132,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 	if errI != nil {
 		if a.Debug {
 			message("warn", "There was an error getting the the IP addresses")
-			message("warn", fmt.Sprintf("%s", errI.Error()))
+			message("warn", errI.Error())
 		}
 	} else {
 		for _, iface := range interfaces {
@@ -236,7 +237,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	if errP != nil {
 		if a.Debug {
 			message("warn", "There was an error marshaling the JSON object")
-			message("warn", fmt.Sprintf("%s", errP.Error()))
+			message("warn", errP.Error())
 		}
 	}
 
@@ -258,7 +259,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	if errA != nil {
 		if a.Debug {
 			message("warn", "There was an error marshaling the JSON object")
-			message("warn", fmt.Sprintf("%s", errA.Error()))
+			message("warn", errA.Error())
 		}
 	}
 
@@ -296,7 +297,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 		a.FailedCheckin++
 		if a.Debug {
 			message("warn", "There was an error with the HTTP client while performing a POST:")
-			message("warn", fmt.Sprintf("%s", err.Error()))
+			message("warn", err.Error())
 		}
 		if a.Verbose {
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
@@ -334,6 +335,7 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	if a.Debug {
 		message("debug", "Leaving initialCheckIn function, returning True")
 	}
+	a.iCheckIn = time.Now().UTC()
 	return true
 }
 
@@ -371,7 +373,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 	if err != nil {
 		if a.Debug {
 			message("warn", "There was an error with the HTTP Response:")
-			message("warn", fmt.Sprintf("%s", err.Error())) // On Mac I get "read: connection reset by peer" here but not on other platforms
+			message("warn", err.Error()) // On Mac I get "read: connection reset by peer" here but not on other platforms
 		} // Only does this with a 10s Sleep
 		a.FailedCheckin++
 		if a.Verbose {
@@ -415,6 +417,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 		}
 
 		a.FailedCheckin = 0
+		a.sCheckIn = time.Now().UTC()
 
 		if a.Debug {
 			message("debug", fmt.Sprintf("Agent ID: %s", j.ID))
@@ -457,11 +460,11 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if directoryPathErr != nil {
 					if a.Verbose {
 						message("warn", fmt.Sprintf("There was an error getting the FileInfo structure for the directory %s", d))
-						message("warn", fmt.Sprintf("%s", directoryPathErr.Error()))
+						message("warn", directoryPathErr.Error())
 					}
-					c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the "+
-						"remote directory %s:\r\n", p.FileLocation)
-					c.Stderr += fmt.Sprintf(directoryPathErr.Error())
+					c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
+						"directory %s:\r\n", p.FileLocation)
+					c.Stderr += directoryPathErr.Error()
 				}
 				if c.Stderr == "" {
 					if a.Verbose {
@@ -472,7 +475,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 						c.Stderr = downloadFileErr.Error()
 						if a.Verbose {
 							message("warn", "There was an error decoding the fileBlob")
-							message("warn", fmt.Sprintf("%s", downloadFileErr.Error()))
+							message("warn", downloadFileErr.Error())
 						}
 					} else {
 						errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
@@ -480,7 +483,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 							c.Stderr = errF.Error()
 							if a.Verbose {
 								message("warn", fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
-								message("warn", fmt.Sprintf("%s", errF.Error()))
+								message("warn", errF.Error())
 							}
 						} else {
 							if a.Verbose {
@@ -513,7 +516,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if fileDataErr != nil {
 					if a.Verbose {
 						message("warn", fmt.Sprintf("There was an error reading %s", p.FileLocation))
-						message("warn", fmt.Sprintf("%s", fileDataErr.Error()))
+						message("warn", fileDataErr.Error())
 					}
 					errMessage := fmt.Sprintf("There was an error reading %s\r\n", p.FileLocation)
 					errMessage += fileDataErr.Error()
@@ -583,7 +586,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 			if respErr != nil {
 				if a.Verbose {
 					message("warn", "There was an error sending the FileTransfer message to the server")
-					message("warn", fmt.Sprintf("%s", respErr.Error()))
+					message("warn", respErr.Error())
 				}
 				break
 			}
@@ -724,11 +727,11 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					g.Payload = (*json.RawMessage)(&k)
 
 				} else {
-					fileHash := sha1.New()
+					fileHash := sha256.New()
 					_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
 					if errW != nil {
 						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
+							message("warn", fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
 						}
 					}
 
@@ -747,8 +750,8 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					k, err := json.Marshal(c)
 					if err != nil {
 						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error creating the json"))
-							message("warn", fmt.Sprintf("%s", err.Error()))
+							message("warn", "There was an error creating the json")
+							message("warn", err.Error())
 						}
 					}
 					g.Type = "FileTransfer"
@@ -768,7 +771,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if respErr != nil {
 					if a.Verbose {
 						message("warn", "There was an error sending the FileTransfer message to the server")
-						message("warn", fmt.Sprintf("%s", respErr.Error()))
+						message("warn", respErr.Error())
 					}
 					break
 				}
@@ -806,7 +809,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error changing the agent waitTime")
-						message("warn", fmt.Sprintf("%s", err.Error()))
+						message("warn", err.Error())
 					}
 				}
 				if t > 0 {
@@ -823,7 +826,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error changing the agent skew interval")
-						message("warn", fmt.Sprintf("%s", err.Error()))
+						message("warn", err.Error())
 					}
 				}
 				if a.Verbose {
@@ -836,7 +839,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error changing the agent message padding size")
-						message("warn", fmt.Sprintf("%s", err.Error()))
+						message("warn", err.Error())
 					}
 				}
 				if a.Verbose {
@@ -855,7 +858,7 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 				if err != nil {
 					if a.Verbose {
 						message("warn", "There was an error changing the agent max retries")
-						message("warn", fmt.Sprintf("%s", err.Error()))
+						message("warn", err.Error())
 					}
 				}
 				if a.Verbose {
@@ -1207,7 +1210,7 @@ func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 	if a.Verbose {
 		if stderr != "" {
 			message("warn", fmt.Sprintf("There was an error executing the command: %s", j.Command))
-			message("success", fmt.Sprintf("%s", stdout))
+			message("success", stdout)
 			message("warn", fmt.Sprintf("Error: %s", stderr))
 
 		} else {
@@ -1319,7 +1322,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 	if errP != nil {
 		if a.Debug {
 			message("warn", "There was an error marshaling the JSON object")
-			message("warn", fmt.Sprintf("%s", errP.Error()))
+			message("warn", errP.Error())
 		}
 	}
 
@@ -1348,7 +1351,7 @@ func (a *Agent) agentInfo(host string, client *http.Client) {
 		a.FailedCheckin++
 		if a.Debug {
 			message("warn", "There was an error with the HTTP client while performing a POST:")
-			message("warn", fmt.Sprintf(err.Error()))
+			message("warn", err.Error())
 		}
 		if a.Verbose {
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
