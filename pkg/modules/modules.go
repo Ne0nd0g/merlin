@@ -90,7 +90,7 @@ func (m *Module) Run() ([]string, error) {
 		return nil, platformError
 	}
 
-	if strings.ToLower(m.Platform) != strings.ToLower(platform) {
+	if !strings.EqualFold(m.Platform, platform) {
 		return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
 	}
 
