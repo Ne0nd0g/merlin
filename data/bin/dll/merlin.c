@@ -1,6 +1,6 @@
 #include <windows.h>
 #include <stdio.h>
-#include "libmerlin.h"
+#include "main.h"
 
 // https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-entry-point-function
 
