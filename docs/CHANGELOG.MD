@@ -25,15 +25,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Test case for TLS certificate generation
 - [Pull 60](https://github.com/Ne0nd0g/merlin/pull/60) - Added `pwd` and `cd` command to agent & agent menu. 
   - Uses go code native to Merlin instead of executing system binaries or access the system's CLI.
+- merlin.dll contains a DllMain function and a function named Magic to instantiate a Merlin agent
+    - DllMain does nothing
+- Added exported function named Merlin to merlinagentdll/main.go to take in a C *char and convert to Go string
+- Shellcode Reflective DLL Injection (sRDI) module windows/x64/go/exec/sRDI
+- Shellcode injection module at windows/x64/go/exec/shellcode provides same functionality as execute-shellcode from Agent menu
+- "extended" module types that call Go code from the pkg/modules directory
 
 ### Fixed
 - [Pull 57](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
 
 ### Changed
 - Changed SHA1 library to SHA256 and checks from http2.go for publicly distributed Merlin Server test certificate
+- Moved execute-shellcode functionality to pkg/modules/shellcode
+- merlin.c contains DllMain and exported Magic function
 
 ### Removed
 - Removed publicly distributed certificates from repository see [Pull 58](https://github.com/Ne0nd0g/merlin/pull/58).
+- Removed "main" and "ReflectiveLoader" functions from merlin.dll/merlin.c
 
 ## 0.6.8 - 2019-01-26
 

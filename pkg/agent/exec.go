@@ -27,9 +27,6 @@ import (
 
 	// 3rd Party
 	"github.com/mattn/go-shellwords"
-
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
@@ -82,9 +79,10 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 }
 
 // miniDump is a Windows only module function to dump the memory of the provided process
-func miniDump(tempDir string, process string, inPid uint32) (modules.MinidumpFile, error) {
+func miniDump(tempDir string, process string, inPid uint32) (map[string]interface{}, error) {
+	var mini map[string]interface{}
 	tempDir = ""
 	process = ""
 	inPid = 0
-	return modules.MinidumpFile{}, errors.New("minidump doesn't work on non-windows hosts")
+	return mini, errors.New("minidump doesn't work on non-windows hosts")
 }

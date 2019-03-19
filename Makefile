@@ -27,7 +27,7 @@ D=Darwin-x64
 $(shell mkdir -p ${DIR})
 
 # Change default to just make for the host OS and add MAKE ALL to do this
-default: server-windows agent-windows server-linux agent-linux server-darwin agent-darwin agent-dll agent-javascript
+default: server-windows agent-windows server-linux agent-linux server-darwin agent-darwin agent-dll agent-dll-library agent-javascript
 
 all: default
 
@@ -54,7 +54,7 @@ server-windows:
 agent-windows:
 	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
 
-# Compile Agent - Windows x64 DLL
+# Compile Agent - Windows x64 DLL - main() - Console
 agent-dll:
 	export GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CGO_ENABLED=1; \
 	go build ${LDFLAGS} -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
