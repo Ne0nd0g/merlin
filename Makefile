@@ -61,13 +61,6 @@ agent-dll:
 	cp data/bin/dll/merlin.c ${DIR}; \
 	x86_64-w64-mingw32-gcc -shared -pthread -o ${DIR}/merlin.dll ${DIR}/merlin.c ${DIR}/main.a -lwinmm -lntdll -lws2_32
 
-# Compile Agent - Windows x64 DLL - DllMain() - DLL
-agent-dll-library:
-	export GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CGO_ENABLED=1; \
-	go build ${LDFLAGS} -buildmode=c-archive -o ${DIR}/libmerlin.a cmd/merlinagentdll/main.go; \
-	cp data/bin/dll/libmerlin.c ${DIR}; \
-	x86_64-w64-mingw32-gcc -shared -pthread -o ${DIR}/libmerlin.dll ${DIR}/libmerlin.c ${DIR}/libmerlin.a -lwinmm -lntdll -lws2_32
-
 # Compile Server - Linux x64
 server-linux:
 	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${L} cmd/merlinserver/main.go
