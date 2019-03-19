@@ -59,8 +59,6 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 	}
 
 	//todo: generate random names?
-	if dnsNames == nil {
-	}
 
 	if notBefore == nil {
 
