@@ -319,7 +319,7 @@ func ShowInfo(agentID uuid.UUID) {
 		{"Agent Version", Agents[agentID].Version},
 		{"Agent Build", Agents[agentID].Build},
 		{"Agent Wait Time", Agents[agentID].WaitTime},
-		{"Agent Wait Time Skew", fmt.Sprintf(strconv.FormatInt(Agents[agentID].Skew, 10))},
+		{"Agent Wait Time Skew", strconv.FormatInt(Agents[agentID].Skew, 10)},
 		{"Agent Message Padding Max", strconv.Itoa(Agents[agentID].PaddingMax)},
 		{"Agent Max Retries", strconv.Itoa(Agents[agentID].MaxRetry)},
 		{"Agent Failed Check In", strconv.Itoa(Agents[agentID].FailedCheckin)},
@@ -478,7 +478,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		m.Payload = (*json.RawMessage)(&k)
 		err := RemoveAgent(agentID)
 		if err != nil {
-			message("warn", fmt.Sprintf("%s", err.Error()))
+			message("warn", err.Error())
 		} else {
 			message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
 		}
