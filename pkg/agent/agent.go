@@ -21,6 +21,7 @@ import (
 	// Standard
 	"bytes"
 	"crypto/sha1" // #nosec G505
+	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -726,11 +727,11 @@ func (a *Agent) statusCheckIn(host string, client *http.Client) {
 					g.Payload = (*json.RawMessage)(&k)
 
 				} else {
-					fileHash := sha1.New()
+					fileHash := sha256.New()
 					_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
 					if errW != nil {
 						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
+							message("warn", fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
 						}
 					}
 
