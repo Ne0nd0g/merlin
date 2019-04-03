@@ -31,7 +31,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/cli"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
+	"github.com/Ne0nd0g/merlin/pkg/servers"
+	"github.com/Ne0nd0g/merlin/pkg/transport/http2"
 )
 
 // Global Variables
@@ -67,7 +68,11 @@ func main() {
 	go cli.Shell()
 
 	// Start Merlin Server to listen for agents
-	server, err := http2.New(*ip, *port, *proto, *key, *crt)
+	trn, err := http2.NewServer(*ip, *port, *proto, *key, *crt)
+	if err != nil {
+		color.Red(err.Error())
+	}
+	server, err := servers.New(*ip, *port, *proto, trn) //http2.New(*ip, *port, *proto, *key, *crt)
 	if err != nil {
 		color.Red(err.Error())
 	} else {
