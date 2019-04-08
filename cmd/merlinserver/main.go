@@ -20,6 +20,7 @@ package main
 import (
 	// Standard
 	"flag"
+	"os"
 	"path/filepath"
 
 	// 3rd Party
@@ -56,6 +57,7 @@ func main() {
 		color.Blue("Version: " + merlin.Version)
 		color.Blue("Build: " + build)
 		flag.PrintDefaults()
+		os.Exit(0)
 	}
 	flag.Parse()
 

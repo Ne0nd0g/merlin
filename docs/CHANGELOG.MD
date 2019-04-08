@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Shellcode Reflective DLL Injection (sRDI) module windows/x64/go/exec/sRDI
 - Shellcode injection module at windows/x64/go/exec/shellcode provides same functionality as execute-shellcode from Agent menu
 - "extended" module types that call Go code from the pkg/modules directory
+- [Pull 64](https://github.com/Ne0nd0g/merlin/pull/64) - Added in Dockerfile by Alex Flores (@audibleblink)
 
 ### Fixed
 - [Pull 57](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
@@ -39,6 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Changed SHA1 library to SHA256 and checks from http2.go for publicly distributed Merlin Server test certificate
 - Moved execute-shellcode functionality to pkg/modules/shellcode
 - merlin.c contains DllMain and exported Magic function
+- Merlin Server uses exit code 0 after printing usage information
 
 ### Removed
 - Removed publicly distributed certificates from repository see [Pull 58](https://github.com/Ne0nd0g/merlin/pull/58).
@@ -71,7 +73,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- [Pull 43](https://github.com/Ne1nd0g/merlin/pull/43) - Gives users the ability to dynamically
+- [Pull 43](https://github.com/Ne0nd0g/merlin/pull/43) - Gives users the ability to dynamically
 assign the callback URL variable at compile time by setting the URL= var in the make command by Alex Flores (@audibleblink)
 
 ### Fixed
