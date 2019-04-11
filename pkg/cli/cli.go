@@ -18,36 +18,34 @@
 package cli
 
 import (
-	// Standard
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
+	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
-	"github.com/mattn/go-shellwords"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
+	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 )
 
 // Global Variables
-var serverLog *os.File
 var shellModule modules.Module
 var shellAgent uuid.UUID
 var prompt *readline.Instance
@@ -74,7 +72,13 @@ func Shell() {
 		color.Red(err.Error())
 	}
 	prompt = p
-	defer prompt.Close()
+
+	defer func() {
+		err := prompt.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	log.SetOutput(prompt.Stderr())
 
@@ -102,7 +106,7 @@ func Shell() {
 						menuAgent(cmd[1:])
 					}
 				case "banner":
-					color.Blue(banner.Banner1)
+					color.Blue(banner.MerlinBanner1)
 					color.Blue("\t\t   Version: %s", merlin.Version)
 				case "help":
 					menuHelpMain()
@@ -155,7 +159,7 @@ func Shell() {
 					shellModule.ShowInfo()
 				case "set":
 					if len(cmd) > 2 {
-						if cmd[1] == "agent" {
+						if cmd[1] == "Agent" {
 							s, err := shellModule.SetAgent(cmd[2])
 							if err != nil {
 								message("warn", err.Error())
@@ -174,17 +178,31 @@ func Shell() {
 				case "reload":
 					menuSetModule(strings.TrimSuffix(strings.Join(shellModule.Path, "/"), ".json"))
 				case "run":
+					var m string
 					r, err := shellModule.Run()
 					if err != nil {
 						message("warn", err.Error())
-					} else {
-						m, err := agents.AddJob(shellModule.Agent, "cmd", r)
-						if err != nil {
-							message("warn", err.Error())
-						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellModule.Agent))
-						}
+						break
 					}
+					if len(r) <= 0 {
+						message("warn", fmt.Sprintf("The %s module did not return a command to task an"+
+							" agent with", shellModule.Name))
+						break
+					}
+					if strings.ToLower(shellModule.Type) == "standard" {
+						m, err = agents.AddJob(shellModule.Agent, "cmd", r)
+					} else {
+						m, err = agents.AddJob(shellModule.Agent, r[0], r[1:])
+					}
+
+					if err != nil {
+						message("warn", "There was an error adding the job to the specified agent")
+						message("warn", err.Error())
+					} else {
+						message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+							m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
+					}
+
 				case "back":
 					menuSetMain()
 				case "main":
@@ -216,15 +234,17 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
 					}
 				case "download":
 					if len(cmd) >= 2 {
-						arg := strings.Join(cmd[1:]," ")
+						arg := strings.Join(cmd[1:], " ")
 						argS, errS := shellwords.Parse(arg)
 						if errS != nil {
-							message("warn",fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							message("warn", fmt.Sprintf("There was an error parsing command line "+
+								"argments: %s\r\n%s", line, errS.Error()))
 							break
 						}
 						if len(argS) >= 1 {
@@ -233,7 +253,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						}
 					} else {
@@ -242,116 +263,66 @@ func Shell() {
 					}
 				case "execute-shellcode":
 					if len(cmd) > 2 {
-						var b64 string
-						i := 0 // position for the file path or inline bytes
+						options := make(map[string]string)
 						switch strings.ToLower(cmd[1]) {
 						case "self":
-							i = 2
+							options["method"] = "self"
+							options["pid"] = ""
+							options["shellcode"] = strings.Join(cmd[2:], " ")
 						case "remote":
 							if len(cmd) > 3 {
-								i = 3
+								options["method"] = "remote"
+								options["pid"] = cmd[2]
+								options["shellcode"] = strings.Join(cmd[3:], " ")
 							} else {
 								message("warn", "Not enough arguments. Try using the help command")
+								message("info", "execute-shellcode remote <pid> <shellcode>")
 								break
 							}
 						case "rtlcreateuserthread":
 							if len(cmd) > 3 {
-								i = 3
+								options["method"] = "rtlcreateuserthread"
+								options["pid"] = cmd[2]
+								options["shellcode"] = strings.Join(cmd[3:], " ")
 							} else {
 								message("warn", "Not enough arguments. Try using the help command")
+								message("info", "execute-shellcode RtlCreateUserThread <pid> <shellcode>")
 								break
 							}
 						case "userapc":
 							if len(cmd) > 3 {
-								i = 3
+								options["method"] = "userapc"
+								options["pid"] = cmd[2]
+								options["shellcode"] = strings.Join(cmd[3:], " ")
 							} else {
 								message("warn", "Not enough arguments. Try using the help command")
+								message("info", "execute-shellcode UserAPC <pid> <shellcode>")
 								break
 							}
 						default:
-							message("warn", "Not enough arguments. Try using the help command")
-							break
+							message("warn", "invalid method provided")
 						}
-
-						if i > 0 {
-							f, errF := os.Stat(cmd[i])
-							if errF != nil {
-								if core.Verbose {
-									message("info", "Valid file not provided as argument, parsing bytes")
-									if core.Debug {
-										message("debug", fmt.Sprintf("%s", errF.Error()))
-									}
-								}
-
-								if core.Verbose {
-									message("info", "Parsing input into hex")
-								}
-
-								h, errH := parseHex(cmd[i:])
-								if errH != nil {
-									message("warn", errH.Error())
-									break
-								} else {
-									b64 = base64.StdEncoding.EncodeToString(h)
-								}
-							} else {
-								if f.IsDir() {
-									message("warn", "A directory was provided instead of a file")
-									break
-								} else {
-									if core.Verbose {
-										message("info", "File passed as parameter")
-									}
-									b, errB := parseShellcodeFile(cmd[i])
-									if errB != nil {
-										message("warn", "There was an error parsing the shellcode file")
-										message("warn", errB.Error())
-										break
-									}
-									b64 = base64.StdEncoding.EncodeToString(b)
-								}
+						if len(options) > 0 {
+							sh, errSh := shellcode.Parse(options)
+							if errSh != nil {
+								message("warn", fmt.Sprintf("there was an error parsing the shellcode:\r\n%s", errSh.Error()))
+								break
 							}
-						} else {
-							message("warn", "Not enough arguments. Try using the help command")
-							break
+							m, err := agents.AddJob(shellAgent, sh[0], sh[1:])
+							if err != nil {
+								message("warn", err.Error())
+								break
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+							}
 						}
-
-						switch strings.ToLower(cmd[1]) {
-						case "self":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"self", b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
-							}
-						case "remote":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"remote", cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
-							}
-						case "rtlcreateuserthread":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"rtlcreateuserthread", cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
-							}
-						case "userapc":
-							m, err := agents.AddJob(shellAgent, "shellcode", []string{"userapc", cmd[2], b64})
-							if err != nil {
-								message("warn", err.Error())
-								break
-							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
-							}
-						default:
-							message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", cmd[1]))
-						}
+					} else {
+						message("warn", "not enough arguments were provided")
+						message("info", "execute-shellcode self <shellcode>")
+						message("info", "execute-shellcode remote <pid> <shellcode>")
+						message("info", "execute-shellcode RtlCreateUserThread <pid> <shellcode>")
+						break
 					}
 				case "exit":
 					exit()
@@ -368,9 +339,66 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
 					}
+				case "ls":
+					var m string
+					if len(cmd) > 1 {
+						arg := strings.Join(cmd[0:], " ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn", fmt.Sprintf("There was an error parsing command line "+
+								"argments: %s\r\n%s", line, errS.Error()))
+							break
+						}
+						m, err = agents.AddJob(shellAgent, "ls", argS)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					} else {
+						m, err = agents.AddJob(shellAgent, cmd[0], cmd)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					}
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+				case "cd":
+					var m string
+					if len(cmd) > 1 {
+						arg := strings.Join(cmd[0:], " ")
+						argS, errS := shellwords.Parse(arg)
+						if errS != nil {
+							message("warn", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							break
+						}
+						m, err = agents.AddJob(shellAgent, "cd", argS)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					} else {
+						m, err = agents.AddJob(shellAgent, "cd", cmd)
+						if err != nil {
+							message("warn", err.Error())
+							break
+						}
+					}
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+				case "pwd":
+					var m string
+					m, err = agents.AddJob(shellAgent, "pwd", cmd)
+					if err != nil {
+						message("warn", err.Error())
+						break
+					}
+					message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "main":
 					menuSetMain()
 				case "quit":
@@ -378,13 +406,33 @@ func Shell() {
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
+						case "killdate":
+							if len(cmd) > 2 {
+								_, errU := strconv.ParseInt(cmd[2], 10, 64)
+								if errU != nil {
+									message("warn", fmt.Sprintf("There was an error converting %s to an"+
+										" int64", cmd[2]))
+									message("info", "Kill date takes in a UNIX epoch timestamp such as"+
+										" 811123200 for September 15, 1995")
+									break
+								}
+								m, err := agents.AddJob(shellAgent, "killdate", cmd[1:])
+								if err != nil {
+									message("warn", fmt.Sprintf("There was an error adding a killdate "+
+										"agent control message:\r\n%s", err.Error()))
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+								}
+							}
 						case "maxretry":
 							if len(cmd) > 2 {
 								m, err := agents.AddJob(shellAgent, "maxretry", cmd[1:])
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						case "padding":
@@ -393,7 +441,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						case "sleep":
@@ -402,7 +451,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						case "skew":
@@ -411,7 +461,8 @@ func Shell() {
 								if err != nil {
 									message("warn", err.Error())
 								} else {
-									message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 								}
 							}
 						}
@@ -422,21 +473,36 @@ func Shell() {
 						if err != nil {
 							message("warn", err.Error())
 						} else {
-							message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 						}
+					}
+				case "status":
+					status := agents.GetAgentStatus(shellAgent)
+					if status == "Active" {
+						color.Green("Active")
+					} else if status == "Delayed" {
+						color.Yellow("Delayed")
+					} else if status == "Dead" {
+						color.Red("Dead")
+					} else {
+						color.Blue(status)
 					}
 				case "upload":
 					if len(cmd) >= 3 {
-						arg := strings.Join(cmd[1:]," ")
+						arg := strings.Join(cmd[1:], " ")
 						argS, errS := shellwords.Parse(arg)
 						if errS != nil {
-							message("warn",fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", line, errS.Error()))
+							message("warn", fmt.Sprintf("There was an error parsing command line "+
+								""+
+								"argments: %s\r\n%s", line, errS.Error()))
 							break
 						}
 						if len(argS) >= 2 {
 							_, errF := os.Stat(argS[0])
-							if errF != nil{
-								message("warn", fmt.Sprintf("There was an error accessing the source upload file:\r\n%s", errF.Error()))
+							if errF != nil {
+								message("warn", fmt.Sprintf("There was an error accessing the source "+
+									"upload file:\r\n%s", errF.Error()))
 								break
 							}
 							m, err := agents.AddJob(shellAgent, "upload", argS[0:2])
@@ -444,7 +510,8 @@ func Shell() {
 								message("warn", err.Error())
 								break
 							} else {
-								message("note", fmt.Sprintf("Created job %s for agent %s", m, shellAgent))
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 							}
 						}
 					} else {
@@ -523,9 +590,10 @@ func menuAgent(cmd []string) {
 			} else {
 				errRemove := agents.RemoveAgent(i)
 				if errRemove != nil {
-					message("warn", fmt.Sprintf("%s", errRemove.Error()))
+					message("warn", errRemove.Error())
 				} else {
-					message("info", fmt.Sprintf("Agent %s was removed from the server", cmd[1]))
+					message("info", fmt.Sprintf("Agent %s was removed from the server at %s",
+						cmd[1], time.Now().UTC().Format(time.RFC3339)))
 				}
 			}
 		}
@@ -604,7 +672,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("info"),
 		),
 		readline.PcItem("set",
-			readline.PcItem("agent",
+			readline.PcItem("Agent",
 				readline.PcItem("all"),
 				readline.PcItemDynamic(agents.GetAgentList()),
 			),
@@ -625,14 +693,19 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("help"),
 		readline.PcItem("info"),
 		readline.PcItem("kill"),
+		readline.PcItem("ls"),
+		readline.PcItem("cd"),
+		readline.PcItem("pwd"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
+			readline.PcItem("killdate"),
 			readline.PcItem("maxretry"),
 			readline.PcItem("padding"),
 			readline.PcItem("skew"),
 			readline.PcItem("sleep"),
 		),
+		readline.PcItem("status"),
 		readline.PcItem("upload"),
 	)
 
@@ -646,7 +719,6 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 	default:
 		return main
 	}
-	return main
 }
 
 func menuHelpMain() {
@@ -711,15 +783,19 @@ func menuHelpAgent() {
 	table.SetHeader([]string{"Command", "Description", "Options"})
 
 	data := [][]string{
+		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
-		{"execute-shellcode", "Execute shellcode", "self, remote"},
+		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
+		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
 		{"main", "Return to the main menu", ""},
-		{"set", "Set the value for one of the agent's options", "maxretry, padding, skew, sleep"},
+		{"pwd", "Display the current working directory", "pwd"},
+		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
+		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 	}
 
@@ -727,7 +803,8 @@ func menuHelpAgent() {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
-	message("info", "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu")
+	message("info", "Visit the wiki for additional information "+
+		"https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu")
 }
 
 func filterInput(r rune) (rune, bool) {
@@ -759,14 +836,12 @@ func message(level string, message string) {
 
 func exit() {
 	color.Red("[!]Quitting")
-	serverLog.WriteString(fmt.Sprintf("[%s]Shutting down Merlin Server due to user input", time.Now()))
+	logging.Server("Shutting down Merlin Server due to user input")
 	os.Exit(0)
 }
 
 func executeCommand(name string, arg []string) {
-	var cmd *exec.Cmd
-
-	cmd = exec.Command(name, arg...)
+	cmd := exec.Command(name, arg...) // #nosec G204 Users can execute any arbitrary command by design
 
 	out, err := cmd.CombinedOutput()
 
@@ -775,126 +850,6 @@ func executeCommand(name string, arg []string) {
 	} else {
 		message("success", fmt.Sprintf("%s", out))
 	}
-}
-
-// parseHex evaluates a string array to determine its format and returns a byte array of the hex
-func parseHex(str []string) ([]byte, error) {
-
-	if core.Debug {
-		message("debug", "Entering into cli.parseHex function")
-	}
-
-	hexString := strings.Join(str, "")
-
-	if core.Debug {
-		message("debug", "Parsing: ")
-		message("debug", fmt.Sprintf("%s", hexString))
-	}
-
-	data, err := base64.StdEncoding.DecodeString(hexString)
-	if err != nil {
-		if core.Verbose {
-			message("info", "Passed in string was not Base64 encoded")
-		}
-		if core.Debug {
-			message("debug", fmt.Sprintf("%s", err.Error()))
-		}
-	} else {
-		if core.Verbose {
-			message("info", "Passed in string is Base64 encoded")
-		}
-		s := string(data)
-		hexString = s
-	}
-
-	// see if string is prefixed with 0x
-	if hexString[0:2] == "0x" {
-		if core.Verbose {
-			message("info", "Passed in string contains 0x; removing")
-		}
-		hexString = strings.Replace(hexString, "0x", "", -1)
-		if strings.Contains(hexString, ",") {
-			if core.Verbose {
-				message("info", "Passed in string is comma separated; removing")
-			}
-			hexString = strings.Replace(hexString, ",", "", -1)
-		}
-		if strings.Contains(hexString, " ") {
-			if core.Verbose {
-				message("info", "Passed in string contains spaces; removing")
-			}
-			hexString = strings.Replace(hexString, " ", "", -1)
-		}
-	}
-
-	// see if string is prefixed with \x
-	if hexString[0:2] == "\\x" {
-		if core.Verbose {
-			message("info", "Passed in string contains \\x; removing")
-		}
-		hexString = strings.Replace(hexString, "\\x", "", -1)
-		if strings.Contains(hexString, ",") {
-			if core.Verbose {
-				message("info", "Passed in string is comma separated; removing")
-			}
-			hexString = strings.Replace(hexString, ",", "", -1)
-		}
-		if strings.Contains(hexString, " ") {
-			if core.Verbose {
-				message("info", "Passed in string contains spaces; removing")
-			}
-			hexString = strings.Replace(hexString, " ", "", -1)
-		}
-	}
-
-	if core.Debug {
-		message("debug", fmt.Sprintf("About to convert to byte array: \r\n%s", hexString))
-	}
-
-	h, errH := hex.DecodeString(hexString)
-
-	if core.Debug {
-		message("debug", "Leaving cli.parseHex function")
-	}
-
-	return h, errH
-
-}
-
-// parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
-func parseShellcodeFile(filePath string) ([]byte, error) {
-
-	if core.Debug {
-		message("debug", "Entering into cli.parseShellcodeFile function")
-	}
-
-	b, errB := ioutil.ReadFile(filePath)
-	if errB != nil {
-		if core.Debug {
-			message("debug", "Leaving cli.parseShellcodeFile function")
-		}
-		return nil, errB
-	}
-
-	h, errH := parseHex([]string{string(b)})
-	if errH != nil {
-		if core.Verbose {
-			message("info", "Error parsing shellcode file for Base64, \\x90\\x00, 0x90,0x00, or 9000 formats; skipping")
-			message("info", errH.Error())
-		}
-	} else {
-		if core.Debug {
-			message("debug", "Leaving cli.parseShellcodeFile function")
-		}
-		return h, nil
-	}
-
-	if core.Debug {
-		message("debug", "Leaving cli.parseShellcodeFile function")
-	}
-
-	return b, nil
-
 }
 
 // TODO add command "agents" to list all connected agents

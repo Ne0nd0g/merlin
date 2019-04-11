@@ -9,8 +9,11 @@ PASSWORD=merlin
 BUILD=$(shell git rev-parse HEAD)
 DIR=data/temp/v${VERSION}/${BUILD}
 BIN=data/bin/
-LDFLAGS=-ldflags "-s -w -X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}"
-WINAGENTLDFLAGS=-ldflags "-s -w -X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD} -H=windowsgui"
+XBUILD=-X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}
+URL ?= https://127.0.0.1:443
+XURL=-X main.url=${URL}
+LDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL}"
+WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} -H=windowsgui"
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
 F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
 F2=LICENSE
@@ -51,10 +54,10 @@ server-windows:
 agent-windows:
 	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
 
-# Compile Agent - Windows x64 DLL
+# Compile Agent - Windows x64 DLL - main() - Console
 agent-dll:
 	export GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CGO_ENABLED=1; \
-	go build -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
+	go build ${LDFLAGS} -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
 	cp data/bin/dll/merlin.c ${DIR}; \
 	x86_64-w64-mingw32-gcc -shared -pthread -o ${DIR}/merlin.dll ${DIR}/merlin.c ${DIR}/main.a -lwinmm -lntdll -lws2_32
 
@@ -86,6 +89,7 @@ agent-darwin:
 agent-javascript:
 	sed -i 's/var build = ".*"/var build = "${BUILD}"/' data/html/scripts/merlin.js
 	sed -i 's/var version = ".*"/var version = "${VERSION}"/' data/html/scripts/merlin.js
+	sed -i 's|var url = ".*"|var url = "${URL}"|' data/html/scripts/merlin.js
 
 # Make directory 'data' and then agents, db, log, x509; Copy src folder, README, and requirements
 package-server-windows:

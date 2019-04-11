@@ -1,0 +1,25 @@
+{
+  "base": {
+    "name": "sRDI",
+    "type": "extended",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Matthew Graeber (@mattifestation)","Leo Loobeek", "Nick Landers (@monoxgas)", "Dan Staples", "Stephen Fewer"],
+    "path": ["windows", "x64", "go", "exec", "sRDI.json"],
+    "platform": "WINDOWS",
+    "arch": "x64",
+    "lang": "Go",
+    "privilege": false,
+    "remote": "",
+    "local": [""],
+    "options": [
+      {"name": "dll", "value": "", "required": true, "flag": "", "description":"File path to the DLL to be conver to reflective shellcode"},
+      {"name": "clearHeader", "value": "false", "required": false, "flag": "", "description":"Set to true to clear the PE header from the resulting library that will be loaded into memory"},
+      {"name": "function", "value": "", "required": false, "flag":"", "description": "The name of the function to call after DllMain"},
+      {"name": "args", "value":  "", "required":  false, "flag": "", "description": "Arguments to be passed to the called DLL function"},
+      {"name": "pid", "value":  "", "required":  false, "flag": "", "description": "The Windows Process ID to inject the shellcode into"},
+      {"name": "method", "value":  "self", "required":  true, "flag": "", "description": "The method to execute the shellcode: self, remote, or RtlCreateUserThread"}
+    ],
+    "description": "This module will convert the provided Windows DLL to position independent shellcode that will be reflectively loaded and executed in the target process",
+    "notes": "Based on the sRDI project at: https://github.com/monoxgas/sRDI"
+  }
+}

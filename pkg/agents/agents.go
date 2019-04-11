@@ -19,7 +19,7 @@ package agents
 
 import (
 	// Standard
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -71,6 +71,7 @@ type agent struct {
 	FailedCheckin  int
 	Skew           int64
 	Proto          string
+	KillDate       int64
 }
 
 // InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
@@ -80,7 +81,8 @@ func InitialCheckIn(j messages.Base) {
 		message("debug", fmt.Sprintf("Base Message Type: %s", j.Type))
 		message("debug", fmt.Sprintf("Base Message Payload: %s", j.Payload))
 	}
-	message("success", fmt.Sprintf("Received new agent checkin from %s", j.ID))
+	logging.Server(fmt.Sprintf("Received new agent checkin from %s", j.ID))
+	message("success", fmt.Sprintf("Received new agent checkin from %s at %s", j.ID, time.Now().UTC().Format(time.RFC3339)))
 
 	// Unmarshal AgentInfo from Base
 	var agentInfo messages.AgentInfo
@@ -124,11 +126,21 @@ func InitialCheckIn(j messages.Base) {
 	agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
 
 	if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
-		os.Mkdir(agentsDir, os.ModeDir)
+		err := os.Mkdir(agentsDir, os.ModeDir)
+		if err != nil {
+			message("warn", fmt.Sprintf("There was an error creating a folder in the agents directory at %s:\r\n%s", agentsDir, err.Error()))
+		}
 	}
 	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
-		os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
-		os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
+		errM := os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
+		if errM != nil {
+			message("warn", fmt.Sprintf("There was an error creating a directory for agent %s:\r\n%s", j.ID.String(), err.Error()))
+		}
+
+		_, errC := os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
+		if errC != nil {
+			message("warn", fmt.Sprintf("There was an error creating the agent_log.txt file for agnet %s:\r\n%s", j.ID.String(), err.Error()))
+		}
 
 		if core.Verbose {
 			message("note", fmt.Sprintf("Created agent log file at: %s agent_log.txt",
@@ -144,29 +156,27 @@ func InitialCheckIn(j messages.Base) {
 	Agents[j.ID] = &agent{
 		Version: agentInfo.Version, Build: agentInfo.Build, WaitTime: agentInfo.WaitTime,
 		PaddingMax: agentInfo.PaddingMax, MaxRetry: agentInfo.MaxRetry, FailedCheckin: agentInfo.FailedCheckin,
-		Skew: agentInfo.Skew, Proto: agentInfo.Proto,
+		Skew: agentInfo.Skew, Proto: agentInfo.Proto, KillDate: agentInfo.KillDate,
 		ID: j.ID, UserName: sysInfo.UserName, UserGUID: sysInfo.UserGUID, Platform: sysInfo.Platform,
 		Architecture: sysInfo.Architecture, Ips: sysInfo.Ips,
 		HostName: sysInfo.HostName, Pid: sysInfo.Pid, channel: make(chan []Job, 10),
-		agentLog: f, InitialCheckIn: time.Now(), StatusCheckIn: time.Now()}
+		agentLog: f, InitialCheckIn: time.Now().UTC(), StatusCheckIn: time.Now().UTC()}
 
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Initial check in for agent %s\r\n", time.Now(), j.ID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Version: %s\r\n", time.Now(), agentInfo.Version))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent Build: %s\r\n", time.Now(), agentInfo.Build))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]WaitTime: %s\r\n", time.Now(), agentInfo.WaitTime))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]PaddingMax: %d\r\n", time.Now(), agentInfo.PaddingMax))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]MaxRetry: %d\r\n", time.Now(), agentInfo.MaxRetry))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]FailedCheckin: %d\r\n", time.Now(), agentInfo.FailedCheckin))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Skew: %d\r\n", time.Now(), agentInfo.Skew))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Proto: %s\r\n", time.Now(), agentInfo.Proto))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), sysInfo.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Platform: %s\r\n", time.Now(), sysInfo.Platform))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Architecture: %s\r\n", time.Now(), sysInfo.Architecture))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]HostName: %s\r\n", time.Now(), sysInfo.HostName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserName: %s\r\n", time.Now(), sysInfo.UserName))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]UserGUID: %s\r\n", time.Now(), sysInfo.UserGUID))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Process ID: %d\r\n", time.Now(), sysInfo.Pid))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]IPs: %v\r\n", time.Now(), sysInfo.Ips))
+	Log(j.ID, fmt.Sprintf("Initial check in for agent %s", agentInfo.Build))
+	Log(j.ID, fmt.Sprintf("WaitTime: %s", agentInfo.WaitTime))
+	Log(j.ID, fmt.Sprintf("PaddingMax: %d", agentInfo.PaddingMax))
+	Log(j.ID, fmt.Sprintf("MaxRetry: %d", agentInfo.MaxRetry))
+	Log(j.ID, fmt.Sprintf("FailedCheckin: %d", agentInfo.FailedCheckin))
+	Log(j.ID, fmt.Sprintf("Skew: %d", agentInfo.Skew))
+	Log(j.ID, fmt.Sprintf("Proto: %s", agentInfo.Proto))
+	Log(j.ID, fmt.Sprintf("Kill Date: %s", time.Unix(agentInfo.KillDate, 0).UTC().Format(time.RFC3339)))
+	Log(j.ID, fmt.Sprintf("Platform: %s", sysInfo.Platform))
+	Log(j.ID, fmt.Sprintf("Architecture: %s", sysInfo.Architecture))
+	Log(j.ID, fmt.Sprintf("HostName: %s", sysInfo.HostName))
+	Log(j.ID, fmt.Sprintf("UserName: %s", sysInfo.UserName))
+	Log(j.ID, fmt.Sprintf("UserGUID: %s", sysInfo.UserGUID))
+	Log(j.ID, fmt.Sprintf("Process ID: %d", sysInfo.Pid))
+	Log(j.ID, fmt.Sprintf("IPs: %v", sysInfo.Ips))
 }
 
 // StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
@@ -174,7 +184,8 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 	// Check to make sure agent UUID is in dataset
 	_, ok := Agents[j.ID]
 	if !ok {
-		message("warn", fmt.Sprintf("Orphaned agent %s has checked in. Instructing agent to re-initialize...", j.ID.String()))
+		message("warn", fmt.Sprintf("Orphaned agent %s has checked in at %s. Instructing agent to re-initialize...",
+			time.Now().UTC().Format(time.RFC3339), j.ID.String()))
 		logging.Server(fmt.Sprintf("[Orphaned agent %s has checked in", j.ID.String()))
 		job := Job{
 			ID:      core.RandStringBytesMaskImprSrc(10),
@@ -186,17 +197,17 @@ func StatusCheckIn(j messages.Base) (messages.Base, error) {
 		return m, mErr
 	}
 
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("[%s]Agent status check in\r\n", time.Now()))
+	Log(j.ID, "Agent status check in")
 	if core.Verbose {
 		message("success", fmt.Sprintf("Received agent status checkin from %s", j.ID))
 	}
 	if core.Debug {
 		message("debug", fmt.Sprintf("Received agent status checkin from %s", j.ID))
 		message("debug", fmt.Sprintf("Channel length: %d", len(Agents[j.ID].channel)))
-		message("debug", fmt.Sprintf("Channel content: %s", Agents[j.ID].channel))
+		message("debug", fmt.Sprintf("Channel content: %v", Agents[j.ID].channel))
 	}
 
-	Agents[j.ID].StatusCheckIn = time.Now()
+	Agents[j.ID].StatusCheckIn = time.Now().UTC()
 	// Check to see if there are any jobs
 	if len(Agents[j.ID].channel) >= 1 {
 		job := <-Agents[j.ID].channel
@@ -244,16 +255,18 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 		message("debug", fmt.Sprintf("Agent maxRetry: %d", p.MaxRetry))
 		message("debug", fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
 		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
+		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 	}
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("Processing AgentInfo message:\r\n"))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Version: %s \r\n", p.Version))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent Build: %s \r\n", p.Build))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent waitTime: %s \r\n", p.WaitTime))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent skew: %d \r\n", p.Skew))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent paddingMax: %d \r\n", p.PaddingMax))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent maxRetry: %d \r\n", p.MaxRetry))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent failedCheckin: %d \r\n", p.FailedCheckin))
-	Agents[j.ID].agentLog.WriteString(fmt.Sprintf("\tAgent proto: %s \r\n", p.Proto))
+	Log(j.ID, fmt.Sprintf("Processing AgentInfo message:"))
+	Log(j.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
+	Log(j.ID, fmt.Sprintf("\tAgent Build: %s ", p.Build))
+	Log(j.ID, fmt.Sprintf("\tAgent waitTime: %s ", p.WaitTime))
+	Log(j.ID, fmt.Sprintf("\tAgent skew: %d ", p.Skew))
+	Log(j.ID, fmt.Sprintf("\tAgent paddingMax: %d ", p.PaddingMax))
+	Log(j.ID, fmt.Sprintf("\tAgent maxRetry: %d ", p.MaxRetry))
+	Log(j.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
+	Log(j.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
+	Log(j.ID, fmt.Sprintf("\tAgent KillDate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 
 	Agents[j.ID].Version = p.Version
 	Agents[j.ID].Build = p.Build
@@ -263,11 +276,15 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 	Agents[j.ID].MaxRetry = p.MaxRetry
 	Agents[j.ID].FailedCheckin = p.FailedCheckin
 	Agents[j.ID].Proto = p.Proto
+	Agents[j.ID].KillDate = p.KillDate
 }
 
 // Log is used to write log messages to the agent's log file
 func Log(agentID uuid.UUID, logMessage string) {
-	Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now(), logMessage))
+	_, err := Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
+	if err != nil {
+		message("warn", fmt.Sprintf("There was an error writing to the agent log agents.Log:\r\n%s", err.Error()))
+	}
 }
 
 // GetAgentList returns a list of agents that exist and is used for command line tab completion
@@ -297,15 +314,16 @@ func ShowInfo(agentID uuid.UUID) {
 		{"Hostname", Agents[agentID].HostName},
 		{"Process ID", strconv.Itoa(Agents[agentID].Pid)},
 		{"IP", fmt.Sprintf("%v", Agents[agentID].Ips)},
-		{"Initial Check In", Agents[agentID].InitialCheckIn.String()},
-		{"Last Check In", Agents[agentID].StatusCheckIn.String()},
+		{"Initial Check In", Agents[agentID].InitialCheckIn.Format(time.RFC3339)},
+		{"Last Check In", Agents[agentID].StatusCheckIn.Format(time.RFC3339)},
 		{"Agent Version", Agents[agentID].Version},
 		{"Agent Build", Agents[agentID].Build},
 		{"Agent Wait Time", Agents[agentID].WaitTime},
-		{"Agent Wait Time Skew", fmt.Sprintf(strconv.FormatInt(Agents[agentID].Skew, 10))},
+		{"Agent Wait Time Skew", strconv.FormatInt(Agents[agentID].Skew, 10)},
 		{"Agent Message Padding Max", strconv.Itoa(Agents[agentID].PaddingMax)},
 		{"Agent Max Retries", strconv.Itoa(Agents[agentID].MaxRetry)},
 		{"Agent Failed Check In", strconv.Itoa(Agents[agentID].FailedCheckin)},
+		{"Agent Kill Date", time.Unix(Agents[agentID].KillDate, 0).UTC().Format(time.RFC3339)},
 		{"Agent Communication Protocol", Agents[agentID].Proto},
 	}
 	table.AppendBulk(data)
@@ -357,7 +375,7 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 			Type:    jobType,
 			Status:  "created",
 			Args:    jobArgs,
-			Created: time.Now(),
+			Created: time.Now().UTC(),
 		}
 
 		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
@@ -368,16 +386,22 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 				s := Agents[k].channel
 				job.ID = core.RandStringBytesMaskImprSrc(10)
 				s <- []Job{job}
-				Agents[k].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
-					"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
+				Log(k, fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
+					job.Type,
+					job.ID,
+					job.Status,
+					job.Args))
 			}
 			return job.ID, nil
 		}
 		job.ID = core.RandStringBytesMaskImprSrc(10)
 		s := Agents[agentID].channel
 		s <- []Job{job}
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Created job Type:%s, ID:%s, Status:%s, "+
-			"Args:%s \r\n", time.Now(), job.Type, job.ID, job.Status, job.Args))
+		Log(agentID, fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
+			job.Type,
+			job.ID,
+			job.Status,
+			job.Args))
 		return job.ID, nil
 	}
 	return "", errors.New("invalid agent ID")
@@ -403,7 +427,6 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 
 		k := marshalMessage(p)
-		m.Type = "CmdPayload"
 		m.Payload = (*json.RawMessage)(&k)
 	case "shellcode":
 		m.Type = "Shellcode"
@@ -426,9 +449,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		m.Payload = (*json.RawMessage)(&k)
 	case "download":
 		m.Type = "FileTransfer"
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Downloading file from agent at %s\n",
-			time.Now(),
-			job.Args[0]))
+		Log(agentID, fmt.Sprintf("Downloading file from agent at %s\n", job.Args[0]))
 
 		p := messages.FileTransfer{
 			FileLocation: job.Args[0],
@@ -457,10 +478,55 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		m.Payload = (*json.RawMessage)(&k)
 		err := RemoveAgent(agentID)
 		if err != nil {
-			message("warn", fmt.Sprintf("%s", err.Error()))
+			message("warn", err.Error())
 		} else {
 			message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
 		}
+
+	case "ls":
+		m.Type = "NativeCmd"
+		p := messages.NativeCmd{
+			Job:     job.ID,
+			Command: job.Args[0],
+		}
+
+		if len(job.Args) > 1 {
+			p.Args = job.Args[1]
+		} else {
+			p.Args = "./"
+		}
+
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "killdate":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+	case "cd":
+		m.Type = "NativeCmd"
+		p := messages.NativeCmd{
+			Job:     job.ID,
+			Command: job.Args[0],
+			Args:    strings.Join(job.Args[1:], " "),
+		}
+
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
+	case "pwd":
+		m.Type = "NativeCmd"
+		p := messages.NativeCmd{
+			Job:     job.ID,
+			Command: job.Args[0],
+			Args:    "",
+		}
+
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
 	case "maxretry":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -510,6 +576,15 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 		k := marshalMessage(p)
 		m.Payload = (*json.RawMessage)(&k)
+	case "Minidump":
+		m.Type = "Module"
+		p := messages.Module{
+			Command: job.Type,
+			Job:     job.ID,
+			Args:    job.Args,
+		}
+		k := marshalMessage(p)
+		m.Payload = (*json.RawMessage)(&k)
 	case "upload":
 		m.Type = "FileTransfer"
 		// TODO add error handling; check 2 args (src, dst)
@@ -518,11 +593,12 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			// TODO send "ServerOK"
 			return m, fmt.Errorf("there was an error reading %s: %v", job.Type, uploadFileErr)
 		}
-		fileHash := sha1.New()
-		io.WriteString(fileHash, string(uploadFile))
-		Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]Uploading file from server at %s of size %d"+
-			" bytes and SHA-1: %x to agent at %s\r\n",
-			time.Now(),
+		fileHash := sha256.New()
+		_, err := io.WriteString(fileHash, string(uploadFile))
+		if err != nil {
+			message("warn", fmt.Sprintf("There was an error generating file hash:\r\n%s", err.Error()))
+		}
+		Log(agentID, fmt.Sprintf("Uploading file from server at %s of size %d bytes and SHA-256: %x to agent at %s",
 			job.Args[0],
 			len(uploadFile),
 			fileHash.Sum(nil),
@@ -563,20 +639,38 @@ func GetAgentStatus(agentID uuid.UUID) string {
 
 // RemoveAgent deletes the agent object from Agents map by its ID
 func RemoveAgent(agentID uuid.UUID) error {
-	// Range over to make sure it exists, return error
-	isAgent := false
-	// Verify the passed in agent is known
-	for k := range Agents {
-		if Agents[k].ID == agentID {
-			isAgent = true
-		}
-	}
-	if isAgent {
+	if isAgent(agentID) {
 		delete(Agents, agentID)
 		return nil
 	}
 	return fmt.Errorf("%s is not a known agent and was not removed", agentID.String())
 
+}
+
+// GetAgentFieldValue returns a string value for the field value belonging to the specefied Agent
+func GetAgentFieldValue(agentID uuid.UUID, field string) (string, error) {
+	if isAgent(agentID) {
+		switch strings.ToLower(field) {
+		case "platform":
+			return Agents[agentID].Platform, nil
+		case "architecture":
+			return Agents[agentID].Architecture, nil
+		case "username":
+			return Agents[agentID].UserName, nil
+		}
+		return "", fmt.Errorf("the provided agent field could not be found: %s", field)
+	}
+	return "", fmt.Errorf("%s is not a valid agent", agentID.String())
+}
+
+// isAgent enumerates a map of all instantiated agents and returns true if the provided agent UUID exists
+func isAgent(agentID uuid.UUID) bool {
+	for agent := range Agents {
+		if Agents[agent].ID == agentID {
+			return true
+		}
+	}
+	return false
 }
 
 // Job is a structure for holding data for single task assigned to a single agent

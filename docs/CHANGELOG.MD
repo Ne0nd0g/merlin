@@ -4,6 +4,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.7.0 - 2019-04-11
+
+### Added
+- [Pull 48](https://github.com/Ne0nd0g/merlin/pull/48) - Added `ls` command to agent & agent menu. Uses go code native to Merlin instead of executing `ls` or `dir` binary
+- New `NativeCmd` message struct for commands native to Merlin
+- [Pull 49](https://github.com/Ne0nd0g/merlin/pull/49) - Added tests for agent package and new `/test` directory for test HTTP server
+- [Pull 50](https://github.com/Ne0nd0g/merlin/pull/50) - Adds a killdate option to agents
+  - Added `set killdate` to Merlin Server agent menu and information table so that it can be changed from the server.
+- [Pull 51](https://github.com/Ne0nd0g/merlin/pull/51) - Adds a Go native `minidump` module for Windows agents to create and receive a minidump file of a specified process (requires elevation)
+  - windows/x64/go/credentials/minidump.json module (@C__Sto)
+  - getProcess Function to exec_windows.go
+  - sePrivEnable Function to exec_windows.go
+  - MinidumpFile struct to modules.go
+  - Module struct to messages.go
+  - agent_windows_test.go to test miniDump functionality 
+- [Pull 58](https://github.com/Ne0nd0g/merlin/pull/58) - Added feature to generate in-memory TLS certificates one is not provided
+  - Adds new `pkg/utils/tls.go` package to generate TLS certificates
+  - Updated Merlin server log to include certificate information
+  - Test case for TLS certificate generation
+- [Pull 60](https://github.com/Ne0nd0g/merlin/pull/60) - Added `pwd` and `cd` command to agent & agent menu. 
+  - Uses go code native to Merlin instead of executing system binaries or access the system's CLI.
+- merlin.dll contains a DllMain function and a function named Magic to instantiate a Merlin agent
+    - DllMain does nothing
+- Added exported function named Merlin to merlinagentdll/main.go to take in a C *char and convert to Go string
+- Shellcode Reflective DLL Injection (sRDI) module windows/x64/go/exec/sRDI
+- Shellcode injection module at windows/x64/go/exec/shellcode provides same functionality as execute-shellcode from Agent menu
+- "extended" module types that call Go code from the pkg/modules directory
+- [Pull 64](https://github.com/Ne0nd0g/merlin/pull/64) - Added in Dockerfile by Alex Flores (@audibleblink)
+
+### Fixed
+- [Pull 57](https://github.com/Ne0nd0g/merlin/pull/57) - Resolved broken JSON does not increment failedCheckin counter on Merlin agent
+
+### Changed
+- Changed SHA1 library to SHA256 and checks from http2.go for publicly distributed Merlin Server test certificate
+- Moved execute-shellcode functionality to pkg/modules/shellcode
+- merlin.c contains DllMain and exported Magic function
+- Merlin Server uses exit code 0 after printing usage information
+
+### Removed
+- Removed publicly distributed certificates from repository see [Pull 58](https://github.com/Ne0nd0g/merlin/pull/58).
+- Removed "main" and "ReflectiveLoader" functions from merlin.dll/merlin.c
+
+## 0.6.8 - 2019-01-26
+
+### Added
+- The `status` command while in the agent menu to see if agent is Active, Delayed, or Dead
+- Messages printed to the CLI now include a UTC timestamp
+- Added Merlin version number and new agent checkins to Merlin Server log file
+
+### Fixed
+- Formatting error placing time stamp and message in wrong spot in the Merlin Server log file
+- Error checking in logging.go
+- Server shutdown was not actually being logged
+
+## 0.6.7 - 2019-01-22
+
+### Added
+- [Pull 45](https://github.com/Ne0nd0g/merlin/pull/45) - Added a module for Python-based SOCKS proxying (@klusitc)
+
+### Changed
+- Modified http2.go to remove `[+]` & `[!]` from shell command results printed to the terminal
+- Modified agents.go so the log files and agent info contain time in [RFC 3339](https://tools.ietf.org/html/rfc3339) compliant UTC
+- Replaced SHA-1 hash with SHA-256 in log file when using upload command
+- Updated agents.go with missing error checking
+
+## 0.6.6 - 2019-01-21
+
+### Changed
+
+- [Pull 43](https://github.com/Ne0nd0g/merlin/pull/43) - Gives users the ability to dynamically
+assign the callback URL variable at compile time by setting the URL= var in the make command by Alex Flores (@audibleblink)
+
+### Fixed
+- [Pull 44](https://github.com/Ne0nd0g/merlin/pull/44) Fixes case-sensitive autocompletion of `agent`
+  on the module menu (@audibleblink)
+
 ## 0.6.5 - 2019-01-10
 
 ### Fixed

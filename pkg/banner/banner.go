@@ -17,8 +17,8 @@
 
 package banner
 
-// Banner1 is the first banner image for Merlin
-const Banner1 string = `
+// MerlinBanner1 is the first banner image for Merlin
+const MerlinBanner1 string = `
                                &&&&&&&&
                              &&&&&&&&&&&&
                             &&&&&&&&&&&&&&&
