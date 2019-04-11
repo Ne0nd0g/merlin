@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 0.6.9 - 2019-XX-XX
+## 0.7.0 - 2019-04-11
 
 ### Added
 - [Pull 48](https://github.com/Ne0nd0g/merlin/pull/48) - Added `ls` command to agent & agent menu. Uses go code native to Merlin instead of executing `ls` or `dir` binary
