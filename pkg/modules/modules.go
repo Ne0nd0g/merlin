@@ -326,6 +326,14 @@ func validateModule(m Module) (bool, error) {
 	default:
 		return false, errors.New("invalid 'arch' value provided in module file")
 	}
+
+	// Validate Type
+	switch strings.ToUpper(m.Type) {
+	case "STANDARD":
+	case "ENHANCED":
+	default:
+		return false, errors.New("invalid or missing 'type' value in module file")
+	}
 	return true, nil
 }
 
