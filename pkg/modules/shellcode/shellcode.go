@@ -150,10 +150,17 @@ func parseShellcodeFile(filePath string) ([]byte, error) {
 	}
 
 	hexBytes, errHex := parseHex([]string{string(fileContents)})
-	if errHex != nil {
-		return nil, errHex
+
+	// If there was an error parsing the bytes then it probably wasn't ASCII hex, therefore continue on
+	if errHex == nil {
+		return hexBytes, nil
 	}
 
-	return hexBytes, nil
+	// See if it is Base64 encoded binary blob
+	base64Data, errB64 := base64.StdEncoding.DecodeString(string(fileContents))
+	if errB64 == nil {
+		return base64Data, nil
+	}
 
+	return fileContents, nil
 }
