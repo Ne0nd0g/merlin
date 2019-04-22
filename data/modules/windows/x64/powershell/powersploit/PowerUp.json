@@ -1,5 +1,6 @@
 {
   "base": {
+    "type": "standard",
     "name": "PowerUp",
     "author": ["Russel Van Tuyl (@Ne0nd0g)"],
     "credits": ["Will Schroeder (@harmj0y)"],
