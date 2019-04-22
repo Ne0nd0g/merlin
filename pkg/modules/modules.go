@@ -330,7 +330,7 @@ func validateModule(m Module) (bool, error) {
 	// Validate Type
 	switch strings.ToUpper(m.Type) {
 	case "STANDARD":
-	case "ENHANCED":
+	case "EXTENDED":
 	default:
 		return false, errors.New("invalid or missing 'type' value in module file")
 	}
