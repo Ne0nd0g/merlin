@@ -1,6 +1,7 @@
 {
     "base": {
       "name": "libprocesshider",
+      "type": "standard",
       "author": ["Tony M Lambert (@ForensicITGuy"],
       "credits": ["Gianluca Borello (@gianlucaborello)"],
       "path": ["linux", "x64", "bash", "evasion", "libprocesshider.json"],
