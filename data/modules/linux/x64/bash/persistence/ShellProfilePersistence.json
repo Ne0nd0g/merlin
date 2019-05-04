@@ -13,7 +13,7 @@
       "remote": "",
       "local": [],
       "options": [
-        {"name": "ShellProfileFile", "value": ".bashrc", "required": true, "flag": "", "description": "Shell profile file to hold command."},
+        {"name": "ShellProfileFile", "value": "~/.bashrc", "required": true, "flag": "", "description": "Shell profile file to hold command."},
         {"name": "Command", "value": "/bin/sh -c", "required": true, "flag": "", "description": "Command to execute via shell profile."}
         ],
       "description": "Establishes persistence of a specified command using a shell profile.",
