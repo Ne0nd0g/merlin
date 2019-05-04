@@ -17,7 +17,7 @@
       ],
       "description": "Uses the rm command to remove the specified shell history file.",
       "commands": [
-        "/bin/sh", "-c", "'rm ~/{{HistoryFile.value}}'"
+        "/bin/sh", "-c", "\"rm ~/{{HistoryFile.value}}\""
       ]
     }
   }
