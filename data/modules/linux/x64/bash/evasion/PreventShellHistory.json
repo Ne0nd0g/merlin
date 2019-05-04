@@ -1,0 +1,24 @@
+{
+    "base": {
+      "name": "PreventShellHistory",
+      "type": "standard",
+      "author": ["Tony M Lambert (@ForensicITGuy)"],
+      "credits": [],
+      "path": ["linux", "x64", "bash", "evasion", "PreventShellHistory.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": false,
+      "notes": "",
+      "remote": "",
+      "local": [],
+      "options": [
+        {"name": "HistoryFile", "value": "/dev/null", "required": true, "flag": "", "description": "The path of the desired history file."},
+        {"name": "HistorySize", "value": "0", "required": true, "flag": "", "description": "The allowed size of the desired history file."}
+      ],
+      "description": "Manipulates the HISTFILE and HISTFILESIZE variables to prevent saving shell history.",
+      "commands": [
+        "/bin/sh", "-c", "'echo \"HISTFILE=/dev/null\" >> ~/.bashrc && echo \"HISTFILESIZE=0\" >> ~/.bashrc'"
+      ]
+    }
+  }

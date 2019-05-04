@@ -8,7 +8,7 @@
       "platform": "linux",
       "arch": "x64",
       "lang": "bash",
-      "privilege": true,
+      "privilege": false,
       "notes": "",
       "remote": "",
       "local": [],
@@ -18,7 +18,7 @@
       ],
       "description": "Uses the touch command to manipulate timestamps using those of a reference file.",
       "commands": [
-        "/bin/sh", "-c", "touch -acmr {{ReferenceFile.value}} {{TargetFile.value}}"
+        "/bin/sh", "-c", "'touch -acmr {{ReferenceFile.value}} {{TargetFile.value}}'"
       ]
     }
   }
