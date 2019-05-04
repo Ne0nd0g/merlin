@@ -14,13 +14,12 @@
       "local": [],
       "options": [
         {"name": "CrontabSchedule", "value": "* * * * *", "required": true, "flag": "", "description": "Execution schedule for crontab entry."},
-        {"name": "CrontabCommand", "value": "/bin/sh -c", "required": true, "flag": "", "description": "Command to execute via cron."},
-        {"name": "CrontabTmpFile", "value": "/tmp/cron", "required": true, "flag": "", "description": "Temp file to hold cron entries."}
+        {"name": "CrontabCommand", "value": "/bin/sh -c", "required": true, "flag": "", "description": "Command to execute via cron."}
         ],
       "description": "Establishes persistence of a specified command using a crontab entry.",
       "commands": [
         "/bin/sh", "-c",
-        "'crontab -l > {{CrontabTmpFile.value}} && echo \"{{CrontabSchedule.value}} {{CrontabCommand.value}}\" >> {{CrontabTmpFile.value}} && crontab {{CrontabTmpFile.value}} && echo crontab successfully modified.'"
+        "'(crontab -l 2>/dev/null; echo \"{{CrontabSchedule.value}} {{CrontabCommand.value}}\") | crontab - && echo crontab successfully modified.'"
       ]
     }
   }
