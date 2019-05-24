@@ -1,5 +1,6 @@
 {
   "base": {
+    "type": "standard",
     "name": "Find-ComputersWithRemoteAccessPolicies",
     "author": ["Russel Van Tuyl (@Ne0nd0g)"],
     "credits": ["William Knowles (@william_knows)","Jon Cave (@joncave)"],

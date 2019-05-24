@@ -4,8 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+
 # Unreleased
 - Fixed an issue where the agent crashes when you set the skew to 0.
+
+## 0.7.1 - 2019-04-2X
+
+### Fixed
+-[Issue 69](https://github.com/Ne0nd0g/merlin/issues/69) - Error with modules missing type definition
+-[Issue 70](https://github.com/Ne0nd0g/merlin/issues/70) - Error parsing a shellcode file containing raw bytes
 
 
 ## 0.7.0 - 2019-04-11

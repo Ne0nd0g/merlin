@@ -1,5 +1,6 @@
 {
   "base": {
+    "type": "standard",
     "name": "Invoke-Mimikatz",
     "author": ["Russel Van Tuyl (@Ne0nd0g)"],
     "credits": ["Joe Bialek (@JosephBialek)", "Benjamin Delpy (@gentilkiwi)"],
