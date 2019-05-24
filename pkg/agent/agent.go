@@ -42,11 +42,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	merlin "github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
@@ -205,7 +205,15 @@ func (a *Agent) Run(server string) {
 			os.Exit(0)
 		}
 
-		timeSkew := time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
+		var timeSkew = time.Duration(0)
+
+		//agent crashes if you set skew to zero because rand.Int63n
+		//panics when you give it 0 input
+		if a.Skew == 0 {
+			timeSkew = 0
+		} else {
+			timeSkew = time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
+		}
 		totalWaitTime := a.WaitTime + timeSkew
 
 		if a.Verbose {
