@@ -383,43 +383,41 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 					}
 					// TODO see if you can move this out
 					return
-				} else {
-					w.WriteHeader(404)
-					return
 				}
-			} else {
-				if core.Verbose {
-					message("note", "Unauthenticated JWT w/ Authenticated JWE agent session key")
-				}
-				// Decrypt the HTTP payload, a JWE, using agent session key
-				j, errDecrypt := decryptJWE(jweString, agents.GetEncryptionKey(agentID))
-				if errDecrypt != nil {
-					message("warn", errDecrypt.Error())
-					w.WriteHeader(404)
-					return
-				}
+				w.WriteHeader(404)
+				return
+			}
+			if core.Verbose {
+				message("note", "Unauthenticated JWT w/ Authenticated JWE agent session key")
+			}
+			// Decrypt the HTTP payload, a JWE, using agent session key
+			j, errDecrypt := decryptJWE(jweString, agents.GetEncryptionKey(agentID))
+			if errDecrypt != nil {
+				message("warn", errDecrypt.Error())
+				w.WriteHeader(404)
+				return
+			}
 
-				if core.Debug {
-					message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
+			if core.Debug {
+				message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
+			}
+			if core.Verbose {
+				message("info", fmt.Sprintf("Recieved %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
+			}
+			switch j.Type {
+			case "AgentInfo":
+				err = agents.UpdateInfo(j)
+			case "AuthComplete":
+				returnMessage, err = agents.OPAQUEAuthenticateComplete(j)
+				if err != nil {
+					logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
 				}
-				if core.Verbose {
-					message("info", fmt.Sprintf("Recieved %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
-				}
-				switch j.Type {
-				case "AgentInfo":
-					err = agents.UpdateInfo(j)
-				case "AuthComplete":
-					returnMessage, err = agents.OPAQUEAuthenticateComplete(j)
-					if err != nil {
-						logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
-					}
-				case "KeyExchange":
-					returnMessage, err = agents.KeyExchange(j)
-				default:
-					message("warn", fmt.Sprintf("Invalid Activity: %s", j.Type))
-					w.WriteHeader(404)
-					return
-				}
+			case "KeyExchange":
+				returnMessage, err = agents.KeyExchange(j)
+			default:
+				message("warn", fmt.Sprintf("Invalid Activity: %s", j.Type))
+				w.WriteHeader(404)
+				return
 			}
 		} else {
 			// If not using the PSK, the agent has previously authenticated
@@ -517,10 +515,9 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					message("warn", err.Error())
 					return
-				} else {
-					message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
-					return
 				}
+				message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
+				return
 			}
 		}
 

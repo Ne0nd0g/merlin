@@ -1114,7 +1114,7 @@ func (a *Agent) getJWT() (string, error) {
 
 	agentJWT, err := jwt.SignedAndEncrypted(signer, encrypter).Claims(cl).CompactSerialize()
 	if err != nil {
-		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s")
+		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s", err)
 	}
 
 	// Parse it to check for errors

@@ -880,24 +880,22 @@ func FileTransfer(m messages.Base) error {
 			errorMessage := fmt.Errorf("there was an error decoding the fileBlob:\r\n%s", downloadBlobErr.Error())
 			Log(m.ID, errorMessage.Error())
 			return errorMessage
-		} else {
-			downloadFile := filepath.Join(agentsDir, m.ID.String(), f)
-			writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
-			if writingErr != nil {
-				errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
-				Log(m.ID, errorMessage.Error())
-				return errorMessage
-			} else {
-				successMessage := fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
-					p.FileLocation,
-					len(downloadBlob),
-					m.ID.String(),
-					downloadFile)
-
-				message("success", successMessage)
-				Log(m.ID, successMessage)
-			}
 		}
+		downloadFile := filepath.Join(agentsDir, m.ID.String(), f)
+		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
+		if writingErr != nil {
+			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
+			Log(m.ID, errorMessage.Error())
+			return errorMessage
+		}
+		successMessage := fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
+			p.FileLocation,
+			len(downloadBlob),
+			m.ID.String(),
+			downloadFile)
+
+		message("success", successMessage)
+		Log(m.ID, successMessage)
 	}
 	if core.Debug {
 		message("debug", "Leaving agents.FileTransfer")

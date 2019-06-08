@@ -127,7 +127,7 @@ func GetJWESymetric(data []byte, key []byte) (string, error) {
 	}
 
 	// Parse it to make sure there were no errors serializing it
-	jwe, errJWE = jose.ParseEncrypted(serialized)
+	_, errJWE = jose.ParseEncrypted(serialized)
 	if errJWE != nil {
 		return "", fmt.Errorf("there was an error parsing the encrypted JWE:\r\n%s", errJWE.Error())
 	}
@@ -135,7 +135,7 @@ func GetJWESymetric(data []byte, key []byte) (string, error) {
 	return serialized, nil
 }
 
-// GetJWEASymetric takes an input, typically a gob encoded messages.Base, and returns a compact serialized JWE using the
+// GetJWEAsymetric takes an input, typically a gob encoded messages.Base, and returns a compact serialized JWE using the
 // provided input RSA public key
 func GetJWEAsymetric(data []byte, key *rsa.PublicKey) (string, error) {
 	// TODO change key algorithm to ECDH
@@ -154,7 +154,7 @@ func GetJWEAsymetric(data []byte, key *rsa.PublicKey) (string, error) {
 	}
 
 	// Parse it to make sure there were no errors serializing it
-	jwe, errJWE = jose.ParseEncrypted(serialized)
+	_, errJWE = jose.ParseEncrypted(serialized)
 	if errJWE != nil {
 		return "", fmt.Errorf("there was an error parsing the encrypted JWE:\r\n%s", errJWE.Error())
 	}
