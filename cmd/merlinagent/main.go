@@ -35,12 +35,14 @@ import (
 // GLOBAL VARIABLES
 var url = "https://127.0.0.1:443"
 var build = "nonRelease"
+var psk = "merlin"
 
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
 	version := flag.Bool("version", false, "Print the agent version and exit")
 	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
+	flag.StringVar(&psk, "psk", psk, "Pre-Shared Key used to encrypt initial communications")
 	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
 	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
@@ -53,9 +55,9 @@ func main() {
 	}
 
 	// Setup and run agent
-	a := agent.New(*protocol, *verbose, *debug)
+	a := agent.New(*protocol, url, psk, *verbose, *debug)
 	a.WaitTime = *sleep
-	a.Run(url)
+	a.Run()
 }
 
 // usage prints command line options

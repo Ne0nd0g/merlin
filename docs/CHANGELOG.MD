@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.8.0 - 2019-xx-xx
+
+### Added
+
+- Network requests and responses are now encrypted in to a JWE
+- Password Based Authenticated Key Exchange (PAKE) using OPAQUE technique
+- Server and agent have new pre-shared key (psk) command line flag
+- All network requests now contain an encrypted JWT in an Authorization header that are only valid for the agent's lifetime
+- RSA keys are exchanged between server and agent, but not currently used
+
+### Changed
+
+- Replaced JSON encoding with Go's gob encoding format
+- Server does not receive agent information/configuration until after password authentication/payload encryption
+- Base messages now contain a token; used to send an agent an encrypted JWT
+
 ## 0.7.0 - 2019-04-11
 
 ### Added

