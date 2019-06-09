@@ -112,7 +112,7 @@ func Shell() {
 					menuHelpMain()
 				case "?":
 					menuHelpMain()
-				case "exit":
+				case "exit", "quit":
 					exit()
 				case "interact":
 					if len(cmd) > 1 {
@@ -120,8 +120,6 @@ func Shell() {
 						i = append(i, cmd[1])
 						menuAgent(i)
 					}
-				case "quit":
-					exit()
 				case "remove":
 					if len(cmd) > 1 {
 						i := []string{"remove"}
@@ -203,17 +201,11 @@ func Shell() {
 							m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
 					}
 
-				case "back":
+				case "back", "main":
 					menuSetMain()
-				case "main":
-					menuSetMain()
-				case "exit":
+				case "exit", "quit":
 					exit()
-				case "quit":
-					exit()
-				case "help":
-					menuHelpModule()
-				case "?":
+				case "?", "help":
 					menuHelpModule()
 				default:
 					message("info", "Executing system command...")
@@ -324,11 +316,9 @@ func Shell() {
 						message("info", "execute-shellcode RtlCreateUserThread <pid> <shellcode>")
 						break
 					}
-				case "exit":
+				case "exit", "quit":
 					exit()
-				case "help":
-					menuHelpAgent()
-				case "?":
+				case "?", "help":
 					menuHelpAgent()
 				case "info":
 					agents.ShowInfo(shellAgent)
@@ -401,8 +391,6 @@ func Shell() {
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "main":
 					menuSetMain()
-				case "quit":
-					exit()
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
@@ -834,10 +822,44 @@ func message(level string, message string) {
 	}
 }
 
+func einslice(element string, slice []string) bool {
+	for _, match := range slice {
+		if element == match {
+			return true
+		}
+	}
+	return false
+}
+
+func confirm() bool {
+	response, err := prompt.Readline()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	yes := []string{"y", "yes"}
+	no := []string{"n", "no"}
+	response = strings.ToLower(response)
+
+	if einslice(response, yes) {
+		return true
+	}
+	if einslice(response, no) {
+		return false
+	}
+
+	return confirm()
+}
+
 func exit() {
-	color.Red("[!]Quitting")
-	logging.Server("Shutting down Merlin Server due to user input")
-	os.Exit(0)
+	prompt.SetPrompt("Are you sure you want to exit? [yes/no]: ")
+	if confirm() {
+		color.Red("[!]Quitting")
+		logging.Server("Shutting down Merlin Server due to user input")
+		os.Exit(0)
+	} else {
+		prompt.SetPrompt("\033[31mMerlin»\033[0m ")
+	}
 }
 
 func executeCommand(name string, arg []string) {
