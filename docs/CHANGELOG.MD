@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 -[Issue 69](https://github.com/Ne0nd0g/merlin/issues/69) - Error with modules missing type definition
 -[Issue 70](https://github.com/Ne0nd0g/merlin/issues/70) - Error parsing a shellcode file containing raw bytes
+-[Issue 54](https://github.com/Ne0nd0g/merlin/issues/54) - Prompt to exit server when user types "quit" or "exit"
 
 ## 0.7.0 - 2019-04-11
 
