@@ -91,7 +91,7 @@ func Shell() {
 				continue
 			}
 		} else if err == io.EOF {
-			break
+			exit()
 		}
 
 		line = strings.TrimSpace(line)
@@ -838,27 +838,24 @@ func confirm() bool {
 	}
 
 	yes := []string{"y", "yes"}
-	no := []string{"n", "no"}
 	response = strings.ToLower(response)
 
 	if einslice(response, yes) {
 		return true
 	}
-	if einslice(response, no) {
-		return false
-	}
 
-	return confirm()
+	return false
 }
 
 func exit() {
+	oldprompt := prompt.Config.Prompt
 	prompt.SetPrompt("Are you sure you want to exit? [yes/no]: ")
 	if confirm() {
 		color.Red("[!]Quitting")
 		logging.Server("Shutting down Merlin Server due to user input")
 		os.Exit(0)
 	} else {
-		prompt.SetPrompt("\033[31mMerlin»\033[0m ")
+		prompt.SetPrompt(oldprompt)
 	}
 }
 
