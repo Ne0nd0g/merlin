@@ -835,7 +835,9 @@ func JobResults(m messages.Base) error {
 	p := m.Payload.(messages.CmdResults)
 	Log(m.ID, fmt.Sprintf("Results for job: %s", p.Job))
 
+	fmt.Println()
 	message("success", fmt.Sprintf("Results for job %s at %s", p.Job, time.Now().UTC().Format(time.RFC3339)))
+	fmt.Println()
 	if len(p.Stdout) > 0 {
 		Log(m.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
 		color.Green(p.Stdout)
@@ -848,6 +850,7 @@ func JobResults(m messages.Base) error {
 	if core.Debug {
 		message("debug", "Leaving agents.JobResults")
 	}
+	fmt.Println()
 	return nil
 }
 

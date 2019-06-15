@@ -212,6 +212,7 @@ func (s *Server) Run() error {
 
 	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
 	if s.psk == "merlin" {
+		fmt.Println()
 		message("warn", "Listener was started using \"merlin\" as the Pre-Shared Key (PSK) allowing anyone"+
 			" decrypt message traffic.")
 		message("note", "Consider changing the PSK by using the -psk command line flag.")
@@ -425,8 +426,6 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
 				}
-			case "KeyExchange":
-				returnMessage, err = agents.KeyExchange(j)
 			default:
 				message("warn", fmt.Sprintf("Invalid Activity: %s", j.Type))
 				w.WriteHeader(404)
@@ -457,6 +456,8 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			switch j.Type {
+			case "KeyExchange":
+				returnMessage, err = agents.KeyExchange(j)
 			case "StatusCheckIn":
 				returnMessage, err = agents.StatusCheckIn(j)
 			case "CmdResults":

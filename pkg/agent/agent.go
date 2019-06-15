@@ -269,14 +269,6 @@ func (a *Agent) initialCheckIn(client *http.Client) bool {
 		return false
 	}
 
-	// Send RSA keys encrypted using authentication derived secret
-	errRSA := a.rsaKeyExchange()
-	if errRSA != nil {
-		if a.Verbose {
-			message("warn", errRSA.Error())
-		}
-	}
-
 	// Now that the agent is authenticated, send in agent info
 	infoResponse, errAgentInfo := a.sendMessage("POST", a.getAgentInfoMessage())
 	if errAgentInfo != nil {
@@ -291,6 +283,14 @@ func (a *Agent) initialCheckIn(client *http.Client) bool {
 	if errHandler != nil {
 		if a.Verbose {
 			message("warn", errHandler.Error())
+		}
+	}
+
+	// Send RSA keys encrypted using authentication derived secret
+	errRSA := a.rsaKeyExchange()
+	if errRSA != nil {
+		if a.Verbose {
+			message("warn", errRSA.Error())
 		}
 	}
 
