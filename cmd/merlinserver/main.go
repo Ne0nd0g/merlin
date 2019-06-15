@@ -20,6 +20,7 @@ package main
 import (
 	// Standard
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -37,6 +38,7 @@ import (
 
 // Global Variables
 var build = "nonRelease"
+var psk = "merlin"
 
 func main() {
 	logging.Server("Starting Merlin Server version " + merlin.Version + " build " + merlin.Build)
@@ -50,7 +52,7 @@ func main() {
 		"The x509 certificate for the HTTPS listener")
 	key := flag.String("x509key", filepath.Join(string(core.CurrentDir), "data", "x509", "server.key"),
 		"The x509 certificate key for the HTTPS listener")
-	psk := flag.String("psk", "merlin", "Pre-Shared Key used to encrypt initial communications")
+	flag.StringVar(&psk, "psk", psk, "Pre-Shared Key used to encrypt initial communications")
 	flag.Usage = func() {
 		color.Blue("#################################################")
 		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
@@ -70,13 +72,15 @@ func main() {
 	go cli.Shell()
 
 	// Start Merlin Server to listen for agents
-	server, err := http2.New(*ip, *port, *proto, *key, *crt, *psk)
+	server, err := http2.New(*ip, *port, *proto, *key, *crt, psk)
 	if err != nil {
-		color.Red(err.Error())
+		color.Red(fmt.Sprintf("[!]There was an error creating a new server instance:\r\n%s", err.Error()))
+		os.Exit(1)
 	} else {
 		err := server.Run()
 		if err != nil {
-			color.Red("[!]There was an error starting the server")
+			color.Red(fmt.Sprintf("[!]There was an error starting the server:\r\n%s", err.Error()))
+			os.Exit(1)
 		}
 	}
 }

@@ -86,16 +86,16 @@ func KeyExchange(m messages.Base) (messages.Base, error) {
 	}
 
 	serverKeyMessage := messages.Base{
+		ID:      m.ID,
 		Version: 1.0,
 		Type:    "KeyExchange",
+		Padding: core.RandStringBytesMaskImprSrc(4096),
 	}
 
 	// Make sure the agent has previously authenticated
 	if !isAgent(m.ID) {
 		return serverKeyMessage, fmt.Errorf("the agent does not exist")
 	}
-
-	m.Padding = core.RandStringBytesMaskImprSrc(Agents[m.ID].PaddingMax)
 
 	logging.Server(fmt.Sprintf("Received new agent key exchange from %s", m.ID))
 
@@ -144,14 +144,13 @@ func OPAQUEAuthenticateInit(m messages.Base, secret []byte) (messages.Base, erro
 		ID:      m.ID,
 		Version: 1.0,
 		Type:    "AuthInit",
+		Padding: core.RandStringBytesMaskImprSrc(4096),
 	}
 
 	// check to see if this agent is already known to the server
 	if isAgent(m.ID) {
 		return returnMessage, fmt.Errorf("the %s agent has already been OPAQUE authenticated", m.ID.String())
 	}
-
-	m.Padding = core.RandStringBytesMaskImprSrc(4096)
 
 	// create new agent and add it to the global map
 	agent, agentErr := newAgent(m.ID)
@@ -232,16 +231,16 @@ func OPAQUEAuthenticateComplete(m messages.Base) (messages.Base, error) {
 	}
 
 	returnMessage := messages.Base{
+		ID:      m.ID,
 		Version: 1.0,
 		Type:    "ServerOk",
+		Padding: core.RandStringBytesMaskImprSrc(4096),
 	}
 
 	// check to see if this agent is already known to the server
 	if !isAgent(m.ID) {
 		return returnMessage, fmt.Errorf("%s is not a known agent", m.ID.String())
 	}
-
-	m.Padding = core.RandStringBytesMaskImprSrc(4096)
 
 	Log(m.ID, "Received agent OPAQUE authentication complete message")
 

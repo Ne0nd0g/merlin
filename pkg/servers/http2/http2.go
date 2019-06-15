@@ -164,14 +164,16 @@ func New(iface string, port int, protocol string, key string, certificate string
 
 	// Configure TLS
 	TLSConfig := &tls.Config{
-		Certificates: []tls.Certificate{cer},
-		MinVersion:   tls.VersionTLS12,
+		Certificates:             []tls.Certificate{cer},
+		MinVersion:               tls.VersionTLS12,
+		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+		PreferServerCipherSuites: true,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 		},
-		NextProtos: []string{protocol},
+		//NextProtos: []string{protocol}, //Dont need to specify because server will pick
 	}
 
 	s.Mux.HandleFunc("/", s.agentHandler)
@@ -183,6 +185,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 		TLSConfig:      TLSConfig,
+		//TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0), // <- Disables HTTP/2
 	}
 
 	if s.Protocol == "h2" {
@@ -208,6 +211,11 @@ func (s *Server) Run() error {
 	logging.Server(fmt.Sprintf("Starting %s Listener at %s:%d", s.Protocol, s.Interface, s.Port))
 
 	time.Sleep(45 * time.Millisecond) // Sleep to allow the shell to start up
+	if s.psk == "merlin" {
+		message("warn", "Listener was started using \"merlin\" as the Pre-Shared Key (PSK) allowing anyone"+
+			" decrypt message traffic.")
+		message("note", "Consider changing the PSK by using the -psk command line flag.")
+	}
 	message("note", fmt.Sprintf("Starting %s listener on %s:%d", s.Protocol, s.Interface, s.Port))
 
 	if s.Protocol == "h2" {
@@ -216,7 +224,7 @@ func (s *Server) Run() error {
 		defer func() {
 			err := server.Close()
 			if err != nil {
-				m := fmt.Sprintf("There was an error starting the h2 server:\r\n%s", err.Error())
+				m := fmt.Sprintf("There was an error starting the %s server:\r\n%s", s.Protocol, err.Error())
 				logging.Server(m)
 				message("warn", m)
 				return
@@ -245,8 +253,8 @@ func (s *Server) Run() error {
 // agentHandler function is responsible for all Merlin agent traffic
 func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 	if core.Verbose {
-		message("note", fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.RemoteAddr))
-		logging.Server(fmt.Sprintf("Received HTTP %s Connection from %s", r.Method, r.RemoteAddr))
+		message("note", fmt.Sprintf("Received %s %s connection from %s", r.Proto, r.Method, r.RemoteAddr))
+		logging.Server(fmt.Sprintf("Received HTTP %s connection from %s", r.Method, r.RemoteAddr))
 	}
 
 	if core.Debug {
@@ -273,6 +281,11 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 		logging.Server(fmt.Sprintf("[DEBUG]Content Length: %d", r.ContentLength))
 	}
 
+	// Check for Merlin PRISM activity
+	if r.UserAgent() == "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 " {
+		message("warn", fmt.Sprintf("Someone from %s is attempting to fingerprint this Merlin server", r.RemoteAddr))
+		//w.WriteHeader(404)
+	}
 	// Make sure the message has a JWT
 	token := r.Header.Get("Authorization")
 	if token == "" {
@@ -281,7 +294,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == "POST" && r.ProtoMajor == 2 {
+	if r.Method == http.MethodPost {
 
 		var returnMessage messages.Base
 		var err error
@@ -467,6 +480,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 
 		if returnMessage.Type == "" {
 			returnMessage.Type = "ServerOk"
+			returnMessage.ID = agentID
 		}
 		if core.Verbose {
 			message("note", fmt.Sprintf("Sending "+returnMessage.Type+" message type to agent"))
@@ -573,7 +587,7 @@ func getJWT(agentID uuid.UUID, key []byte) (string, error) {
 
 	agentJWT, err := jwt.SignedAndEncrypted(signer, encrypter).Claims(cl).CompactSerialize()
 	if err != nil {
-		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s")
+		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s", err.Error())
 	}
 
 	// Parse it to check for errors

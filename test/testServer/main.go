@@ -19,13 +19,17 @@ package testserver
 
 import (
 	// Standard
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
+	"encoding/gob"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/agents"
+	"io/ioutil"
 	"log"
 	"math/big"
 	"net"
@@ -33,39 +37,106 @@ import (
 	"testing"
 	"time"
 
+	// 3rd Party
+	"gopkg.in/square/go-jose.v2"
+
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
+
+var verbose = true
 
 func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && r.RequestURI == "/isup" {
 		w.WriteHeader(200)
+	}
+
+	//Read the request message until EOF
+	requestBytes, errRequestBytes := ioutil.ReadAll(r.Body)
+	if errRequestBytes != nil {
+		if verbose {
+			fmt.Println(fmt.Sprintf("there was an error reading the request message:\r\n%s", errRequestBytes.Error()))
+		}
+		w.WriteHeader(500)
 		return
 	}
-	bod := ""
 
-	var payload json.RawMessage
-	j := messages.Base{
-		Payload: &payload,
-	}
-	err := json.NewDecoder(r.Body).Decode(&j)
-	if err != nil {
-		log.Fatalf("There was an error:\r\n%s", err.Error())
+	// Decode gob to JWE string
+	var jweString string
+	errDecode := gob.NewDecoder(bytes.NewReader(requestBytes)).Decode(&jweString)
+	if errDecode != nil {
+		if verbose {
+			fmt.Println(fmt.Sprintf("there was an error decoding the message from gob to JWE string:\r\n%s", errDecode.Error()))
+		}
+		w.WriteHeader(500)
+		return
 	}
 
-	switch r.UserAgent() {
-	case "BrokenJSON":
-		w.Header().Set("Content-Type", "application/json")
-		bod = "{this is hella broken"
+	key := sha256.Sum256([]byte("merlinTest"))
+
+	// Decrypt JWE
+	j, errDecryptPSK := decryptJWE(jweString, key[:])
+	if errDecryptPSK != nil {
+		if verbose {
+			fmt.Println(fmt.Sprintf("there was an error decrypting the JWE:\r\n%s", errDecryptPSK.Error()))
+		}
+		w.WriteHeader(500)
+		return
 	}
 
 	//fmt.Println(fmt.Sprintf("Request: %+v\nBody:%+v", r, j)) //uncomment here if you want to print out exactly what the test server receives
-	respCode := http.StatusOK
-	//perform logic here to determine if the agent is behaving as expected
-	w.WriteHeader(respCode)
-	_, errF := fmt.Fprintln(w, bod)
-	if errF != nil {
-		log.Fatalf("There was an error writing the message:\r\n%s", errF)
+
+	var returnMessage messages.Base
+	var err error
+
+	// User Agent based actions
+	switch r.UserAgent() {
+	case "invalidMessageBaseType":
+		returnMessage.Type = "Test"
+	}
+
+	// Message type based action
+	switch j.Type {
+	case "AuthInit":
+		returnMessage, err = agents.OPAQUEAuthenticateInit(j, key[:])
+	default:
+
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Encode messages.Base into a gob
+	returnMessageBytes := new(bytes.Buffer)
+	errReturnMessageBytes := gob.NewEncoder(returnMessageBytes).Encode(returnMessage)
+	if errReturnMessageBytes != nil {
+		if verbose {
+			fmt.Println(fmt.Sprintf("there was an error encoding the return message into a gob:\r\n%s", errReturnMessageBytes.Error()))
+		}
+		w.WriteHeader(500)
+		return
+	}
+
+	// Get JWE
+	jwe, errJWE := core.GetJWESymetric(returnMessageBytes.Bytes(), key[:])
+	if errJWE != nil {
+		if verbose {
+			fmt.Println(fmt.Sprintf("there was an error encrypting the message into a JWE:\r\n%s", errJWE.Error()))
+		}
+		w.WriteHeader(500)
+		return
+	}
+
+	// Encode JWE to GOB and send it to the agent
+	w.Header().Set("Content-Type", "application/octet-stream")
+	errEncode := gob.NewEncoder(w).Encode(jwe)
+	if errEncode != nil {
+		if verbose {
+			fmt.Println(fmt.Sprintf("there was an error encoding the JWE into a gob:\r\n%s", errEncode.Error()))
+		}
+		w.WriteHeader(500)
+		return
 	}
 }
 
@@ -117,7 +188,6 @@ func generateTLSConfig() *tls.Config {
 
 //Start starts the test HTTP server
 func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testing.T) {
-
 	s := http.NewServeMux()
 	ts := TestServer{
 		tes: t,
@@ -173,4 +243,29 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 
 	close(setup)
 	<-finishedTest //this is an ultra gross hack :(
+}
+
+// decryptJWE takes provided JWE string and decrypts it using the per-agent key
+func decryptJWE(jweString string, key []byte) (messages.Base, error) {
+	var m messages.Base
+
+	// Parse JWE string back into JSONWebEncryption
+	jwe, errObject := jose.ParseEncrypted(jweString)
+	if errObject != nil {
+		return m, fmt.Errorf("there was an error parseing the JWE string into a JSONWebEncryption object:\r\n%s", errObject)
+	}
+
+	// Decrypt the JWE
+	jweMessage, errDecrypt := jwe.Decrypt(key)
+	if errDecrypt != nil {
+		return m, fmt.Errorf("there was an error decrypting the JWE:\r\n%s", errDecrypt.Error())
+	}
+
+	// Decode the JWE payload into a messages.Base struct
+	errDecode := gob.NewDecoder(bytes.NewReader(jweMessage)).Decode(&m)
+	if errDecode != nil {
+		return m, fmt.Errorf("there was an error decoding JWE payload message sent by an agent:\r\n%s", errDecode.Error())
+	}
+
+	return m, nil
 }

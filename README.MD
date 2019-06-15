@@ -44,30 +44,37 @@ sudo ./merlinServer-Linux-x64
 ## Merlin Server Command Line Flags
 `./merlinServer-Linux-x64 -h`
 ```
+Version: 0.8.0.BETA
+Build: nonRelease
   -debug
         Enable debug output
   -i string
-        The IP address of the interface to bind to (default "0.0.0.0")
+        The IP address of the interface to bind to (default "127.0.0.1")
   -p int
         Merlin Server Port (default 443)
   -proto string
         Protocol for the agent to connect with [h2, hq] (default "h2")
+  -psk string
+        Pre-Shared Key used to encrypt initial communications (default "merlin")
   -v    Enable verbose output
   -x509cert string
-        The x509 certificate for the HTTPS listener (default "C:\\Merlin\\data\\x509\\server.crt")
+        The x509 certificate for the HTTPS listener (default "/opt/merlin/data/x509/server.crt")
   -x509key string
-        The x509 certificate key for the HTTPS listener (default "C:\\Merlin\\data\\x509\\server.key")
+        The x509 certificate key for the HTTPS listener (default "/opt/merlin/data/x509/server.key")
 ```
 
 ## Merlin Agent Command Line Flags
 `./merlinAgent-Linux-x64 -h`
 ```
+Merlin Agent
   -debug
         Enable debug output
   -proto string
         Protocol for the agent to connect with [h2, hq] (default "h2")
+  -psk string
+        Pre-Shared Key used to encrypt initial communications (default "merlin")
   -sleep duration
-        Time for agent to sleep (default 10s)
+        Time for agent to sleep (default 30s)
   -url string
         Full URL for agent to connect to (default "https://127.0.0.1:443")
   -v    Enable verbose output
