@@ -217,6 +217,26 @@
 			"revisionTime": "2019-05-01T09:33:42Z"
 		},
 		{
+			"path": "go.dedis.ch/kyber/v3",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
+		},
+		{
+			"path": "go.dedis.ch/kyber/v3/group/edwards25519",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
+		},
+		{
+			"path": "go.dedis.ch/kyber/v3/group/nist",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
+		},
+		{
+			"path": "go.dedis.ch/kyber/v3/pairing",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
+		},
+		{
+			"path": "go.dedis.ch/kyber/v3/pairing/bn256",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
+		},
+		{
 			"checksumSHA1": "FwW3Vv4jW0Nv7V2SZC7x/Huj5M4=",
 			"path": "golang.org/x/crypto/argon2",
 			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
