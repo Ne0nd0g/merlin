@@ -193,16 +193,58 @@
 			"revisionTime": "2019-05-01T09:33:42Z"
 		},
 		{
+			"checksumSHA1": "lJLRUPC1+X2R4HQy5XfxhCzQKNA=",
+			"path": "go.dedis.ch/kyber/sign/schnorr",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
+			"revisionTime": "2019-05-01T09:33:42Z"
+		},
+		{
+			"checksumSHA1": "G/4vbOCYkxCn0KA9E5l8+y9uaU8=",
+			"path": "go.dedis.ch/kyber/suites",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
+			"revisionTime": "2019-05-01T09:33:42Z"
+		},
+		{
+			"checksumSHA1": "kf8+2ETF3q4mb9Hb//QxXPTZ7cs=",
+			"path": "go.dedis.ch/kyber/util/key",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
+			"revisionTime": "2019-05-01T09:33:42Z"
+		},
+		{
+			"checksumSHA1": "xmvCdVAaWpySAWU3MAiyQtA6nh4=",
+			"path": "go.dedis.ch/kyber/util/random",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
+			"revisionTime": "2019-05-01T09:33:42Z"
+		},
+		{
+			"checksumSHA1": "FwW3Vv4jW0Nv7V2SZC7x/Huj5M4=",
+			"path": "golang.org/x/crypto/argon2",
+			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
+			"revisionTime": "2019-04-19T16:04:53Z"
+		},
+		{
 			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
 			"path": "golang.org/x/crypto/curve25519",
 			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
 			"revisionTime": "2017-09-27T09:16:38Z"
 		},
 		{
+			"checksumSHA1": "2LpxYGSf068307b7bhAuVjvzLLc=",
+			"path": "golang.org/x/crypto/ed25519",
+			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
+			"revisionTime": "2019-04-19T16:04:53Z"
+		},
+		{
 			"checksumSHA1": "4D8hxMIaSDEW5pCQk22Xj4DcDh4=",
 			"path": "golang.org/x/crypto/hkdf",
 			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
 			"revisionTime": "2017-09-27T09:16:38Z"
+		},
+		{
+			"checksumSHA1": "1MGpGDQqnUoRpv7VEcQrXOBydXE=",
+			"path": "golang.org/x/crypto/pbkdf2",
+			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
+			"revisionTime": "2019-04-19T16:04:53Z"
 		},
 		{
 			"checksumSHA1": "pCY4YtdNKVBYRbNvODjx8hj0hIs=",
