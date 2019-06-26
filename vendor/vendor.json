@@ -27,6 +27,12 @@
 			"revisionTime": "2017-03-13T23:49:21Z"
 		},
 		{
+			"checksumSHA1": "Ay+ic7NB3/HApe9g4KlC5nVlY98=",
+			"path": "github.com/cretz/gopaque/gopaque",
+			"revision": "8180617f489fa5ce0e27660415c024cadd8ad19a",
+			"revisionTime": "2019-02-06T21:05:59Z"
+		},
+		{
 			"checksumSHA1": "AXA+JyaZ70zQ49yj43VfPVi0OPs=",
 			"path": "github.com/fatih/color",
 			"revision": "bf82308e8c8546dc2b945157173eb8a959ae9505",
@@ -257,6 +263,12 @@
 			"path": "golang.org/x/text/unicode/norm",
 			"revision": "cfdf022e86b4ecfb646e1efbd7db175dd623a8fa",
 			"revisionTime": "2017-06-28T09:51:01Z"
+		},
+		{
+			"checksumSHA1": "oRfTuL23MIBG2nCwjweTJz4Eiqg=",
+			"path": "gopkg.in/square/go-jose.v2",
+			"revision": "730df5f748271903322feb182be83b43ebbbe27d",
+			"revisionTime": "2019-04-10T21:58:30Z"
 		}
 	],
 	"rootPath": "github.com/Ne0nd0g/merlin"
