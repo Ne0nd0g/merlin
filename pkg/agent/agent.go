@@ -97,7 +97,7 @@ type Agent struct {
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, url string, psk string, proxy string, verbose bool, debug bool) Agent {
+func New(protocol string, url string, psk string, proxy string, verbose bool, debug bool) (Agent, error) {
 	if debug {
 		message("debug", "Entering agent.New function")
 	}
@@ -122,49 +122,41 @@ func New(protocol string, url string, psk string, proxy string, verbose bool, de
 
 	u, errU := user.Current()
 	if errU != nil {
-		if a.Debug {
-			message("warn", "There was an error getting the username")
-			message("warn", errU.Error())
-		}
-	} else {
-		a.UserName = u.Username
-		a.UserGUID = u.Gid
+		return a, fmt.Errorf("there was an error getting the current user:\r\n%s", errU)
 	}
+
+	a.UserName = u.Username
+	a.UserGUID = u.Gid
 
 	h, errH := os.Hostname()
 	if errH != nil {
-		if a.Debug {
-			message("warn", "There was an error getting the hostname")
-			message("warn", errH.Error())
-		}
-	} else {
-		a.HostName = h
+		return a, fmt.Errorf("there was an error getting the hostname:\r\n%s", errH)
 	}
+
+	a.HostName = h
 
 	interfaces, errI := net.Interfaces()
 	if errI != nil {
-		if a.Debug {
-			message("warn", "There was an error getting the the IP addresses")
-			message("warn", errI.Error())
-		}
-	} else {
-		for _, iface := range interfaces {
-			addrs, err := iface.Addrs()
-			if err == nil {
-				for _, addr := range addrs {
-					a.Ips = append(a.Ips, addr.String())
-				}
+		return a, fmt.Errorf("there was an error getting the IP addresses:\r\n%s", errI)
+	}
+
+	for _, iface := range interfaces {
+		addrs, err := iface.Addrs()
+		if err == nil {
+			for _, addr := range addrs {
+				a.Ips = append(a.Ips, addr.String())
 			}
+		} else {
+			return a, fmt.Errorf("there was an error getting interface information:\r\n%s", err)
 		}
 	}
+
 	client, errClient := getClient(a.Proto, proxy)
-	if errClient == nil {
-		a.Client = client
-	} else {
-		if a.Verbose {
-			message("warn", errClient.Error())
-		}
+	if errClient != nil {
+		return a, fmt.Errorf("there was an error getting a transport client:\r\n%s", errClient)
 	}
+
+	a.Client = client
 
 	// Set encryption secret to pre-authentication pre-shared key
 	k := sha256.Sum256([]byte(psk))
@@ -172,10 +164,7 @@ func New(protocol string, url string, psk string, proxy string, verbose bool, de
 	// Generate RSA key pair
 	privateKey, rsaErr := rsa.GenerateKey(cryptorand.Reader, 4096)
 	if rsaErr != nil {
-		if verbose {
-			message("warn", fmt.Sprintf("There was an error generating the RSA key pair:\r\n%s", rsaErr.Error()))
-		}
-		os.Exit(1)
+		return a, fmt.Errorf("there was an error generating the RSA key pair:\r\n%s", rsaErr)
 	}
 
 	a.RSAKeys = privateKey
@@ -183,9 +172,7 @@ func New(protocol string, url string, psk string, proxy string, verbose bool, de
 	// Create JWT using pre-authentication pre-shared key; updated by server after authentication
 	agentJWT, errJWT := a.getJWT()
 	if errJWT != nil {
-		if verbose {
-			message("warn", fmt.Sprintf("there was an erreor getting the initial JWT:\r\n%s", errJWT))
-		}
+		return a, fmt.Errorf("there was an erreor getting the initial JWT:\r\n%s", errJWT)
 	}
 	a.JWT = agentJWT
 
@@ -205,11 +192,11 @@ func New(protocol string, url string, psk string, proxy string, verbose bool, de
 	if debug {
 		message("debug", "Leaving agent.New function")
 	}
-	return a
+	return a, nil
 }
 
 // Run instructs an agent to establish communications with the passed in server using the passed in protocol
-func (a *Agent) Run() {
+func (a *Agent) Run() error {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	if a.Verbose {
@@ -229,17 +216,10 @@ func (a *Agent) Run() {
 				a.initial = a.initialCheckIn(a.Client)
 			}
 			if a.FailedCheckin >= a.MaxRetry {
-				if a.Verbose {
-					message("warn", "Failed Checkin is greater than or equal to max retries. Quitting")
-				}
-				os.Exit(0)
+				return fmt.Errorf("maximum number of failed checkin attempts reached: %d", a.MaxRetry)
 			}
 		} else {
-			if a.Verbose {
-				message("warn", fmt.Sprintf("Quitting. Agent Kill Date has been exceeded: %s",
-					time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
-			}
-			os.Exit(0)
+			return fmt.Errorf("agent kill date has been exceeded: %s", time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339))
 		}
 
 		timeSkew := time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
@@ -544,6 +524,9 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
+	if a.ID != m.ID {
+		return returnMessage, fmt.Errorf("the input message UUID did not match this agent's UUID")
+	}
 	var c messages.CmdResults
 	if m.Token != "" {
 		a.JWT = m.Token

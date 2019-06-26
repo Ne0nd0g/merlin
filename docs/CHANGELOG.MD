@@ -27,7 +27,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Server does not receive agent information/configuration until after password authentication/payload encryption
 - Base messages now contain a token; used to send an agent an encrypted JWT
 - agent.New() requires the url, psk, and proxy settings
+- agent.New() can return an error
 - agent.Run() does not take a url anymore, it is part of the Agent structure
+- agent.Run() can return an error
+- Server & Agent log file directory permissions changed to 0750
+- Server & Agent log file permissions changed to 0640
 
 ### Removed
 

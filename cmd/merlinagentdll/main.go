@@ -36,8 +36,14 @@ func main() {}
 
 // run is a private function called by exported functions to instantiate/execute the Agent
 func run(URL string) {
-	a := agent.New("h2", URL, psk, proxy, false, false)
-	a.Run()
+	a, err := agent.New("h2", URL, psk, proxy, false, false)
+	if err != nil {
+		os.Exit(1)
+	}
+	errRun := a.Run()
+	if errRun != nil {
+		os.Exit(1)
+	}
 }
 
 // EXPORTED FUNCTIONS

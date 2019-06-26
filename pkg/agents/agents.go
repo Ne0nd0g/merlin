@@ -731,7 +731,7 @@ func RemoveAgent(agentID uuid.UUID) error {
 
 }
 
-// GetAgentFieldValue returns a string value for the field value belonging to the specefied Agent
+// GetAgentFieldValue returns a string value for the field value belonging to the specified Agent
 func GetAgentFieldValue(agentID uuid.UUID, field string) (string, error) {
 	if isAgent(agentID) {
 		switch strings.ToLower(field) {
@@ -769,26 +769,24 @@ func newAgent(agentID uuid.UUID) (agent, error) {
 
 	agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
 
-	// Make sure the top-level agents directory exists
-	if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
-		err := os.Mkdir(agentsDir, os.ModeDir)
-		if err != nil {
-			return agent, fmt.Errorf("there was an error creating a folder in the agents directory at %s:"+
-				"\r\n%s", agentsDir, err.Error())
-		}
-	}
 	// Create a directory for the new agent's files
 	if _, err := os.Stat(filepath.Join(agentsDir, agentID.String())); os.IsNotExist(err) {
-		errM := os.Mkdir(filepath.Join(agentsDir, agentID.String()), os.ModeDir)
+		errM := os.MkdirAll(filepath.Join(agentsDir, agentID.String()), 0750)
 		if errM != nil {
 			return agent, fmt.Errorf("there was an error creating a directory for agent %s:\r\n%s",
 				agentID.String(), err.Error())
 		}
 		// Create the agent's log file
-		_, errC := os.Create(filepath.Join(agentsDir, agentID.String(), "agent_log.txt"))
+		agentLog, errC := os.Create(filepath.Join(agentsDir, agentID.String(), "agent_log.txt"))
 		if errC != nil {
 			return agent, fmt.Errorf("there was an error creating the agent_log.txt file for agnet %s:\r\n%s",
 				agentID.String(), err.Error())
+		}
+
+		// Change the file's permissions
+		errChmod := agentLog.Chmod(0640)
+		if errChmod != nil {
+			return agent, fmt.Errorf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error())
 		}
 
 		if core.Verbose {

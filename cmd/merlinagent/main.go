@@ -57,9 +57,21 @@ func main() {
 	}
 
 	// Setup and run agent
-	a := agent.New(*protocol, url, psk, proxy, *verbose, *debug)
+	a, err := agent.New(*protocol, url, psk, proxy, *verbose, *debug)
+	if err != nil {
+		if *verbose {
+			color.Red(err.Error())
+		}
+		os.Exit(1)
+	}
 	a.WaitTime = *sleep
-	a.Run()
+	errRun := a.Run()
+	if errRun != nil {
+		if *verbose {
+			color.Red(errRun.Error())
+		}
+		os.Exit(1)
+	}
 }
 
 // usage prints command line options

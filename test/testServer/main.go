@@ -28,30 +28,40 @@ import (
 	"crypto/x509/pkix"
 	"encoding/gob"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	// 3rd Party
+	"github.com/satori/go.uuid"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
-var verbose = true
+var verbose = false
 
 func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && r.RequestURI == "/isup" {
 		w.WriteHeader(200)
+		return
 	}
 
+	// Make sure the message has a JWT
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		w.WriteHeader(404)
+		return
+	}
 	//Read the request message until EOF
 	requestBytes, errRequestBytes := ioutil.ReadAll(r.Body)
 	if errRequestBytes != nil {
@@ -73,13 +83,34 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := sha256.Sum256([]byte("merlinTest"))
+	// Validate JWT and get claims
+	var agentID uuid.UUID
+	var errValidate error
+
+	hashedKey := sha256.Sum256([]byte("test"))
+	key := hashedKey[:]
+
+	agentID, errValidate = validateJWT(strings.Split(token, " ")[1], []byte("xZF7fvaGD6p2yeLyf9i7O9gBBHk05B0u"))
+	if errValidate != nil {
+		// Validate JWT using interface PSK; Used by unauthenticated agents
+		hashedKey := sha256.Sum256([]byte("test"))
+		key := hashedKey[:]
+		agentID, errValidate = validateJWT(strings.Split(token, " ")[1], key)
+		if errValidate != nil {
+			w.WriteHeader(404)
+			return
+		}
+	}
+
+	if len(agents.GetEncryptionKey(agentID)) > 0 {
+		key = agents.GetEncryptionKey(agentID)
+	}
 
 	// Decrypt JWE
-	j, errDecryptPSK := decryptJWE(jweString, key[:])
+	j, errDecryptPSK := decryptJWE(jweString, key)
 	if errDecryptPSK != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error decrypting the JWE:\r\n%s", errDecryptPSK.Error()))
+			fmt.Println(fmt.Sprintf("there was an error decrypting the JWE on the server:\r\n%s", errDecryptPSK.Error()))
 		}
 		w.WriteHeader(500)
 		return
@@ -98,8 +129,18 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 
 	// Message type based action
 	switch j.Type {
+	case "AgentInfo":
+		err = agents.UpdateInfo(j)
 	case "AuthInit":
 		returnMessage, err = agents.OPAQUEAuthenticateInit(j, key[:])
+	case "AuthComplete":
+		returnMessage, err = agents.OPAQUEAuthenticateComplete(j)
+	case "BadPayload":
+		w.Header().Set("Content-Type", "application/octet-stream")
+		errBadPayload := gob.NewEncoder(w).Encode([]byte("Hack the planet!"))
+		if errBadPayload != nil {
+			fmt.Println(errBadPayload.Error())
+		}
 	default:
 
 	}
@@ -107,6 +148,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	returnMessage.ID = agentID
 	// Encode messages.Base into a gob
 	returnMessageBytes := new(bytes.Buffer)
 	errReturnMessageBytes := gob.NewEncoder(returnMessageBytes).Encode(returnMessage)
@@ -268,4 +310,39 @@ func decryptJWE(jweString string, key []byte) (messages.Base, error) {
 	}
 
 	return m, nil
+}
+
+// validateJWT validates the provided JSON Web Token
+func validateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
+	var agentID uuid.UUID
+
+	claims := jwt.Claims{}
+
+	// Parse to make sure it is a valid JWT
+	nestedToken, err := jwt.ParseSignedAndEncrypted(agentJWT)
+	if err != nil {
+		return agentID, fmt.Errorf("there was an error parsing the JWT:\r\n%s", err.Error())
+	}
+
+	// Decrypt JWT
+	token, errToken := nestedToken.Decrypt(key)
+	if errToken != nil {
+		return agentID, fmt.Errorf("there was an error decrypting the JWT:\r\n%s", errToken.Error())
+	}
+
+	// Deserialize the claims and validate the signature
+	errClaims := token.Claims(key, &claims)
+	if errClaims != nil {
+		return agentID, fmt.Errorf("there was an deserializing the JWT claims:\r\n%s", errClaims.Error())
+	}
+
+	// Validate claims
+	errValidate := claims.Validate(jwt.Expected{
+		Time: time.Now(),
+	})
+	if errValidate != nil {
+		return agentID, errValidate
+	}
+	agentID = uuid.FromStringOrNil(claims.ID)
+	return agentID, nil
 }
