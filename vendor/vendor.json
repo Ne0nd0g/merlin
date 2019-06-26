@@ -187,6 +187,12 @@
 			"revisionTime": "2016-09-27T10:08:44Z"
 		},
 		{
+			"checksumSHA1": "ySNRtIvC6kLJT33VJWnqzWXzLAM=",
+			"path": "go.dedis.ch/kyber",
+			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
+			"revisionTime": "2019-05-01T09:33:42Z"
+		},
+		{
 			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
 			"path": "golang.org/x/crypto/curve25519",
 			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
@@ -267,6 +273,24 @@
 		{
 			"checksumSHA1": "oRfTuL23MIBG2nCwjweTJz4Eiqg=",
 			"path": "gopkg.in/square/go-jose.v2",
+			"revision": "730df5f748271903322feb182be83b43ebbbe27d",
+			"revisionTime": "2019-04-10T21:58:30Z"
+		},
+		{
+			"checksumSHA1": "Ho5sr2GbiR8S35IRni7vC54d5Js=",
+			"path": "gopkg.in/square/go-jose.v2/cipher",
+			"revision": "730df5f748271903322feb182be83b43ebbbe27d",
+			"revisionTime": "2019-04-10T21:58:30Z"
+		},
+		{
+			"checksumSHA1": "JFun0lWY9eqd80Js2iWsehu1gc4=",
+			"path": "gopkg.in/square/go-jose.v2/json",
+			"revision": "730df5f748271903322feb182be83b43ebbbe27d",
+			"revisionTime": "2019-04-10T21:58:30Z"
+		},
+		{
+			"checksumSHA1": "ArWEYi3WR6KVH3dZcElUJTi+pdA=",
+			"path": "gopkg.in/square/go-jose.v2/jwt",
 			"revision": "730df5f748271903322feb182be83b43ebbbe27d",
 			"revisionTime": "2019-04-10T21:58:30Z"
 		}
