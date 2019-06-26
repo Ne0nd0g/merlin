@@ -187,6 +187,12 @@
 			"revisionTime": "2016-09-27T10:08:44Z"
 		},
 		{
+			"checksumSHA1": "GLFNGcT5tLnfU7wJnxnUKTEN+dY=",
+			"path": "go.dedis.ch/fixbuf",
+			"revision": "966c1af8d4433e699ff72f3309a444bd16eb0508",
+			"revisionTime": "2019-01-24T15:29:07Z"
+		},
+		{
 			"checksumSHA1": "ySNRtIvC6kLJT33VJWnqzWXzLAM=",
 			"path": "go.dedis.ch/kyber",
 			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
@@ -243,6 +249,12 @@
 			"revisionTime": "2019-04-19T16:04:53Z"
 		},
 		{
+			"checksumSHA1": "jfKksm9ENL0+wzoOuMR8kNuIePw=",
+			"path": "golang.org/x/crypto/blake2b",
+			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
+			"revisionTime": "2019-04-19T16:04:53Z"
+		},
+		{
 			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
 			"path": "golang.org/x/crypto/curve25519",
 			"revision": "650f4a345ab4e5b245a3034b110ebc7299e68186",
@@ -251,6 +263,12 @@
 		{
 			"checksumSHA1": "2LpxYGSf068307b7bhAuVjvzLLc=",
 			"path": "golang.org/x/crypto/ed25519",
+			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
+			"revisionTime": "2019-04-19T16:04:53Z"
+		},
+		{
+			"checksumSHA1": "0JTAFXPkankmWcZGQJGScLDiaN8=",
+			"path": "golang.org/x/crypto/ed25519/internal/edwards25519",
 			"revision": "22d7a77e9e5f409e934ed268692e56707cd169e5",
 			"revisionTime": "2019-04-19T16:04:53Z"
 		},
