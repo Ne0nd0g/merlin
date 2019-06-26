@@ -35,13 +35,17 @@ import (
 // GLOBAL VARIABLES
 var url = "https://127.0.0.1:443"
 var build = "nonRelease"
+var psk = "merlin"
+var proxy = ""
 
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
 	version := flag.Bool("version", false, "Print the agent version and exit")
 	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
-	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
+	flag.StringVar(&psk, "psk", psk, "Pre-Shared Key used to encrypt initial communications")
+	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq, https/1.1]")
+	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
 	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
@@ -53,9 +57,21 @@ func main() {
 	}
 
 	// Setup and run agent
-	a := agent.New(*protocol, *verbose, *debug)
+	a, err := agent.New(*protocol, url, psk, proxy, *verbose, *debug)
+	if err != nil {
+		if *verbose {
+			color.Red(err.Error())
+		}
+		os.Exit(1)
+	}
 	a.WaitTime = *sleep
-	a.Run(url)
+	errRun := a.Run()
+	if errRun != nil {
+		if *verbose {
+			color.Red(errRun.Error())
+		}
+		os.Exit(1)
+	}
 }
 
 // usage prints command line options
