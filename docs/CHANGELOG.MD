@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.8.0 - 2019-xx-xx
+
+### Added
+
+- Network requests and responses are now encrypted in to a JWE
+- Password Based Authenticated Key Exchange (PAKE) using OPAQUE technique
+- Server and agent have new pre-shared key (psk) command line flag
+- All network requests now contain an encrypted JWT in an Authorization header that are only valid for the agent's lifetime
+- RSA keys are exchanged between server and agent, but not currently used
+- Added `PSK=` to Make file so the binaries can be hard coded with the PSK
+- Added Merlin server identification tool dubbed PRISM
+- Added gcflags & asmflags trimpaths to remove _some_ of the file path strings in output agent binary files
+- Added http/1.1 support
+- Added support for user defined HTTP proxy with agent `-proxy` command line flag; Only works with HTTP/1.1
+- Added `PROXY=` to Make file so the binaries can be hard coded with the proxy
+- Added PRISM application to detect a Merlin server
+
+### Changed
+
+- Replaced JSON encoding with Go's gob encoding format
+- Server does not receive agent information/configuration until after password authentication/payload encryption
+- Base messages now contain a token; used to send an agent an encrypted JWT
+- agent.New() requires the url, psk, and proxy settings
+- agent.New() can return an error
+- agent.Run() does not take a url anymore, it is part of the Agent structure
+- agent.Run() can return an error
+- Server & Agent log file directory permissions changed to 0750
+- Server & Agent log file permissions changed to 0640
+
+### Removed
+
+- Removed http server's check to only allow HTTP/2 traffic so that HTTP/1.1 traffic can be supported
+
 ## 0.7.1 - 2019-04-2X
 
 ### Added
