@@ -148,7 +148,7 @@ package-agent-dll:
 
 package-prism-windows:
 	${PACKAGE} ${DIR}/PRISM-${W}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${W}-v${VERSION}.7z PRISM-${W}
+	cd ${DIR};${PACKAGE} PRISM-${W}-v${VERSION}.7z PRISM-${W}.exe
 	cp ${DIR}/PRISM-${W}.exe ${BIN}windows/
 
 package-prism-linux:

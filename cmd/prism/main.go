@@ -53,6 +53,7 @@ var secret []byte
 var verbose = false
 var debug = false
 var JWT string
+var host string
 
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
@@ -61,13 +62,14 @@ func main() {
 	flag.StringVar(&psk, "psk", psk, "Pre-Shared Key used to encrypt initial communications")
 	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq]")
 	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
+	flag.StringVar(&host, "host", host, "HTTP Host header")
 	flag.Usage = usage
 	flag.Parse()
 
 	var err error
 
 	// Setup and run agent
-	a, errNew := agent.New(*protocol, url, psk, proxy, verbose, debug)
+	a, errNew := agent.New(*protocol, url, host, psk, proxy, verbose, debug)
 	if errNew != nil {
 		message("warn", errNew.Error())
 		os.Exit(1)
