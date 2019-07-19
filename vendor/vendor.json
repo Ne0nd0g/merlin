@@ -193,40 +193,6 @@
 			"revisionTime": "2019-01-24T15:29:07Z"
 		},
 		{
-			"checksumSHA1": "ySNRtIvC6kLJT33VJWnqzWXzLAM=",
-			"path": "go.dedis.ch/kyber",
-			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
-			"revisionTime": "2019-05-01T09:33:42Z"
-		},
-		{
-			"checksumSHA1": "lJLRUPC1+X2R4HQy5XfxhCzQKNA=",
-			"path": "go.dedis.ch/kyber/sign/schnorr",
-			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
-			"revisionTime": "2019-05-01T09:33:42Z"
-		},
-		{
-			"checksumSHA1": "G/4vbOCYkxCn0KA9E5l8+y9uaU8=",
-			"path": "go.dedis.ch/kyber/suites",
-			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
-			"revisionTime": "2019-05-01T09:33:42Z"
-		},
-		{
-			"checksumSHA1": "kf8+2ETF3q4mb9Hb//QxXPTZ7cs=",
-			"path": "go.dedis.ch/kyber/util/key",
-			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
-			"revisionTime": "2019-05-01T09:33:42Z"
-		},
-		{
-			"checksumSHA1": "xmvCdVAaWpySAWU3MAiyQtA6nh4=",
-			"path": "go.dedis.ch/kyber/util/random",
-			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a",
-			"revisionTime": "2019-05-01T09:33:42Z"
-		},
-		{
-			"path": "go.dedis.ch/kyber/v3",
-			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
-		},
-		{
 			"path": "go.dedis.ch/kyber/v3/group/edwards25519",
 			"revision": "1a3d86c4f61cd7ac92bf14509aa887c728a5fe2a"
 		},

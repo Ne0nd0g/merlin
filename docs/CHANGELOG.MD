@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added support for user defined HTTP proxy with agent `-proxy` command line flag; Only works with HTTP/1.1
 - Added `PROXY=` to Make file so the binaries can be hard coded with the proxy
 - Added PRISM application to detect a Merlin server
+- Added in CLI option to set HTTP Host header for domain fronting
 
 ### Changed
 

