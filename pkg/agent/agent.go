@@ -224,7 +224,12 @@ func (a *Agent) Run() error {
 			return fmt.Errorf("agent kill date has been exceeded: %s", time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339))
 		}
 
-		timeSkew := time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
+		timeSkew := time.Duration(0)
+
+		if a.Skew > 0 {
+			timeSkew = time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
+		}
+
 		totalWaitTime := a.WaitTime + timeSkew
 
 		if a.Verbose {
