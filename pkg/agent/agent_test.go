@@ -38,7 +38,7 @@ import (
 
 // TestNewHTTPSAgent ensure the agent.New function returns a HTTP/1.1 agent without error
 func TestNewHTTPSAgent(t *testing.T) {
-	_, err := New("http/1.1", "https://127.0.0.1:8080", "test", "http://127.0.0.1:8081", false, false)
+	_, err := New("http/1.1", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -47,7 +47,7 @@ func TestNewHTTPSAgent(t *testing.T) {
 
 // TestNewH2Agent ensure the agent.New function returns a HTTP/2 agent without error
 func TestNewH2Agent(t *testing.T) {
-	_, err := New("h2", "https://127.0.0.1:8080", "test", "http://127.0.0.1:8081", false, false)
+	_, err := New("h2", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -56,7 +56,7 @@ func TestNewH2Agent(t *testing.T) {
 
 // TestNewHQAgent ensure the agent.New function returns a HTTP/3 agent without error
 func TestNewHQAgent(t *testing.T) {
-	_, err := New("hq", "https://127.0.0.1:8080", "test", "http://127.0.0.1:8081", false, false)
+	_, err := New("hq", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -65,7 +65,7 @@ func TestNewHQAgent(t *testing.T) {
 
 // TestKillDate sends a message with a kill date that has been exceeded
 func TestKillDate(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -82,7 +82,7 @@ func TestKillDate(t *testing.T) {
 
 // TestFailedCheckin test for the agent to exit after the amount of failed checkins exceeds the agent's MaxRetry setting
 func TestFailedCheckin(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -98,7 +98,7 @@ func TestFailedCheckin(t *testing.T) {
 
 // TestInvalidMessageType sends a valid message.Base with an invalid Type string
 func TestInvalidMessageType(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -118,7 +118,7 @@ func TestInvalidMessageType(t *testing.T) {
 
 // TestInvalidMessage sends a structure that is not a valid message.Base
 func TestInvalidMessage(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8081", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8081", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -203,7 +203,7 @@ func TestInvalidMessage(t *testing.T) {
 
 // TestPSK ensure that the agent can't successfully communicate with the server using the wrong PSK
 func TestPSK(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -245,7 +245,7 @@ func TestPSK(t *testing.T) {
 
 // TestWrongUUID sends a valid message to an agent using a UUID that is different from the running agent
 func TestWrongUUID(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -271,7 +271,7 @@ func TestWrongUUID(t *testing.T) {
 
 // TestInvalidHTTPTrafficPayload sends a gob encoded string to the server to ensure it handles invalid traffic
 func TestInvalidHTTPTrafficPayload(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -292,7 +292,7 @@ func TestInvalidHTTPTrafficPayload(t *testing.T) {
 
 // TestAuthentication verifies successful authentication using the correct PSK
 func TestAuthentication(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8082", "test", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8082", "", "test", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -317,7 +317,7 @@ func TestAuthentication(t *testing.T) {
 
 // TestBadAuthentication verifies unsuccessful authentication using the wrong PSK
 func TestBadAuthentication(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8083", "neverGonnaGiveYouUp", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8083", "", "neverGonnaGiveYouUp", "", false, false)
 
 	if err != nil {
 		t.Error(err)

@@ -760,7 +760,6 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 			}
 		default:
 			c.Stderr = fmt.Sprintf("%s is not a valid AgentControl message type.", p.Command)
-			break
 		}
 		return a.getAgentInfoMessage(), nil
 	case "Shellcode":
