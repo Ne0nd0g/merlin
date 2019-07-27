@@ -29,6 +29,7 @@ L=Linux-x64
 A=Linux-arm
 M=Linux-mips
 D=Darwin-x64
+export GO111MODULE=on
 
 # Make Directory to store executables
 $(shell mkdir -p ${DIR})
