@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `PROXY=` to Make file so the binaries can be hard coded with the proxy
 - Added PRISM application to detect a Merlin server
 - Added in CLI option to set HTTP Host header for domain fronting
+- [Pull 72](https://github.com/Ne0nd0g/merlin/pull/72) - Added a Linux module that will hide the Merlin process from tools that walk the /proc filesystem
 
 ### Changed
 
@@ -39,7 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Removed http server's check to only allow HTTP/2 traffic so that HTTP/1.1 traffic can be supported
 - Removed Vendor folder updated project to use Go Modules in go.mod
 
-## 0.7.1 - 2019-04-2X
+## 0.7.1 - 2019-04-21
 
 ### Added
 - [Pull 72](https://github.com/Ne0nd0g/merlin/pull/72) - Added linux/x64/bash/evasion/libprocesshider.json module (@ForensicITGuy)
