@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added in CLI option to set HTTP Host header for domain fronting
 - [Pull 72](https://github.com/Ne0nd0g/merlin/pull/72) - Added a Linux module that will hide the Merlin process from tools that walk the /proc filesystem
 
+### Fixed
+
+- [Pull 74](https://github.com/Ne0nd0g/merlin/pull/74) - Fixed issued that would crash the agent if the skew was set to 0
+
 ### Changed
 
 - Replaced JSON encoding with Go's gob encoding format
@@ -46,8 +50,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Pull 72](https://github.com/Ne0nd0g/merlin/pull/72) - Added linux/x64/bash/evasion/libprocesshider.json module (@ForensicITGuy)
 
 ### Fixed
--[Issue 69](https://github.com/Ne0nd0g/merlin/issues/69) - Error with modules missing type definition
--[Issue 70](https://github.com/Ne0nd0g/merlin/issues/70) - Error parsing a shellcode file containing raw bytes
+- [Issue 69](https://github.com/Ne0nd0g/merlin/issues/69) - Error with modules missing type definition
+- [Issue 70](https://github.com/Ne0nd0g/merlin/issues/70) - Error parsing a shellcode file containing raw bytes
 
 
 ## 0.7.0 - 2019-04-11
