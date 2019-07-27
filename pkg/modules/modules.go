@@ -307,7 +307,7 @@ func Create(modulePath string) (Module, error) {
 	return m, nil
 }
 
-// validate function is used to check a module's configuration for errors
+// validateModule function is used to check a module's configuration for errors
 func validateModule(m Module) (bool, error) {
 
 	// Validate Platform
@@ -316,7 +316,7 @@ func validateModule(m Module) (bool, error) {
 	case "LINUX":
 	case "DARWIN":
 	default:
-		return false, errors.New("invalid 'platform' value provided in module file")
+		return false, errors.New("invalid or missing 'platform' value in the module's JSON file")
 	}
 
 	// Validate Architecture
@@ -324,7 +324,7 @@ func validateModule(m Module) (bool, error) {
 	case "X64":
 	case "X32":
 	default:
-		return false, errors.New("invalid 'arch' value provided in module file")
+		return false, errors.New("invalid or missing 'arch' value in the module's JSON file")
 	}
 
 	// Validate Type
@@ -332,7 +332,7 @@ func validateModule(m Module) (bool, error) {
 	case "STANDARD":
 	case "EXTENDED":
 	default:
-		return false, errors.New("invalid or missing 'type' value in module file")
+		return false, errors.New("invalid or missing `type` value in the module's JSON file")
 	}
 	return true, nil
 }

@@ -12,8 +12,15 @@ BIN=data/bin/
 XBUILD=-X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}
 URL ?= https://127.0.0.1:443
 XURL=-X main.url=${URL}
-LDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL}"
-WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} -H=windowsgui"
+PSK ?= merlin
+PROXY ?=
+XPROXY = -X main.proxy=$(PROXY)
+XPSK=-X main.psk=${PSK}
+LDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} ${XPSK} ${XPROXY} -buildid="
+WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
+# TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries
+GCFLAGS=-gcflags=all=-trimpath=$(GOPATH)
+ASMFLAGS=-asmflags=all=-trimpath=$(GOPATH)# -asmflags=-trimpath=$(GOPATH)
 PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
 F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
 F2=LICENSE
@@ -22,12 +29,13 @@ L=Linux-x64
 A=Linux-arm
 M=Linux-mips
 D=Darwin-x64
+export GO111MODULE=on
 
 # Make Directory to store executables
 $(shell mkdir -p ${DIR})
 
 # Change default to just make for the host OS and add MAKE ALL to do this
-default: server-windows agent-windows server-linux agent-linux server-darwin agent-darwin agent-dll agent-javascript
+default: server-windows agent-windows server-linux agent-linux server-darwin agent-darwin agent-dll agent-javascript prism-windows prism-linux prism-darwin
 
 all: default
 
@@ -52,14 +60,18 @@ server-windows:
 
 # Compile Agent - Windows x64
 agent-windows:
-	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
+	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
 
 # Compile Agent - Windows x64 DLL - main() - Console
 agent-dll:
 	export GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CGO_ENABLED=1; \
-	go build ${LDFLAGS} -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
+	go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
 	cp data/bin/dll/merlin.c ${DIR}; \
 	x86_64-w64-mingw32-gcc -shared -pthread -o ${DIR}/merlin.dll ${DIR}/merlin.c ${DIR}/main.a -lwinmm -lntdll -lws2_32
+
+# Compile PRISM - Windows x64
+prism-windows:
+	export GOOS=windows GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/PRISM-${W}.exe cmd/prism/main.go
 
 # Compile Server - Linux x64
 server-linux:
@@ -67,23 +79,31 @@ server-linux:
 
 # Compile Agent - Linux mips
 agent-mips:
-	export GOOS=linux;export GOARCH=mips;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${M} cmd/merlinagent/main.go
+	export GOOS=linux;export GOARCH=mips;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${M} cmd/merlinagent/main.go
 
 # Compile Agent - Linux arm
 agent-arm:
-	export GOOS=linux;export GOARCH=arm;export GOARM=7;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${A} cmd/merlinagent/main.go
+	export GOOS=linux;export GOARCH=arm;export GOARM=7;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${A} cmd/merlinagent/main.go
 
 # Compile Agent - Linux x64
 agent-linux:
-	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${L} cmd/merlinagent/main.go
-	
+	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${L} cmd/merlinagent/main.go
+
+# Compile PRISM - Linux x64
+prism-linux:
+	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/PRISM-${L} cmd/prism/main.go
+
 # Compile Server - Darwin x64
 server-darwin:
 	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D} cmd/merlinserver/main.go
 
 # Compile Agent - Darwin x64
 agent-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MAGENT}-${D} cmd/merlinagent/main.go
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${D} cmd/merlinagent/main.go
+
+# Compile PRISM - Darwin x64
+prism-darwin:
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/PRISM-${D} cmd/prism/main.go
 
 # Update JavaScript Information
 agent-javascript:
@@ -127,7 +147,22 @@ package-agent-dll:
 	cd ${DIR};${PACKAGE} ${MAGENT}-DLL-v${VERSION}.7z merlin.dll
 	cp ${DIR}/merlin.dll ${BIN}dll
 
-package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-server-windows package-server-linux package-server-darwin
+package-prism-windows:
+	${PACKAGE} ${DIR}/PRISM-${W}-v${VERSION}.7z ${F2}
+	cd ${DIR};${PACKAGE} PRISM-${W}-v${VERSION}.7z PRISM-${W}.exe
+	cp ${DIR}/PRISM-${W}.exe ${BIN}windows/
+
+package-prism-linux:
+	${PACKAGE} ${DIR}/PRISM-${L}-v${VERSION}.7z ${F2}
+	cd ${DIR};${PACKAGE} PRISM-${L}-v${VERSION}.7z PRISM-${L}
+	cp ${DIR}/PRISM-${L} ${BIN}linux/
+
+package-prism-darwin:
+	${PACKAGE} ${DIR}/PRISM-${D}-v${VERSION}.7z ${F2}
+	cd ${DIR};${PACKAGE} PRISM-${D}-v${VERSION}.7z PRISM-${D}
+	cp ${DIR}/PRISM-${D} ${BIN}darwin/
+
+package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-prism-windows package-server-windows package-server-linux package-server-darwin
 
 clean:
 	rm -rf ${DIR}*

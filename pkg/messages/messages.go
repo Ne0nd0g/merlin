@@ -18,8 +18,24 @@
 package messages
 
 import (
+	"crypto/rsa"
+	"encoding/gob"
 	"github.com/satori/go.uuid"
 )
+
+// init registers message types with gob that are an interface for Base.Payload
+func init() {
+	gob.Register(AgentControl{})
+	gob.Register(AgentInfo{})
+	gob.Register(CmdPayload{})
+	gob.Register(CmdResults{})
+	gob.Register(FileTransfer{})
+	gob.Register(KeyExchange{})
+	gob.Register(Module{})
+	gob.Register(NativeCmd{})
+	gob.Register(Shellcode{})
+	gob.Register(SysInfo{})
+}
 
 // Base is the base JSON Object for HTTP POST payloads
 type Base struct {
@@ -28,6 +44,7 @@ type Base struct {
 	Type    string      `json:"type"`
 	Payload interface{} `json:"payload,omitempty"`
 	Padding string      `json:"padding"`
+	Token   string      `json:"token,omitempty"`
 }
 
 // FileTransfer is the JSON payload to transfer files between the server and agent
@@ -74,16 +91,16 @@ type AgentControl struct {
 
 // AgentInfo is a JSON payload containing information about the agent and its configuration
 type AgentInfo struct {
-	Version       string      `json:"version,omitempty"`
-	Build         string      `json:"build,omitempty"`
-	WaitTime      string      `json:"waittime,omitempty"`
-	PaddingMax    int         `json:"paddingmax,omitempty"`
-	MaxRetry      int         `json:"maxretry,omitempty"`
-	FailedCheckin int         `json:"failedcheckin,omitempty"`
-	Skew          int64       `json:"skew,omitempty"`
-	Proto         string      `json:"proto,omitempty"`
-	SysInfo       interface{} `json:"sysinfo,omitempty"`
-	KillDate      int64       `json:"killdate,omitempty"`
+	Version       string  `json:"version,omitempty"`
+	Build         string  `json:"build,omitempty"`
+	WaitTime      string  `json:"waittime,omitempty"`
+	PaddingMax    int     `json:"paddingmax,omitempty"`
+	MaxRetry      int     `json:"maxretry,omitempty"`
+	FailedCheckin int     `json:"failedcheckin,omitempty"`
+	Skew          int64   `json:"skew,omitempty"`
+	Proto         string  `json:"proto,omitempty"`
+	SysInfo       SysInfo `json:"sysinfo,omitempty"`
+	KillDate      int64   `json:"killdate,omitempty"`
 }
 
 // Shellcode is a JSON payload containing shellcode and the method for execution
@@ -108,4 +125,9 @@ type NativeCmd struct {
 	Job     string `json:"job"`
 	Command string `json:"command"`
 	Args    string `json:"args,omitempty"`
+}
+
+// KeyExchange is a JSON payload used to exchange public keys for encryption
+type KeyExchange struct {
+	PublicKey rsa.PublicKey `json:"publickey"`
 }

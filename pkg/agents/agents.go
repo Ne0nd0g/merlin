@@ -19,9 +19,10 @@ package agents
 
 import (
 	// Standard
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -34,6 +35,7 @@ import (
 	"time"
 
 	// 3rd Party
+	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
@@ -48,202 +50,296 @@ import (
 
 // Agents contains all of the instantiated agent object that are accessed by other modules
 var Agents = make(map[uuid.UUID]*agent)
-var paddingMax = 4096
 
 type agent struct {
-	ID             uuid.UUID
-	Platform       string
-	Architecture   string
-	UserName       string
-	UserGUID       string
-	HostName       string
-	Ips            []string
-	Pid            int
-	agentLog       *os.File
-	channel        chan []Job
-	InitialCheckIn time.Time
-	StatusCheckIn  time.Time
-	Version        string
-	Build          string
-	WaitTime       string
-	PaddingMax     int
-	MaxRetry       int
-	FailedCheckin  int
-	Skew           int64
-	Proto          string
-	KillDate       int64
+	ID               uuid.UUID
+	Platform         string
+	Architecture     string
+	UserName         string
+	UserGUID         string
+	HostName         string
+	Ips              []string
+	Pid              int
+	agentLog         *os.File
+	channel          chan []Job
+	InitialCheckIn   time.Time
+	StatusCheckIn    time.Time
+	Version          string
+	Build            string
+	WaitTime         string
+	PaddingMax       int
+	MaxRetry         int
+	FailedCheckin    int
+	Skew             int64
+	Proto            string
+	KillDate         int64
+	RSAKeys          *rsa.PrivateKey    // RSA Private/Public key pair; Private key used to decrypt messages
+	PublicKey        rsa.PublicKey      // Public key used to encrypt messages
+	secret           []byte             // secret is used to perform symmetric encryption operations
+	OPAQUEServerAuth gopaque.ServerAuth // OPAQUE Server Authentication information used to derive shared secret
 }
 
-// InitialCheckIn is run on the first communication with an agent and is used to instantiate an agent object
-func InitialCheckIn(j messages.Base) {
+// KeyExchange is used to exchange public keys between the server and agent
+func KeyExchange(m messages.Base) (messages.Base, error) {
 	if core.Debug {
-		message("debug", "Entering into agents.InitialCheckIn function")
-		message("debug", fmt.Sprintf("Base Message Type: %s", j.Type))
-		message("debug", fmt.Sprintf("Base Message Payload: %s", j.Payload))
-	}
-	logging.Server(fmt.Sprintf("Received new agent checkin from %s", j.ID))
-	message("success", fmt.Sprintf("Received new agent checkin from %s at %s", j.ID, time.Now().UTC().Format(time.RFC3339)))
-
-	// Unmarshal AgentInfo from Base
-	var agentInfo messages.AgentInfo
-	agentInfoPayload, errAgentInfoPayload := json.Marshal(j.Payload)
-	if errAgentInfoPayload != nil {
-		message("warn", fmt.Sprintf("There was an error marshalling the messages.Base Payload: %s",
-			errAgentInfoPayload.Error()))
-		return
-	}
-	errA := json.Unmarshal(agentInfoPayload, &agentInfo)
-	if errA != nil {
-		message("warn", fmt.Sprintf("There was an error unmarshaling the AgentInfo message: %s", errA.Error()))
-		return
+		message("debug", "Entering into agents.KeyExchange function")
 	}
 
-	// Unmarshal SysInfo from AgentInfo
-	var sysInfo messages.SysInfo
-	sysInfoPayload, errSysInfoPayload := json.Marshal(agentInfo.SysInfo)
-	if errSysInfoPayload != nil {
-		message("warn", fmt.Sprintf("There was an error marshalling the SysInfo Payload of the AgentInfo"+
-			" message: %s", errSysInfoPayload.Error()))
-		return
-	}
-	errS := json.Unmarshal(sysInfoPayload, &sysInfo)
-	if errS != nil {
-		message("warn", fmt.Sprintf("There was an error unmarshaling the SysInfo message: %s",
-			errS.Error()))
-		return
+	serverKeyMessage := messages.Base{
+		ID:      m.ID,
+		Version: 1.0,
+		Type:    "KeyExchange",
+		Padding: core.RandStringBytesMaskImprSrc(4096),
 	}
 
-	if core.Verbose {
-		message("info", fmt.Sprintf("Agent UUID: %s", j.ID))
-		message("info", fmt.Sprintf("Agent Proto: %s", agentInfo.Proto))
-		message("info", fmt.Sprintf("Platform: %s", sysInfo.Platform))
-		message("info", fmt.Sprintf("Architecture: %s", sysInfo.Architecture))
-		message("info", fmt.Sprintf("Hostname: %s", sysInfo.HostName))
-		message("info", fmt.Sprintf("Username: %s", sysInfo.UserName))
-		message("info", fmt.Sprintf("IpAddrs: %v", sysInfo.Ips))
-	}
-	// TODO move currentDir to a core library
-	agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
-
-	if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
-		err := os.Mkdir(agentsDir, os.ModeDir)
-		if err != nil {
-			message("warn", fmt.Sprintf("There was an error creating a folder in the agents directory at %s:\r\n%s", agentsDir, err.Error()))
-		}
-	}
-	if _, err := os.Stat(filepath.Join(agentsDir, j.ID.String())); os.IsNotExist(err) {
-		errM := os.Mkdir(filepath.Join(agentsDir, j.ID.String()), os.ModeDir)
-		if errM != nil {
-			message("warn", fmt.Sprintf("There was an error creating a directory for agent %s:\r\n%s", j.ID.String(), err.Error()))
-		}
-
-		_, errC := os.Create(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"))
-		if errC != nil {
-			message("warn", fmt.Sprintf("There was an error creating the agent_log.txt file for agnet %s:\r\n%s", j.ID.String(), err.Error()))
-		}
-
-		if core.Verbose {
-			message("note", fmt.Sprintf("Created agent log file at: %s agent_log.txt",
-				path.Join(agentsDir, j.ID.String())))
-		}
+	// Make sure the agent has previously authenticated
+	if !isAgent(m.ID) {
+		return serverKeyMessage, fmt.Errorf("the agent does not exist")
 	}
 
-	f, err := os.OpenFile(filepath.Join(agentsDir, j.ID.String(), "agent_log.txt"), os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		panic(err)
-	}
-	// Add custom agent struct to global agents map
-	Agents[j.ID] = &agent{
-		Version: agentInfo.Version, Build: agentInfo.Build, WaitTime: agentInfo.WaitTime,
-		PaddingMax: agentInfo.PaddingMax, MaxRetry: agentInfo.MaxRetry, FailedCheckin: agentInfo.FailedCheckin,
-		Skew: agentInfo.Skew, Proto: agentInfo.Proto, KillDate: agentInfo.KillDate,
-		ID: j.ID, UserName: sysInfo.UserName, UserGUID: sysInfo.UserGUID, Platform: sysInfo.Platform,
-		Architecture: sysInfo.Architecture, Ips: sysInfo.Ips,
-		HostName: sysInfo.HostName, Pid: sysInfo.Pid, channel: make(chan []Job, 10),
-		agentLog: f, InitialCheckIn: time.Now().UTC(), StatusCheckIn: time.Now().UTC()}
+	logging.Server(fmt.Sprintf("Received new agent key exchange from %s", m.ID))
 
-	Log(j.ID, fmt.Sprintf("Initial check in for agent %s", agentInfo.Build))
-	Log(j.ID, fmt.Sprintf("WaitTime: %s", agentInfo.WaitTime))
-	Log(j.ID, fmt.Sprintf("PaddingMax: %d", agentInfo.PaddingMax))
-	Log(j.ID, fmt.Sprintf("MaxRetry: %d", agentInfo.MaxRetry))
-	Log(j.ID, fmt.Sprintf("FailedCheckin: %d", agentInfo.FailedCheckin))
-	Log(j.ID, fmt.Sprintf("Skew: %d", agentInfo.Skew))
-	Log(j.ID, fmt.Sprintf("Proto: %s", agentInfo.Proto))
-	Log(j.ID, fmt.Sprintf("Kill Date: %s", time.Unix(agentInfo.KillDate, 0).UTC().Format(time.RFC3339)))
-	Log(j.ID, fmt.Sprintf("Platform: %s", sysInfo.Platform))
-	Log(j.ID, fmt.Sprintf("Architecture: %s", sysInfo.Architecture))
-	Log(j.ID, fmt.Sprintf("HostName: %s", sysInfo.HostName))
-	Log(j.ID, fmt.Sprintf("UserName: %s", sysInfo.UserName))
-	Log(j.ID, fmt.Sprintf("UserGUID: %s", sysInfo.UserGUID))
-	Log(j.ID, fmt.Sprintf("Process ID: %d", sysInfo.Pid))
-	Log(j.ID, fmt.Sprintf("IPs: %v", sysInfo.Ips))
+	ke := m.Payload.(messages.KeyExchange)
+
+	if core.Debug {
+		message("debug", fmt.Sprintf("Recieved new public key from %s:\r\n%v", m.ID, ke.PublicKey))
+	}
+
+	serverKeyMessage.ID = Agents[m.ID].ID
+	Agents[m.ID].PublicKey = ke.PublicKey
+
+	// Generate key pair
+	privateKey, rsaErr := rsa.GenerateKey(rand.Reader, 4096)
+	if rsaErr != nil {
+		return serverKeyMessage, fmt.Errorf("there was an error generating the RSA key pair:\r\n%s", rsaErr.Error())
+	}
+
+	Agents[m.ID].RSAKeys = privateKey
+
+	if core.Debug {
+		message("debug", fmt.Sprintf("Server's Public Key: %v", Agents[m.ID].RSAKeys.PublicKey))
+	}
+
+	pk := messages.KeyExchange{
+		PublicKey: Agents[m.ID].RSAKeys.PublicKey,
+	}
+
+	serverKeyMessage.ID = m.ID
+	serverKeyMessage.Payload = pk
+
+	if core.Debug {
+		message("debug", "Leaving agents.KeyExchange returning without error")
+		message("debug", fmt.Sprintf("serverKeyMessage: %v", serverKeyMessage))
+	}
+	return serverKeyMessage, nil
+}
+
+// OPAQUEAuthenticateInit is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol and pre-shared key
+func OPAQUEAuthenticateInit(m messages.Base, secret []byte) (messages.Base, error) {
+	if core.Debug {
+		message("debug", "Entering into agents.OPAQUEAuthenticateInit function")
+	}
+
+	returnMessage := messages.Base{
+		ID:      m.ID,
+		Version: 1.0,
+		Type:    "AuthInit",
+		Padding: core.RandStringBytesMaskImprSrc(4096),
+	}
+
+	// check to see if this agent is already known to the server
+	if isAgent(m.ID) {
+		return returnMessage, fmt.Errorf("the %s agent has already been OPAQUE authenticated", m.ID.String())
+	}
+
+	// create new agent and add it to the global map
+	agent, agentErr := newAgent(m.ID)
+	if agentErr != nil {
+		return returnMessage, fmt.Errorf("there was an error creating a new agent instance for %s:\r\n%s", m.ID.String(), agentErr.Error())
+	}
+
+	// 1 - Receive the user's UserAuthInit
+	serverKex := gopaque.NewKeyExchangeSigma(gopaque.CryptoDefault)
+	serverAuth := gopaque.NewServerAuth(gopaque.CryptoDefault, serverKex)
+	agent.OPAQUEServerAuth = *serverAuth
+
+	var userInit gopaque.UserAuthInit
+	errFromBytes := userInit.FromBytes(gopaque.CryptoDefault, m.Payload.([]byte))
+	if errFromBytes != nil {
+		message("warn", fmt.Sprintf("there was an error unmarshalling the user init message from bytes:\r\n%s", errFromBytes.Error()))
+	}
+
+	// Generate agent registered EnvU
+	// Registration first...create user side and server side
+	userReg := gopaque.NewUserRegister(gopaque.CryptoDefault, m.ID.Bytes(), nil)
+	serverReg := gopaque.NewServerRegister(gopaque.CryptoDefault, gopaque.CryptoDefault.NewKey(nil))
+
+	// Do the registration steps
+	userRegInit := userReg.Init(secret)
+	serverRegInit := serverReg.Init(userRegInit)
+	userRegComplete := userReg.Complete(serverRegInit)
+	serverRegComplete := serverReg.Complete(userRegComplete)
+
+	if core.Debug {
+		sharedSecret := gopaque.CryptoDefault.Point().Mul(userReg.PrivateKey(), serverRegInit.ServerPublicKey)
+		message("debug", fmt.Sprintf("Generated OPAQUE User Private Key: %v", userReg.PrivateKey()))
+		message("debug", fmt.Sprintf("Generated OPAQUE User Public Key: %v", userRegComplete.UserPublicKey))
+		message("debug", fmt.Sprintf("Generated OPAQUE Server Private Key: %v", serverRegComplete.ServerPrivateKey))
+		message("debug", fmt.Sprintf("Generated OPAQUE Server Public Key: %v", serverRegInit.ServerPublicKey))
+		message("debug", fmt.Sprintf("Generated OPAQUE User Alpha: %v", userRegInit.Alpha))
+		message("debug", fmt.Sprintf("Generated OPAQUE Shared Secret: %v", sharedSecret))
+	}
+
+	//serverAuthComplete, errServerAuthComplete := serverAuth.Complete(&userInit, &agent.Envelope)
+	serverAuthComplete, errServerAuthComplete := serverAuth.Complete(&userInit, serverRegComplete)
+	if errServerAuthComplete != nil {
+		return returnMessage, fmt.Errorf("there was an error completing the OPAQUE server authentication:\r\n%s", errServerAuthComplete.Error())
+	}
+
+	if serverAuthComplete.ServerPublicKey.String() != serverRegInit.ServerPublicKey.String() {
+		return returnMessage, fmt.Errorf("the calculated and generated server public key's do not match")
+	}
+
+	if core.Debug {
+		message("debug", fmt.Sprintf("User Auth Init:\r\n%+v", userInit))
+		message("debug", fmt.Sprintf("Server Auth Complete:\r\n%+v", serverAuthComplete))
+	}
+
+	serverAuthCompleteBytes, errServerAuthCompleteBytes := serverAuthComplete.ToBytes()
+	if errServerAuthCompleteBytes != nil {
+		return returnMessage, fmt.Errorf("there was an error marshalling the OPAQUE server authentication complete message to bytes:\r\n%s", errServerAuthCompleteBytes.Error())
+	}
+
+	returnMessage.Payload = serverAuthCompleteBytes
+	agent.secret = []byte(serverKex.SharedSecret.String())
+	Agents[m.ID] = &agent
+
+	Log(m.ID, "Received new agent OPAQUE authentication initialization message")
+
+	if core.Debug {
+		message("debug", fmt.Sprintf("Received new agent OPAQUE authentication for %s at %s", m.ID, time.Now().UTC().Format(time.RFC3339)))
+		message("debug", "Leaving agents.OPAQUEAuthenticateInit function without error")
+		message("debug", fmt.Sprintf("Server OPAQUE key exchange shared secret: %v", agent.secret))
+	}
+	return returnMessage, nil
+}
+
+// OPAQUEAuthenticateComplete is used to receive the OPAQUE UserAuthComplete
+func OPAQUEAuthenticateComplete(m messages.Base) (messages.Base, error) {
+	if core.Debug {
+		message("debug", "Entering into agents.OPAQUEAuthenticateComplete function")
+	}
+
+	returnMessage := messages.Base{
+		ID:      m.ID,
+		Version: 1.0,
+		Type:    "ServerOk",
+		Padding: core.RandStringBytesMaskImprSrc(4096),
+	}
+
+	// check to see if this agent is already known to the server
+	if !isAgent(m.ID) {
+		return returnMessage, fmt.Errorf("%s is not a known agent", m.ID.String())
+	}
+
+	Log(m.ID, "Received agent OPAQUE authentication complete message")
+
+	var userComplete gopaque.UserAuthComplete
+	errFromBytes := userComplete.FromBytes(gopaque.CryptoDefault, m.Payload.([]byte))
+	if errFromBytes != nil {
+		message("warn", fmt.Sprintf("there was an error unmarshalling the user complete message from bytes:\r\n%s", errFromBytes.Error()))
+	}
+
+	// server auth finish
+	errAuthFinish := Agents[m.ID].OPAQUEServerAuth.Finish(&userComplete)
+	if errAuthFinish != nil {
+		message("warn", fmt.Sprintf("there was an error finishing authentication:\r\n%s", errAuthFinish.Error()))
+	}
+
+	message("success", fmt.Sprintf("New authenticated agent checkin for %s at %s", m.ID.String(), time.Now().UTC().Format(time.RFC3339)))
+	if core.Debug {
+		message("debug", "Leaving agents.OPAQUEAuthenticateComplete function without error")
+	}
+	return returnMessage, nil
+}
+
+// GetEncryptionKey retrieves the per-agent payload encryption key used to decrypt messages for any protocol
+func GetEncryptionKey(agentID uuid.UUID) []byte {
+	if core.Debug {
+		message("debug", "Entering into agents.GetEncryptionKey function")
+	}
+	var key []byte
+
+	if isAgent(agentID) {
+		key = Agents[agentID].secret
+	}
+
+	if core.Debug {
+		message("debug", "Leaving agents.GetEncryptionKey function")
+	}
+	return key
 }
 
 // StatusCheckIn is the function that is run when an agent sends a message back to server, checking in for additional instructions
-func StatusCheckIn(j messages.Base) (messages.Base, error) {
+func StatusCheckIn(m messages.Base) (messages.Base, error) {
 	// Check to make sure agent UUID is in dataset
-	_, ok := Agents[j.ID]
+	_, ok := Agents[m.ID]
 	if !ok {
 		message("warn", fmt.Sprintf("Orphaned agent %s has checked in at %s. Instructing agent to re-initialize...",
-			time.Now().UTC().Format(time.RFC3339), j.ID.String()))
-		logging.Server(fmt.Sprintf("[Orphaned agent %s has checked in", j.ID.String()))
+			time.Now().UTC().Format(time.RFC3339), m.ID.String()))
+		logging.Server(fmt.Sprintf("[Orphaned agent %s has checked in", m.ID.String()))
 		job := Job{
 			ID:      core.RandStringBytesMaskImprSrc(10),
 			Type:    "initialize",
 			Created: time.Now(),
 			Status:  "created",
 		}
-		m, mErr := GetMessageForJob(j.ID, job)
+		m, mErr := GetMessageForJob(m.ID, job)
 		return m, mErr
 	}
 
-	Log(j.ID, "Agent status check in")
+	Log(m.ID, "Agent status check in")
 	if core.Verbose {
-		message("success", fmt.Sprintf("Received agent status checkin from %s", j.ID))
+		message("success", fmt.Sprintf("Received agent status checkin from %s", m.ID))
 	}
 	if core.Debug {
-		message("debug", fmt.Sprintf("Received agent status checkin from %s", j.ID))
-		message("debug", fmt.Sprintf("Channel length: %d", len(Agents[j.ID].channel)))
-		message("debug", fmt.Sprintf("Channel content: %v", Agents[j.ID].channel))
+		message("debug", fmt.Sprintf("Received agent status checkin from %s", m.ID))
+		message("debug", fmt.Sprintf("Channel length: %d", len(Agents[m.ID].channel)))
+		message("debug", fmt.Sprintf("Channel content: %v", Agents[m.ID].channel))
 	}
 
-	Agents[j.ID].StatusCheckIn = time.Now().UTC()
+	Agents[m.ID].StatusCheckIn = time.Now().UTC()
 	// Check to see if there are any jobs
-	if len(Agents[j.ID].channel) >= 1 {
-		job := <-Agents[j.ID].channel
+	if len(Agents[m.ID].channel) >= 1 {
+		job := <-Agents[m.ID].channel
 		if core.Debug {
 			message("debug", fmt.Sprintf("Channel command string: %s", job))
 			message("debug", fmt.Sprintf("Agent command type: %s", job[0].Type))
 		}
 
-		m, mErr := GetMessageForJob(j.ID, job[0])
+		m, mErr := GetMessageForJob(m.ID, job[0])
 		return m, mErr
 	}
-	m := messages.Base{
+	returnMessage := messages.Base{
 		Version: 1.0,
-		ID:      j.ID,
+		ID:      m.ID,
 		Type:    "ServerOk",
-		Padding: core.RandStringBytesMaskImprSrc(paddingMax),
+		Padding: core.RandStringBytesMaskImprSrc(Agents[m.ID].PaddingMax),
 	}
-	return m, nil
-}
-
-func marshalMessage(m interface{}) []byte {
-	k, err := json.Marshal(m)
-	if err != nil {
-		message("warn", "There was an error marshaling the JSON object")
-		message("warn", err.Error())
-	}
-	return k
+	return returnMessage, nil
 }
 
 // UpdateInfo is used to update an agent's information with the passed in message data
-func UpdateInfo(j messages.Base, p messages.AgentInfo) {
-	_, ok := Agents[j.ID]
+func UpdateInfo(m messages.Base) error {
+	if core.Debug {
+		message("debug", "Entering into agents.UpdateInfo function")
+	}
 
-	if !ok {
+	p := m.Payload.(messages.AgentInfo)
+
+	if !isAgent(m.ID) {
 		message("warn", "The agent was not found while processing an AgentInfo message")
-		return
+		return fmt.Errorf("%s is not a known agent", m.ID)
 	}
 	if core.Debug {
 		message("debug", "Processing new agent info")
@@ -257,30 +353,46 @@ func UpdateInfo(j messages.Base, p messages.AgentInfo) {
 		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
 		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 	}
-	Log(j.ID, fmt.Sprintf("Processing AgentInfo message:"))
-	Log(j.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
-	Log(j.ID, fmt.Sprintf("\tAgent Build: %s ", p.Build))
-	Log(j.ID, fmt.Sprintf("\tAgent waitTime: %s ", p.WaitTime))
-	Log(j.ID, fmt.Sprintf("\tAgent skew: %d ", p.Skew))
-	Log(j.ID, fmt.Sprintf("\tAgent paddingMax: %d ", p.PaddingMax))
-	Log(j.ID, fmt.Sprintf("\tAgent maxRetry: %d ", p.MaxRetry))
-	Log(j.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
-	Log(j.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
-	Log(j.ID, fmt.Sprintf("\tAgent KillDate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
+	Log(m.ID, fmt.Sprintf("Processing AgentInfo message:"))
+	Log(m.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
+	Log(m.ID, fmt.Sprintf("\tAgent Build: %s ", p.Build))
+	Log(m.ID, fmt.Sprintf("\tAgent waitTime: %s ", p.WaitTime))
+	Log(m.ID, fmt.Sprintf("\tAgent skew: %d ", p.Skew))
+	Log(m.ID, fmt.Sprintf("\tAgent paddingMax: %d ", p.PaddingMax))
+	Log(m.ID, fmt.Sprintf("\tAgent maxRetry: %d ", p.MaxRetry))
+	Log(m.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
+	Log(m.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
+	Log(m.ID, fmt.Sprintf("\tAgent KillDate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 
-	Agents[j.ID].Version = p.Version
-	Agents[j.ID].Build = p.Build
-	Agents[j.ID].WaitTime = p.WaitTime
-	Agents[j.ID].Skew = p.Skew
-	Agents[j.ID].PaddingMax = p.PaddingMax
-	Agents[j.ID].MaxRetry = p.MaxRetry
-	Agents[j.ID].FailedCheckin = p.FailedCheckin
-	Agents[j.ID].Proto = p.Proto
-	Agents[j.ID].KillDate = p.KillDate
+	Agents[m.ID].Version = p.Version
+	Agents[m.ID].Build = p.Build
+	Agents[m.ID].WaitTime = p.WaitTime
+	Agents[m.ID].Skew = p.Skew
+	Agents[m.ID].PaddingMax = p.PaddingMax
+	Agents[m.ID].MaxRetry = p.MaxRetry
+	Agents[m.ID].FailedCheckin = p.FailedCheckin
+	Agents[m.ID].Proto = p.Proto
+	Agents[m.ID].KillDate = p.KillDate
+
+	Agents[m.ID].Architecture = p.SysInfo.Architecture
+	Agents[m.ID].HostName = p.SysInfo.HostName
+	Agents[m.ID].Pid = p.SysInfo.Pid
+	Agents[m.ID].Ips = p.SysInfo.Ips
+	Agents[m.ID].Platform = p.SysInfo.Platform
+	Agents[m.ID].UserName = p.SysInfo.UserName
+	Agents[m.ID].UserGUID = p.SysInfo.UserGUID
+
+	if core.Debug {
+		message("debug", "Leaving agents.UpdateInfo function")
+	}
+	return nil
 }
 
 // Log is used to write log messages to the agent's log file
 func Log(agentID uuid.UUID, logMessage string) {
+	if core.Debug {
+		message("debug", "Entering into agents.Log")
+	}
 	_, err := Agents[agentID].agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
 	if err != nil {
 		message("warn", fmt.Sprintf("There was an error writing to the agent log agents.Log:\r\n%s", err.Error()))
@@ -300,6 +412,11 @@ func GetAgentList() func(string) []string {
 
 // ShowInfo lists all of the agent's structure value in a table
 func ShowInfo(agentID uuid.UUID) {
+
+	if !isAgent(agentID) {
+		message("warn", fmt.Sprintf("%s is not a valid agent!", agentID))
+		return
+	}
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -359,18 +476,7 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 		message("debug", fmt.Sprintf("In agents.AddJob function for command: %s", jobArgs))
 	}
 
-	isAgent := false
-	// Verify the passed in agent is known
-	for k := range Agents {
-		if Agents[k].ID == agentID {
-			isAgent = true
-		}
-	}
-	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		isAgent = true
-	}
-
-	if isAgent {
+	if isAgent(agentID) || agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
 		job := Job{
 			Type:    jobType,
 			Status:  "created",
@@ -409,12 +515,14 @@ func AddJob(agentID uuid.UUID, jobType string, jobArgs []string) (string, error)
 
 // GetMessageForJob returns a Message Base structure for the provided job type
 func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
-	// TODO should be moved to messages library
 	m := messages.Base{
 		Version: 1.0,
 		ID:      agentID,
-		Padding: core.RandStringBytesMaskImprSrc(paddingMax), // TODO shouldn't this be the agent.PaddingMax?
 	}
+	if !isAgent(agentID) {
+		return m, fmt.Errorf("%s is not a valid agent", agentID.String())
+	}
+	m.Padding = core.RandStringBytesMaskImprSrc(Agents[agentID].PaddingMax)
 	switch job.Type {
 	case "cmd":
 		m.Type = "CmdPayload"
@@ -425,9 +533,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) > 1 {
 			p.Args = strings.Join(job.Args[1:], " ")
 		}
-
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "shellcode":
 		m.Type = "Shellcode"
 		p := messages.Shellcode{
@@ -445,8 +551,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			p.PID = uint32(i)
 			p.Bytes = job.Args[2]
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "download":
 		m.Type = "FileTransfer"
 		Log(agentID, fmt.Sprintf("Downloading file from agent at %s\n", job.Args[0]))
@@ -456,33 +561,21 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			Job:          job.ID,
 			IsDownload:   false,
 		}
-
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "initialize":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
 			Command: job.Type,
 			Job:     job.ID,
 		}
-		// TODO I think I can move these last two steps to outside the case statement
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "kill":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
 			Command: job.Args[0],
 			Job:     job.ID,
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
-		err := RemoveAgent(agentID)
-		if err != nil {
-			message("warn", err.Error())
-		} else {
-			message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
-		}
-
+		m.Payload = p
 	case "ls":
 		m.Type = "NativeCmd"
 		p := messages.NativeCmd{
@@ -495,9 +588,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		} else {
 			p.Args = "./"
 		}
-
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "killdate":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -507,6 +598,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
 		}
+		m.Payload = p
 	case "cd":
 		m.Type = "NativeCmd"
 		p := messages.NativeCmd{
@@ -514,9 +606,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			Command: job.Args[0],
 			Args:    strings.Join(job.Args[1:], " "),
 		}
-
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "pwd":
 		m.Type = "NativeCmd"
 		p := messages.NativeCmd{
@@ -524,9 +614,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			Command: job.Args[0],
 			Args:    "",
 		}
-
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "maxretry":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -537,9 +625,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
 		}
-		k := marshalMessage(p)
-
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "padding":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -550,8 +636,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "skew":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -562,8 +647,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "sleep":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
@@ -574,8 +658,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		if len(job.Args) == 2 {
 			p.Args = job.Args[1]
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "Minidump":
 		m.Type = "Module"
 		p := messages.Module{
@@ -583,8 +666,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			Job:     job.ID,
 			Args:    job.Args,
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	case "upload":
 		m.Type = "FileTransfer"
 		// TODO add error handling; check 2 args (src, dst)
@@ -610,8 +692,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
 			Job:          job.ID,
 		}
-		k := marshalMessage(p)
-		m.Payload = (*json.RawMessage)(&k)
+		m.Payload = p
 	default:
 		m.Type = "ServerOk"
 		return m, errors.New("invalid job type, sending ServerOK")
@@ -622,6 +703,9 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 // GetAgentStatus evaluates the agent's last check in time and max wait time to determine if it is active, delayed, or dead
 func GetAgentStatus(agentID uuid.UUID) string {
 	var status string
+	if !isAgent(agentID) {
+		return fmt.Sprintf("%s is not a valid agent", agentID.String())
+	}
 	dur, errDur := time.ParseDuration(Agents[agentID].WaitTime)
 	if errDur != nil {
 		message("warn", fmt.Sprintf("Error converting %s to a time duration: %s", Agents[agentID].WaitTime,
@@ -647,7 +731,7 @@ func RemoveAgent(agentID uuid.UUID) error {
 
 }
 
-// GetAgentFieldValue returns a string value for the field value belonging to the specefied Agent
+// GetAgentFieldValue returns a string value for the field value belonging to the specified Agent
 func GetAgentFieldValue(agentID uuid.UUID, field string) (string, error) {
 	if isAgent(agentID) {
 		switch strings.ToLower(field) {
@@ -671,6 +755,204 @@ func isAgent(agentID uuid.UUID) bool {
 		}
 	}
 	return false
+}
+
+// newAgent creates a new Agent and returns the object but does not add it to the global agents map
+func newAgent(agentID uuid.UUID) (agent, error) {
+	if core.Debug {
+		message("debug", "Entering into agents.newAgent function")
+	}
+	var agent agent
+	if isAgent(agentID) {
+		return agent, fmt.Errorf("the %s agent already exists", agentID)
+	}
+
+	agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
+
+	// Create a directory for the new agent's files
+	if _, err := os.Stat(filepath.Join(agentsDir, agentID.String())); os.IsNotExist(err) {
+		errM := os.MkdirAll(filepath.Join(agentsDir, agentID.String()), 0750)
+		if errM != nil {
+			return agent, fmt.Errorf("there was an error creating a directory for agent %s:\r\n%s",
+				agentID.String(), err.Error())
+		}
+		// Create the agent's log file
+		agentLog, errC := os.Create(filepath.Join(agentsDir, agentID.String(), "agent_log.txt"))
+		if errC != nil {
+			return agent, fmt.Errorf("there was an error creating the agent_log.txt file for agnet %s:\r\n%s",
+				agentID.String(), err.Error())
+		}
+
+		// Change the file's permissions
+		errChmod := agentLog.Chmod(0640)
+		if errChmod != nil {
+			return agent, fmt.Errorf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error())
+		}
+
+		if core.Verbose {
+			message("note", fmt.Sprintf("Created agent log file at: %s agent_log.txt",
+				path.Join(agentsDir, agentID.String())))
+		}
+	}
+	// Open agent's log file for writing
+	f, err := os.OpenFile(filepath.Join(agentsDir, agentID.String(), "agent_log.txt"), os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		return agent, fmt.Errorf("there was an error openeing the %s agent's log file:\r\n%s", agentID.String(), err.Error())
+	}
+
+	agent.ID = agentID
+	agent.agentLog = f
+	agent.InitialCheckIn = time.Now().UTC()
+	agent.StatusCheckIn = time.Now().UTC()
+	agent.channel = make(chan []Job, 10)
+
+	_, errAgentLog := agent.agentLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), "Instantiated agent"))
+	if errAgentLog != nil {
+		message("warn", fmt.Sprintf("There was an error writing to the agent log agents.Log:\r\n%s", errAgentLog.Error()))
+	}
+
+	if core.Debug {
+		message("debug", "Leaving agents.newAgent function without error")
+	}
+	return agent, nil
+}
+
+// JobResults handles the response message sent by the agent
+func JobResults(m messages.Base) error {
+	if core.Debug {
+		message("debug", "Entering into agents.JobResults")
+	}
+
+	// Check to make sure it is a known agent
+	if !isAgent(m.ID) {
+		return fmt.Errorf("%s is not a known agent", m.ID)
+	}
+
+	// Check to make sure it was a real job for that agent
+
+	p := m.Payload.(messages.CmdResults)
+	Log(m.ID, fmt.Sprintf("Results for job: %s", p.Job))
+
+	fmt.Println()
+	message("success", fmt.Sprintf("Results for job %s at %s", p.Job, time.Now().UTC().Format(time.RFC3339)))
+	fmt.Println()
+	if len(p.Stdout) > 0 {
+		Log(m.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
+		color.Green(p.Stdout)
+	}
+	if len(p.Stderr) > 0 {
+		Log(m.ID, fmt.Sprintf("Command Results (stderr):\r\n%s", p.Stderr))
+		color.Red(p.Stderr)
+	}
+
+	if core.Debug {
+		message("debug", "Leaving agents.JobResults")
+	}
+	fmt.Println()
+	return nil
+}
+
+// FileTransfer handles file upload/download operations
+func FileTransfer(m messages.Base) error {
+	if core.Debug {
+		message("debug", "Entering into agents.FileTransfer")
+	}
+
+	// Check to make sure it is a known agent
+	if !isAgent(m.ID) {
+		return fmt.Errorf("%s is not a known agent", m.ID)
+	}
+
+	p := m.Payload.(messages.FileTransfer)
+
+	if p.IsDownload {
+		agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
+		_, f := filepath.Split(p.FileLocation) // We don't need the directory part for anything
+		if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
+			errorMessage := fmt.Errorf("there was an error locating the agent's directory:\r\n%s", errD.Error())
+			Log(m.ID, errorMessage.Error())
+			return errorMessage
+		}
+		message("success", fmt.Sprintf("Results for job %s", p.Job))
+		downloadBlob, downloadBlobErr := base64.StdEncoding.DecodeString(p.FileBlob)
+
+		if downloadBlobErr != nil {
+			errorMessage := fmt.Errorf("there was an error decoding the fileBlob:\r\n%s", downloadBlobErr.Error())
+			Log(m.ID, errorMessage.Error())
+			return errorMessage
+		}
+		downloadFile := filepath.Join(agentsDir, m.ID.String(), f)
+		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
+		if writingErr != nil {
+			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
+			Log(m.ID, errorMessage.Error())
+			return errorMessage
+		}
+		successMessage := fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
+			p.FileLocation,
+			len(downloadBlob),
+			m.ID.String(),
+			downloadFile)
+
+		message("success", successMessage)
+		Log(m.ID, successMessage)
+	}
+	if core.Debug {
+		message("debug", "Leaving agents.FileTransfer")
+	}
+	return nil
+}
+
+// GetLifetime returns the amount an agent could live without successfully communicating with the server
+func GetLifetime(agentID uuid.UUID) (time.Duration, error) {
+	if core.Debug {
+		message("debug", "Entering into agents.GetLifeTime")
+	}
+	// Check to make sure it is a known agent
+	if !isAgent(agentID) {
+		return 0, fmt.Errorf("%s is not a known agent", agentID)
+	}
+
+	// Check to see if PID is set to know if the first AgentInfo message has been sent
+	if Agents[agentID].Pid == 0 {
+		return 0, nil
+	}
+
+	sleep, errSleep := time.ParseDuration(Agents[agentID].WaitTime)
+	if errSleep != nil {
+		return 0, fmt.Errorf("there was an error parsing the agent WaitTime to a duration:\r\n%s", errSleep.Error())
+	}
+	if sleep == 0 {
+		return 0, fmt.Errorf("agent WaitTime is equal to zero")
+	}
+
+	retry := Agents[agentID].MaxRetry
+	if retry == 0 {
+		return 0, fmt.Errorf("agent MaxRetry is equal to zero")
+	}
+
+	skew := time.Duration(Agents[agentID].Skew) * time.Millisecond
+	maxRetry := Agents[agentID].MaxRetry
+
+	// Calculate the worst case scenario that an agent could be alive before dying
+	lifetime := sleep + skew
+	for maxRetry > 1 {
+		lifetime = lifetime + (sleep + skew)
+		maxRetry--
+	}
+
+	if Agents[agentID].KillDate > 0 {
+		if time.Now().Add(lifetime).After(time.Unix(Agents[agentID].KillDate, 0)) {
+			return 0, fmt.Errorf("the agent lifetime will exceed the killdate")
+		}
+	}
+
+	if core.Debug {
+		message("debug", "Leaving agents.GetLifeTime without error")
+	}
+
+	return lifetime, nil
+
 }
 
 // Job is a structure for holding data for single task assigned to a single agent
