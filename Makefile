@@ -29,6 +29,7 @@ L=Linux-x64
 A=Linux-arm
 M=Linux-mips
 D=Darwin-x64
+export GO111MODULE=on
 
 # Make Directory to store executables
 $(shell mkdir -p ${DIR})
@@ -148,7 +149,7 @@ package-agent-dll:
 
 package-prism-windows:
 	${PACKAGE} ${DIR}/PRISM-${W}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${W}-v${VERSION}.7z PRISM-${W}
+	cd ${DIR};${PACKAGE} PRISM-${W}-v${VERSION}.7z PRISM-${W}.exe
 	cp ${DIR}/PRISM-${W}.exe ${BIN}windows/
 
 package-prism-linux:

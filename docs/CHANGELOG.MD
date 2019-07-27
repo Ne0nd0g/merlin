@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added support for user defined HTTP proxy with agent `-proxy` command line flag; Only works with HTTP/1.1
 - Added `PROXY=` to Make file so the binaries can be hard coded with the proxy
 - Added PRISM application to detect a Merlin server
+- Added in CLI option to set HTTP Host header for domain fronting
 
 ### Changed
 
@@ -36,6 +37,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Removed
 
 - Removed http server's check to only allow HTTP/2 traffic so that HTTP/1.1 traffic can be supported
+- Removed Vendor folder updated project to use Go Modules in go.mod
 
 ## 0.7.1 - 2019-04-2X
 
