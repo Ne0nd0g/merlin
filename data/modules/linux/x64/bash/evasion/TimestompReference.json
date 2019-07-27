@@ -1,0 +1,24 @@
+{
+    "base": {
+      "name": "TimestompReference",
+      "type": "standard",
+      "author": ["Tony M Lambert (@ForensicITGuy)"],
+      "credits": [],
+      "path": ["linux", "x64", "bash", "evasion", "TimestompReference.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": false,
+      "notes": "",
+      "remote": "",
+      "local": [],
+      "options": [
+        {"name": "ReferenceFile", "value": "/bin/sh", "required": true, "flag": "", "description": "The reference file for sourcing timestamps."},
+        {"name": "TargetFile", "value": "file", "required": true, "flag": "", "description":"The target file to set timestamps."}
+      ],
+      "description": "Uses the touch command to manipulate timestamps using those of a reference file.",
+      "commands": [
+        "/bin/sh", "-c", "'touch -acmr {{ReferenceFile.value}} {{TargetFile.value}}'"
+      ]
+    }
+  }

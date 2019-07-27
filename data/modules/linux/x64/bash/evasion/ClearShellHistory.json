@@ -1,0 +1,23 @@
+{
+    "base": {
+      "name": "ClearShellHistory",
+      "type": "standard",
+      "author": ["Tony M Lambert (@ForensicITGuy)"],
+      "credits": [],
+      "path": ["linux", "x64", "bash", "evasion", "ClearShellHistory.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": false,
+      "notes": "",
+      "remote": "",
+      "local": [],
+      "options": [
+        {"name": "HistoryFile", "value": ".bash_history", "required": true, "flag": "", "description": "The shell history file."}
+      ],
+      "description": "Uses the rm command to remove the specified shell history file.",
+      "commands": [
+        "/bin/sh", "-c", "\"rm ~/{{HistoryFile.value}}\""
+      ]
+    }
+  }

@@ -19,6 +19,11 @@ package agent
 
 import (
 	// Standard
+	"bytes"
+	"crypto/sha256"
+	"encoding/gob"
+	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -26,131 +31,314 @@ import (
 	"github.com/satori/go.uuid"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/test/testServer"
 )
 
-func getTestAgent(proto string) Agent {
-	//creates a reproducible agent to ensure no jiggery pokery during generation
+// TestNewHTTPSAgent ensure the agent.New function returns a HTTP/1.1 agent without error
+func TestNewHTTPSAgent(t *testing.T) {
+	_, err := New("http/1.1", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", false, false)
 
-	a := Agent{
-		Platform:     "linux", //runtime.GOOS,
-		Architecture: "amd64", //runtime.GOARCH,
-		Pid:          1337,    //os.Getpid(),
-		Version:      "0.0.0", //merlin.Version,
-		WaitTime:     300 * time.Millisecond,
-		PaddingMax:   4096,
-		MaxRetry:     2,
-		Skew:         3000,
-		Verbose:      true,
-		Debug:        true,
-		Proto:        proto,
-		UserAgent:    "TEST HARNESS Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36",
-	}
-	id, err := uuid.FromString("f55b5543-106e-4f9b-8ee3-21185de64aaf")
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
-	a.ID = id
+}
 
-	a.UserName = "testuser" //u.Username
-	a.UserGUID = "testguid" //u.Gid
+// TestNewH2Agent ensure the agent.New function returns a HTTP/2 agent without error
+func TestNewH2Agent(t *testing.T) {
+	_, err := New("h2", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", false, false)
 
-	a.HostName = "testhostname"
+	if err != nil {
+		t.Error(err)
+	}
+}
 
-	a.Ips = append(a.Ips, "127.0.0.1")
+// TestNewHQAgent ensure the agent.New function returns a HTTP/3 agent without error
+func TestNewHQAgent(t *testing.T) {
+	_, err := New("hq", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", false, false)
 
-	client, errClient := getClient(a.Proto)
-	if errClient == nil {
-		a.Client = client
-	} else {
-		if a.Verbose {
-			message("warn", errClient.Error())
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// TestKillDate sends a message with a kill date that has been exceeded
+func TestKillDate(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	agent.KillDate = 1560616599
+
+	errRun := agent.Run()
+	// TODO the function won't actually return unless there is an error
+	if errRun == nil {
+		t.Errorf("the agent did not quit when the killdate was exceeded")
+	}
+}
+
+// TestFailedCheckin test for the agent to exit after the amount of failed checkins exceeds the agent's MaxRetry setting
+func TestFailedCheckin(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	agent.FailedCheckin = agent.MaxRetry
+
+	errRun := agent.Run()
+	if errRun == nil {
+		t.Errorf("the agent did not quit when the maximum number of failed checkin atttempts were reached")
+	}
+}
+
+// TestInvalidMessageType sends a valid message.Base with an invalid Type string
+func TestInvalidMessageType(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	m := messages.Base{
+		Version: 1.0,
+		ID:      agent.ID,
+		Type:    "NotReal",
+		Token:   agent.JWT,
+	}
+	_, errSend := agent.sendMessage("POST", m)
+	if errSend == nil {
+		t.Error("agent handler processed an invalid message type without returning an error")
+	}
+}
+
+// TestInvalidMessage sends a structure that is not a valid message.Base
+func TestInvalidMessage(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8081", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	//signalling chans for start/end of test
+	setup := make(chan struct{})
+	ended := make(chan struct{})
+
+	go testserver.TestServer{}.Start("8081", ended, setup, t)
+	//wait until set up
+	<-setup
+
+	type testMessage struct {
+		Alpha   string
+		Number  int64
+		Boolean bool
+	}
+
+	m := testMessage{
+		Alpha:   "TestString",
+		Number:  1337,
+		Boolean: false,
+	}
+
+	// Can't use agent.sendMessage because it only accepts valid message.Base objects
+
+	// Convert messages.Base to gob
+	messageBytes := new(bytes.Buffer)
+	errGobEncode := gob.NewEncoder(messageBytes).Encode(m)
+	if errGobEncode != nil {
+		t.Errorf("there was an error gob encoding the message:\r\n%s", errGobEncode.Error())
+		return
+	}
+
+	// Get JWE
+	jweString, errJWE := core.GetJWESymetric(messageBytes.Bytes(), agent.secret)
+	if errJWE != nil {
+		t.Errorf("there was an error getting the JWE:\r\n%s", errJWE.Error())
+		return
+	}
+
+	// Encode JWE into gob
+	jweBytes := new(bytes.Buffer)
+	errJWEBuffer := gob.NewEncoder(jweBytes).Encode(jweString)
+	if errJWEBuffer != nil {
+		t.Errorf("there was an error gob encoding the JWE:\r\n%s", errJWEBuffer.Error())
+		return
+	}
+
+	req, reqErr := http.NewRequest("POST", agent.URL, jweBytes)
+	if reqErr != nil {
+		t.Errorf("there was an error sending the POST request:\r\n%s", reqErr.Error())
+		return
+	}
+
+	if req != nil {
+		req.Header.Set("User-Agent", agent.UserAgent)
+		req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", agent.JWT))
+	}
+
+	// Send the request
+	resp, err := agent.Client.Do(req)
+	if err != nil {
+		t.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
+		return
+	}
+
+	close(ended)
+
+	if resp == nil {
+		t.Error("the server did not return a response")
+		return
+	}
+
+	if resp.StatusCode != 500 {
+		t.Error("the merlin server did not return a 500 for an invalid message type")
+	}
+
+}
+
+// TestPSK ensure that the agent can't successfully communicate with the server using the wrong PSK
+func TestPSK(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+	agent.WaitTime = 5000 * time.Millisecond
+	k := sha256.Sum256([]byte("wrongPassword"))
+	agent.secret = k[:]
+
+	//signalling chans for start/end of test
+	setup := make(chan struct{})
+	ended := make(chan struct{})
+
+	go testserver.TestServer{}.Start("8080", ended, setup, t)
+	//wait until set up
+	<-setup
+
+	m := messages.Base{
+		Version: 1.0,
+		ID:      agent.ID,
+		Type:    "StatusOk",
+		Token:   agent.JWT,
+	}
+
+	_, errSend := agent.sendMessage("POST", m)
+	if errSend == nil {
+		t.Error("Agent successfully sent an encrypted message using the wrong key")
+		return
+	}
+
+	// Try again with the correct password
+	k = sha256.Sum256([]byte("test"))
+	agent.secret = k[:]
+	_, errSend2 := agent.sendMessage("POST", m)
+	if errSend2 != nil {
+		t.Error("agent was unable communicate with the server using the PSK")
+	}
+	close(ended)
+}
+
+// TestWrongUUID sends a valid message to an agent using a UUID that is different from the running agent
+func TestWrongUUID(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	m := messages.Base{
+		Version: 1.0,
+		ID:      uuid.NewV4(),
+		Type:    "ServerOk",
+		Token:   agent.JWT,
+	}
+
+	_, errHandler := agent.messageHandler(m)
+	if errHandler == nil {
+		t.Error("the agent handled a message with a wrong UUID without returning an error")
+	}
+	if errHandler != nil {
+		if errHandler.Error() != "the input message UUID did not match this agent's UUID" {
+			t.Error(errHandler)
 		}
 	}
-	return a
 }
 
-func TestInitialh2(t *testing.T) {
-	//create a new agent with default params and h2 proto
-	a := getTestAgent("h2")
-	//create a server for the agent to interact with locally
+// TestInvalidHTTPTrafficPayload sends a gob encoded string to the server to ensure it handles invalid traffic
+func TestInvalidHTTPTrafficPayload(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	m := messages.Base{
+		Version: 1.0,
+		ID:      agent.ID,
+		Type:    "BadPayload",
+		Token:   agent.JWT,
+	}
+
+	_, errHandler := agent.sendMessage("POST", m)
+	if errHandler == nil {
+		t.Error("the agent handled a message with a wrong UUID without returning an error")
+	}
+}
+
+// TestAuthentication verifies successful authentication using the correct PSK
+func TestAuthentication(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8082", "", "test", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	agent.WaitTime = 5000 * time.Millisecond
+
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
 	ended := make(chan struct{})
-	port := "8081"
-	go testserver.TestServer{}.Start(port, ended, setup, t)
+
+	go testserver.TestServer{}.Start("8082", ended, setup, t)
 	//wait until set up
 	<-setup
-	//~~~~ the above can probably be copied into each test function
 
-	//do the test stuff
-
-	//simulate a.Run()
-	server := "https://127.0.0.1:" + port
-
-	// Do initial checkin
-	if a.initial {
-		t.Error("Agent initialised prematurely")
-	} else {
-		a.initial = a.initialCheckIn(server, a.Client)
+	authenticated := agent.initialCheckIn(agent.Client)
+	if authenticated == false {
+		t.Error("the agent did not successfully authenticate")
 	}
-
-	// Ensure after initial, the status checkin is sensible too
-	if a.initial {
-		a.statusCheckIn(server, a.Client)
-	} else {
-		t.Error("Agent not marked checked in correctly")
-	}
-
-	//signal to the server the test is over
 	close(ended)
-	//we assume the initial checkin was successful for this case - so check the attribute
-	if !a.initial {
-		t.Error("Initial checkin failed")
-	}
-
 }
 
-func TestBrokenJson(t *testing.T) {
-	//create a new agent with default params and h2 proto
-	a := getTestAgent("h2")
-	//create a server for the agent to interact with locally
+// TestBadAuthentication verifies unsuccessful authentication using the wrong PSK
+func TestBadAuthentication(t *testing.T) {
+	agent, err := New("h2", "https://127.0.0.1:8083", "", "neverGonnaGiveYouUp", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	agent.WaitTime = 5000 * time.Millisecond
+
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
 	ended := make(chan struct{})
-	port := "8082"
-	go testserver.TestServer{}.Start(port, ended, setup, t)
+
+	go testserver.TestServer{}.Start("8083", ended, setup, t)
 	//wait until set up
 	<-setup
-	//~~~~ the above can probably be copied into each test function
 
-	a.UserAgent = "BrokenJSON" //signal to the test server to send broken json
-
-	//simulate a.Run()
-	server := "https://127.0.0.1:" + port
-
-	// Do initial checkin
-	if a.initial {
-		t.Error("Agent initialised prematurely")
-	} else {
-		a.initial = a.initialCheckIn(server, a.Client)
+	authenticated := agent.initialCheckIn(agent.Client)
+	if authenticated != false {
+		t.Error("the agent successfully authenticated with the wrong PSK")
 	}
-
-	// Ensure after initial, the status checkin is sensible too
-	if a.initial {
-		a.statusCheckIn(server, a.Client)
-	} else {
-		t.Error("Agent not marked checked in correctly")
-	}
-
-	//signal to the server the test is over
 	close(ended)
-	//we assume the initial checkin was successful for this case - so check the attribute
-	if !a.initial {
-		t.Error("Initial checkin failed")
-	}
-
-	if a.FailedCheckin < 1 {
-		t.Error("Broken response didn't trigger failed checkin increment")
-	}
 }
+
+// Bad content-type header
+// TODO test every function of the message handler

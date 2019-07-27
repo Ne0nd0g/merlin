@@ -1,0 +1,25 @@
+{
+    "base": {
+      "name": "ShellProfilePersistence",
+      "type": "standard",
+      "author": ["Tony M Lambert (@ForensicITGuy)"],
+      "credits": [],
+      "path": ["linux", "x64", "bash", "persistence", "ShellProfilePersistence.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": false,
+      "notes": "",
+      "remote": "",
+      "local": [],
+      "options": [
+        {"name": "ShellProfileFile", "value": "~/.bashrc", "required": true, "flag": "", "description": "Shell profile file to hold command."},
+        {"name": "Command", "value": "/bin/sh -c", "required": true, "flag": "", "description": "Command to execute via shell profile."}
+        ],
+      "description": "Establishes persistence of a specified command using a shell profile.",
+      "commands": [
+        "/bin/sh", "-c",
+        "'echo \"{{Command.value}}\" >> {{ShellProfileFile.value}} && echo Profile successfully modified.'"
+      ]
+    }
+  }

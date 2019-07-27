@@ -1,0 +1,25 @@
+{
+    "base": {
+      "name": "CrontabPersistence",
+      "type": "standard",
+      "author": ["Tony M Lambert (@ForensicITGuy)"],
+      "credits": [],
+      "path": ["linux", "x64", "bash", "persistence", "CrontabPersistence.json"],
+      "platform": "linux",
+      "arch": "x64",
+      "lang": "bash",
+      "privilege": false,
+      "notes": "",
+      "remote": "",
+      "local": [],
+      "options": [
+        {"name": "CrontabSchedule", "value": "* * * * *", "required": true, "flag": "", "description": "Execution schedule for crontab entry."},
+        {"name": "CrontabCommand", "value": "/bin/sh -c", "required": true, "flag": "", "description": "Command to execute via cron."}
+        ],
+      "description": "Establishes persistence of a specified command using a crontab entry.",
+      "commands": [
+        "/bin/sh", "-c",
+        "'(crontab -l 2>/dev/null; echo \"{{CrontabSchedule.value}} {{CrontabCommand.value}}\") | crontab - && echo crontab successfully modified.'"
+      ]
+    }
+  }
