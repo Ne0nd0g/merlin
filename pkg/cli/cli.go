@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -91,7 +92,7 @@ func Shell() {
 				continue
 			}
 		} else if err == io.EOF {
-			break
+			exit()
 		}
 
 		line = strings.TrimSpace(line)
@@ -112,7 +113,7 @@ func Shell() {
 					menuHelpMain()
 				case "?":
 					menuHelpMain()
-				case "exit":
+				case "exit", "quit":
 					exit()
 				case "interact":
 					if len(cmd) > 1 {
@@ -120,8 +121,6 @@ func Shell() {
 						i = append(i, cmd[1])
 						menuAgent(i)
 					}
-				case "quit":
-					exit()
 				case "remove":
 					if len(cmd) > 1 {
 						i := []string{"remove"}
@@ -203,17 +202,11 @@ func Shell() {
 							m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
 					}
 
-				case "back":
+				case "back", "main":
 					menuSetMain()
-				case "main":
-					menuSetMain()
-				case "exit":
+				case "exit", "quit":
 					exit()
-				case "quit":
-					exit()
-				case "help":
-					menuHelpModule()
-				case "?":
+				case "?", "help":
 					menuHelpModule()
 				default:
 					message("info", "Executing system command...")
@@ -324,11 +317,9 @@ func Shell() {
 						message("info", "execute-shellcode RtlCreateUserThread <pid> <shellcode>")
 						break
 					}
-				case "exit":
+				case "exit", "quit":
 					exit()
-				case "help":
-					menuHelpAgent()
-				case "?":
+				case "?", "help":
 					menuHelpAgent()
 				case "info":
 					agents.ShowInfo(shellAgent)
@@ -401,8 +392,6 @@ func Shell() {
 						m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
 				case "main":
 					menuSetMain()
-				case "quit":
-					exit()
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
@@ -834,10 +823,39 @@ func message(level string, message string) {
 	}
 }
 
+// confirm reads in string and returns true if the string is y or yes but does not provide the prompt question
+func confirm(response string) bool {
+
+	response = strings.ToLower(response)
+	response = strings.Trim(response, "\r\n")
+	yes := []string{"y", "yes"}
+
+	for _, match := range yes {
+		if response == match {
+			return true
+		}
+	}
+
+	return false
+}
+
+// exit will prompt the user to confirm if they want to exit
 func exit() {
-	color.Red("[!]Quitting")
-	logging.Server("Shutting down Merlin Server due to user input")
-	os.Exit(0)
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Are you sure you want to exit? [yes/NO]: ")
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		message("warn", fmt.Sprintf("There was an error reading the input:\r\n%s", err.Error()))
+	}
+	response = strings.ToLower(response)
+	response = strings.Trim(response, "\r\n")
+
+	if confirm(response) {
+		color.Red("[!]Quitting")
+		logging.Server("Shutting down Merlin Server due to user input")
+		os.Exit(0)
+	}
 }
 
 func executeCommand(name string, arg []string) {
