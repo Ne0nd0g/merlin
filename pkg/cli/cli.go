@@ -18,6 +18,7 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -822,40 +823,38 @@ func message(level string, message string) {
 	}
 }
 
-func einslice(element string, slice []string) bool {
-	for _, match := range slice {
-		if element == match {
+// confirm reads in string and returns true if the string is y or yes but does not provide the prompt question
+func confirm(response string) bool {
+
+	response = strings.ToLower(response)
+	response = strings.Trim(response, "\r\n")
+	yes := []string{"y", "yes"}
+
+	for _, match := range yes {
+		if response == match {
 			return true
 		}
 	}
-	return false
-}
-
-func confirm() bool {
-	response, err := prompt.Readline()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	yes := []string{"y", "yes"}
-	response = strings.ToLower(response)
-
-	if einslice(response, yes) {
-		return true
-	}
 
 	return false
 }
 
+// exit will prompt the user to confirm if they want to exit
 func exit() {
-	oldprompt := prompt.Config.Prompt
-	prompt.SetPrompt("Are you sure you want to exit? [yes/no]: ")
-	if confirm() {
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Are you sure you want to exit? [yes/NO]: ")
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		message("warn", fmt.Sprintf("There was an error reading the input:\r\n%s", err.Error()))
+	}
+	response = strings.ToLower(response)
+	response = strings.Trim(response, "\r\n")
+
+	if confirm(response) {
 		color.Red("[!]Quitting")
 		logging.Server("Shutting down Merlin Server due to user input")
 		os.Exit(0)
-	} else {
-		prompt.SetPrompt(oldprompt)
 	}
 }
 

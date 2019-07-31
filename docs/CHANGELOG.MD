@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added in CLI option to set HTTP Host header for domain fronting
 - [Pull 72](https://github.com/Ne0nd0g/merlin/pull/72) - Added a Linux module that will hide the Merlin process from tools that walk the /proc filesystem by @ForensicITGuy
 - [Pull 73](https://github.com/Ne0nd0g/merlin/pull/74) - Added 5 Linux evasion and persistence modules by @ForensicITGuy
+- [Pull 76](https://github.com/Ne0nd0g/merlin/pull/76) - Prompt user to confirm exit or quit by [Daniel Roberson](https://github.com/droberson)
 
 ### Fixed
 
