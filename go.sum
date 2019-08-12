@@ -108,10 +108,10 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 go.dedis.ch/fixbuf v1.0.3 h1:hGcV9Cd/znUxlusJ64eAlExS+5cJDIyTyEG+otu5wQs=
 go.dedis.ch/fixbuf v1.0.3/go.mod h1:yzJMt34Wa5xD37V5RTdmp38cz3QhMagdGoem9anUalw=
-go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible h1:AAAaZPJwirRhDa0UFezb2UAZA+isQOfu2TgY4nXENnA=
-go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
-go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
 go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd h1:tuKhSPASZIyBYK+wcd403NJfOXd+2hny39q+ufdZPYY=
+go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible h1:AAAaZPJwirRhDa0UFezb2UAZA+isQOfu2TgY4nXENnA=
+go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
+go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
 go.dedis.ch/kyber v0.0.0-20180509082236-f066f8d2cd58 h1:7z4wJ1qona0Jczun7WPDjOD07V0E3VAyelGBd0TlcfU=
 go.dedis.ch/kyber v0.0.0-20180509082236-f066f8d2cd58/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
 go.dedis.ch/kyber v0.0.0-20190125094535-ffb719103651 h1:dTGoEbq/SSGWUHVhtnAEz0j68UOL5M6zDjWwONqjChg=

