@@ -36,6 +36,7 @@ import (
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/pbkdf2"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
@@ -97,9 +98,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Send message to server and see if I get a AuthInit message that I can decrypt
+	// Send message to server and see if I get a RegInit message that can be decrypted
 	message("info", fmt.Sprintf("Connecting to %s checking for Merlin server version v0.8.0.BETA or greater", url))
-	err = opaqueAuthenticate(a)
+	err = opaqueRegister(a)
 	if err != nil {
 		if verbose {
 			message("warn", err.Error())
@@ -109,105 +110,62 @@ func main() {
 }
 
 // opaqueAuthenticate is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
-func opaqueAuthenticate(a agent.Agent) error {
-	// 1 - Create a NewUserAuth with an embedded key exchange
-	userKex := gopaque.NewKeyExchangeSigma(gopaque.CryptoDefault)
-	userAuth := gopaque.NewUserAuth(gopaque.CryptoDefault, a.ID.Bytes(), userKex)
+func opaqueRegister(a agent.Agent) error {
 
-	// 2 - Call Init with the password and send the resulting UserAuthInit to the server
-	userAuthInit, err := userAuth.Init([]byte(psk))
-	if err != nil {
-		return fmt.Errorf("there was an error creating the OPAQUE user authentication initialization message:\r\n%s", err.Error())
-	}
+	// Generate a random password and run it through 5000 iterations of PBKDF2
+	x := core.RandStringBytesMaskImprSrc(30)
+	pwdU := pbkdf2.Key([]byte(x), a.ID.Bytes(), 5000, 32, sha256.New)
 
-	userAuthInitBytes, errUserAuthInitBytes := userAuthInit.ToBytes()
-	if errUserAuthInitBytes != nil {
-		return fmt.Errorf("there was an error marshalling the OPAQUE user authentication initialization message to bytes:\r\n%s", errUserAuthInitBytes.Error())
+	// 1 - Create a NewUserRegister
+	userReg := gopaque.NewUserRegister(gopaque.CryptoDefault, a.ID.Bytes(), nil)
+	userRegInit := userReg.Init(pwdU)
+
+	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
+	if errUserRegInitBytes != nil {
+		return fmt.Errorf("there was an error marshalling the OPAQUE user registration initialization message to bytes:\r\n%s", errUserRegInitBytes.Error())
 	}
 
 	// message to be sent to the server
-	authInitBase := messages.Base{
+	regInitBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "AuthInit",
-		Payload: userAuthInitBytes,
-		Padding: core.RandStringBytesMaskImprSrc(4096),
+		Type:    "RegInit",
+		Payload: userRegInitBytes,
+		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
-	authInitResp, errAuthInitResp := sendMessage("POST", authInitBase, a.Client)
+	regInitResp, errRegInitResp := sendMessage("POST", regInitBase, a.Client)
 
-	if errAuthInitResp != nil {
-		return fmt.Errorf("there was an error sending the agent OPAQUE authentication initialization message:\r\n%s", errAuthInitResp.Error())
+	if errRegInitResp != nil {
+		return fmt.Errorf("there was an error sending the agent OPAQUE user registration initialization message:\r\n%s", errRegInitResp.Error())
 	}
 
-	if authInitResp.Type != "AuthInit" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user authenticaion initialization", authInitResp.Type)
+	if regInitResp.Type != "RegInit" {
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", regInitResp.Type)
 	}
 
 	// If we get this far then it means we sent a message to the server encrypted with the correct psk and it responded
 	message("success", fmt.Sprintf("Verified Merlin server v0.8.0.BETA or greater instance at %s", url))
 
 	if verbose {
-		message("note", fmt.Sprintf("Decrypted Merlin message:\r\n%+v", authInitResp))
+		message("note", fmt.Sprintf("Decrypted Merlin message:\r\n%+v", regInitResp))
 	}
 
-	// 3 - Receive the server's ServerAuthComplete
-	var serverComplete gopaque.ServerAuthComplete
+	var serverRegInit gopaque.ServerRegisterInit
 
-	errServerComplete := serverComplete.FromBytes(gopaque.CryptoDefault, authInitResp.Payload.([]byte))
-	if errServerComplete != nil {
-		return fmt.Errorf("there was an error unmarshalling the OPAQUE server complete message from bytes:\r\n%s", errServerComplete.Error())
+	errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload.([]byte))
+	if errServerRegInit != nil {
+		return fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
 	}
 
-	// 4 - Call Complete with the server's ServerAuthComplete. The resulting UserAuthFinish has user and server key
-	// information. This would be the last step if we were not using an embedded key exchange. Since we are, take the
-	// resulting UserAuthComplete and send it to the server.
-	_, userAuthComplete, errUserAuth := userAuth.Complete(&serverComplete)
-	if errUserAuth != nil {
-		return fmt.Errorf("there was an error completing OPAQUE authentication:\r\n%s", errUserAuth)
+	if a.Verbose {
+		message("info", fmt.Sprintf("OPAQUE Alpha:\t%s", userRegInit.Alpha))
+		message("info", fmt.Sprintf("OPAQUE Beta:\t\t%s", serverRegInit.Beta))
+		message("info", fmt.Sprintf("OPAQUE V:\t\t%s", serverRegInit.V))
+		message("info", fmt.Sprintf("OPAQUE PubS:\t\t%s", serverRegInit.ServerPublicKey))
 	}
 
-	userAuthCompleteBytes, errUserAuthCompleteBytes := userAuthComplete.ToBytes()
-	if errUserAuthCompleteBytes != nil {
-		return fmt.Errorf("there was an error marshalling the OPAQUE user authentication complete message to bytes:\r\n%s", errUserAuthCompleteBytes.Error())
-	}
-
-	authCompleteBase := messages.Base{
-		Version: 1.0,
-		ID:      a.ID,
-		Type:    "AuthComplete",
-		Payload: &userAuthCompleteBytes,
-		Padding: core.RandStringBytesMaskImprSrc(4096),
-	}
-
-	// Save the OPAQUE derived Diffie-Hellman secret
-	secret = []byte(userKex.SharedSecret.String())
-
-	if verbose {
-		message("note", fmt.Sprintf("Session encryption key for %s: %v", a.ID, secret))
-	}
-
-	// Send the User Auth Complete message
-	authCompleteResp, errAuthCompleteResp := sendMessage("POST", authCompleteBase, a.Client)
-
-	if errAuthCompleteResp != nil {
-		return fmt.Errorf("there was an error sending the agent OPAQUE authentication completion message:\r\n%s", errAuthCompleteResp.Error())
-	}
-
-	switch authCompleteResp.Type {
-	case "ServerOk":
-		if verbose {
-			message("success", "Agent authentication successful")
-			message("note", fmt.Sprintf("Decrypted Merlin message:\r\n%+v", authCompleteResp))
-		}
-		if debug {
-			message("debug", "Leaving agent.opaqueAuthenticate without error")
-		}
-		return nil
-	default:
-		return fmt.Errorf("recieved unexpected or unrecognized message type during OPAQUE authentication completion:\r\n%s", authCompleteResp.Type)
-	}
-
+	return nil
 }
 
 func sendPre8Message(a agent.Agent) error {
