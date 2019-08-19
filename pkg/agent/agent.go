@@ -399,7 +399,7 @@ func getClient(protocol string, proxyURL string) (*http.Client, error) {
 			TLSClientConfig: TLSConfig,
 		}
 		return &http.Client{Transport: transport}, nil
-	case "http/1.1":
+	case "https":
 		if proxyURL != "" {
 			rawURL, errProxy := url.Parse(proxyURL)
 			if errProxy != nil {

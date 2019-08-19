@@ -13,11 +13,15 @@ XBUILD=-X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUI
 URL ?= https://127.0.0.1:443
 XURL=-X main.url=${URL}
 PSK ?= merlin
-PROXY ?=
-XPROXY = -X main.proxy=$(PROXY)
 XPSK=-X main.psk=${PSK}
-LDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} ${XPSK} ${XPROXY} -buildid="
-WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XURL} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
+PROXY ?=
+XPROXY =-X main.proxy=$(PROXY)
+HOST ?=
+XHOST =-X main.host=$(HOST)
+PROTO ?= h2
+XPROTO =-X main.protocol=$(PROTO)
+LDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
+WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
 # TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries
 GCFLAGS=-gcflags=all=-trimpath=$(GOPATH)
 ASMFLAGS=-asmflags=all=-trimpath=$(GOPATH)# -asmflags=-trimpath=$(GOPATH)

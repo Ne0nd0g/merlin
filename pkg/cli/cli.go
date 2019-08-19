@@ -549,10 +549,11 @@ func menuAgent(cmd []string) {
 		for k, v := range agents.Agents {
 			// Convert proto (i.e. h2 or hq) to user friendly string
 			var proto string
-			if v.Proto == "h2" {
+			if v.Proto == "https" {
+				proto = "HTTP/1.1 (https)"
+			} else if v.Proto == "h2" {
 				proto = "HTTP/2 (h2)"
-			}
-			if v.Proto == "hq" {
+			} else if v.Proto == "hq" {
 				proto = "QUIC (hq)"
 			}
 
