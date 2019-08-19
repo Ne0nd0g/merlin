@@ -330,7 +330,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 		var errValidate error
 
 		// Set return headers
-		w.Header().Set("Content-Type", "application/octet-stream")
+		//w.Header().Set("Content-Type", "application/octet-stream")
 
 		// Validate JWT using HTTP interface JWT key; Given to authenticated agents by server
 		agentID, errValidate = validateJWT(strings.Split(token, " ")[1], s.jwtKey)
@@ -441,6 +441,9 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
+				// Set return headers
+				w.Header().Set("Content-Type", "application/octet-stream")
+
 				// Encode JWE into gob
 				errJWEBuffer := gob.NewEncoder(w).Encode(jwe)
 				if errJWEBuffer != nil {
@@ -450,7 +453,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(404)
 					return
 				}
-				w.WriteHeader(404)
+
 				return
 			}
 			if core.Verbose {
@@ -576,6 +579,9 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 			logging.Server(errJWE.Error())
 			message("warn", errJWE.Error())
 		}
+
+		// Set return headers
+		w.Header().Set("Content-Type", "application/octet-stream")
 
 		// Encode JWE to GOB and send it to the agent
 		errEncode := gob.NewEncoder(w).Encode(jwe)
