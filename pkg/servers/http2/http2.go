@@ -447,7 +447,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 				// Encode JWE into gob
 				errJWEBuffer := gob.NewEncoder(w).Encode(jwe)
 				if errJWEBuffer != nil {
-					m := fmt.Errorf("there was an error writting the %s response message to the HTTP stream:\r\n%s", k.Type, errJWEBuffer.Error())
+					m := fmt.Errorf("there was an error writing the %s response message to the HTTP stream:\r\n%s", k.Type, errJWEBuffer.Error())
 					logging.Server(m.Error())
 					message("warn", m.Error())
 					w.WriteHeader(404)
@@ -471,7 +471,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 				message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
 			}
 			if core.Verbose {
-				message("info", fmt.Sprintf("Recieved %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
+				message("info", fmt.Sprintf("Received %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
 			}
 
 			// Allowed authenticated message with PSK JWT and JWE encrypted with derived secret
@@ -507,7 +507,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if core.Verbose {
 				message("note", "Authenticated JWT w/ Authenticated JWE agent session key")
-				message("info", fmt.Sprintf("Recived %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
+				message("info", fmt.Sprintf("Received %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
 			}
 
 			// If both an agentID and error were returned, then the claims were likely bad and the agent needs to re-authenticate

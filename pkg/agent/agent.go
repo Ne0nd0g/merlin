@@ -1155,7 +1155,7 @@ func (a *Agent) opaqueAuthenticate() error {
 	}
 
 	if authInitResp.Type != "AuthInit" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user authenticaion initialization", authInitResp.Type)
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user authentication initialization", authInitResp.Type)
 	}
 
 	// 3 - Receive the server's ServerAuthComplete
@@ -1211,7 +1211,7 @@ func (a *Agent) opaqueAuthenticate() error {
 		}
 		return nil
 	default:
-		return fmt.Errorf("recieved unexpected or unrecognized message type during OPAQUE authentication completion:\r\n%s", authCompleteResp.Type)
+		return fmt.Errorf("received unexpected or unrecognized message type during OPAQUE authentication completion:\r\n%s", authCompleteResp.Type)
 	}
 
 }

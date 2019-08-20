@@ -106,7 +106,7 @@ func KeyExchange(m messages.Base) (messages.Base, error) {
 	ke := m.Payload.(messages.KeyExchange)
 
 	if core.Debug {
-		message("debug", fmt.Sprintf("Recieved new public key from %s:\r\n%v", m.ID, ke.PublicKey))
+		message("debug", fmt.Sprintf("Received new public key from %s:\r\n%v", m.ID, ke.PublicKey))
 	}
 
 	serverKeyMessage.ID = Agents[m.ID].ID

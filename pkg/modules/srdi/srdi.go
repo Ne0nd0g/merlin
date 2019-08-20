@@ -106,7 +106,7 @@ func Parse(options map[string]string) ([]string, error) {
 // https://gist.githubusercontent.com/leoloobeek/c726719d25d7e7953d4121bd93dd2ed3/raw/05f20bae7aa6cd21e20a52034b9547a19e211c5e/ShellcodeRDI.go
 // The work by Leo Loobeek is based on the sRDI project by Nick Landers (@monoxgas) at https://github.com/monoxgas/sRDI/
 // The work done by Nick Landers is based on the work by Dan Staples which is based on the work by Stephen Fewer
-// The work done by Nick Landers regarding Position Indipendent Code (PIC) is based on the work by Matthew Graeber
+// The work done by Nick Landers regarding Position Independent Code (PIC) is based on the work by Matthew Graeber
 // The work done by Matthew Graeber is based on the work by Alan Turing
 // Lastly, invoking the name of the Lee Christensen is used for good luck and pwnage
 // dllPath is a the file path, as a string, of the source DLL to convert to reflective shellcode

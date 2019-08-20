@@ -53,7 +53,7 @@ var proxy = ""
 var secret []byte
 var verbose = false
 var debug = false
-var JWT string
+var merlinJWT string
 var host string
 
 func main() {
@@ -80,7 +80,7 @@ func main() {
 	secret = k[:]
 
 	// Set initial JWT
-	JWT, err = getJWT(a.ID)
+	merlinJWT, err = getJWT(a.ID)
 	if err != nil {
 		message("warn", err.Error())
 		os.Exit(1)
@@ -211,7 +211,7 @@ func sendPre8Message(a agent.Agent) error {
 			message("note", fmt.Sprintf("Merlin message:\r\n%+v", j))
 		}
 	} else {
-		return fmt.Errorf("recieved JSON message did not contain an message type of AgentControl")
+		return fmt.Errorf("received JSON message did not contain an message type of AgentControl")
 	}
 	return nil
 }
@@ -258,7 +258,7 @@ func sendMessage(method string, m messages.Base, client *http.Client) (messages.
 		if req != nil {
 			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
 			req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", JWT))
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", merlinJWT))
 		}
 
 		// Send the request

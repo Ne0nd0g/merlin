@@ -132,7 +132,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	case "AgentInfo":
 		err = agents.UpdateInfo(j)
 	case "AuthInit":
-		returnMessage, err = agents.OPAQUEAuthenticateInit(j, key[:])
+		returnMessage, err = agents.OPAQUEAuthenticateInit(j)
 	case "AuthComplete":
 		returnMessage, err = agents.OPAQUEAuthenticateComplete(j)
 	case "BadPayload":
