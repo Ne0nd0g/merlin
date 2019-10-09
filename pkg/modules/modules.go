@@ -57,7 +57,7 @@ type Module struct {
 	Description  string      `json:"description"`          // A description of what the module does
 	Notes        string      `json:"notes"`                // Additional information or notes about the module
 	Commands     []string    `json:"commands"`             // A list of commands to be run on the agent
-	SourceRemote string      `json:"remote"`               // Online or remote source code for a module (i.e. https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1)
+	SourceRemote string      `json:"remote"`               // Online or remote source code for a module
 	SourceLocal  []string    `json:"local"`                // The local file path to the script or payload
 	Options      []Option    `json:"options"`              // A list of configurable options/arguments for the module
 	Powershell   interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
