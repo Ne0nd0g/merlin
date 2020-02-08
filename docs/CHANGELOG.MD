@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.9.0 - 2020-02-XX
+
+### Added
+
+- Incorporated fork of `github.com/CUCyber/ja3client` allowing the Merlin agent to establish TLS connections from a JA3 signature
+- Added `ja3` to agent.New() function
+- Added `-ja3` to agent command line arguments and JA3 to Make file for hard coding initial signature
+- Added `PSK=` to Make file
+- Added `set ja3` to Agent menu allowing operators to change TLS client profile at any time
+- Created new `merlinClient` interface to handle abstract http clients and changed the Agent.Client to that interface
+- Updated Dockerfile to support Go modules
+
 ## 0.8.1 - 2019-10-08
 
 ### Fixed

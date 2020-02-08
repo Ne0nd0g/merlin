@@ -81,6 +81,7 @@ type agent struct {
 	OPAQUEServerAuth gopaque.ServerAuth             // OPAQUE Server Authentication information used to derive shared secret
 	OPAQUEServerReg  gopaque.ServerRegister         // OPAQUE server registration information
 	OPAQUERecord     gopaque.ServerRegisterComplete // Holds the OPAQUE kU, EnvU, PrivS, PubU
+	JA3              string                         // The JA3 signature applied to the agent's TLS client
 }
 
 // KeyExchange is used to exchange public keys between the server and agent
@@ -453,6 +454,7 @@ func UpdateInfo(m messages.Base) error {
 		message("debug", fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
 		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
 		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
+		message("debug", fmt.Sprintf("Agent JA3 signature: %s", p.JA3))
 	}
 	Log(m.ID, fmt.Sprintf("Processing AgentInfo message:"))
 	Log(m.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
@@ -464,6 +466,7 @@ func UpdateInfo(m messages.Base) error {
 	Log(m.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
 	Log(m.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
 	Log(m.ID, fmt.Sprintf("\tAgent KillDate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
+	Log(m.ID, fmt.Sprintf("\tAgent JA3 signature: %s", p.JA3))
 
 	Agents[m.ID].Version = p.Version
 	Agents[m.ID].Build = p.Build
@@ -474,6 +477,7 @@ func UpdateInfo(m messages.Base) error {
 	Agents[m.ID].FailedCheckin = p.FailedCheckin
 	Agents[m.ID].Proto = p.Proto
 	Agents[m.ID].KillDate = p.KillDate
+	Agents[m.ID].JA3 = p.JA3
 
 	Agents[m.ID].Architecture = p.SysInfo.Architecture
 	Agents[m.ID].HostName = p.SysInfo.HostName
@@ -543,6 +547,7 @@ func ShowInfo(agentID uuid.UUID) {
 		{"Agent Failed Check In", strconv.Itoa(Agents[agentID].FailedCheckin)},
 		{"Agent Kill Date", time.Unix(Agents[agentID].KillDate, 0).UTC().Format(time.RFC3339)},
 		{"Agent Communication Protocol", Agents[agentID].Proto},
+		{"Agent JA3 TLS Client Signature", Agents[agentID].JA3},
 	}
 	table.AppendBulk(data)
 	fmt.Println()
@@ -750,6 +755,17 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		}
 		m.Payload = p
 	case "sleep":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+		m.Payload = p
+	case "ja3":
 		m.Type = "AgentControl"
 		p := messages.AgentControl{
 			Command: job.Args[0],

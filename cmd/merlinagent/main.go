@@ -39,6 +39,7 @@ var build = "nonRelease"
 var psk = "merlin"
 var proxy = ""
 var host = ""
+var ja3 = ""
 
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
@@ -49,6 +50,7 @@ func main() {
 	flag.StringVar(&protocol, "proto", protocol, "Protocol for the agent to connect with [https (HTTP/1.1), h2 (HTTP/2), hq (QUIC or HTTP/3.0)]")
 	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
 	flag.StringVar(&host, "host", host, "HTTP Host header")
+	flag.StringVar(&ja3, "ja3", ja3, "JA3 signature string (not the MD5 hash). Overrides -proto flag")
 	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
 	flag.Usage = usage
 	flag.Parse()
@@ -60,7 +62,7 @@ func main() {
 	}
 
 	// Setup and run agent
-	a, err := agent.New(protocol, url, host, psk, proxy, *verbose, *debug)
+	a, err := agent.New(protocol, url, host, psk, proxy, ja3, *verbose, *debug)
 	if err != nil {
 		if *verbose {
 			color.Red(err.Error())
