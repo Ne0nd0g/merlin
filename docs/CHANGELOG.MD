@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `set ja3` to Agent menu allowing operators to change TLS client profile at any time
 - Created new `merlinClient` interface to handle abstract http clients and changed the Agent.Client to that interface
 - Updated Dockerfile to support Go modules
+- Added support for plain-text HTTP/1.1 (http) and plain-text HTTP/2.0 (h2c)
+
+## Fixed
+
+- Catch errors returned when starting a server (i.e insufficient privileges to bind to a port)
+- hq listener would fail when in-memory x.509 certificates were used
 
 ## 0.8.1 - 2019-10-08
 

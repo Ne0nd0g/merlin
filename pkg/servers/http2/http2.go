@@ -27,6 +27,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -186,13 +189,21 @@ func New(iface string, port int, protocol string, key string, certificate string
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
-		TLSConfig:      TLSConfig,
 		//TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0), // <- Disables HTTP/2
 	}
 
-	if s.Protocol == "h2" {
+	switch strings.ToLower(s.Protocol) {
+	case "http":
 		s.Server = srv
-	} else if s.Protocol == "hq" {
+	case "h2":
+		srv.TLSConfig = TLSConfig
+		s.Server = srv
+	case "h2c":
+		h2s := &http2.Server{}
+		srv.Handler = h2c.NewHandler(s.Mux, h2s)
+		s.Server = srv
+	case "hq":
+		srv.TLSConfig = TLSConfig
 		s.Server = &h2quic.Server{
 			Server: srv,
 			QuicConfig: &quic.Config{
@@ -201,8 +212,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 				RequestConnectionIDOmission: false,
 			},
 		}
-
-	} else {
+	default:
 		return s, fmt.Errorf("%s is an invalid server protocol", s.Protocol)
 	}
 	return s, nil
@@ -216,41 +226,50 @@ func (s *Server) Run() error {
 	if s.psk == "merlin" {
 		fmt.Println()
 		message("warn", "Listener was started using \"merlin\" as the Pre-Shared Key (PSK) allowing anyone"+
-			" decrypt message traffic.")
+			" to decrypt message traffic.")
 		message("note", "Consider changing the PSK by using the -psk command line flag.")
 	}
 	message("note", fmt.Sprintf("Starting %s listener on %s:%d", s.Protocol, s.Interface, s.Port))
 
-	if s.Protocol == "h2" {
-		server := s.Server.(*http.Server)
+	var g errgroup.Group
 
-		defer func() {
-			err := server.Close()
-			if err != nil {
-				m := fmt.Sprintf("There was an error starting the %s server:\r\n%s", s.Protocol, err.Error())
-				logging.Server(m)
-				message("warn", m)
-				return
-			}
-		}()
-		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
-		return nil
-	} else if s.Protocol == "hq" {
-		server := s.Server.(*h2quic.Server)
+	// Catch Panic
+	defer func() {
+		if r := recover(); r != nil {
+			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+", s.Protocol, s.Interface, s.Port, r.(error))
+			logging.Server(m)
+			message("warn", m)
+		}
+	}()
 
-		defer func() {
-			err := server.Close()
-			if err != nil {
-				m := fmt.Sprintf("There was an error starting the hq server:\r\n%s", err.Error())
-				logging.Server(m)
-				message("warn", m)
-				return
+	g.Go(func() error {
+		switch strings.ToLower(s.Protocol) {
+		case "h2":
+			return s.Server.(*http.Server).ListenAndServeTLS(s.Certificate, s.Key)
+		case "http":
+			return s.Server.(*http.Server).ListenAndServe()
+		case "h2c":
+			return s.Server.(*http.Server).ListenAndServe()
+		case "hq":
+			if s.Certificate != "" {
+				return s.Server.(*h2quic.Server).ListenAndServeTLS(s.Certificate, s.Key)
+			} else {
+				return s.Server.(*h2quic.Server).ListenAndServe()
 			}
-		}()
-		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
-		return nil
+		default:
+			return errors.New(fmt.Sprintf("unknown server protocol type: %s", s.Protocol))
+		}
+	})
+
+	if err := g.Wait(); err != nil {
+		m := fmt.Sprintf("There was an error starting the %s server on %s:%d %s", s.Protocol, s.Interface, s.Port, err.Error())
+		logging.Server(m)
+		if core.Debug {
+			message("debug", fmt.Sprintf("Server object:\r\n%v+", s))
+		}
+		return errors.New(m)
 	}
-	return fmt.Errorf("%s is an invalid server protocol", s.Protocol)
+	return nil
 }
 
 // agentHandler function is responsible for all Merlin agent traffic

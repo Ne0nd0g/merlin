@@ -433,32 +433,51 @@ func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, err
 		return &m, nil
 	}
 
+	var transport http.RoundTripper
 	switch strings.ToLower(protocol) {
 	case "hq":
-		transport := &h2quic.RoundTripper{
+		transport = &h2quic.RoundTripper{
 			QuicConfig:      &quic.Config{IdleTimeout: 168 * time.Hour},
 			TLSClientConfig: TLSConfig,
 		}
-		m = &http.Client{Transport: transport}
-		return &m, nil
 	case "h2":
-		transport := &http2.Transport{
+		transport = &http2.Transport{
 			TLSClientConfig: TLSConfig,
 		}
-		m = &http.Client{Transport: transport}
-		return &m, nil
+	case "h2c":
+		transport = &http2.Transport{
+			AllowHTTP: true,
+			DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+				return net.Dial(network, addr)
+			},
+		}
 	case "https":
-		transport := &http.Transport{
-			TLSClientConfig: TLSConfig,
-		}
 		if proxyURL != "" {
-			transport.Proxy = proxy
+			transport = &http.Transport{
+				TLSClientConfig: TLSConfig,
+				Proxy:           proxy,
+			}
+		} else {
+			transport = &http.Transport{
+				TLSClientConfig: TLSConfig,
+			}
 		}
-		m = &http.Client{Transport: transport}
-		return &m, nil
+	case "http":
+		if proxyURL != "" {
+			transport = &http.Transport{
+				MaxIdleConns: 10,
+				Proxy:        proxy,
+			}
+		} else {
+			transport = &http.Transport{
+				MaxIdleConns: 10,
+			}
+		}
 	default:
 		return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 	}
+	m = &http.Client{Transport: transport}
+	return &m, nil
 }
 
 // sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
