@@ -84,101 +84,106 @@ func New(iface string, port int, protocol string, key string, certificate string
 	// OPAQUE Server Public/Private keys; Can be used with every agent
 	s.opaqueKey = gopaque.CryptoDefault.NewKey(nil)
 
-	var cer tls.Certificate
-	var err error
-	// Check if certificate exists on disk
-	_, errCrt := os.Stat(certificate)
-	if os.IsNotExist(errCrt) {
-		// generate a new ephemeral certificate
-		m := fmt.Sprintf("No certificate found at %s", certificate)
-		logging.Server(m)
-		message("note", m)
-		t := "Creating in-memory x.509 certificate used for this session only."
-		logging.Server(t)
-		message("note", t)
-		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
-		cerp, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //ec certs not supported (yet) :(
-		if err != nil {
-			m := fmt.Sprintf("There was an error generating the SSL/TLS certificate:\r\n%s", err.Error())
+	var TLSConfig *tls.Config
+
+	// TODO Move this to the utils package
+	if strings.ToLower(s.Protocol) == "h2" || strings.ToLower(s.Protocol) == "hq" {
+		var cer tls.Certificate
+		var err error
+		// Check if certificate exists on disk
+		_, errCrt := os.Stat(certificate)
+		if os.IsNotExist(errCrt) {
+			// generate a new ephemeral certificate
+			m := fmt.Sprintf("No certificate found at %s", certificate)
+			logging.Server(m)
+			message("note", m)
+			t := "Creating in-memory x.509 certificate used for this session only."
+			logging.Server(t)
+			message("note", t)
+			message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+			cerp, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //ec certs not supported (yet) :(
+			if err != nil {
+				m := fmt.Sprintf("There was an error generating the SSL/TLS certificate:\r\n%s", err.Error())
+				logging.Server(m)
+				message("warn", m)
+				return s, err
+			}
+			cer = *cerp
+		} else {
+			if errCrt != nil {
+				m := fmt.Sprintf("There was an error importing the SSL/TLS x509 certificate:\r\n%s", errCrt.Error())
+				logging.Server(m)
+				message("warn", m)
+				return s, errCrt
+			}
+			s.Certificate = certificate
+
+			_, errKey := os.Stat(key)
+			if errKey != nil {
+				m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key:\r\n%s", errKey.Error())
+				logging.Server(m)
+				message("warn", m)
+				return s, errKey
+			}
+			s.Key = key
+
+			cer, err = tls.LoadX509KeyPair(certificate, key)
+			if err != nil {
+				m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error())
+				logging.Server(m)
+				message("warn", m)
+				message("warn", "Ensure a keypair is located in the data/x509 directory")
+				return s, err
+			}
+		}
+
+		if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
+			m := "Unable to import certificate for use in Merlin: empty certificate structure."
 			logging.Server(m)
 			message("warn", m)
-			return s, err
+			return s, errors.New("empty certificate structure")
 		}
-		cer = *cerp
-	} else {
-		if errCrt != nil {
-			m := fmt.Sprintf("There was an error importing the SSL/TLS x509 certificate:\r\n%s", errCrt.Error())
+
+		// Parse into X.509 format
+		x, errX509 := x509.ParseCertificate(cer.Certificate[0])
+		if errX509 != nil {
+			m := fmt.Sprintf("There was an error parsing the tls.Certificate structure into a x509.Certificate"+
+				" structure:\r\n%s", errX509.Error())
 			logging.Server(m)
 			message("warn", m)
-			return s, errCrt
+			return s, errX509
 		}
-		s.Certificate = certificate
+		// Create fingerprint
+		S256 := sha256.Sum256(x.Raw)
+		sha256Fingerprint := hex.EncodeToString(S256[:])
 
-		_, errKey := os.Stat(key)
-		if errKey != nil {
-			m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key:\r\n%s", errKey.Error())
-			logging.Server(m)
-			message("warn", m)
-			return s, errKey
+		// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+		merlinCRT := "4af9224c77821bc8a46503cfc2764b94b1fc8aa2521afc627e835f0b3c449f50"
+
+		// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+		if merlinCRT == sha256Fingerprint {
+			message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+			message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
 		}
-		s.Key = key
 
-		cer, err = tls.LoadX509KeyPair(certificate, key)
-		if err != nil {
-			m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error())
-			logging.Server(m)
-			message("warn", m)
-			message("warn", "Ensure a keypair is located in the data/x509 directory")
-			return s, err
+		// Log certificate information
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a %s signature of %s",
+			x.SignatureAlgorithm.String(), hex.EncodeToString(x.Signature)))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a public key of %v", x.PublicKey))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a serial number of %d", x.SerialNumber))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certifcate with a subject of %s", x.Subject.String()))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a SHA256 hash, "+
+			"calculated by Merlin, of %s", sha256Fingerprint))
+
+		// Configure TLS
+		TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cer},
+			// Removed the below configuration options because the server needs to accept arbitrary client config for JA3 to work
+			//MinVersion:               tls.VersionTLS12,
+			//CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+			//PreferServerCipherSuites: true,
+			//NextProtos: []string{protocol}, //Dont need to specify because server will pick
 		}
-	}
-
-	if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
-		m := "Unable to import certificate for use in Merlin: empty certificate structure."
-		logging.Server(m)
-		message("warn", m)
-		return s, errors.New("empty certificate structure")
-	}
-
-	// Parse into X.509 format
-	x, errX509 := x509.ParseCertificate(cer.Certificate[0])
-	if errX509 != nil {
-		m := fmt.Sprintf("There was an error parsing the tls.Certificate structure into a x509.Certificate"+
-			" structure:\r\n%s", errX509.Error())
-		logging.Server(m)
-		message("warn", m)
-		return s, errX509
-	}
-	// Create fingerprint
-	S256 := sha256.Sum256(x.Raw)
-	sha256Fingerprint := hex.EncodeToString(S256[:])
-
-	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
-	merlinCRT := "4af9224c77821bc8a46503cfc2764b94b1fc8aa2521afc627e835f0b3c449f50"
-
-	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
-	if merlinCRT == sha256Fingerprint {
-		message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
-		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
-	}
-
-	// Log certificate information
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a %s signature of %s",
-		x.SignatureAlgorithm.String(), hex.EncodeToString(x.Signature)))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a public key of %v", x.PublicKey))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a serial number of %d", x.SerialNumber))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certifcate with a subject of %s", x.Subject.String()))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a SHA256 hash, "+
-		"calculated by Merlin, of %s", sha256Fingerprint))
-
-	// Configure TLS
-	TLSConfig := &tls.Config{
-		Certificates: []tls.Certificate{cer},
-		// Removed the below configuration options because the server needs to accept arbitrary client config for JA3 to work
-		//MinVersion:               tls.VersionTLS12,
-		//CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		//PreferServerCipherSuites: true,
-		//NextProtos: []string{protocol}, //Dont need to specify because server will pick
 	}
 
 	s.Mux.HandleFunc("/", s.agentHandler)
