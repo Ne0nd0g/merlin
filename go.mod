@@ -12,8 +12,6 @@ require (
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-shellwords v1.0.5
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/satori/go.uuid v1.2.0
@@ -29,3 +27,5 @@ require (
 	gopkg.in/square/go-jose.v2 v2.3.1
 	honnef.co/go/tools v0.0.0-2019.2.1 // indirect
 )
+
+go 1.13

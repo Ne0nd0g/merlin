@@ -29,6 +29,7 @@ github.com/cretz/gopaque v0.0.0-20190206211514-8180617f489f h1:UumgEK+8eKtf6K5mM
 github.com/cretz/gopaque v0.0.0-20190206211514-8180617f489f/go.mod h1:eGAWzckd6JlkkKDnMDTa31neEdEyjHgcxLJabY9mQV0=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dedis/fixbuf v1.0.2 h1:vpZ8jjlC+4jMfpVd5Cu1Nyp0W5cGUbNRhdNPHeUeg+Y=
 github.com/dedis/fixbuf v1.0.2/go.mod h1:2syWkaV6ERSAvTkXkD08E6Nrh3Wl8pHMa8F/+HFuAL4=
@@ -48,6 +49,7 @@ github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/me
 github.com/gogo/protobuf v1.1.1/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7atdtwQ=
 github.com/gojp/goreportcard v0.0.0-20190808093409-9f711d57eb7d h1:IVz69ynXKGHyc18+Nu8ceKsTdNvkPJUrkDL1Ya1DZ0E=
 github.com/gojp/goreportcard v0.0.0-20190808093409-9f711d57eb7d/go.mod h1:/DA2Xpp+OaR3EHafQSnT9SKOfbG2NPQR/qp6Qr8AgIw=
+github.com/golang/mock v1.2.0 h1:28o5sBqPkBsMGnC6b4MvE2TzSr5/AT4c/1fLqVGIwlk=
 github.com/golang/mock v1.2.0/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/golang/mock v1.3.1 h1:qGJ6qTW+x6xX/my+8YUVl4WNpX9B7+/l2tRsHGZ7f2s=
 github.com/golang/mock v1.3.1/go.mod h1:sBzyDLLjw3U8JLTeZvSv8jJB+tU5PVekmnlKIyFUx0Y=
@@ -69,9 +71,11 @@ github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7V
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=
+github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/pty v1.1.8/go.mod h1:O1sed60cT9XZ5uDucP5qwvh+TE3NnUj51EiZO/lmSfw=
+github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/lib/pq v1.1.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
 github.com/lucas-clemente/aes12 v0.0.0-20171027163421-cd47fb39b79f h1:sSeNEkJrs+0F9TUau0CgWTTNEwF23HST3Eq0A+QIx+A=
@@ -159,10 +163,10 @@ github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 go.dedis.ch/fixbuf v1.0.3 h1:hGcV9Cd/znUxlusJ64eAlExS+5cJDIyTyEG+otu5wQs=
 go.dedis.ch/fixbuf v1.0.3/go.mod h1:yzJMt34Wa5xD37V5RTdmp38cz3QhMagdGoem9anUalw=
-go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd h1:tuKhSPASZIyBYK+wcd403NJfOXd+2hny39q+ufdZPYY=
-go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
-go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible h1:AAAaZPJwirRhDa0UFezb2UAZA+isQOfu2TgY4nXENnA=
 go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
+go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd h1:tuKhSPASZIyBYK+wcd403NJfOXd+2hny39q+ufdZPYY=
+go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd+incompatible h1:AAAaZPJwirRhDa0UFezb2UAZA+isQOfu2TgY4nXENnA=
+go.dedis.ch/kyber v0.0.0-20170824083343-8f53a63e87fd/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
 go.dedis.ch/kyber v0.0.0-20180509082236-f066f8d2cd58 h1:7z4wJ1qona0Jczun7WPDjOD07V0E3VAyelGBd0TlcfU=
 go.dedis.ch/kyber v0.0.0-20180509082236-f066f8d2cd58/go.mod h1:X2QdOMFu0WkZABwU1fvI+GQSkXIazv2I9qCVL+Tx1Wc=
 go.dedis.ch/kyber v0.0.0-20190125094535-ffb719103651 h1:dTGoEbq/SSGWUHVhtnAEz0j68UOL5M6zDjWwONqjChg=
@@ -225,6 +229,7 @@ golang.org/x/tools v0.0.0-20190727173135-db2fa46ec33c/go.mod h1:jcCCGcm9btYwXyDq
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 h1:qIbj1fsPNlZgppZ+VLlY7N33q108Sa+fhmuc+sWQYwY=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/dedis/crypto.v0 v0.0.0-20170824083343-8f53a63e87fd h1:NgdP+CIA4HGjhid6ZJohhQjXdXnstl36ipeYPRd9fLU=
 gopkg.in/dedis/crypto.v0 v0.0.0-20170824083343-8f53a63e87fd/go.mod h1:iaqPCBte+013imsCluFurQDVPHmFazSfB7Hs6Azgj0U=
