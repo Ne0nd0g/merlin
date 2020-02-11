@@ -69,6 +69,7 @@ func Server(logMessage string) {
 	_, err := serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
 	if err != nil {
 		message("warn", "there was an error writing to the Merlin Server log file")
+		message("warn", err.Error())
 	}
 }
 

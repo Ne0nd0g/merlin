@@ -395,6 +395,16 @@ func Shell() {
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
+						case "ja3":
+							if len(cmd) > 2 {
+								m, err := agents.AddJob(shellAgent, "ja3", cmd[1:])
+								if err != nil {
+									message("warn", fmt.Sprintf("there was an error creating a job for the JA3 signature:\r\n%s", err.Error()))
+								} else {
+									message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+										m, shellAgent, time.Now().UTC().Format(time.RFC3339)))
+								}
+							}
 						case "killdate":
 							if len(cmd) > 2 {
 								_, errU := strconv.ParseInt(cmd[2], 10, 64)
@@ -689,6 +699,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
+			readline.PcItem("ja3"),
 			readline.PcItem("killdate"),
 			readline.PcItem("maxretry"),
 			readline.PcItem("padding"),
@@ -783,7 +794,7 @@ func menuHelpAgent() {
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
 		{"main", "Return to the main menu", ""},
 		{"pwd", "Display the current working directory", "pwd"},
-		{"set", "Set the value for one of the agent's options", "killdate, maxretry, padding, skew, sleep"},
+		{"set", "Set the value for one of the agent's options", "ja3, killdate, maxretry, padding, skew, sleep"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},

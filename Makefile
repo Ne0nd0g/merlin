@@ -20,6 +20,8 @@ HOST ?=
 XHOST =-X main.host=$(HOST)
 PROTO ?= h2
 XPROTO =-X main.protocol=$(PROTO)
+JA3 ?=
+XJA3 =-X main.ja3=$(JA3)
 LDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
 WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
 # TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries

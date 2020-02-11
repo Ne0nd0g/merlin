@@ -27,6 +27,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"golang.org/x/sync/errgroup"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -81,105 +84,106 @@ func New(iface string, port int, protocol string, key string, certificate string
 	// OPAQUE Server Public/Private keys; Can be used with every agent
 	s.opaqueKey = gopaque.CryptoDefault.NewKey(nil)
 
-	var cer tls.Certificate
-	var err error
-	// Check if certificate exists on disk
-	_, errCrt := os.Stat(certificate)
-	if os.IsNotExist(errCrt) {
-		// generate a new ephemeral certificate
-		m := fmt.Sprintf("No certificate found at %s", certificate)
-		logging.Server(m)
-		message("note", m)
-		t := "Creating in-memory x.509 certificate used for this session only."
-		logging.Server(t)
-		message("note", t)
-		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
-		cerp, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //ec certs not supported (yet) :(
-		if err != nil {
-			m := fmt.Sprintf("There was an error generating the SSL/TLS certificate:\r\n%s", err.Error())
+	var TLSConfig *tls.Config
+
+	// TODO Move this to the utils package
+	if strings.ToLower(s.Protocol) == "h2" || strings.ToLower(s.Protocol) == "hq" {
+		var cer tls.Certificate
+		var err error
+		// Check if certificate exists on disk
+		_, errCrt := os.Stat(certificate)
+		if os.IsNotExist(errCrt) {
+			// generate a new ephemeral certificate
+			m := fmt.Sprintf("No certificate found at %s", certificate)
+			logging.Server(m)
+			message("note", m)
+			t := "Creating in-memory x.509 certificate used for this session only."
+			logging.Server(t)
+			message("note", t)
+			message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+			cerp, err := util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true) //ec certs not supported (yet) :(
+			if err != nil {
+				m := fmt.Sprintf("There was an error generating the SSL/TLS certificate:\r\n%s", err.Error())
+				logging.Server(m)
+				message("warn", m)
+				return s, err
+			}
+			cer = *cerp
+		} else {
+			if errCrt != nil {
+				m := fmt.Sprintf("There was an error importing the SSL/TLS x509 certificate:\r\n%s", errCrt.Error())
+				logging.Server(m)
+				message("warn", m)
+				return s, errCrt
+			}
+			s.Certificate = certificate
+
+			_, errKey := os.Stat(key)
+			if errKey != nil {
+				m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key:\r\n%s", errKey.Error())
+				logging.Server(m)
+				message("warn", m)
+				return s, errKey
+			}
+			s.Key = key
+
+			cer, err = tls.LoadX509KeyPair(certificate, key)
+			if err != nil {
+				m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error())
+				logging.Server(m)
+				message("warn", m)
+				message("warn", "Ensure a keypair is located in the data/x509 directory")
+				return s, err
+			}
+		}
+
+		if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
+			m := "Unable to import certificate for use in Merlin: empty certificate structure."
 			logging.Server(m)
 			message("warn", m)
-			return s, err
+			return s, errors.New("empty certificate structure")
 		}
-		cer = *cerp
-	} else {
-		if errCrt != nil {
-			m := fmt.Sprintf("There was an error importing the SSL/TLS x509 certificate:\r\n%s", errCrt.Error())
+
+		// Parse into X.509 format
+		x, errX509 := x509.ParseCertificate(cer.Certificate[0])
+		if errX509 != nil {
+			m := fmt.Sprintf("There was an error parsing the tls.Certificate structure into a x509.Certificate"+
+				" structure:\r\n%s", errX509.Error())
 			logging.Server(m)
 			message("warn", m)
-			return s, errCrt
+			return s, errX509
 		}
-		s.Certificate = certificate
+		// Create fingerprint
+		S256 := sha256.Sum256(x.Raw)
+		sha256Fingerprint := hex.EncodeToString(S256[:])
 
-		_, errKey := os.Stat(key)
-		if errKey != nil {
-			m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key:\r\n%s", errKey.Error())
-			logging.Server(m)
-			message("warn", m)
-			return s, errKey
+		// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+		merlinCRT := "4af9224c77821bc8a46503cfc2764b94b1fc8aa2521afc627e835f0b3c449f50"
+
+		// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+		if merlinCRT == sha256Fingerprint {
+			message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
+			message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
 		}
-		s.Key = key
 
-		cer, err = tls.LoadX509KeyPair(certificate, key)
-		if err != nil {
-			m := fmt.Sprintf("There was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error())
-			logging.Server(m)
-			message("warn", m)
-			message("warn", "Ensure a keypair is located in the data/x509 directory")
-			return s, err
+		// Log certificate information
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a %s signature of %s",
+			x.SignatureAlgorithm.String(), hex.EncodeToString(x.Signature)))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a public key of %v", x.PublicKey))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a serial number of %d", x.SerialNumber))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certifcate with a subject of %s", x.Subject.String()))
+		logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a SHA256 hash, "+
+			"calculated by Merlin, of %s", sha256Fingerprint))
+
+		// Configure TLS
+		TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cer},
+			// Removed the below configuration options because the server needs to accept arbitrary client config for JA3 to work
+			//MinVersion:               tls.VersionTLS12,
+			//CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
+			//PreferServerCipherSuites: true,
+			//NextProtos: []string{protocol}, //Dont need to specify because server will pick
 		}
-	}
-
-	if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
-		m := "Unable to import certificate for use in Merlin: empty certificate structure."
-		logging.Server(m)
-		message("warn", m)
-		return s, errors.New("empty certificate structure")
-	}
-
-	// Parse into X.509 format
-	x, errX509 := x509.ParseCertificate(cer.Certificate[0])
-	if errX509 != nil {
-		m := fmt.Sprintf("There was an error parsing the tls.Certificate structure into a x509.Certificate"+
-			" structure:\r\n%s", errX509.Error())
-		logging.Server(m)
-		message("warn", m)
-		return s, errX509
-	}
-	// Create fingerprint
-	S256 := sha256.Sum256(x.Raw)
-	sha256Fingerprint := hex.EncodeToString(S256[:])
-
-	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
-	merlinCRT := "4af9224c77821bc8a46503cfc2764b94b1fc8aa2521afc627e835f0b3c449f50"
-
-	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
-	if merlinCRT == sha256Fingerprint {
-		message("warn", "Insecure publicly distributed Merlin x.509 testing certificate in use")
-		message("info", "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
-	}
-
-	// Log certificate information
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a %s signature of %s",
-		x.SignatureAlgorithm.String(), hex.EncodeToString(x.Signature)))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a public key of %v", x.PublicKey))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a serial number of %d", x.SerialNumber))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certifcate with a subject of %s", x.Subject.String()))
-	logging.Server(fmt.Sprintf("Starting Merlin Server using an X.509 certificate with a SHA256 hash, "+
-		"calculated by Merlin, of %s", sha256Fingerprint))
-
-	// Configure TLS
-	TLSConfig := &tls.Config{
-		Certificates:             []tls.Certificate{cer},
-		MinVersion:               tls.VersionTLS12,
-		CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-		PreferServerCipherSuites: true,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-		},
-		//NextProtos: []string{protocol}, //Dont need to specify because server will pick
 	}
 
 	s.Mux.HandleFunc("/", s.agentHandler)
@@ -190,13 +194,21 @@ func New(iface string, port int, protocol string, key string, certificate string
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
-		TLSConfig:      TLSConfig,
 		//TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0), // <- Disables HTTP/2
 	}
 
-	if s.Protocol == "h2" {
+	switch strings.ToLower(s.Protocol) {
+	case "http":
 		s.Server = srv
-	} else if s.Protocol == "hq" {
+	case "h2":
+		srv.TLSConfig = TLSConfig
+		s.Server = srv
+	case "h2c":
+		h2s := &http2.Server{}
+		srv.Handler = h2c.NewHandler(s.Mux, h2s)
+		s.Server = srv
+	case "hq":
+		srv.TLSConfig = TLSConfig
 		s.Server = &h2quic.Server{
 			Server: srv,
 			QuicConfig: &quic.Config{
@@ -205,8 +217,7 @@ func New(iface string, port int, protocol string, key string, certificate string
 				RequestConnectionIDOmission: false,
 			},
 		}
-
-	} else {
+	default:
 		return s, fmt.Errorf("%s is an invalid server protocol", s.Protocol)
 	}
 	return s, nil
@@ -220,41 +231,50 @@ func (s *Server) Run() error {
 	if s.psk == "merlin" {
 		fmt.Println()
 		message("warn", "Listener was started using \"merlin\" as the Pre-Shared Key (PSK) allowing anyone"+
-			" decrypt message traffic.")
+			" to decrypt message traffic.")
 		message("note", "Consider changing the PSK by using the -psk command line flag.")
 	}
 	message("note", fmt.Sprintf("Starting %s listener on %s:%d", s.Protocol, s.Interface, s.Port))
 
-	if s.Protocol == "h2" {
-		server := s.Server.(*http.Server)
+	var g errgroup.Group
 
-		defer func() {
-			err := server.Close()
-			if err != nil {
-				m := fmt.Sprintf("There was an error starting the %s server:\r\n%s", s.Protocol, err.Error())
-				logging.Server(m)
-				message("warn", m)
-				return
-			}
-		}()
-		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
-		return nil
-	} else if s.Protocol == "hq" {
-		server := s.Server.(*h2quic.Server)
+	// Catch Panic
+	defer func() {
+		if r := recover(); r != nil {
+			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+", s.Protocol, s.Interface, s.Port, r.(error))
+			logging.Server(m)
+			message("warn", m)
+		}
+	}()
 
-		defer func() {
-			err := server.Close()
-			if err != nil {
-				m := fmt.Sprintf("There was an error starting the hq server:\r\n%s", err.Error())
-				logging.Server(m)
-				message("warn", m)
-				return
+	g.Go(func() error {
+		switch strings.ToLower(s.Protocol) {
+		case "h2":
+			return s.Server.(*http.Server).ListenAndServeTLS(s.Certificate, s.Key)
+		case "http":
+			return s.Server.(*http.Server).ListenAndServe()
+		case "h2c":
+			return s.Server.(*http.Server).ListenAndServe()
+		case "hq":
+			if s.Certificate != "" {
+				return s.Server.(*h2quic.Server).ListenAndServeTLS(s.Certificate, s.Key)
+			} else {
+				return s.Server.(*h2quic.Server).ListenAndServe()
 			}
-		}()
-		go logging.Server(server.ListenAndServeTLS(s.Certificate, s.Key).Error())
-		return nil
+		default:
+			return errors.New(fmt.Sprintf("unknown server protocol type: %s", s.Protocol))
+		}
+	})
+
+	if err := g.Wait(); err != nil {
+		m := fmt.Sprintf("There was an error starting the %s server on %s:%d %s", s.Protocol, s.Interface, s.Port, err.Error())
+		logging.Server(m)
+		if core.Debug {
+			message("debug", fmt.Sprintf("Server object:\r\n%v+", s))
+		}
+		return errors.New(m)
 	}
-	return fmt.Errorf("%s is an invalid server protocol", s.Protocol)
+	return nil
 }
 
 // agentHandler function is responsible for all Merlin agent traffic
