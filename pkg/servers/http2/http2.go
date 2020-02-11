@@ -733,7 +733,7 @@ func validateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 		}
 	}
 	if AgentWaitTime == "" {
-		AgentWaitTime = "10s"
+		AgentWaitTime = "60s"
 	}
 
 	WaitTime, errParse := time.ParseDuration(AgentWaitTime)

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Created new `merlinClient` interface to handle abstract http clients and changed the Agent.Client to that interface
 - Updated Dockerfile to support Go modules
 - Added support for plain-text HTTP/1.1 (http) and plain-text HTTP/2.0 (h2c)
+- Increased initial JWT lifetime from 10 seconds to 60 seconds
 
 ## Fixed
 
