@@ -258,11 +258,10 @@ func (s *Server) Run() error {
 		case "hq":
 			if s.Certificate != "" {
 				return s.Server.(*h2quic.Server).ListenAndServeTLS(s.Certificate, s.Key)
-			} else {
-				return s.Server.(*h2quic.Server).ListenAndServe()
 			}
+			return s.Server.(*h2quic.Server).ListenAndServe()
 		default:
-			return errors.New(fmt.Sprintf("unknown server protocol type: %s", s.Protocol))
+			return fmt.Errorf("unknown server protocol type: %s", s.Protocol)
 		}
 	})
 
