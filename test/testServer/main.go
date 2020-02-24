@@ -77,7 +77,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	errDecode := gob.NewDecoder(bytes.NewReader(requestBytes)).Decode(&jweString)
 	if errDecode != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error decoding the message from gob to JWE string:\r\n%s", errDecode.Error()))
+			fmt.Printf("there was an error decoding the message from gob to JWE string:\r\n%s\r\n", errDecode.Error())
 		}
 		w.WriteHeader(500)
 		return
@@ -110,7 +110,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	j, errDecryptPSK := decryptJWE(jweString, key)
 	if errDecryptPSK != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error decrypting the JWE on the server:\r\n%s", errDecryptPSK.Error()))
+			fmt.Printf("there was an error decrypting the JWE on the server:\r\n%s\r\n", errDecryptPSK.Error())
 		}
 		w.WriteHeader(500)
 		return
@@ -154,7 +154,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	errReturnMessageBytes := gob.NewEncoder(returnMessageBytes).Encode(returnMessage)
 	if errReturnMessageBytes != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error encoding the return message into a gob:\r\n%s", errReturnMessageBytes.Error()))
+			fmt.Printf("there was an error encoding the return message into a gob:\r\n%s\r\n", errReturnMessageBytes.Error())
 		}
 		w.WriteHeader(500)
 		return
@@ -164,7 +164,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	jwe, errJWE := core.GetJWESymetric(returnMessageBytes.Bytes(), key[:])
 	if errJWE != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error encrypting the message into a JWE:\r\n%s", errJWE.Error()))
+			fmt.Printf("there was an error encrypting the message into a JWE:\r\n%s\r\n", errJWE.Error())
 		}
 		w.WriteHeader(500)
 		return
@@ -175,7 +175,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	errEncode := gob.NewEncoder(w).Encode(jwe)
 	if errEncode != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error encoding the JWE into a gob:\r\n%s", errEncode.Error()))
+			fmt.Printf("there was an error encoding the JWE into a gob:\r\n%s\r\n", errEncode.Error())
 		}
 		w.WriteHeader(500)
 		return

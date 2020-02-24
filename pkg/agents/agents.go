@@ -456,7 +456,7 @@ func UpdateInfo(m messages.Base) error {
 		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
 		message("debug", fmt.Sprintf("Agent JA3 signature: %s", p.JA3))
 	}
-	Log(m.ID, fmt.Sprintf("Processing AgentInfo message:"))
+	Log(m.ID, "Processing AgentInfo message:")
 	Log(m.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
 	Log(m.ID, fmt.Sprintf("\tAgent Build: %s ", p.Build))
 	Log(m.ID, fmt.Sprintf("\tAgent waitTime: %s ", p.WaitTime))

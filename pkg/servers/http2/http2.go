@@ -284,7 +284,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if core.Debug {
-		message("debug", fmt.Sprintf("HTTP Connection Details:"))
+		message("debug", "HTTP Connection Details:")
 		message("debug", fmt.Sprintf("Host: %s", r.Host))
 		message("debug", fmt.Sprintf("URI: %s", r.RequestURI))
 		message("debug", fmt.Sprintf("Method: %s", r.Method))
@@ -295,7 +295,7 @@ func (s *Server) agentHandler(w http.ResponseWriter, r *http.Request) {
 		message("debug", fmt.Sprintf("TLS Server Name: %s", r.TLS.ServerName))
 		message("debug", fmt.Sprintf("Content Length: %d", r.ContentLength))
 
-		logging.Server(fmt.Sprintf("[DEBUG]HTTP Connection Details:"))
+		logging.Server("[DEBUG]HTTP Connection Details:")
 		logging.Server(fmt.Sprintf("[DEBUG]Host: %s", r.Host))
 		logging.Server(fmt.Sprintf("[DEBUG]URI: %s", r.RequestURI))
 		logging.Server(fmt.Sprintf("[DEBUG]Method: %s", r.Method))

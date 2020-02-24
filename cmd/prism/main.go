@@ -144,8 +144,7 @@ func opaqueRegister(a agent.Agent) error {
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
-	var client merlinClient
-	client = *a.Client
+	var client merlinClient = *a.Client
 
 	regInitResp, errRegInitResp := sendMessage("POST", regInitBase, client)
 
@@ -203,8 +202,8 @@ func sendPre8Message(a agent.Agent) error {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	var client merlinClient
-	client = *a.Client
+	var client merlinClient = *a.Client
+
 	resp, err := client.Do(req)
 
 	if err != nil {
