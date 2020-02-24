@@ -903,7 +903,7 @@ func newAgent(agentID uuid.UUID) (agent, error) {
 		}
 
 		// Change the file's permissions
-		errChmod := os.Chmod(agentLog.Name(), 0640)
+		errChmod := os.Chmod(agentLog.Name(), 0600)
 		if errChmod != nil {
 			return agent, fmt.Errorf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error())
 		}

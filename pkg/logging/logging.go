@@ -47,7 +47,7 @@ func init() {
 			return
 		}
 		// Change the file's permissions
-		errChmod := os.Chmod(serverLog.Name(), 0640)
+		errChmod := os.Chmod(serverLog.Name(), 0600)
 		if errChmod != nil {
 			message("warn", fmt.Sprintf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error()))
 		}
