@@ -66,7 +66,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	requestBytes, errRequestBytes := ioutil.ReadAll(r.Body)
 	if errRequestBytes != nil {
 		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error reading the request message:\r\n%s", errRequestBytes.Error()))
+			fmt.Printf("there was an error reading the request message:\r\n%s\r\n", errRequestBytes.Error())
 		}
 		w.WriteHeader(500)
 		return
