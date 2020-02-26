@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Catch errors returned when starting a server (i.e insufficient privileges to bind to a port)
 - hq listener would fail when in-memory x.509 certificates were used
+- Invoke-M.i.m.i.k.a.t.z module points to the updated version of M.i.m.i.k.a.t.z (2.2.0) in the Empire 3.0 repository
 
 ## 0.8.1 - 2019-10-08
 
