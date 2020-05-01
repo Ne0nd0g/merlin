@@ -19,7 +19,7 @@
       "description": "Establishes persistence of a specified command using a crontab entry.",
       "commands": [
         "/bin/sh", "-c",
-        "'(crontab -l 2>/dev/null; echo \"{{CrontabSchedule.value}} {{CrontabCommand.value}}\") | crontab - && echo crontab successfully modified.'"
+        "'(crontab -l 2>/dev/null; echo \"{{CrontabSchedule.vAlUe}} {{CrontabCommand.Value}}\") | crontab - && echo crontab successfully modified.'"
       ]
     }
   }

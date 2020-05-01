@@ -166,7 +166,7 @@ func Shell() {
 								message("success", s)
 							}
 						} else {
-							s, err := shellModule.SetOption(cmd[1], cmd[2])
+							s, err := shellModule.SetOption(cmd[1], cmd[2:])
 							if err != nil {
 								message("warn", err.Error())
 							} else {
