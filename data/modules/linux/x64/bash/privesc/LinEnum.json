@@ -8,6 +8,7 @@
     "arch": "x64",
     "lang": "bash",
     "privilege": false,
+    "type": "standard",
     "notes": "WARNING: This module will take a long time to complete and return data",
     "remote": "https://raw.githubusercontent.com/rebootuser/LinEnum/master/LinEnum.sh",
     "local": ["data", "src", "rebootuser", "LinEnum", "LinEnum.sh"],

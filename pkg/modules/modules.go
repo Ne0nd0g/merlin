@@ -118,23 +118,23 @@ func (m *Module) Run() ([]string, error) {
 	for _, o := range m.Options {
 		for k := len(command) - 1; k >= 0; k-- {
 			// Check if an option was set WITHOUT the Flag or Value qualifiers
-			if strings.Contains(command[k], "{{"+o.Name+"}}") {
+			if strings.Contains(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+"}}") {
 				if o.Value != "" {
-					command[k] = strings.Replace(command[k], "{{"+o.Name+"}}", o.Flag+" "+o.Value, -1)
+					command[k] = strings.Replace(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+"}}", o.Flag+" "+o.Value, -1)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Flag qualifier
-			} else if strings.Contains(command[k], "{{"+o.Name+".Flag}}") {
+			} else if strings.Contains(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".flag}}") {
 				if strings.ToLower(o.Value) == "true" {
-					command[k] = strings.Replace(command[k], "{{"+o.Name+".Flag}}", o.Flag, -1)
+					command[k] = strings.Replace(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".flag}}", o.Flag, -1)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Value qualifier
-			} else if strings.Contains(command[k], "{{"+o.Name+".Value}}") {
+			} else if strings.Contains(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".value}}") {
 				if o.Value != "" {
-					command[k] = strings.Replace(command[k], "{{"+o.Name+".Value}}", o.Value, -1)
+					command[k] = strings.Replace(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".value}}", o.Value, -1)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
@@ -203,11 +203,12 @@ func GetModuleList() func(string) []string {
 }
 
 // SetOption is used to change the passed in module option's value. Used when a user is configuring a module
-func (m *Module) SetOption(option string, value string) (string, error) {
+func (m *Module) SetOption(option string, value []string) (string, error) {
 	// Verify this option exists
 	for k, v := range m.Options {
 		if option == v.Name {
-			m.Options[k].Value = value
+			// Take in a slice of string for arguments that contain spaces; https://github.com/Ne0nd0g/merlin/issues/88
+			m.Options[k].Value = strings.Join(value, " ")
 			return fmt.Sprintf("%s set to %s", v.Name, m.Options[k].Value), nil
 		}
 	}

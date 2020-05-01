@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 0.9.0 - 2020-02-XX
+## 0.9.0 - 2020-XX-XX
 
 ### Added
 
@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Catch errors returned when starting a server (i.e insufficient privileges to bind to a port)
 - hq listener would fail when in-memory x.509 certificates were used
 - Invoke-M.i.m.i.k.a.t.z module points to the updated version of M.i.m.i.k.a.t.z (2.2.0) in the Empire 3.0 repository
+- [Issue 88](https://github.com/Ne0nd0g/merlin/issues/88) - Set option will now take all arguments after a space
+- Added module type to LinEnum, MimiPenguin, and SwapDigger
+
+## Changed
+
+- Made module variables case-insensitive. Values will still match input case.
 
 ## 0.8.1 - 2019-10-08
 
