@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- Incorporated fork of `github.com/CUCyber/ja3client` allowing the Merlin agent to establish TLS connections from a JA3 signature
+- Incorporated a fork of `github.com/CUCyber/ja3client` allowing the Merlin agent to establish TLS connections from a JA3 signature
 - Added `ja3` to agent.New() function
 - Added `-ja3` to agent command line arguments and JA3 to Make file for hard coding initial signature
 - Added `PSK=` to Make file
@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updated Dockerfile to support Go modules
 - Added support for plain-text HTTP/1.1 (http) and plain-text HTTP/2.0 (h2c)
 - Increased initial JWT lifetime from 10 seconds to 60 seconds
+- BASH module `linux\x64\bash\exec\bash.json` to run a single BASH command across all agents
+- PowerShell module `windows\x64\powershell\exec\powershell.json` to run a single PowerShell command across all agents
+- Added `unset` command to modules to reset an option to nil
+- Job result messages now include the agent ID
 
 ## Fixed
 
@@ -25,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Invoke-M.i.m.i.k.a.t.z module points to the updated version of M.i.m.i.k.a.t.z (2.2.0) in the Empire 3.0 repository
 - [Issue 88](https://github.com/Ne0nd0g/merlin/issues/88) - Set option will now take all arguments after a space
 - Added module type to LinEnum, MimiPenguin, and SwapDigger
+- [Issue 71](https://github.com/Ne0nd0g/merlin/issues/71) - Run a module against all agents
 
 ## Changed
 

@@ -1,0 +1,23 @@
+{
+  "base": {
+    "name": "BASH",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": [],
+    "path": ["linux", "x64", "bash", "exec", "bash.json"],
+    "platform": "linux",
+    "arch": "x64",
+    "lang": "bash",
+    "privilege": false,
+    "notes": "Commands are run with /bin/bash -c . Use quotes if you want to run multiple commands or shell features such as redirection or pipeline",
+    "remote": "",
+    "local": [],
+    "options": [
+      {"name": "Command", "value": "whoami", "required": true, "flag": "", "description": "Command to run in BASH terminal"}
+    ],
+    "description": "Execute a command in a BASH terminal. Useful to run a single command across all agents",
+    "commands": [
+      "/bin/bash", "-c", "{{Command}}"
+    ]
+  }
+}
