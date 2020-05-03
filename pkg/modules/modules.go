@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"io/ioutil"
 	"os"
 	"path"
@@ -38,6 +37,7 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
 )
@@ -85,13 +85,15 @@ func (m *Module) Run() ([]string, error) {
 		return nil, errors.New("agent not set for module")
 	}
 
-	platform, platformError := agents.GetAgentFieldValue(m.Agent, "platform")
-	if platformError != nil {
-		return nil, platformError
-	}
+	if strings.ToLower(m.Agent.String()) != "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		platform, platformError := agents.GetAgentFieldValue(m.Agent, "platform")
+		if platformError != nil {
+			return nil, platformError
+		}
 
-	if !strings.EqualFold(m.Platform, platform) {
-		return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
+		if !strings.EqualFold(m.Platform, platform) {
+			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
+		}
 	}
 
 	// Check every 'required' option to make sure it isn't null

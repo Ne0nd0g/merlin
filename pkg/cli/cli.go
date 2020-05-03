@@ -188,24 +188,67 @@ func Shell() {
 							" agent with", shellModule.Name))
 						break
 					}
-					if strings.ToLower(shellModule.Type) == "standard" {
-						m, err = agents.AddJob(shellModule.Agent, "cmd", r)
-					} else {
-						m, err = agents.AddJob(shellModule.Agent, r[0], r[1:])
-					}
 
-					if err != nil {
-						message("warn", "There was an error adding the job to the specified agent")
-						message("warn", err.Error())
+					// ALL Agents
+					if strings.ToLower(shellModule.Agent.String()) == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+						if len(agents.Agents) <= 0 {
+							message("warn", "there are 0 available agents, no jobs were created")
+							break
+						}
+						for id := range agents.Agents {
+							// Make sure OS platform match
+							if strings.ToLower(agents.Agents[id].Platform) != strings.ToLower(shellModule.Platform) {
+								message("note", fmt.Sprintf("Module platform %s does not match agent %s platform %s. Skipping job...", shellModule.Platform, id, agents.Agents[id].Platform))
+								continue
+							}
+							switch strings.ToLower(shellModule.Type) {
+							case "standard":
+								m, err = agents.AddJob(id, "cmd", r)
+							case "extended":
+								m, err = agents.AddJob(id, r[0], r[1:])
+							default:
+								message("warn", fmt.Sprintf("Invalid module type: %s", shellModule.Type))
+							}
+							if err != nil {
+								message("warn", "There was an error adding the job to the specified agent")
+								message("warn", err.Error())
+							} else {
+								message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+									m, id, time.Now().UTC().Format(time.RFC3339)))
+							}
+						}
+						// Single Agent
 					} else {
-						message("note", fmt.Sprintf("Created job %s for agent %s at %s",
-							m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
+						switch strings.ToLower(shellModule.Type) {
+						case "standard":
+							m, err = agents.AddJob(shellModule.Agent, "cmd", r)
+						case "extended":
+							m, err = agents.AddJob(shellModule.Agent, r[0], r[1:])
+						default:
+							message("warn", fmt.Sprintf("Invalid module type: %s", shellModule.Type))
+						}
+						if err != nil {
+							message("warn", "There was an error adding the job to the specified agent")
+							message("warn", err.Error())
+						} else {
+							message("note", fmt.Sprintf("Created job %s for agent %s at %s",
+								m, shellModule.Agent, time.Now().UTC().Format(time.RFC3339)))
+						}
 					}
 
 				case "back", "main":
 					menuSetMain()
 				case "exit", "quit":
 					exit()
+				case "unset":
+					if len(cmd) >= 2 {
+						s, err := shellModule.SetOption(cmd[1], nil)
+						if err != nil {
+							message("warn", err.Error())
+						} else {
+							message("success", s)
+						}
+					}
 				case "?", "help":
 					menuHelpModule()
 				default:
@@ -678,6 +721,9 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			),
 			readline.PcItemDynamic(shellModule.GetOptionsList()),
 		),
+		readline.PcItem("unset",
+			readline.PcItemDynamic(shellModule.GetOptionsList()),
+		),
 	)
 
 	// Agent Menu
@@ -766,6 +812,7 @@ func menuHelpModule() {
 		{"run", "Run or execute the module", ""},
 		{"set", "Set the value for one of the module's options", "<option name> <option value>"},
 		{"show", "Show information about a module or its options", "info, options"},
+		{"unset", "Clear a module option to empty", "<option name>"},
 	}
 
 	table.AppendBulk(data)

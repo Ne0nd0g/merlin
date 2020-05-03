@@ -953,7 +953,7 @@ func JobResults(m messages.Base) error {
 	Log(m.ID, fmt.Sprintf("Results for job: %s", p.Job))
 
 	fmt.Println()
-	message("success", fmt.Sprintf("Results for job %s at %s", p.Job, time.Now().UTC().Format(time.RFC3339)))
+	message("success", fmt.Sprintf("Results for %s job %s at %s", m.ID, p.Job, time.Now().UTC().Format(time.RFC3339)))
 	fmt.Println()
 	if len(p.Stdout) > 0 {
 		Log(m.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
@@ -992,7 +992,7 @@ func FileTransfer(m messages.Base) error {
 			Log(m.ID, errorMessage.Error())
 			return errorMessage
 		}
-		message("success", fmt.Sprintf("Results for job %s", p.Job))
+		message("success", fmt.Sprintf("Results for %s job %s at %s", m.ID, p.Job, time.Now().UTC().Format(time.RFC3339)))
 		downloadBlob, downloadBlobErr := base64.StdEncoding.DecodeString(p.FileBlob)
 
 		if downloadBlobErr != nil {
