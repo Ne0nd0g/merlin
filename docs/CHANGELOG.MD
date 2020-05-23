@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Increased initial JWT lifetime from 10 seconds to 60 seconds
 - BASH module `linux\x64\bash\exec\bash.json` to run a single BASH command across all agents
 - PowerShell module `windows\x64\powershell\exec\powershell.json` to run a single PowerShell command across all agents
+- macOS Orchard module `darwin\x64\javascript\enumeration\orchard.json` a JavaScript for Automation (JXA) tool to do Active Directory enumeration
+- macOS HealthInspector module `darwin\x64\javascript\enumeration\healthinspector.json` a JXA situational awareness helper by simply reading specific files on a filesystem
+- macOS Bifrost module `darwin\x64\objective-c\kerberos\bifrost.json` an Objective-C library and console to interact with Heimdal APIs for macOS Kerberos
+- macOS Venator module  `darwin\x64\python\enumeration\venator.json` a python tool used to gather data for proactive detection of malicious activity on macOS devices
 - Added `unset` command to modules to reset an option to nil
 - Job result messages now include the agent ID
 
