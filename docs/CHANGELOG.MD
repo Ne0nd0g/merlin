@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - macOS HealthInspector module `darwin\x64\javascript\enumeration\healthinspector.json` a JXA situational awareness helper by simply reading specific files on a filesystem
 - macOS Bifrost module `darwin\x64\objective-c\kerberos\bifrost.json` an Objective-C library and console to interact with Heimdal APIs for macOS Kerberos
 - macOS Venator module  `darwin\x64\python\enumeration\venator.json` a python tool used to gather data for proactive detection of malicious activity on macOS devices
+- macOS SwiftBelt module `darwin\x64\swift\enumeration\swiftbelt.json` A MacOS enumerator similar to @harmjoy's Seatbelt
 - Added `unset` command to modules to reset an option to nil
 - Job result messages now include the agent ID
 
