@@ -126,27 +126,21 @@ func (m *Module) Run() ([]string, error) {
 			// Check if an option was set WITHOUT the Flag or Value qualifiers
 			if reName.MatchString(command[k]) {
 				if o.Value != "" {
-					fmt.Println(fmt.Sprintf("[DEBUG]BEFORE: %s", command[k]))
 					command[k] = reName.ReplaceAllString(command[k], o.Flag+" "+o.Value)
-					fmt.Println(fmt.Sprintf("[DEBUG]AFTER: %s", command[k]))
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Flag qualifier
 			} else if reFlag.MatchString(command[k]) {
 				if strings.ToLower(o.Value) == "true" {
-					fmt.Println(fmt.Sprintf("[DEBUG]BEFORE: %s", command[k]))
 					command[k] = reFlag.ReplaceAllString(command[k], o.Flag)
-					fmt.Println(fmt.Sprintf("[DEBUG]AFTER: %s", command[k]))
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Value qualifier
 			} else if reValue.MatchString(command[k]) {
 				if o.Value != "" {
-					fmt.Println(fmt.Sprintf("[DEBUG]BEFORE: %s", command[k]))
 					command[k] = reValue.ReplaceAllString(command[k], o.Value)
-					fmt.Println(fmt.Sprintf("[DEBUG]AFTER: %s", command[k]))
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
