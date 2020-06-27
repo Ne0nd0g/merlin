@@ -26,6 +26,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -119,24 +120,33 @@ func (m *Module) Run() ([]string, error) {
 
 	for _, o := range m.Options {
 		for k := len(command) - 1; k >= 0; k-- {
+			reName := regexp.MustCompile(`(?iU)({{2}` + o.Name + `}{2})`)
+			reFlag := regexp.MustCompile(`(?iU)({{2}` + o.Name + `.Flag}{2})`)
+			reValue := regexp.MustCompile(`(?iU)({{2}` + o.Name + `.Value}{2})`)
 			// Check if an option was set WITHOUT the Flag or Value qualifiers
-			if strings.Contains(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+"}}") {
+			if reName.MatchString(command[k]) {
 				if o.Value != "" {
-					command[k] = strings.Replace(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+"}}", o.Flag+" "+o.Value, -1)
+					fmt.Println(fmt.Sprintf("[DEBUG]BEFORE: %s", command[k]))
+					command[k] = reName.ReplaceAllString(command[k], o.Flag+" "+o.Value)
+					fmt.Println(fmt.Sprintf("[DEBUG]AFTER: %s", command[k]))
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Flag qualifier
-			} else if strings.Contains(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".flag}}") {
+			} else if reFlag.MatchString(command[k]) {
 				if strings.ToLower(o.Value) == "true" {
-					command[k] = strings.Replace(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".flag}}", o.Flag, -1)
+					fmt.Println(fmt.Sprintf("[DEBUG]BEFORE: %s", command[k]))
+					command[k] = reFlag.ReplaceAllString(command[k], o.Flag)
+					fmt.Println(fmt.Sprintf("[DEBUG]AFTER: %s", command[k]))
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Value qualifier
-			} else if strings.Contains(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".value}}") {
+			} else if reValue.MatchString(command[k]) {
 				if o.Value != "" {
-					command[k] = strings.Replace(strings.ToLower(command[k]), "{{"+strings.ToLower(o.Name)+".value}}", o.Value, -1)
+					fmt.Println(fmt.Sprintf("[DEBUG]BEFORE: %s", command[k]))
+					command[k] = reValue.ReplaceAllString(command[k], o.Value)
+					fmt.Println(fmt.Sprintf("[DEBUG]AFTER: %s", command[k]))
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
