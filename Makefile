@@ -168,7 +168,7 @@ package-prism-darwin:
 	cd ${DIR};${PACKAGE} PRISM-${D}-v${VERSION}.7z PRISM-${D}
 	cp ${DIR}/PRISM-${D} ${BIN}darwin/
 
-package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-prism-windows package-server-windows package-server-linux package-server-darwin
+package-all: package-server-linux package-server-windows package-server-darwin package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-prism-windows
 
 clean:
 	rm -rf ${DIR}*
