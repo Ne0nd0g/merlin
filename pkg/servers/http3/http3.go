@@ -15,39 +15,41 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
-package http2
-
-// This package is used for specific HTTP/2 features that are NOT available in the net/http package
+package http3
 
 import (
 	// Standard
-	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	// X Packages
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
+	"github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go/h2quic"
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/handlers"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
+	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
-// Server is a structure for the HTTP/2 clear-text (h2c) server
+// Server is a structure for the HTTP3 server
 type Server struct {
 	servers.Server
-	urls []string
-	ctx  *handlers.HTTPContext
+	x509Cert string
+	x509Key  string
+	urls     []string
+	ctx      *handlers.HTTPContext
 }
 
 // Template is a structure used to collect the information needed to create an instance with the New() function
@@ -60,35 +62,65 @@ type Template struct {
 
 // init registers this server type with the servers package
 func init() {
-	servers.RegisteredServers["h2c"] = ""
+	servers.RegisteredServers["http3"] = ""
 }
 
 // GetOptions returns a map of configurable server options typically used when creating a listener
 func GetOptions() map[string]string {
 	options := make(map[string]string)
 	options["Interface"] = "127.0.0.1"
-	options["Port"] = "80"
+	options["Port"] = "443"
 	options["PSK"] = "merlin"
 	options["URLS"] = "/"
+	options["X509Cert"] = filepath.Join(core.CurrentDir, "data", "x509", "server.crt")
+	options["X509Key"] = filepath.Join(core.CurrentDir, "data", "x509", "server.key")
 	return options
 }
 
-// New creates a new HTTP2 server object and returns a pointer
+// New creates a new HTTP3 server object and returns a pointer
 // All arguments are taken in as strings and are converted/validate
 func New(options map[string]string) (*Server, error) {
 	var s Server
+	var certificates *tls.Certificate
 	var err error
 
 	// Verify protocol match
-	if strings.ToLower(options["Protocol"]) != "h2c" {
-		return &s, fmt.Errorf("server protocol mismatch, expected: H2C got: %s", options["Protocol"])
+	if strings.ToLower(options["Protocol"]) != "http3" {
+		return &s, fmt.Errorf("server protocol mismatch, expected: HTTP3 got: %s", options["Protocol"])
 	}
-	s.Protocol = servers.SERVER_PROTOCOL_H2C
+	s.Protocol = servers.SERVER_PROTOCOL_HTTP3
 
 	// Convert port to integer from string
 	s.Port, err = strconv.Atoi(options["Port"])
 	if err != nil {
 		return &s, fmt.Errorf("there was an error converting the port number to an integer: %s", err.Error())
+	}
+
+	// Verify X509 Key file exists and can be parsed
+	certificates, err = util.GetTLSCertificates(options["X509Cert"], options["X509Key"])
+	if err != nil {
+		//return &s, err
+		fmt.Printf("Certificate was not found at: %s\r\n", options["X509Cert"])
+		fmt.Println("Creating in-memory x.509 certificate used for this session only")
+		certificates, err = util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true)
+		if err != nil {
+			return &s, err
+		}
+	} else {
+		s.x509Cert = options["X509Cert"]
+		s.x509Key = options["X509Key"]
+	}
+	insecure, errI := util.CheckInsecureFingerprint(*certificates)
+	if errI != nil {
+		return &s, errI
+	} else {
+		// Leave empty to force the use of the server's TLSConfig
+		s.x509Cert = ""
+		s.x509Key = ""
+	}
+	if insecure {
+		fmt.Println("Insecure publicly distributed Merlin x.509 testing certificate in use")
+		fmt.Println("Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
 	}
 
 	mux := http.NewServeMux()
@@ -111,13 +143,22 @@ func New(options map[string]string) (*Server, error) {
 		mux.HandleFunc(url, s.ctx.AgentHTTP)
 	}
 
-	h2s := &http2.Server{}
-	s.Transport = &http.Server{
+	srv := &http.Server{
 		Addr:           options["Interface"] + ":" + options["Port"],
-		Handler:        h2c.NewHandler(mux, h2s),
+		Handler:        mux,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
+		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}},
+	}
+
+	s.Transport = &h2quic.Server{
+		Server: srv,
+		QuicConfig: &quic.Config{
+			KeepAlive:                   false,
+			IdleTimeout:                 168 * time.Hour,
+			RequestConnectionIDOmission: false,
+		},
 	}
 
 	s.Interface = options["Interface"]
@@ -136,6 +177,10 @@ func (s *Server) GetConfiguredOptions() map[string]string {
 	options["PSK"] = s.ctx.PSK
 	options["URLS"] = strings.Join(s.urls, " ")
 
+	if s.Protocol != servers.SERVER_PROTOCOL_HTTP {
+		options["X509Cert"] = s.x509Cert
+		options["X509Key"] = s.x509Key
+	}
 	return options
 }
 
@@ -157,8 +202,8 @@ func (s *Server) GetProtocol() int {
 // This function returns the server's protocol
 func (s *Server) GetProtocolString() string {
 	switch s.Protocol {
-	case servers.SERVER_PROTOCOL_H2C:
-		return "H2C"
+	case servers.SERVER_PROTOCOL_HTTP3:
+		return "HTTP3"
 	default:
 		return "UNKNOWN"
 	}
@@ -182,32 +227,40 @@ func (s *Server) SetOption(option string, value string) error {
 		s.ctx.PSK = value
 	case "urls":
 		s.urls = strings.Split(option, ",")
+	case "x509cert":
+		s.x509Cert = option
+	case "x509key":
+		s.x509Key = option
 	default:
 		return fmt.Errorf("invalid option: %s", option)
 	}
 	return nil
 }
 
-// This function starts the HTTP2 server
+// This function starts the HTTP3 server
 func (s *Server) Start() error {
 	var g errgroup.Group
 
 	// Catch Panic
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
+			fmt.Printf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.Protocol), s.Interface, s.Port, r.(error))
 		}
 	}()
 
 	g.Go(func() error {
 		s.State = servers.SERVER_STATE_RUNNING
-		return s.Transport.(*http.Server).ListenAndServe()
+		if s.x509Key != "" && s.x509Cert != "" {
+			return s.Transport.(*h2quic.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+		} else {
+			return s.Transport.(*h2quic.Server).ListenAndServe()
+		}
 	})
 
 	if err := g.Wait(); err != nil {
-		if err != http.ErrServerClosed {
+		if !strings.Contains(strings.ToLower(err.Error()), "server closed") {
 			s.State = servers.SERVER_STATE_ERROR
-			return fmt.Errorf("there was an error with the %s server on %s:%d %s", s.GetProtocolString(), s.Interface, s.Port, err.Error())
+			return fmt.Errorf("there was an error starting the %s server on %s:%d %s", servers.GetProtocol(s.Protocol), s.Interface, s.Port, err.Error())
 		}
 	}
 	return nil
@@ -218,12 +271,14 @@ func (s *Server) Status() int {
 	return s.State
 }
 
-// This function stops the HTTP2 server
+// This function stops the HTTP3 server
 func (s *Server) Stop() error {
-	err := s.Transport.(*http.Server).Shutdown(context.Background())
+	err := s.Transport.(*h2quic.Server).CloseGracefully(time.Second * 20)
 	if err != nil {
-		return fmt.Errorf("there was an error stopping the HTTP server:\r\n%s", err.Error())
+		return fmt.Errorf("there was an error stopping the HTTP3 server:\r\n%s", err.Error())
 	}
 	s.State = servers.SERVER_STATE_CLOSED
-	return nil
+
+	// TODO figure out why the port binding isn't released after it has been shutdown
+	return fmt.Errorf("the bind port was not released due to an uknown error; create a new listener if needed")
 }

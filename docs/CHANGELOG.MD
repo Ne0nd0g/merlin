@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - macOS SwiftBelt module `darwin\x64\swift\enumeration\swiftbelt.json` A MacOS enumerator similar to @harmjoy's Seatbelt
 - Added `unset` command to modules to reset an option to nil
 - Job result messages now include the agent ID
+- Added new Listeners menu to create or remove multiple agent listeners per running Merlin Server instance
+- Added new `servers` and `listeners` packages to handle new Listeners menu
+- A single listener can now handle multiple URLS instead of just `/`
+- Can enable/disable verbose and debug output from CLI main menu with `set vervose true`
 
 ## Fixed
 
@@ -38,7 +42,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Changed
 
-- Made module variables case-insensitive. Values will still match input case.
+- Made module variables case-insensitive. Values will still match input case
+- Moved `GetTLSCertificates()` and `CheckInsecureFingerprint()` to utils package
+- Moved JWT create, validate, decrypt functions to the utils package
+- Moved Agent handling code to a new handlers package
+
+## Removed
+
+- Removed all command line arguments from Merlin Server executable in favor of run-time Listeners menu
 
 ## 0.8.1 - 2019-10-08
 
