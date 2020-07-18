@@ -38,6 +38,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/handlers"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
@@ -195,7 +196,13 @@ func (s *Server) Start() error {
 	// Catch Panic
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
+			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
+			messages.SendBroadcastMessage(messages.UserMessage{
+				Level:   messages.MESSAGE_WARN,
+				Message: m,
+				Time:    time.Now().UTC(),
+				Error:   true,
+			})
 		}
 	}()
 

@@ -29,12 +29,12 @@ import (
 	"time"
 
 	// 3rd Party
-	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
 	"go.dedis.ch/kyber"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
+	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
@@ -52,52 +52,44 @@ type HTTPContext struct {
 // AgentHTTP function is responsible for all Merlin agent traffic
 func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 	if core.Verbose {
-		// TODO Send CLI Message
-		message("note", fmt.Sprintf("Received %s %s connection from %s", r.Proto, r.Method, r.RemoteAddr))
-		logging.Server(fmt.Sprintf("Received HTTP %s connection from %s", r.Method, r.RemoteAddr))
+		m := fmt.Sprintf("Received %s %s connection from %s", r.Proto, r.Method, r.RemoteAddr)
+		message("warn", m)
+		logging.Server(m)
 	}
 
 	if core.Debug {
-		// TODO Send CLI Message
-		message("debug", "HTTP Connection Details:")
-		message("debug", fmt.Sprintf("Host: %s", r.Host))
-		message("debug", fmt.Sprintf("URI: %s", r.RequestURI))
-		message("debug", fmt.Sprintf("Method: %s", r.Method))
-		message("debug", fmt.Sprintf("Protocol: %s", r.Proto))
-		message("debug", fmt.Sprintf("Headers: %s", r.Header))
+		var m string
+		m += "HTTP Connection Details:\r\n"
+		m += fmt.Sprintf("Host: %s\r\n", r.Host)
+		m += fmt.Sprintf("URI: %s\r\n", r.RequestURI)
+		m += fmt.Sprintf("Method: %s\r\n", r.Method)
+		m += fmt.Sprintf("Protocol: %s\r\n", r.Proto)
+		m += fmt.Sprintf("Headers: %s\r\n", r.Header)
 		if r.TLS != nil {
-			message("debug", fmt.Sprintf("TLS Negotiated Protocol: %s", r.TLS.NegotiatedProtocol))
-			message("debug", fmt.Sprintf("TLS Cipher Suite: %d", r.TLS.CipherSuite))
-			message("debug", fmt.Sprintf("TLS Server Name: %s", r.TLS.ServerName))
+			m += fmt.Sprintf("TLS Negotiated Protocol: %s\r\n", r.TLS.NegotiatedProtocol)
+			m += fmt.Sprintf("TLS Cipher Suite: %d\r\n", r.TLS.CipherSuite)
+			m += fmt.Sprintf("TLS Server Name: %s\r\n", r.TLS.ServerName)
 		}
-		message("debug", fmt.Sprintf("Content Length: %d", r.ContentLength))
+		m += fmt.Sprintf("Content Length: %d", r.ContentLength)
 
-		logging.Server("[DEBUG]HTTP Connection Details:")
-		logging.Server(fmt.Sprintf("[DEBUG]Host: %s", r.Host))
-		logging.Server(fmt.Sprintf("[DEBUG]URI: %s", r.RequestURI))
-		logging.Server(fmt.Sprintf("[DEBUG]Method: %s", r.Method))
-		logging.Server(fmt.Sprintf("[DEBUG]Protocol: %s", r.Proto))
-		logging.Server(fmt.Sprintf("[DEBUG]Headers: %s", r.Header))
-		if r.TLS != nil {
-			logging.Server(fmt.Sprintf("[DEBUG]TLS Negotiated Protocol: %s", r.TLS.NegotiatedProtocol))
-			logging.Server(fmt.Sprintf("[DEBUG]TLS Cipher Suite: %d", r.TLS.CipherSuite))
-			logging.Server(fmt.Sprintf("[DEBUG]TLS Server Name: %s", r.TLS.ServerName))
-		}
-		logging.Server(fmt.Sprintf("[DEBUG]Content Length: %d", r.ContentLength))
+		message("debug", m)
+		logging.Server(m)
 	}
 
 	// Check for Merlin PRISM activity
 	if r.UserAgent() == "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 " {
-		// TODO Send CLI Message
-		message("warn", fmt.Sprintf("Someone from %s is attempting to fingerprint this Merlin server", r.RemoteAddr))
+		m := fmt.Sprintf("Someone from %s is attempting to fingerprint this Merlin server", r.RemoteAddr)
+		message("warn", m)
+		logging.Server(m)
 	}
 
 	// Make sure the message has a JWT
 	token := r.Header.Get("Authorization")
 	if token == "" {
 		if core.Verbose {
-			// TODO Send CLI Message
-			message("warn", "incoming request did not contain an Authorization header")
+			m := "incoming request did not contain an Authorization header"
+			message("warn", m)
+			logging.Server(m)
 		}
 		w.WriteHeader(404)
 		return
@@ -112,8 +104,9 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		//Read the request message until EOF
 		requestBytes, errRequestBytes := ioutil.ReadAll(r.Body)
 		if errRequestBytes != nil {
-			message("warn", fmt.Sprintf("There was an error reading a POST message sent by an "+
-				"agent:\r\n%s", errRequestBytes))
+			m := fmt.Sprintf("There was an error reading a POST message sent by an "+
+				"agent:\r\n%s", errRequestBytes)
+			message("warn", m)
 			return
 		}
 
@@ -415,20 +408,26 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// message is used to print a message to the command line
+// message is used to send a broadcast message to all connected clients
 func message(level string, message string) {
+	m := messageAPI.UserMessage{
+		Message: message,
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 	switch level {
 	case "info":
-		color.Cyan("[i]" + message)
+		m.Level = messageAPI.MESSAGE_INFO
 	case "note":
-		color.Yellow("[-]" + message)
+		m.Level = messageAPI.MESSAGE_NOTE
 	case "warn":
-		color.Red("[!]" + message)
+		m.Level = messageAPI.MESSAGE_WARN
 	case "debug":
-		color.Red("[DEBUG]" + message)
+		m.Level = messageAPI.MESSAGE_DEBUG
 	case "success":
-		color.Green("[+]" + message)
+		m.Level = messageAPI.MESSAGE_SUCCESS
 	default:
-		color.Red("[_-_]Invalid message level: " + message)
+		m.Level = messageAPI.MESSAGE_PLAIN
 	}
+	messageAPI.SendBroadcastMessage(m)
 }

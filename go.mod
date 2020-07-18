@@ -15,7 +15,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-shellwords v1.0.5
 	github.com/olekukonko/tablewriter v0.0.1
-	github.com/refraction-networking/utls v0.0.0-20190909200633-43c36d3c1f57
 	github.com/satori/go.uuid v1.2.0
 	go.dedis.ch/kyber v0.0.0-20190125094535-ffb719103651
 	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f
@@ -23,10 +22,8 @@ require (
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200221224223-e1da425f72fd // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1
 	gopkg.in/yaml.v2 v2.2.2 // indirect
-	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 )
 
 go 1.13
