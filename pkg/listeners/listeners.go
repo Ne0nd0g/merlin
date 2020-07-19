@@ -236,18 +236,23 @@ func Exists(name string) bool {
 	return false
 }
 
-// Remove deletes the instantiated listener object
-func Remove(name string) error {
-	if Exists(name) {
-		l, err := GetListenerByName(name)
+func RemoveByID(id uuid.UUID) error {
+	if _, ok := Listeners[id]; ok {
+		err := Listeners[id].Server.Stop()
 		if err != nil {
-			return fmt.Errorf("could not remove listener: %s because: %s", name, err.Error())
-		}
-		if err := l.Server.Stop(); err != nil {
 			return err
 		}
-		delete(Listeners, l.ID)
+		delete(Listeners, id)
 		return nil
 	}
-	return fmt.Errorf("could not remove listener: %s because it does not exist", name)
+	return fmt.Errorf("could not remove listener: %s because it does not exist", id)
+}
+
+// GetListeners is used to return a list of Listener objects to be consumed by a client application
+func GetListeners() []Listener {
+	var listeners []Listener
+	for id := range Listeners {
+		listeners = append(listeners, *Listeners[id])
+	}
+	return listeners
 }

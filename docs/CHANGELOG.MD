@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added new `servers` and `listeners` packages to handle new Listeners menu
 - A single listener can now handle multiple URLS instead of just `/`
 - Can enable/disable verbose and debug output from CLI main menu with `set vervose true`
+- Added API packages for agents, listeners, modules, and messages to separate the CLI from the server
+- Added a channel for user messages that the CLI reads from and then prints them to STDOUT
 
 ## Fixed
 
@@ -46,6 +48,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Moved `GetTLSCertificates()` and `CheckInsecureFingerprint()` to utils package
 - Moved JWT create, validate, decrypt functions to the utils package
 - Moved Agent handling code to a new handlers package
+- All packages _should_ be sending messages to the CLI through the message API package
 
 ## Removed
 

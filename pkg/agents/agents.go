@@ -43,6 +43,7 @@ import (
 	"go.dedis.ch/kyber"
 
 	// Merlin
+	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
@@ -555,22 +556,28 @@ func ShowInfo(agentID uuid.UUID) {
 	fmt.Println()
 }
 
-// message is used to print a message to the command line
+// message is used to send a broadcast message to all connected clients
 func message(level string, message string) {
+	m := messageAPI.UserMessage{
+		Message: message,
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 	switch level {
 	case "info":
-		color.Cyan("[i]" + message)
+		m.Level = messageAPI.MESSAGE_INFO
 	case "note":
-		color.Yellow("[-]" + message)
+		m.Level = messageAPI.MESSAGE_NOTE
 	case "warn":
-		color.Red("[!]" + message)
+		m.Level = messageAPI.MESSAGE_WARN
 	case "debug":
-		color.Red("[DEBUG]" + message)
+		m.Level = messageAPI.MESSAGE_DEBUG
 	case "success":
-		color.Green("[+]" + message)
+		m.Level = messageAPI.MESSAGE_SUCCESS
 	default:
-		color.Red("[_-_]Invalid message level: " + message)
+		m.Level = messageAPI.MESSAGE_PLAIN
 	}
+	messageAPI.SendBroadcastMessage(m)
 }
 
 // AddJob creates a job and adds it to the specified agent's channel and returns the Job ID or an error
@@ -1082,5 +1089,3 @@ type Job struct {
 	Args    []string
 	Created time.Time
 }
-
-// TODO configure all message to be displayed on the CLI to be returned as errors and not written to the CLI here

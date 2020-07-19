@@ -38,6 +38,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/handlers"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
@@ -117,8 +118,14 @@ func New(options map[string]string) (*Server, error) {
 	if s.Protocol == servers.SERVER_PROTOCOL_HTTPS || s.Protocol == servers.SERVER_PROTOCOL_HTTP2 {
 		certificates, err = util.GetTLSCertificates(options["X509Cert"], options["X509Key"])
 		if err != nil {
-			fmt.Printf("Certificate was not found at: %s\r\n", options["X509Cert"])
-			fmt.Println("Creating in-memory x.509 certificate used for this session only")
+			m := fmt.Sprintf("Certificate was not found at: %s\r\n", options["X509Cert"])
+			m += "Creating in-memory x.509 certificate used for this session only"
+			messages.SendBroadcastMessage(messages.UserMessage{
+				Level:   messages.MESSAGE_NOTE,
+				Message: m,
+				Time:    time.Now().UTC(),
+				Error:   false,
+			})
 			// Generate in-memory certificates
 			certificates, err = util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true)
 			if err != nil {
@@ -137,8 +144,14 @@ func New(options map[string]string) (*Server, error) {
 			return &s, errI
 		}
 		if insecure {
-			fmt.Println("Insecure publicly distributed Merlin x.509 testing certificate in use")
-			fmt.Println("Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates")
+			m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for %s server on %s:%s\r\n", proto, options["Interface"], options["Port"])
+			m += "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates"
+			messages.SendBroadcastMessage(messages.UserMessage{
+				Level:   messages.MESSAGE_WARN,
+				Message: m,
+				Time:    time.Now().UTC(),
+				Error:   false,
+			})
 		}
 	}
 
@@ -266,7 +279,13 @@ func (s *Server) Start() error {
 	// Catch Panic
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Printf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
+			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
+			messages.SendBroadcastMessage(messages.UserMessage{
+				Level:   messages.MESSAGE_WARN,
+				Message: m,
+				Time:    time.Now().UTC(),
+				Error:   true,
+			})
 		}
 	}()
 

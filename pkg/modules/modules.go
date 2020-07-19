@@ -81,7 +81,7 @@ type PowerShell struct {
 }
 
 // Run function returns an array of commands to execute the module on an agent
-func (m *Module) Run() ([]string, error) {
+func Run(m Module) ([]string, error) {
 	if m.Agent == uuid.FromStringOrNil("00000000-0000-0000-0000-000000000000") {
 		return nil, errors.New("agent not set for module")
 	}
@@ -107,7 +107,7 @@ func (m *Module) Run() ([]string, error) {
 	}
 
 	if strings.ToLower(m.Type) == "extended" {
-		extendedCommand, err := getExtendedCommand(m)
+		extendedCommand, err := getExtendedCommand(&m)
 		if err != nil {
 			return nil, err
 		}
