@@ -40,7 +40,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
-	"go.dedis.ch/kyber"
+	"go.dedis.ch/kyber/v3"
 
 	// Merlin
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"

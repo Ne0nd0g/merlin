@@ -1089,9 +1089,9 @@ func (a *Agent) opaqueRegister() error {
 	userRegInit := userReg.Init(a.pwdU)
 
 	if a.Debug {
-		message("debug", fmt.Sprintf("OPAQUE UserID: %v", userRegInit.UserID))
+		message("debug", fmt.Sprintf("OPAQUE UserID: %x", userRegInit.UserID))
 		message("debug", fmt.Sprintf("OPAQUE Alpha: %v", userRegInit.Alpha))
-		message("debug", fmt.Sprintf("OPAQUE PwdU: %s", a.pwdU))
+		message("debug", fmt.Sprintf("OPAQUE PwdU: %x", a.pwdU))
 	}
 
 	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
@@ -1155,7 +1155,7 @@ func (a *Agent) opaqueRegister() error {
 	}
 
 	if a.Debug {
-		message("debug", fmt.Sprintf("OPAQUE EnvU: %v", userRegComplete.EnvU))
+		message("debug", fmt.Sprintf("OPAQUE EnvU: %x", userRegComplete.EnvU))
 		message("debug", fmt.Sprintf("OPAQUE PubU: %v", userRegComplete.UserPublicKey))
 	}
 
@@ -1197,7 +1197,7 @@ func (a *Agent) opaqueAuthenticate() error {
 	userAuth := gopaque.NewUserAuth(gopaque.CryptoDefault, a.ID.Bytes(), userKex)
 
 	// 2 - Call Init with the password and send the resulting UserAuthInit to the server
-	userAuthInit, err := userAuth.Init(a.secret)
+	userAuthInit, err := userAuth.Init(a.pwdU)
 	if err != nil {
 		return fmt.Errorf("there was an error creating the OPAQUE user authentication initialization message:\r\n%s", err.Error())
 	}
@@ -1248,6 +1248,17 @@ func (a *Agent) opaqueAuthenticate() error {
 	// 4 - Call Complete with the server's ServerAuthComplete. The resulting UserAuthFinish has user and server key
 	// information. This would be the last step if we were not using an embedded key exchange. Since we are, take the
 	// resulting UserAuthComplete and send it to the server.
+	if a.Verbose {
+		message("note", "Received OPAQUE server complete message")
+	}
+
+	if a.Debug {
+		message("debug", fmt.Sprintf("OPAQUE Beta: %x", serverComplete.Beta))
+		message("debug", fmt.Sprintf("OPAQUE V: %x", serverComplete.V))
+		message("debug", fmt.Sprintf("OPAQUE PubS: %x", serverComplete.ServerPublicKey))
+		message("debug", fmt.Sprintf("OPAQUE EnvU: %x", serverComplete.EnvU))
+	}
+
 	_, userAuthComplete, errUserAuth := userAuth.Complete(&serverComplete)
 	if errUserAuth != nil {
 		return fmt.Errorf("there was an error completing OPAQUE authentication:\r\n%s", errUserAuth)
