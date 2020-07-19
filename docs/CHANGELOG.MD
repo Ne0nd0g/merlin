@@ -49,10 +49,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Moved JWT create, validate, decrypt functions to the utils package
 - Moved Agent handling code to a new handlers package
 - All packages _should_ be sending messages to the CLI through the message API package
+- Upgraded gopaque library to v0.1.0
+- Upgraded kyber library to v3.0.12
 
 ## Removed
 
 - Removed all command line arguments from Merlin Server executable in favor of run-time Listeners menu
+
+## Security
+
+- OPAQUE go library used static decryption key and allowed EnvU to be decrypted without the correct password (PwdU)
+  [gopaque - Issue 2](https://github.com/cretz/gopaque/issues/2)
+- Symmetric encryption key was use with OPAQUE User Authentication instead of OPAQUE password (PwdU)
 
 ## 0.8.1 - 2019-10-08
 

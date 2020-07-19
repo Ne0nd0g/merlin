@@ -30,7 +30,7 @@ import (
 
 	// 3rd Party
 	uuid "github.com/satori/go.uuid"
-	"go.dedis.ch/kyber"
+	"go.dedis.ch/kyber/v3"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
