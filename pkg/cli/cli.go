@@ -56,6 +56,8 @@ var shellListenerOptions map[string]string
 var prompt *readline.Instance
 var shellCompleter *readline.PrefixCompleter
 var shellMenuContext = "main"
+
+// MessageChannel is used to input user messages that are eventually written to STDOUT on the CLI application
 var MessageChannel = make(chan messages.UserMessage)
 var clientID = uuid.NewV4()
 
@@ -1362,7 +1364,7 @@ func printUserMessage() {
 			case messages.MESSAGE_SUCCESS:
 				fmt.Println(color.GreenString("\n[+] %s", m.Message))
 			case messages.MESSAGE_PLAIN:
-				fmt.Print(fmt.Sprintf("\n%s", m.Message))
+				fmt.Println(fmt.Sprintf("%s", m.Message))
 			default:
 				fmt.Println(color.RedString("\n[_-_] Invalid message level: %d\r\n%s", m.Level, m.Message))
 			}

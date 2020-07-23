@@ -639,7 +639,7 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 				if downloadFileErr != nil {
 					c.Stderr = downloadFileErr.Error()
 				} else {
-					errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
+					errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0600)
 					if errF != nil {
 						c.Stderr = errF.Error()
 					} else {

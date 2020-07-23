@@ -140,12 +140,12 @@ func (s *Server) GetConfiguredOptions() map[string]string {
 	return options
 }
 
-// This function returns the interface that the server is bound to
+// GetInterface function returns the interface that the server is bound to
 func (s *Server) GetInterface() string {
 	return s.Interface
 }
 
-// This function returns the port that the server is bound to
+// GetPort function returns the port that the server is bound to
 func (s *Server) GetPort() int {
 	return s.Port
 }
@@ -155,7 +155,7 @@ func (s *Server) GetProtocol() int {
 	return s.Protocol
 }
 
-// This function returns the server's protocol
+// GetProtocolString function returns the server's protocol
 func (s *Server) GetProtocolString() string {
 	switch s.Protocol {
 	case servers.SERVER_PROTOCOL_H2C:
@@ -165,7 +165,7 @@ func (s *Server) GetProtocolString() string {
 	}
 }
 
-// This function sets an option for an instantiated server object
+// SetOption sets an option for an instantiated server object
 func (s *Server) SetOption(option string, value string) error {
 	var err error
 	// Check non-string options first
@@ -189,7 +189,7 @@ func (s *Server) SetOption(option string, value string) error {
 	return nil
 }
 
-// This function starts the HTTP2 server
+// Start the HTTP2 server
 func (s *Server) Start() error {
 	var g errgroup.Group
 
@@ -225,7 +225,7 @@ func (s *Server) Status() int {
 	return s.State
 }
 
-// This function stops the HTTP2 server
+// Stop the HTTP2 server
 func (s *Server) Stop() error {
 	err := s.Transport.(*http.Server).Shutdown(context.Background())
 	if err != nil {

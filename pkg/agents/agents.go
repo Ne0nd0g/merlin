@@ -1008,7 +1008,7 @@ func FileTransfer(m messages.Base) error {
 			return errorMessage
 		}
 		downloadFile := filepath.Join(agentsDir, m.ID.String(), f)
-		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
+		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0600)
 		if writingErr != nil {
 			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
 			Log(m.ID, errorMessage.Error())
