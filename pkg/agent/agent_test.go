@@ -74,7 +74,7 @@ func TestNewH2Agent(t *testing.T) {
 
 // TestNewHQAgent ensure the agent.New function returns a HTTP/3 agent without error
 func TestNewHQAgent(t *testing.T) {
-	_, err := New("hq", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+	_, err := New("http3", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
 
 	if err != nil {
 		t.Error(err)
