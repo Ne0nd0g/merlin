@@ -155,6 +155,10 @@ func New(options map[string]string) (*Server, error) {
 		mux.HandleFunc(url, s.ctx.AgentHTTP)
 	}
 
+	/* #nosec G402 */
+	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
+	// G402 (CWE-295): TLS MinVersion too low. (Confidence: HIGH, Severity: HIGH)
+	// TLS version is not configured to facilitate dynamic JA3 configurations
 	srv := &http.Server{
 		Addr:           options["Interface"] + ":" + options["Port"],
 		Handler:        mux,

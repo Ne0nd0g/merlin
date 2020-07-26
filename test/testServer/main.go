@@ -216,6 +216,10 @@ func generateTLSConfig() *tls.Config {
 		Certificate: [][]byte{crtBytes},
 		PrivateKey:  priv,
 	}
+	/* #nosec G402 */
+	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
+	// G402 (CWE-295): TLS MinVersion too low. (Confidence: HIGH, Severity: HIGH)
+	// TLS version is not configured to facilitate dynamic JA3 configurations
 	return &tls.Config{
 		Certificates: []tls.Certificate{crt},
 		NextProtos:   []string{"h2", "hq"},

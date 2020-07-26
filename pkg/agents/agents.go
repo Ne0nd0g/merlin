@@ -921,7 +921,7 @@ func newAgent(agentID uuid.UUID) (agent, error) {
 		}
 	}
 	// Open agent's log file for writing
-	f, err := os.OpenFile(filepath.Join(agentsDir, agentID.String(), "agent_log.txt"), os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(filepath.Clean(filepath.Join(agentsDir, agentID.String(), "agent_log.txt")), os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return agent, fmt.Errorf("there was an error openeing the %s agent's log file:\r\n%s", agentID.String(), err.Error())
 	}

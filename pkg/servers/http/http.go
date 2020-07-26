@@ -184,7 +184,7 @@ func New(options map[string]string) (*Server, error) {
 
 	// Add X.509 certificates if using TLS
 	if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
-		s.Transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}}
+		s.Transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
 	}
 
 	s.Interface = options["Interface"]
