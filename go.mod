@@ -18,10 +18,12 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	go.dedis.ch/kyber/v3 v3.0.12
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/net v0.0.0-20191119073136-fc4aabc6c914
-	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
 	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/tools v0.0.0-20200725200936-102e7d357031 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

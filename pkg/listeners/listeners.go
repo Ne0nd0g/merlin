@@ -99,7 +99,7 @@ func (l *Listener) Restart(options map[string]string) error {
 	var err error
 
 	// Stop the running instance
-	if l.Server.Status() == servers.SERVER_STATE_RUNNING {
+	if l.Server.Status() == servers.Running {
 		if err = l.Server.Stop(); err != nil {
 			return err
 		}
@@ -107,11 +107,11 @@ func (l *Listener) Restart(options map[string]string) error {
 
 	// Create a new instance
 	switch l.Server.GetProtocol() {
-	case servers.SERVER_PROTOCOL_HTTP, servers.SERVER_PROTOCOL_HTTPS, servers.SERVER_PROTOCOL_HTTP2:
+	case servers.HTTP, servers.HTTPS, servers.HTTP2:
 		l.Server, err = http.New(options)
-	case servers.SERVER_PROTOCOL_H2C:
+	case servers.H2C:
 		l.Server, err = http2.New(options)
-	case servers.SERVER_PROTOCOL_HTTP3:
+	case servers.HTTP3:
 		l.Server, err = http3.New(options)
 	default:
 		err = fmt.Errorf("invalid server protocol: %d (%s)", l.Server.GetProtocol(), servers.GetProtocol(l.Server.GetProtocol()))
@@ -119,6 +119,7 @@ func (l *Listener) Restart(options map[string]string) error {
 	return err
 }
 
+// SetOption sets the value for a configurable option on the Listener
 func (l *Listener) SetOption(option string, value string) error {
 	switch strings.ToLower(option) {
 	case "name":
@@ -144,12 +145,11 @@ func GetList() func(string) []string {
 
 // GetListenerByID finds and returns a pointer to an instantiated listener object by its ID (UUIDv4)
 func GetListenerByID(id uuid.UUID) (*Listener, error) {
-	if l, exists := Listeners[id]; !exists {
+	l, exists := Listeners[id]
+	if !exists {
 		return &Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
-	} else {
-		return l, nil
 	}
-
+	return l, nil
 }
 
 // GetListenerByName finds and returns a pointer to an instantiated listener object by its name (string)
@@ -186,7 +186,7 @@ func GetListenerOptions(protocol string) map[string]string {
 	return options
 }
 
-// GetListenerOptionsList gets an array of listener options to be used for tab completion for CLI tab completion
+// GetListenerOptionsCompleter gets an array of listener options to be used for tab completion for CLI tab completion
 func GetListenerOptionsCompleter(protocol string) func(string) []string {
 	return func(line string) []string {
 		var serverOptions map[string]string
@@ -236,6 +236,7 @@ func Exists(name string) bool {
 	return false
 }
 
+// RemoveByID deletes a Listener from the global list of Listeners by the input UUID
 func RemoveByID(id uuid.UUID) error {
 	if _, ok := Listeners[id]; ok {
 		err := Listeners[id].Server.Stop()

@@ -42,22 +42,18 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 		if errS != nil {
 			m := fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", Args, errS.Error())
 			return messages.ErrorMessage(m)
-		} else {
-			job, err := agents.AddJob(agentID, "cd", argS)
-			if err != nil {
-				return messages.ErrorMessage(err.Error())
-			} else {
-				return messages.JobMessage(agentID, job)
-			}
 		}
-	} else {
-		job, err := agents.AddJob(agentID, "cd", Args)
+		job, err := agents.AddJob(agentID, "cd", argS)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
-		} else {
-			return messages.JobMessage(agentID, job)
 		}
+		return messages.JobMessage(agentID, job)
 	}
+	job, err := agents.AddJob(agentID, "cd", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // CMD is used to send a command to the agent to run a command or execute a program
@@ -68,9 +64,8 @@ func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 		job, err := agents.AddJob(agentID, Args[0], Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
-		} else {
-			return messages.JobMessage(agentID, job)
 		}
+		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage("not enough arguments provided for the Agent Cmd call")
 }
@@ -91,15 +86,14 @@ func Download(agentID uuid.UUID, Args []string) messages.UserMessage {
 			job, err := agents.AddJob(agentID, "download", argS[0:1])
 			if err != nil {
 				return messages.ErrorMessage(err.Error())
-			} else {
-				return messages.JobMessage(agentID, job)
 			}
+			return messages.JobMessage(agentID, job)
 		}
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Download call: %s", Args))
 }
 
-// executeShellcode calls the corresponding shellcode module to create a job that executes the provided shellcode
+// ExecuteShellcode calls the corresponding shellcode module to create a job that executes the provided shellcode
 // Args[0] = "execute-shellcode
 // Args[1] = Shellcode execution method [self, remote, retlcreateuserthread, userapc]
 func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
@@ -146,9 +140,8 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 			job, err := agents.AddJob(agentID, sh[0], sh[1:])
 			if err != nil {
 				return messages.ErrorMessage(err.Error())
-			} else {
-				return messages.JobMessage(agentID, job)
 			}
+			return messages.JobMessage(agentID, job)
 		}
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
@@ -160,9 +153,8 @@ func Kill(agentID uuid.UUID, Args []string) messages.UserMessage {
 		job, err := agents.AddJob(agentID, "kill", Args[0:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
-		} else {
-			return messages.JobMessage(agentID, job)
 		}
+		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Kill call: %s", Args))
 }
@@ -175,22 +167,18 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 		if errS != nil {
 			m := fmt.Sprintf("there was an error parsing command line argments: %s\r\n%s", Args, errS.Error())
 			return messages.ErrorMessage(m)
-		} else {
-			job, err := agents.AddJob(agentID, "ls", argS)
-			if err != nil {
-				return messages.ErrorMessage(err.Error())
-			} else {
-				return messages.JobMessage(agentID, job)
-			}
 		}
-	} else {
-		job, err := agents.AddJob(agentID, "ls", Args)
+		job, err := agents.AddJob(agentID, "ls", argS)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
-		} else {
-			return messages.JobMessage(agentID, job)
 		}
+		return messages.JobMessage(agentID, job)
 	}
+	job, err := agents.AddJob(agentID, "ls", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // PWD is used to print the Agent's current working directory

@@ -27,12 +27,18 @@ import (
 )
 
 const (
-	MESSAGE_INFO    int = 0
-	MESSAGE_NOTE    int = 1
-	MESSAGE_WARN    int = 2
-	MESSAGE_DEBUG   int = 3
-	MESSAGE_SUCCESS int = 4
-	MESSAGE_PLAIN   int = 5
+	// Info messages are used just to inform the user and do not indicate that an action is required
+	Info int = 0
+	// Note messages are used similar to verbose messages and are used to keep the user up to date
+	Note int = 1
+	// Warn messages are used to notify the user that there was an error or that something didn't work as planned
+	Warn int = 2
+	// Debug messages are displayed while debugging the program and display a lot of information
+	Debug int = 3
+	// Success messages are you to notify the user that an action was completed without error
+	Success int = 4
+	// Plain messages have no color or other formatting applied and are used for edge cases
+	Plain int = 5
 )
 
 // messageChannel is a map of all registered clients where messages can be queued in a channel for the client
@@ -51,14 +57,14 @@ func Register(clientID uuid.UUID) UserMessage {
 	if _, ok := messageChannel[clientID]; !ok {
 		messageChannel[clientID] = make(chan UserMessage)
 		return UserMessage{
-			Level:   MESSAGE_SUCCESS,
+			Level:   Success,
 			Message: "successfully registered client for user message channel with server",
 			Time:    time.Now().UTC(),
 			Error:   false,
 		}
 	}
 	return UserMessage{
-		Level:   MESSAGE_WARN,
+		Level:   Warn,
 		Message: fmt.Sprintf("client %s already registered for user a user message channel with server", clientID),
 		Time:    time.Now().UTC(),
 		Error:   true,
@@ -78,7 +84,7 @@ func GetMessageForClient(clientID uuid.UUID) UserMessage {
 		return <-messageChannel[clientID]
 	}
 	return UserMessage{
-		Level:   MESSAGE_WARN,
+		Level:   Warn,
 		Message: fmt.Sprintf(" could not get messages for client %s because it does not exist", clientID),
 		Time:    time.Now().UTC(),
 		Error:   true,
@@ -89,7 +95,7 @@ func GetMessageForClient(clientID uuid.UUID) UserMessage {
 func ErrorMessage(message string) UserMessage {
 	return UserMessage{
 		Error:   true,
-		Level:   MESSAGE_WARN,
+		Level:   Warn,
 		Time:    time.Now().UTC(),
 		Message: message,
 	}
@@ -100,7 +106,7 @@ func JobMessage(agentID uuid.UUID, jobID string) UserMessage {
 	m := fmt.Sprintf("Created job %s for agent %s at %s", jobID, agentID, time.Now().UTC().Format(time.RFC3339))
 	return UserMessage{
 		Error:   false,
-		Level:   MESSAGE_NOTE,
+		Level:   Note,
 		Message: m,
 		Time:    time.Now().UTC(),
 	}

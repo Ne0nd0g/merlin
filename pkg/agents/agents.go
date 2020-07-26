@@ -565,17 +565,17 @@ func message(level string, message string) {
 	}
 	switch level {
 	case "info":
-		m.Level = messageAPI.MESSAGE_INFO
+		m.Level = messageAPI.Info
 	case "note":
-		m.Level = messageAPI.MESSAGE_NOTE
+		m.Level = messageAPI.Note
 	case "warn":
-		m.Level = messageAPI.MESSAGE_WARN
+		m.Level = messageAPI.Warn
 	case "debug":
-		m.Level = messageAPI.MESSAGE_DEBUG
+		m.Level = messageAPI.Debug
 	case "success":
-		m.Level = messageAPI.MESSAGE_SUCCESS
+		m.Level = messageAPI.Success
 	default:
-		m.Level = messageAPI.MESSAGE_PLAIN
+		m.Level = messageAPI.Plain
 	}
 	messageAPI.SendBroadcastMessage(m)
 }

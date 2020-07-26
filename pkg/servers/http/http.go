@@ -101,11 +101,11 @@ func New(options map[string]string) (*Server, error) {
 	}
 	switch proto {
 	case "http":
-		s.Protocol = servers.SERVER_PROTOCOL_HTTP
+		s.Protocol = servers.HTTP
 	case "https":
-		s.Protocol = servers.SERVER_PROTOCOL_HTTPS
+		s.Protocol = servers.HTTPS
 	case "http2":
-		s.Protocol = servers.SERVER_PROTOCOL_HTTP2
+		s.Protocol = servers.HTTP2
 	}
 
 	// Convert port to integer from string
@@ -115,13 +115,13 @@ func New(options map[string]string) (*Server, error) {
 	}
 
 	// Verify X509 Key file exists and can be parsed
-	if s.Protocol == servers.SERVER_PROTOCOL_HTTPS || s.Protocol == servers.SERVER_PROTOCOL_HTTP2 {
+	if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
 		certificates, err = util.GetTLSCertificates(options["X509Cert"], options["X509Key"])
 		if err != nil {
 			m := fmt.Sprintf("Certificate was not found at: %s\r\n", options["X509Cert"])
 			m += "Creating in-memory x.509 certificate used for this session only"
 			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.MESSAGE_NOTE,
+				Level:   messages.Note,
 				Message: m,
 				Time:    time.Now().UTC(),
 				Error:   false,
@@ -130,11 +130,10 @@ func New(options map[string]string) (*Server, error) {
 			certificates, err = util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true)
 			if err != nil {
 				return &s, err
-			} else {
-				// Leave empty to force the use of the server's TLSConfig
-				s.x509Cert = ""
-				s.x509Key = ""
 			}
+			// Leave empty to force the use of the server's TLSConfig
+			s.x509Cert = ""
+			s.x509Key = ""
 		} else {
 			s.x509Cert = options["X509Cert"]
 			s.x509Key = options["X509Key"]
@@ -147,7 +146,7 @@ func New(options map[string]string) (*Server, error) {
 			m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for %s server on %s:%s\r\n", proto, options["Interface"], options["Port"])
 			m += "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates"
 			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.MESSAGE_WARN,
+				Level:   messages.Warn,
 				Message: m,
 				Time:    time.Now().UTC(),
 				Error:   false,
@@ -184,13 +183,13 @@ func New(options map[string]string) (*Server, error) {
 	}
 
 	// Add X.509 certificates if using TLS
-	if s.Protocol == servers.SERVER_PROTOCOL_HTTPS || s.Protocol == servers.SERVER_PROTOCOL_HTTP2 {
+	if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
 		s.Transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}}
 	}
 
 	s.Interface = options["Interface"]
 	s.ID = uuid.NewV4()
-	s.State = servers.SERVER_STATE_STOPPED
+	s.State = servers.Stopped
 
 	return &s, nil
 }
@@ -204,19 +203,19 @@ func (s *Server) GetConfiguredOptions() map[string]string {
 	options["PSK"] = s.ctx.PSK
 	options["URLS"] = strings.Join(s.urls, " ")
 
-	if s.Protocol != servers.SERVER_PROTOCOL_HTTP {
+	if s.Protocol != servers.HTTP {
 		options["X509Cert"] = s.x509Cert
 		options["X509Key"] = s.x509Key
 	}
 	return options
 }
 
-// This function returns the interface that the server is bound to
+// GetInterface function returns the interface that the server is bound to
 func (s *Server) GetInterface() string {
 	return s.Interface
 }
 
-// This function returns the port that the server is bound to
+// GetPort function returns the port that the server is bound to
 func (s *Server) GetPort() int {
 	return s.Port
 }
@@ -226,21 +225,21 @@ func (s *Server) GetProtocol() int {
 	return s.Protocol
 }
 
-// This function returns the server's protocol
+// GetProtocolString function returns the server's protocol
 func (s *Server) GetProtocolString() string {
 	switch s.Protocol {
-	case servers.SERVER_PROTOCOL_HTTP:
+	case servers.HTTP:
 		return "HTTP"
-	case servers.SERVER_PROTOCOL_HTTPS:
+	case servers.HTTPS:
 		return "HTTPS"
-	case servers.SERVER_PROTOCOL_HTTP2:
+	case servers.HTTP2:
 		return "HTTP/2"
 	default:
 		return "UNKNOWN"
 	}
 }
 
-// This function sets an option for an instantiated server object
+// SetOption function sets an option for an instantiated server object
 func (s *Server) SetOption(option string, value string) error {
 	var err error
 	// Check non-string options first
@@ -259,11 +258,11 @@ func (s *Server) SetOption(option string, value string) error {
 	case "urls":
 		s.urls = strings.Split(option, ",")
 	case "x509cert":
-		if s.Protocol == servers.SERVER_PROTOCOL_HTTPS || s.Protocol == servers.SERVER_PROTOCOL_HTTP2 {
+		if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
 			s.x509Cert = option
 		}
 	case "x509key":
-		if s.Protocol == servers.SERVER_PROTOCOL_HTTPS || s.Protocol == servers.SERVER_PROTOCOL_HTTP2 {
+		if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
 			s.x509Key = option
 		}
 	default:
@@ -272,7 +271,7 @@ func (s *Server) SetOption(option string, value string) error {
 	return nil
 }
 
-// This function starts the HTTP server
+// Start function starts the HTTP server
 func (s *Server) Start() error {
 	var g errgroup.Group
 
@@ -281,7 +280,7 @@ func (s *Server) Start() error {
 		if r := recover(); r != nil {
 			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
 			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.MESSAGE_WARN,
+				Level:   messages.Warn,
 				Message: m,
 				Time:    time.Now().UTC(),
 				Error:   true,
@@ -290,11 +289,11 @@ func (s *Server) Start() error {
 	}()
 
 	g.Go(func() error {
-		s.State = servers.SERVER_STATE_RUNNING
+		s.State = servers.Running
 		switch s.Protocol {
-		case servers.SERVER_PROTOCOL_HTTP:
+		case servers.HTTP:
 			return s.Transport.(*http.Server).ListenAndServe()
-		case servers.SERVER_PROTOCOL_HTTPS, servers.SERVER_PROTOCOL_HTTP2:
+		case servers.HTTPS, servers.HTTP2:
 			return s.Transport.(*http.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
 		default:
 			return fmt.Errorf("could not start HTTP server, invalid protocol %d, %s", s.Protocol, servers.GetStateString(s.Protocol))
@@ -303,7 +302,7 @@ func (s *Server) Start() error {
 
 	if err := g.Wait(); err != nil {
 		if err != http.ErrServerClosed {
-			s.State = servers.SERVER_STATE_ERROR
+			s.State = servers.Error
 			return fmt.Errorf("there was an error with the %s server on %s:%d %s", s.GetProtocolString(), s.Interface, s.Port, err.Error())
 		}
 	}
@@ -315,12 +314,12 @@ func (s *Server) Status() int {
 	return s.State
 }
 
-// This function stops the HTTP3 server
+// Stop function stops the server
 func (s *Server) Stop() error {
 	err := s.Transport.(*http.Server).Shutdown(context.Background())
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP server:\r\n%s", err.Error())
 	}
-	s.State = servers.SERVER_STATE_CLOSED
+	s.State = servers.Closed
 	return nil
 }

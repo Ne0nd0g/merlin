@@ -84,7 +84,7 @@ func New(options map[string]string) (*Server, error) {
 	if strings.ToLower(options["Protocol"]) != "h2c" {
 		return &s, fmt.Errorf("server protocol mismatch, expected: H2C got: %s", options["Protocol"])
 	}
-	s.Protocol = servers.SERVER_PROTOCOL_H2C
+	s.Protocol = servers.H2C
 
 	// Convert port to integer from string
 	s.Port, err = strconv.Atoi(options["Port"])
@@ -123,7 +123,7 @@ func New(options map[string]string) (*Server, error) {
 
 	s.Interface = options["Interface"]
 	s.ID = uuid.NewV4()
-	s.State = servers.SERVER_STATE_STOPPED
+	s.State = servers.Stopped
 
 	return &s, nil
 }
@@ -158,7 +158,7 @@ func (s *Server) GetProtocol() int {
 // GetProtocolString function returns the server's protocol
 func (s *Server) GetProtocolString() string {
 	switch s.Protocol {
-	case servers.SERVER_PROTOCOL_H2C:
+	case servers.H2C:
 		return "H2C"
 	default:
 		return "UNKNOWN"
@@ -198,7 +198,7 @@ func (s *Server) Start() error {
 		if r := recover(); r != nil {
 			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
 			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.MESSAGE_WARN,
+				Level:   messages.Warn,
 				Message: m,
 				Time:    time.Now().UTC(),
 				Error:   true,
@@ -207,13 +207,13 @@ func (s *Server) Start() error {
 	}()
 
 	g.Go(func() error {
-		s.State = servers.SERVER_STATE_RUNNING
+		s.State = servers.Running
 		return s.Transport.(*http.Server).ListenAndServe()
 	})
 
 	if err := g.Wait(); err != nil {
 		if err != http.ErrServerClosed {
-			s.State = servers.SERVER_STATE_ERROR
+			s.State = servers.Error
 			return fmt.Errorf("there was an error with the %s server on %s:%d %s", s.GetProtocolString(), s.Interface, s.Port, err.Error())
 		}
 	}
@@ -231,6 +231,6 @@ func (s *Server) Stop() error {
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP server:\r\n%s", err.Error())
 	}
-	s.State = servers.SERVER_STATE_CLOSED
+	s.State = servers.Closed
 	return nil
 }

@@ -23,18 +23,30 @@ import (
 
 const (
 	// Supported protocols
-	SERVER_PROTOCOL_HTTP  int = 1 // HTTP/1.1 Clear-Text
-	SERVER_PROTOCOL_HTTPS int = 2 // HTTP/1.1 Secure (over SSL/TLS)
-	SERVER_PROTOCOL_H2C   int = 3 // HTTP/2.0 Clear-Text
-	SERVER_PROTOCOL_HTTP2 int = 4 // HTTP/2.0 Secure (over SSL/TLS)
-	SERVER_PROTOCOL_HTTP3 int = 5 // HTTP/2.0 Secure over Quick UDP Internet Connection (QUIC) - HTTP3
-	SERVER_PROTOCOL_DNS   int = 6 // Domain Name Service (DNS)
+
+	// HTTP is HTTP/1.1 Clear-Text protocol
+	HTTP int = 1
+	// HTTPS is HTTP/1.1 Secure (over SSL/TLS) protocol
+	HTTPS int = 2
+	// H2C is HTTP/2.0 Clear-Text protocol
+	H2C int = 3
+	// HTTP2 is HTTP/2.0 Secure (over SSL/TLS)
+	HTTP2 int = 4
+	// HTTP3 is HTTP/2.0 Secure over Quick UDP Internet Connection (QUIC)
+	HTTP3 int = 5
+	// DNS is Domain Name Service protocol
+	DNS int = 6
 
 	// Server states
-	SERVER_STATE_STOPPED int = 0
-	SERVER_STATE_RUNNING int = 1
-	SERVER_STATE_ERROR   int = 2
-	SERVER_STATE_CLOSED  int = 3 // Closed and can't be reused
+
+	// Stopped is the server's state when it has not ever been started
+	Stopped int = 0
+	// Running means the server is actively accepting connections and serving content
+	Running int = 1
+	// Error is used when there was an error operating the server
+	Error int = 2
+	// Closed is used when the server was running but has been stopped; it can't be reused again
+	Closed int = 3
 )
 
 // RegisteredServers contains an array of registered listener types
@@ -74,17 +86,17 @@ type Template struct {
 // GetProtocol is used to transform a server protocol constant into a string for use in written messages or logs
 func GetProtocol(protocol int) string {
 	switch protocol {
-	case SERVER_PROTOCOL_HTTP:
+	case HTTP:
 		return "HTTP"
-	case SERVER_PROTOCOL_HTTPS:
+	case HTTPS:
 		return "HTTPS"
-	case SERVER_PROTOCOL_H2C:
+	case H2C:
 		return "H2C"
-	case SERVER_PROTOCOL_HTTP2:
+	case HTTP2:
 		return "HTTP2"
-	case SERVER_PROTOCOL_HTTP3:
+	case HTTP3:
 		return "HTTP3"
-	case SERVER_PROTOCOL_DNS:
+	case DNS:
 		return "DNS"
 	default:
 		return "invalid protocol"
@@ -94,13 +106,13 @@ func GetProtocol(protocol int) string {
 // GetStateString is used to transform a server state constant into a string for use in written messages or logs
 func GetStateString(state int) string {
 	switch state {
-	case SERVER_STATE_STOPPED:
+	case Stopped:
 		return "Stopped"
-	case SERVER_STATE_RUNNING:
+	case Running:
 		return "Running"
-	case SERVER_STATE_ERROR:
+	case Error:
 		return "Error"
-	case SERVER_STATE_CLOSED:
+	case Closed:
 		return "Closed"
 	default:
 		return "Undefined"

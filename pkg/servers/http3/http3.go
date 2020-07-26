@@ -89,7 +89,7 @@ func New(options map[string]string) (*Server, error) {
 	if strings.ToLower(options["Protocol"]) != "http3" {
 		return &s, fmt.Errorf("server protocol mismatch, expected: HTTP3 got: %s", options["Protocol"])
 	}
-	s.Protocol = servers.SERVER_PROTOCOL_HTTP3
+	s.Protocol = servers.HTTP3
 
 	// Convert port to integer from string
 	s.Port, err = strconv.Atoi(options["Port"])
@@ -103,7 +103,7 @@ func New(options map[string]string) (*Server, error) {
 		m := fmt.Sprintf("Certificate was not found at: %s\r\n", options["X509Cert"])
 		m += "Creating in-memory x.509 certificate used for this session only"
 		messages.SendBroadcastMessage(messages.UserMessage{
-			Level:   messages.MESSAGE_NOTE,
+			Level:   messages.Note,
 			Message: m,
 			Time:    time.Now().UTC(),
 			Error:   false,
@@ -119,16 +119,16 @@ func New(options map[string]string) (*Server, error) {
 	insecure, errI := util.CheckInsecureFingerprint(*certificates)
 	if errI != nil {
 		return &s, errI
-	} else {
-		// Leave empty to force the use of the server's TLSConfig
-		s.x509Cert = ""
-		s.x509Key = ""
 	}
+	// Leave empty to force the use of the server's TLSConfig
+	s.x509Cert = ""
+	s.x509Key = ""
+
 	if insecure {
 		m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for HTTP/3 server on %s:%s\r\n", options["Interface"], options["Port"])
 		m += "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates"
 		messages.SendBroadcastMessage(messages.UserMessage{
-			Level:   messages.MESSAGE_WARN,
+			Level:   messages.Warn,
 			Message: m,
 			Time:    time.Now().UTC(),
 			Error:   false,
@@ -175,7 +175,7 @@ func New(options map[string]string) (*Server, error) {
 
 	s.Interface = options["Interface"]
 	s.ID = uuid.NewV4()
-	s.State = servers.SERVER_STATE_STOPPED
+	s.State = servers.Stopped
 
 	return &s, nil
 }
@@ -188,20 +188,18 @@ func (s *Server) GetConfiguredOptions() map[string]string {
 	options["Protocol"] = servers.GetProtocol(s.Protocol)
 	options["PSK"] = s.ctx.PSK
 	options["URLS"] = strings.Join(s.urls, " ")
+	options["X509Cert"] = s.x509Cert
+	options["X509Key"] = s.x509Key
 
-	if s.Protocol != servers.SERVER_PROTOCOL_HTTP {
-		options["X509Cert"] = s.x509Cert
-		options["X509Key"] = s.x509Key
-	}
 	return options
 }
 
-// This function returns the interface that the server is bound to
+// GetInterface function returns the interface that the server is bound to
 func (s *Server) GetInterface() string {
 	return s.Interface
 }
 
-// This function returns the port that the server is bound to
+// GetPort function returns the port that the server is bound to
 func (s *Server) GetPort() int {
 	return s.Port
 }
@@ -211,17 +209,17 @@ func (s *Server) GetProtocol() int {
 	return s.Protocol
 }
 
-// This function returns the server's protocol
+// GetProtocolString function returns the server's protocol
 func (s *Server) GetProtocolString() string {
 	switch s.Protocol {
-	case servers.SERVER_PROTOCOL_HTTP3:
+	case servers.HTTP3:
 		return "HTTP3"
 	default:
 		return "UNKNOWN"
 	}
 }
 
-// This function sets an option for an instantiated server object
+// SetOption function sets an option for an instantiated server object
 func (s *Server) SetOption(option string, value string) error {
 	var err error
 	// Check non-string options first
@@ -249,7 +247,7 @@ func (s *Server) SetOption(option string, value string) error {
 	return nil
 }
 
-// This function starts the HTTP3 server
+// Start function starts the HTTP3 server
 func (s *Server) Start() error {
 	var g errgroup.Group
 
@@ -258,7 +256,7 @@ func (s *Server) Start() error {
 		if r := recover(); r != nil {
 			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.Protocol), s.Interface, s.Port, r.(error))
 			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.MESSAGE_WARN,
+				Level:   messages.Warn,
 				Message: m,
 				Time:    time.Now().UTC(),
 				Error:   true,
@@ -267,17 +265,16 @@ func (s *Server) Start() error {
 	}()
 
 	g.Go(func() error {
-		s.State = servers.SERVER_STATE_RUNNING
+		s.State = servers.Running
 		if s.x509Key != "" && s.x509Cert != "" {
 			return s.Transport.(*h2quic.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
-		} else {
-			return s.Transport.(*h2quic.Server).ListenAndServe()
 		}
+		return s.Transport.(*h2quic.Server).ListenAndServe()
 	})
 
 	if err := g.Wait(); err != nil {
 		if !strings.Contains(strings.ToLower(err.Error()), "server closed") {
-			s.State = servers.SERVER_STATE_ERROR
+			s.State = servers.Error
 			return fmt.Errorf("there was an error starting the %s server on %s:%d %s", servers.GetProtocol(s.Protocol), s.Interface, s.Port, err.Error())
 		}
 	}
@@ -289,13 +286,13 @@ func (s *Server) Status() int {
 	return s.State
 }
 
-// This function stops the HTTP3 server
+// Stop function stops the HTTP3 server
 func (s *Server) Stop() error {
 	err := s.Transport.(*h2quic.Server).CloseGracefully(time.Second * 20)
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP3 server:\r\n%s", err.Error())
 	}
-	s.State = servers.SERVER_STATE_CLOSED
+	s.State = servers.Closed
 
 	// TODO figure out why the port binding isn't released after it has been shutdown
 	return fmt.Errorf("the bind port was not released due to an uknown error; create a new listener if needed")

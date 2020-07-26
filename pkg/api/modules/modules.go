@@ -73,7 +73,7 @@ func RunModule(module modules.Module) []messages.UserMessage {
 					module.Platform, id, agents.Agents[id].Platform)
 				um := messages.UserMessage{
 					Error:   false,
-					Level:   messages.MESSAGE_NOTE,
+					Level:   messages.Note,
 					Message: m,
 					Time:    time.Now().UTC(),
 				}
@@ -99,23 +99,22 @@ func RunModule(module modules.Module) []messages.UserMessage {
 		}
 		return returnMessages
 		// Single Agent
-	} else {
-		switch strings.ToLower(module.Type) {
-		case "standard":
-			returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, r))
-		case "extended":
-			job, err := agents.AddJob(module.Agent, r[0], r[1:])
-			if err != nil {
-				returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
-			} else {
-				returnMessages = append(returnMessages, messages.JobMessage(module.Agent, job))
-			}
-			return returnMessages
-		default:
-			err := fmt.Errorf("invalid module type: %s", module.Type)
+	}
+	switch strings.ToLower(module.Type) {
+	case "standard":
+		returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, r))
+	case "extended":
+		job, err := agents.AddJob(module.Agent, r[0], r[1:])
+		if err != nil {
 			returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
-			return returnMessages
+		} else {
+			returnMessages = append(returnMessages, messages.JobMessage(module.Agent, job))
 		}
+		return returnMessages
+	default:
+		err := fmt.Errorf("invalid module type: %s", module.Type)
+		returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
+		return returnMessages
 	}
 	return returnMessages
 }

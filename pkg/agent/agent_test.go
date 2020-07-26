@@ -36,9 +36,27 @@ import (
 	"github.com/Ne0nd0g/merlin/test/testServer"
 )
 
-// TestNewHTTPSAgent ensure the agent.New function returns a HTTP/1.1 agent without error
+// TestNewHTTPAgent ensure the agent.New function returns a http agent without error
+func TestNewHTTPAgent(t *testing.T) {
+	_, err := New("http", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// TestNewHTTPSAgent ensure the agent.New function returns a https agent without error
 func TestNewHTTPSAgent(t *testing.T) {
-	_, err := New("http/1.1", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+	_, err := New("https", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+// TestNewH2CAgent ensure the agent.New function returns a HTTP/2 clear-text agent without error
+func TestNewH2CAgent(t *testing.T) {
+	_, err := New("h2c", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -196,15 +214,15 @@ func TestInvalidMessage(t *testing.T) {
 		return
 	}
 
-	if resp.StatusCode != 500 {
-		t.Error("the merlin server did not return a 500 for an invalid message type")
+	if resp.StatusCode != 404 {
+		t.Error("the merlin server did not return a 404 for an invalid message type")
 	}
 
 }
 
 // TestPSK ensure that the agent can't successfully communicate with the server using the wrong PSK
 func TestPSK(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8080/merlin", "", "test", "", "", false, false)
 
 	if err != nil {
 		t.Error(err)
@@ -234,13 +252,6 @@ func TestPSK(t *testing.T) {
 		return
 	}
 
-	// Try again with the correct password
-	k = sha256.Sum256([]byte("test"))
-	agent.secret = k[:]
-	_, errSend2 := agent.sendMessage("POST", m)
-	if errSend2 != nil {
-		t.Error("agent was unable communicate with the server using the PSK")
-	}
 	close(ended)
 }
 
@@ -293,7 +304,7 @@ func TestInvalidHTTPTrafficPayload(t *testing.T) {
 
 // TestAuthentication verifies successful authentication using the correct PSK
 func TestAuthentication(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8082", "", "test", "", "", false, false)
+	agent, err := New("h2", "https://127.0.0.1:8082/merlin", "", "test", "", "", false, false)
 
 	if err != nil {
 		t.Error(err)

@@ -115,7 +115,7 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 	}, nil
 }
 
-// GetX509Key parses PEM encoded input x.509 certificate and key file paths as a string and returns a tls object
+// GetTLSCertificates parses PEM encoded input x.509 certificate and key file paths as a string and returns a tls object
 func GetTLSCertificates(certificate string, key string) (*tls.Certificate, error) {
 	var cer tls.Certificate
 	var err error

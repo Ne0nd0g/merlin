@@ -52,7 +52,7 @@ func NewListener(options map[string]string) (messages.UserMessage, uuid.UUID) {
 	}
 	m := fmt.Sprintf("%s listener was created with an ID of: %s", l.Name, l.ID)
 	um := messages.UserMessage{
-		Level:   messages.MESSAGE_SUCCESS,
+		Level:   messages.Success,
 		Time:    time.Now().UTC(),
 		Message: m,
 		Error:   false,
@@ -60,7 +60,7 @@ func NewListener(options map[string]string) (messages.UserMessage, uuid.UUID) {
 	return um, l.ID
 }
 
-// This deletes and removes the listener from the server
+// Remove deletes and removes the listener from the server
 func Remove(name string) messages.UserMessage {
 	l, errL := listeners.GetListenerByName(name)
 	if errL != nil {
@@ -72,14 +72,14 @@ func Remove(name string) messages.UserMessage {
 	}
 	m := fmt.Sprintf("deleted listener %s:%s", l.Name, l.ID)
 	return messages.UserMessage{
-		Level:   messages.MESSAGE_SUCCESS,
+		Level:   messages.Success,
 		Time:    time.Now().UTC(),
 		Message: m,
 		Error:   false,
 	}
 }
 
-// This restarts the Listener's server
+// Restart restarts the Listener's server
 func Restart(listenerID uuid.UUID) messages.UserMessage {
 	l, err := listeners.GetListenerByID(listenerID)
 	if err != nil {
@@ -98,7 +98,7 @@ func Restart(listenerID uuid.UUID) messages.UserMessage {
 		}
 	}()
 	return messages.UserMessage{
-		Level:   messages.MESSAGE_SUCCESS,
+		Level:   messages.Success,
 		Time:    time.Now().UTC(),
 		Message: fmt.Sprintf("%s listener was successfully restarted", l.Name),
 		Error:   false,
@@ -118,13 +118,12 @@ func SetOption(listenerID uuid.UUID, Args []string) messages.UserMessage {
 				err := l.SetOption(k, v)
 				if err != nil {
 					return messages.ErrorMessage(err.Error())
-				} else {
-					return messages.UserMessage{
-						Error:   false,
-						Level:   messages.MESSAGE_SUCCESS,
-						Time:    time.Now().UTC(),
-						Message: fmt.Sprintf("set %s to: %s", k, v),
-					}
+				}
+				return messages.UserMessage{
+					Error:   false,
+					Level:   messages.Success,
+					Time:    time.Now().UTC(),
+					Message: fmt.Sprintf("set %s to: %s", k, v),
 				}
 			}
 		}
@@ -139,14 +138,14 @@ func Start(name string) messages.UserMessage {
 		return messages.ErrorMessage(err.Error())
 	}
 	switch l.Server.Status() {
-	case servers.SERVER_STATE_RUNNING:
+	case servers.Running:
 		return messages.UserMessage{
 			Error:   false,
-			Level:   messages.MESSAGE_NOTE,
+			Level:   messages.Note,
 			Time:    time.Now().UTC(),
 			Message: "the server is already running",
 		}
-	case servers.SERVER_STATE_STOPPED:
+	case servers.Stopped:
 		go func() {
 			err := l.Server.Start()
 			if err != nil {
@@ -155,13 +154,13 @@ func Start(name string) messages.UserMessage {
 		}()
 		return messages.UserMessage{
 			Error: false,
-			Level: messages.MESSAGE_SUCCESS,
+			Level: messages.Success,
 			Time:  time.Now().UTC(),
 			Message: fmt.Sprintf("Started %s listener on %s:%d", servers.GetProtocol(l.Server.GetProtocol()),
 				l.Server.GetInterface(),
 				l.Server.GetPort()),
 		}
-	case servers.SERVER_STATE_CLOSED:
+	case servers.Closed:
 		if err := l.Restart(l.GetConfiguredOptions()); err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -173,7 +172,7 @@ func Start(name string) messages.UserMessage {
 		}()
 		return messages.UserMessage{
 			Error: false,
-			Level: messages.MESSAGE_SUCCESS,
+			Level: messages.Success,
 			Time:  time.Now().UTC(),
 			Message: fmt.Sprintf("Restarted %s %s listener on %s:%d", l.Name, servers.GetProtocol(l.Server.GetProtocol()),
 				l.Server.GetInterface(),
@@ -182,7 +181,7 @@ func Start(name string) messages.UserMessage {
 	default:
 		return messages.UserMessage{
 			Error:   true,
-			Level:   messages.MESSAGE_WARN,
+			Level:   messages.Warn,
 			Time:    time.Now().UTC(),
 			Message: fmt.Sprintf("unhandled server status: %s", servers.GetStateString(l.Server.Status())),
 		}
@@ -195,22 +194,21 @@ func Stop(name string) messages.UserMessage {
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	if l.Server.Status() == servers.SERVER_STATE_RUNNING {
+	if l.Server.Status() == servers.Running {
 		err := l.Server.Stop()
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
-		} else {
-			return messages.UserMessage{
-				Error:   false,
-				Level:   messages.MESSAGE_SUCCESS,
-				Time:    time.Now().UTC(),
-				Message: fmt.Sprintf("%s listener was stopped", l.Name),
-			}
+		}
+		return messages.UserMessage{
+			Error:   false,
+			Level:   messages.Success,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("%s listener was stopped", l.Name),
 		}
 	}
 	return messages.UserMessage{
 		Error:   false,
-		Level:   messages.MESSAGE_NOTE,
+		Level:   messages.Note,
 		Time:    time.Now().UTC(),
 		Message: "this listener is not running",
 	}
@@ -223,7 +221,7 @@ func GetListenerStatus(listenerID uuid.UUID) messages.UserMessage {
 		return messages.ErrorMessage(err.Error())
 	}
 	return messages.UserMessage{
-		Level:   messages.MESSAGE_PLAIN,
+		Level:   messages.Plain,
 		Message: servers.GetStateString(l.Server.Status()),
 		Time:    time.Time{},
 		Error:   false,
@@ -243,7 +241,7 @@ func GetListenerByName(name string) (messages.UserMessage, uuid.UUID) {
 	return um, l.ID
 }
 
-// GetListenerConfiguredOption enumerates all of a Listener's settings and returns them
+// GetListenerConfiguredOptions enumerates all of a Listener's settings and returns them
 func GetListenerConfiguredOptions(listenerID uuid.UUID) (messages.UserMessage, map[string]string) {
 	l, err := listeners.GetListenerByID(listenerID)
 	if err != nil {

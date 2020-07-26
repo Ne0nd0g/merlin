@@ -82,7 +82,7 @@ func Shell() {
 
 	if err != nil {
 		MessageChannel <- messages.UserMessage{
-			Level:   messages.MESSAGE_WARN,
+			Level:   messages.Warn,
 			Message: fmt.Sprintf("There was an error with the provided input: %s", err.Error()),
 			Time:    time.Now().UTC(),
 			Error:   true,
@@ -134,7 +134,7 @@ func Shell() {
 					m += color.BlueString("\r\n\t\t   Version: %s", merlin.Version)
 					m += color.BlueString("\r\n\t\t   Build: %s\n", merlin.Build)
 					MessageChannel <- messages.UserMessage{
-						Level:   messages.MESSAGE_PLAIN,
+						Level:   messages.Plain,
 						Message: m,
 						Time:    time.Now().UTC(),
 						Error:   false,
@@ -177,7 +177,7 @@ func Shell() {
 							if strings.ToLower(cmd[2]) == "true" {
 								core.Verbose = true
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_SUCCESS,
+									Level:   messages.Success,
 									Message: "Verbose output enabled",
 									Time:    time.Now(),
 									Error:   false,
@@ -185,7 +185,7 @@ func Shell() {
 							} else if strings.ToLower(cmd[2]) == "false" {
 								core.Verbose = false
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_SUCCESS,
+									Level:   messages.Success,
 									Message: "Verbose output disabled",
 									Time:    time.Now(),
 									Error:   false,
@@ -195,7 +195,7 @@ func Shell() {
 							if strings.ToLower(cmd[2]) == "true" {
 								core.Debug = true
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_SUCCESS,
+									Level:   messages.Success,
 									Message: "Debug output enabled",
 									Time:    time.Now().UTC(),
 									Error:   false,
@@ -203,7 +203,7 @@ func Shell() {
 							} else if strings.ToLower(cmd[2]) == "false" {
 								core.Debug = false
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_SUCCESS,
+									Level:   messages.Success,
 									Message: "Debug output disabled",
 									Time:    time.Now().UTC(),
 									Error:   false,
@@ -215,7 +215,7 @@ func Shell() {
 					menuUse(cmd[1:])
 				case "version":
 					MessageChannel <- messages.UserMessage{
-						Level:   messages.MESSAGE_PLAIN,
+						Level:   messages.Plain,
 						Message: color.BlueString("Merlin version: %s\n", merlin.Version),
 						Time:    time.Now().UTC(),
 						Error:   false,
@@ -248,14 +248,14 @@ func Shell() {
 							s, err := shellModule.SetAgent(cmd[2])
 							if err != nil {
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_WARN,
+									Level:   messages.Warn,
 									Message: err.Error(),
 									Time:    time.Now().UTC(),
 									Error:   true,
 								}
 							} else {
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_SUCCESS,
+									Level:   messages.Success,
 									Message: s,
 									Time:    time.Now().UTC(),
 									Error:   false,
@@ -265,14 +265,14 @@ func Shell() {
 							s, err := shellModule.SetOption(cmd[1], cmd[2:])
 							if err != nil {
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_WARN,
+									Level:   messages.Warn,
 									Message: err.Error(),
 									Time:    time.Now().UTC(),
 									Error:   true,
 								}
 							} else {
 								MessageChannel <- messages.UserMessage{
-									Level:   messages.MESSAGE_SUCCESS,
+									Level:   messages.Success,
 									Message: s,
 									Time:    time.Now().UTC(),
 									Error:   false,
@@ -303,14 +303,14 @@ func Shell() {
 						s, err := shellModule.SetOption(cmd[1], nil)
 						if err != nil {
 							MessageChannel <- messages.UserMessage{
-								Level:   messages.MESSAGE_WARN,
+								Level:   messages.Warn,
 								Message: err.Error(),
 								Time:    time.Now().UTC(),
 								Error:   true,
 							}
 						} else {
 							MessageChannel <- messages.UserMessage{
-								Level:   messages.MESSAGE_SUCCESS,
+								Level:   messages.Success,
 								Message: s,
 								Time:    time.Now().UTC(),
 								Error:   false,
@@ -379,7 +379,7 @@ func Shell() {
 							MessageChannel <- agentAPI.SetSkew(shellAgent, cmd)
 						default:
 							MessageChannel <- messages.UserMessage{
-								Level:   messages.MESSAGE_WARN,
+								Level:   messages.Warn,
 								Message: fmt.Sprintf("invalid option to set: %s", cmd[1]),
 								Time:    time.Time{},
 								Error:   true,
@@ -390,28 +390,28 @@ func Shell() {
 					status := agents.GetAgentStatus(shellAgent)
 					if status == "Active" {
 						MessageChannel <- messages.UserMessage{
-							Level:   messages.MESSAGE_PLAIN,
+							Level:   messages.Plain,
 							Message: color.GreenString("%s agent is active\n", shellAgent),
 							Time:    time.Now().UTC(),
 							Error:   false,
 						}
 					} else if status == "Delayed" {
 						MessageChannel <- messages.UserMessage{
-							Level:   messages.MESSAGE_PLAIN,
+							Level:   messages.Plain,
 							Message: color.YellowString("%s agent is delayed\n", shellAgent),
 							Time:    time.Now().UTC(),
 							Error:   false,
 						}
 					} else if status == "Dead" {
 						MessageChannel <- messages.UserMessage{
-							Level:   messages.MESSAGE_PLAIN,
+							Level:   messages.Plain,
 							Message: color.RedString("%s agent is dead\n", shellAgent),
 							Time:    time.Now().UTC(),
 							Error:   false,
 						}
 					} else {
 						MessageChannel <- messages.UserMessage{
-							Level:   messages.MESSAGE_PLAIN,
+							Level:   messages.Plain,
 							Message: color.BlueString("%s agent is %s\n", shellAgent, status),
 							Time:    time.Now().UTC(),
 							Error:   false,
@@ -440,7 +440,7 @@ func menuUse(cmd []string) {
 				menuSetModule(cmd[1])
 			} else {
 				MessageChannel <- messages.UserMessage{
-					Level:   messages.MESSAGE_WARN,
+					Level:   messages.Warn,
 					Message: "Invalid module",
 					Time:    time.Now().UTC(),
 					Error:   false,
@@ -449,7 +449,7 @@ func menuUse(cmd []string) {
 		case "":
 		default:
 			MessageChannel <- messages.UserMessage{
-				Level:   messages.MESSAGE_NOTE,
+				Level:   messages.Note,
 				Message: "Invalid 'use' command",
 				Time:    time.Now().UTC(),
 				Error:   false,
@@ -457,7 +457,7 @@ func menuUse(cmd []string) {
 		}
 	} else {
 		MessageChannel <- messages.UserMessage{
-			Level:   messages.MESSAGE_NOTE,
+			Level:   messages.Note,
 			Message: "Invalid 'use' command",
 			Time:    time.Now().UTC(),
 			Error:   false,
@@ -493,7 +493,7 @@ func menuAgent(cmd []string) {
 			i, errUUID := uuid.FromString(cmd[1])
 			if errUUID != nil {
 				MessageChannel <- messages.UserMessage{
-					Level:   messages.MESSAGE_WARN,
+					Level:   messages.Warn,
 					Message: fmt.Sprintf("There was an error interacting with agent %s", cmd[1]),
 					Time:    time.Now().UTC(),
 					Error:   true,
@@ -507,7 +507,7 @@ func menuAgent(cmd []string) {
 			i, errUUID := uuid.FromString(cmd[1])
 			if errUUID != nil {
 				MessageChannel <- messages.UserMessage{
-					Level:   messages.MESSAGE_WARN,
+					Level:   messages.Warn,
 					Message: fmt.Sprintf("There was an error interacting with agent %s", cmd[1]),
 					Time:    time.Now().UTC(),
 					Error:   true,
@@ -516,7 +516,7 @@ func menuAgent(cmd []string) {
 				errRemove := agents.RemoveAgent(i)
 				if errRemove != nil {
 					MessageChannel <- messages.UserMessage{
-						Level:   messages.MESSAGE_WARN,
+						Level:   messages.Warn,
 						Message: errRemove.Error(),
 						Time:    time.Now().UTC(),
 						Error:   true,
@@ -525,7 +525,7 @@ func menuAgent(cmd []string) {
 					m := fmt.Sprintf("Agent %s was removed from the server at %s",
 						cmd[1], time.Now().UTC().Format(time.RFC3339))
 					MessageChannel <- messages.UserMessage{
-						Level:   messages.MESSAGE_INFO,
+						Level:   messages.Info,
 						Message: m,
 						Time:    time.Now().UTC(),
 						Error:   false,
@@ -591,7 +591,7 @@ func menuListener(cmd []string) {
 		}
 		if options != nil {
 			MessageChannel <- messages.UserMessage{
-				Level:   messages.MESSAGE_INFO,
+				Level:   messages.Info,
 				Message: fmt.Sprintf("%s Listener Options", shellListener.name),
 				Time:    time.Now().UTC(),
 				Error:   false,
@@ -681,7 +681,7 @@ func menuListeners(cmd []string) {
 			}
 			if id == uuid.Nil {
 				MessageChannel <- messages.UserMessage{
-					Level:   messages.MESSAGE_WARN,
+					Level:   messages.Warn,
 					Message: "a nil Listener UUID was returned",
 					Time:    time.Time{},
 					Error:   true,
@@ -694,7 +694,7 @@ func menuListeners(cmd []string) {
 			}
 			if options != nil {
 				MessageChannel <- messages.UserMessage{
-					Level:   messages.MESSAGE_INFO,
+					Level:   messages.Info,
 					Message: fmt.Sprintf("%s Listener Options", name),
 					Time:    time.Now().UTC(),
 					Error:   false,
@@ -733,7 +733,7 @@ func menuListeners(cmd []string) {
 			prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m" + name + "\033[31m]»\033[0m ")
 		} else {
 			MessageChannel <- messages.UserMessage{
-				Level:   messages.MESSAGE_NOTE,
+				Level:   messages.Note,
 				Message: "you must select a listener to interact with",
 				Time:    time.Now().UTC(),
 				Error:   false,
@@ -813,7 +813,7 @@ func menuListenerSetup(cmd []string) {
 
 		if shellListenerOptions != nil {
 			MessageChannel <- messages.UserMessage{
-				Level:   messages.MESSAGE_INFO,
+				Level:   messages.Info,
 				Message: "Listener Options",
 				Time:    time.Now().UTC(),
 				Error:   false,
@@ -839,7 +839,7 @@ func menuListenerSetup(cmd []string) {
 					shellListenerOptions[k] = strings.Join(cmd[2:], " ")
 					m := fmt.Sprintf("set %s to: %s", k, strings.Join(cmd[2:], " "))
 					MessageChannel <- messages.UserMessage{
-						Level:   messages.MESSAGE_SUCCESS,
+						Level:   messages.Success,
 						Message: m,
 						Time:    time.Now().UTC(),
 						Error:   false,
@@ -855,7 +855,7 @@ func menuListenerSetup(cmd []string) {
 		}
 		if id == uuid.Nil {
 			MessageChannel <- messages.UserMessage{
-				Level:   messages.MESSAGE_WARN,
+				Level:   messages.Warn,
 				Message: "a nil Listener UUID was returned",
 				Time:    time.Time{},
 				Error:   true,
@@ -1063,7 +1063,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 
 func menuHelpMain() {
 	MessageChannel <- messages.UserMessage{
-		Level:   messages.MESSAGE_PLAIN,
+		Level:   messages.Plain,
 		Message: color.YellowString("Merlin C2 Server (version %s)\n", merlin.Version),
 		Time:    time.Now().UTC(),
 		Error:   false,
@@ -1093,7 +1093,7 @@ func menuHelpMain() {
 	table.Render()
 	fmt.Println()
 	MessageChannel <- messages.UserMessage{
-		Level:   messages.MESSAGE_INFO,
+		Level:   messages.Info,
 		Message: "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Main-Menu",
 		Time:    time.Now().UTC(),
 		Error:   false,
@@ -1125,7 +1125,7 @@ func menuHelpModule() {
 	table.Render()
 	fmt.Println()
 	MessageChannel <- messages.UserMessage{
-		Level:   messages.MESSAGE_INFO,
+		Level:   messages.Info,
 		Message: "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Module-Menu",
 		Time:    time.Now().UTC(),
 		Error:   false,
@@ -1163,7 +1163,7 @@ func menuHelpAgent() {
 	table.Render()
 	fmt.Println()
 	MessageChannel <- messages.UserMessage{
-		Level:   messages.MESSAGE_INFO,
+		Level:   messages.Info,
 		Message: "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu",
 		Time:    time.Now().UTC(),
 		Error:   false,
@@ -1264,7 +1264,7 @@ func confirm(question string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	//fmt.Print(color.RedString(fmt.Sprintf("%s [yes/NO]: ", question)))
 	MessageChannel <- messages.UserMessage{
-		Level:   messages.MESSAGE_PLAIN,
+		Level:   messages.Plain,
 		Message: color.RedString(fmt.Sprintf("%s [yes/NO]: ", question)),
 		Time:    time.Now().UTC(),
 		Error:   false,
@@ -1272,7 +1272,7 @@ func confirm(question string) bool {
 	response, err := reader.ReadString('\n')
 	if err != nil {
 		MessageChannel <- messages.UserMessage{
-			Level:   messages.MESSAGE_WARN,
+			Level:   messages.Warn,
 			Message: fmt.Sprintf("There was an error reading the input:\r\n%s", err.Error()),
 			Time:    time.Now().UTC(),
 			Error:   true,
@@ -1304,21 +1304,21 @@ func executeCommand(name string, arg []string) {
 	out, err := cmd.CombinedOutput()
 
 	MessageChannel <- messages.UserMessage{
-		Level:   messages.MESSAGE_INFO,
+		Level:   messages.Info,
 		Message: "Executing system command...",
 		Time:    time.Time{},
 		Error:   false,
 	}
 	if err != nil {
 		MessageChannel <- messages.UserMessage{
-			Level:   messages.MESSAGE_WARN,
+			Level:   messages.Warn,
 			Message: err.Error(),
 			Time:    time.Time{},
 			Error:   true,
 		}
 	} else {
 		MessageChannel <- messages.UserMessage{
-			Level:   messages.MESSAGE_SUCCESS,
+			Level:   messages.Success,
 			Message: fmt.Sprintf("%s", out),
 			Time:    time.Time{},
 			Error:   false,
@@ -1351,19 +1351,19 @@ func printUserMessage() {
 		for {
 			m := <-MessageChannel
 			switch m.Level {
-			case messages.MESSAGE_INFO:
+			case messages.Info:
 				fmt.Println(color.CyanString("\n[i] %s", m.Message))
-			case messages.MESSAGE_NOTE:
+			case messages.Note:
 				fmt.Println(color.YellowString("\n[-] %s", m.Message))
-			case messages.MESSAGE_WARN:
+			case messages.Warn:
 				fmt.Println(color.RedString("\n[!] %s", m.Message))
-			case messages.MESSAGE_DEBUG:
+			case messages.Debug:
 				if core.Debug {
 					fmt.Println(color.RedString("\n[DEBUG] %s", m.Message))
 				}
-			case messages.MESSAGE_SUCCESS:
+			case messages.Success:
 				fmt.Println(color.GreenString("\n[+] %s", m.Message))
-			case messages.MESSAGE_PLAIN:
+			case messages.Plain:
 				fmt.Println("\n" + m.Message)
 			default:
 				fmt.Println(color.RedString("\n[_-_] Invalid message level: %d\r\n%s", m.Level, m.Message))

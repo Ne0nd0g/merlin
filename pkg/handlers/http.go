@@ -329,7 +329,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			m := fmt.Sprintf("There was an error during while handling a message from agent %s:\r\n%s", agentID.String(), err.Error())
+			m := fmt.Sprintf("There was an error during while handling a message from agent %s:\r\n%s", agentID, err.Error())
 			logging.Server(m)
 			message("warn", m)
 			w.WriteHeader(404)
@@ -359,7 +359,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		returnMessageBytes := new(bytes.Buffer)
 		errReturnMessageBytes := gob.NewEncoder(returnMessageBytes).Encode(returnMessage)
 		if errReturnMessageBytes != nil {
-			m := fmt.Sprintf("there was an error encoding the %s return message for agent %s into a GOB:\r\n%s", returnMessage.Type, agentID.String(), errReturnMessageBytes.Error())
+			m := fmt.Sprintf("there was an error encoding the %s return message for agent %s into a GOB:\r\n%s", returnMessage.Type, agentID, errReturnMessageBytes.Error())
 			logging.Server(m)
 			message("warn", m)
 			return
@@ -393,7 +393,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 					message("warn", err.Error())
 					return
 				}
-				message("info", fmt.Sprintf("Agent %s was removed from the server", agentID.String()))
+				message("info", fmt.Sprintf("Agent %s was removed from the server", agentID))
 				return
 			}
 		}
@@ -417,17 +417,17 @@ func message(level string, message string) {
 	}
 	switch level {
 	case "info":
-		m.Level = messageAPI.MESSAGE_INFO
+		m.Level = messageAPI.Info
 	case "note":
-		m.Level = messageAPI.MESSAGE_NOTE
+		m.Level = messageAPI.Note
 	case "warn":
-		m.Level = messageAPI.MESSAGE_WARN
+		m.Level = messageAPI.Warn
 	case "debug":
-		m.Level = messageAPI.MESSAGE_DEBUG
+		m.Level = messageAPI.Debug
 	case "success":
-		m.Level = messageAPI.MESSAGE_SUCCESS
+		m.Level = messageAPI.Success
 	default:
-		m.Level = messageAPI.MESSAGE_PLAIN
+		m.Level = messageAPI.Plain
 	}
 	messageAPI.SendBroadcastMessage(m)
 }
