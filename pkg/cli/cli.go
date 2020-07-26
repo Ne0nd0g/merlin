@@ -474,12 +474,19 @@ func menuAgent(cmd []string) {
 		for k, v := range agents.Agents {
 			// Convert proto (i.e. h2 or hq) to user friendly string
 			var proto string
-			if v.Proto == "https" {
-				proto = "HTTP/1.1 (https)"
-			} else if v.Proto == "h2" {
-				proto = "HTTP/2 (h2)"
-			} else if v.Proto == "hq" {
-				proto = "QUIC (hq)"
+			switch v.Proto {
+			case "http":
+				proto = "HTTP/1.1 clear-text"
+			case "https":
+				proto = "HTTP/1.1 over TLS"
+			case "h2c":
+				proto = "HTTP/2 clear-text"
+			case "h2":
+				proto = "HTTP/2 over TLS"
+			case "http3":
+				proto = "HTTP/3 (HTTP/2 over QUIC)"
+			default:
+				proto = fmt.Sprintf("Unknown: %s", v.Proto)
 			}
 
 			table.Append([]string{k.String(), v.Platform + "/" + v.Architecture, v.UserName,
@@ -590,13 +597,6 @@ func menuListener(cmd []string) {
 			break
 		}
 		if options != nil {
-			MessageChannel <- messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("%s Listener Options", shellListener.name),
-				Time:    time.Now().UTC(),
-				Error:   false,
-			}
-
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Name", "Value"})
 			table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -693,13 +693,6 @@ func menuListeners(cmd []string) {
 				return
 			}
 			if options != nil {
-				MessageChannel <- messages.UserMessage{
-					Level:   messages.Info,
-					Message: fmt.Sprintf("%s Listener Options", name),
-					Time:    time.Now().UTC(),
-					Error:   false,
-				}
-
 				table := tablewriter.NewWriter(os.Stdout)
 				table.SetHeader([]string{"Name", "Value"})
 				table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -810,15 +803,7 @@ func menuListenerSetup(cmd []string) {
 	case "help":
 		menuHelpListenerSetup()
 	case "info", "show":
-
 		if shellListenerOptions != nil {
-			MessageChannel <- messages.UserMessage{
-				Level:   messages.Info,
-				Message: "Listener Options",
-				Time:    time.Now().UTC(),
-				Error:   false,
-			}
-
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Name", "Value"})
 			table.SetAlignment(tablewriter.ALIGN_LEFT)

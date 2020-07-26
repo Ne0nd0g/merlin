@@ -33,7 +33,7 @@ import (
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/h2quic"
+	"github.com/lucas-clemente/quic-go/http3"
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
@@ -168,12 +168,11 @@ func New(options map[string]string) (*Server, error) {
 		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}},
 	}
 
-	s.Transport = &h2quic.Server{
+	s.Transport = &http3.Server{
 		Server: srv,
 		QuicConfig: &quic.Config{
-			KeepAlive:                   false,
-			IdleTimeout:                 168 * time.Hour,
-			RequestConnectionIDOmission: false,
+			// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
+			MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
 		},
 	}
 
@@ -271,9 +270,9 @@ func (s *Server) Start() error {
 	g.Go(func() error {
 		s.State = servers.Running
 		if s.x509Key != "" && s.x509Cert != "" {
-			return s.Transport.(*h2quic.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+			return s.Transport.(*http3.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
 		}
-		return s.Transport.(*h2quic.Server).ListenAndServe()
+		return s.Transport.(*http3.Server).ListenAndServe()
 	})
 
 	if err := g.Wait(); err != nil {
@@ -292,7 +291,7 @@ func (s *Server) Status() int {
 
 // Stop function stops the HTTP3 server
 func (s *Server) Stop() error {
-	err := s.Transport.(*h2quic.Server).CloseGracefully(time.Second * 20)
+	err := s.Transport.(*http3.Server).CloseGracefully(time.Second * 20)
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP3 server:\r\n%s", err.Error())
 	}
