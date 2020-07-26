@@ -320,7 +320,7 @@ func TestAuthentication(t *testing.T) {
 	//wait until set up
 	<-setup
 
-	authenticated := agent.initialCheckIn(agent.Client)
+	authenticated := agent.initialCheckIn()
 	if authenticated == false {
 		t.Error("the agent did not successfully authenticate")
 	}
@@ -345,7 +345,7 @@ func TestBadAuthentication(t *testing.T) {
 	//wait until set up
 	<-setup
 
-	authenticated := agent.initialCheckIn(agent.Client)
+	authenticated := agent.initialCheckIn()
 	if authenticated != false {
 		t.Error("the agent successfully authenticated with the wrong PSK")
 	}
