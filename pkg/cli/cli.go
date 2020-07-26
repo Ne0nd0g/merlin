@@ -1364,7 +1364,7 @@ func printUserMessage() {
 			case messages.MESSAGE_SUCCESS:
 				fmt.Println(color.GreenString("\n[+] %s", m.Message))
 			case messages.MESSAGE_PLAIN:
-				fmt.Println(fmt.Sprintf("%s", m.Message))
+				fmt.Println("\n" + m.Message)
 			default:
 				fmt.Println(color.RedString("\n[_-_] Invalid message level: %d\r\n%s", m.Level, m.Message))
 			}
