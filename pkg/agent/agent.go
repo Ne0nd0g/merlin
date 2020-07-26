@@ -47,7 +47,7 @@ import (
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/h2quic"
+	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/net/http2"
@@ -93,7 +93,7 @@ type Agent struct {
 	Skew          int64           // Skew is size of skew added to each WaitTime to vary check in attempts
 	Verbose       bool            // Verbose enables verbose messages to standard out
 	Debug         bool            // Debug enables debug messages to standard out
-	Proto         string          // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
+	Proto         string          // Proto contains the transportation protocol the agent is using (i.e. http2 or http3)
 	Client        *merlinClient   // Client is an interface for clients to make connections for agent communications
 	UserAgent     string          // UserAgent is the user agent string used with HTTP connections
 	initial       bool            // initial identifies if the agent has successfully completed the first initial check in
@@ -385,7 +385,7 @@ func (a *Agent) statusCheckIn() {
 
 }
 
-// getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
+// getClient returns a HTTP client for the passed in protocol (i.e. h2 or http3)
 func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, error) {
 
 	var m merlinClient
@@ -437,9 +437,14 @@ func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, err
 
 	var transport http.RoundTripper
 	switch strings.ToLower(protocol) {
-	case "hq":
-		transport = &h2quic.RoundTripper{
-			QuicConfig:      &quic.Config{IdleTimeout: 168 * time.Hour},
+	case "http3":
+		transport = &http3.RoundTripper{
+			QuicConfig: &quic.Config{
+				// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
+				MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
+				// KeepAlive will send a HTTP/2 PING frame to keep the connection alive
+				KeepAlive: false,
+			},
 			TLSClientConfig: TLSConfig,
 		}
 	case "h2":
@@ -563,7 +568,8 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 		}
 
 		// Check to make sure message response contained data
-		if resp.ContentLength == 0 {
+		// TODO Temporarily disabled length check for HTTP/3 connections https://github.com/lucas-clemente/quic-go/issues/2398
+		if resp.ContentLength == 0 && a.Proto != "http3" {
 			return returnMessage, fmt.Errorf("the response message did not contain any data")
 		}
 

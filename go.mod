@@ -9,8 +9,9 @@ require (
 	github.com/cretz/gopaque v0.1.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.7.0
-	github.com/golang/protobuf v1.3.2 // indirect
-	github.com/lucas-clemente/quic-go v0.10.2
+	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/lucas-clemente/quic-go v0.17.3
+	github.com/marten-seemann/qtls v0.10.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-shellwords v1.0.5
@@ -21,11 +22,11 @@ require (
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+	golang.org/x/sys v0.0.0-20200724161237-0e2f3a69832c
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20200725200936-102e7d357031 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1
-	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
 
-go 1.13
+go 1.14
