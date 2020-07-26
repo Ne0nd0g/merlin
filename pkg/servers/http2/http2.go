@@ -182,7 +182,7 @@ func (s *Server) SetOption(option string, value string) error {
 	case "psk":
 		s.ctx.PSK = value
 	case "urls":
-		s.urls = strings.Split(option, ",")
+		s.urls = strings.Split(value, ",")
 	default:
 		return fmt.Errorf("invalid option: %s", option)
 	}

@@ -201,7 +201,7 @@ func (s *Server) GetConfiguredOptions() map[string]string {
 	options["Port"] = fmt.Sprintf("%d", s.Port)
 	options["Protocol"] = s.GetProtocolString()
 	options["PSK"] = s.ctx.PSK
-	options["URLS"] = strings.Join(s.urls, " ")
+	options["URLS"] = strings.Join(s.urls, ",")
 
 	if s.Protocol != servers.HTTP {
 		options["X509Cert"] = s.x509Cert
@@ -256,7 +256,7 @@ func (s *Server) SetOption(option string, value string) error {
 	case "psk":
 		s.ctx.PSK = value
 	case "urls":
-		s.urls = strings.Split(option, ",")
+		s.urls = strings.Split(value, ",")
 	case "x509cert":
 		if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
 			s.x509Cert = option
