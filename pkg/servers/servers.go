@@ -18,7 +18,11 @@
 package servers
 
 import (
+	// 3rd Party
 	uuid "github.com/satori/go.uuid"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/handlers"
 )
 
 const (
@@ -55,6 +59,7 @@ var RegisteredServers = make(map[string]string) // TODO not sure what to do with
 // ServerInterface is used to provide a standard set of methods a server module must support to work with Merlin
 type ServerInterface interface {
 	GetConfiguredOptions() map[string]string
+	GetContext() handlers.ContextInterface
 	GetInterface() string
 	GetProtocol() int
 	GetProtocolString() string

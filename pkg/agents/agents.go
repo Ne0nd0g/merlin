@@ -574,6 +574,8 @@ func message(level string, message string) {
 		m.Level = messageAPI.Debug
 	case "success":
 		m.Level = messageAPI.Success
+	case "plain":
+		m.Level = messageAPI.Plain
 	default:
 		m.Level = messageAPI.Plain
 	}
@@ -819,7 +821,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		m.Payload = p
 	default:
 		m.Type = "ServerOk"
-		return m, errors.New("invalid job type, sending ServerOK")
+		return m, fmt.Errorf("invalid job type: %s, sending ServerOK", m.Type)
 	}
 	return m, nil
 }
@@ -959,16 +961,15 @@ func JobResults(m messages.Base) error {
 	p := m.Payload.(messages.CmdResults)
 	Log(m.ID, fmt.Sprintf("Results for job: %s", p.Job))
 
-	fmt.Println()
 	message("success", fmt.Sprintf("Results for %s job %s at %s", m.ID, p.Job, time.Now().UTC().Format(time.RFC3339)))
-	fmt.Println()
+
 	if len(p.Stdout) > 0 {
 		Log(m.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
-		color.Green(p.Stdout)
+		message("plain", color.GreenString("%s", p.Stdout))
 	}
 	if len(p.Stderr) > 0 {
 		Log(m.ID, fmt.Sprintf("Command Results (stderr):\r\n%s", p.Stderr))
-		color.Red(p.Stderr)
+		message("plain", color.RedString("%s", p.Stderr))
 	}
 
 	if core.Debug {

@@ -20,3 +20,7 @@ package handlers
 // Context structure is used to ensure all handlers have a standardized set of fields
 type Context struct {
 }
+
+// ContextInterface is used for embedded structures and subtyping
+type ContextInterface interface {
+}

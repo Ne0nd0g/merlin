@@ -716,10 +716,12 @@ func menuListeners(cmd []string) {
 			if id == uuid.Nil {
 				return
 			}
+
+			status := listenerAPI.GetListenerStatus(id).Message
 			shellListener = listener{
 				id:     id,
 				name:   name,
-				status: "",
+				status: status,
 			}
 			shellMenuContext = "listener"
 			prompt.Config.AutoComplete = getCompleter("listener")

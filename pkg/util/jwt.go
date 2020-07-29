@@ -101,7 +101,7 @@ func GetJWT(agentID uuid.UUID, key []byte) (string, error) {
 func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 	var agentID uuid.UUID
 	if core.Debug {
-		message("debug", "Entering into http2.ValidateJWT")
+		message("debug", "Entering into jwt.ValidateJWT")
 		message("debug", fmt.Sprintf("Input JWT: %v", agentJWT))
 	}
 
@@ -157,7 +157,7 @@ func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 	}
 	if core.Debug {
 		message("debug", fmt.Sprintf("agentID: %s", agentID.String()))
-		message("debug", "Leaving http2.ValidateJWT without error")
+		message("debug", "Leaving jwt.ValidateJWT without error")
 	}
 	// TODO I need to validate other things like token age/expiry
 	return agentID, nil
@@ -166,7 +166,7 @@ func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 // DecryptJWE takes provided JWE string and decrypts it using the per-agent key
 func DecryptJWE(jweString string, key []byte) (messages.Base, error) {
 	if core.Debug {
-		message("debug", "Entering into http2.DecryptJWE function")
+		message("debug", "Entering into jwt.DecryptJWE function")
 		message("debug", fmt.Sprintf("Input JWE String: %s", jweString))
 	}
 
@@ -195,7 +195,7 @@ func DecryptJWE(jweString string, key []byte) (messages.Base, error) {
 	}
 
 	if core.Debug {
-		message("debug", "Leaving http2.DecryptJWE function without error")
+		message("debug", "Leaving jwt.DecryptJWE function without error")
 		message("debug", fmt.Sprintf("Returning message base: %+v", m))
 	}
 	return m, nil

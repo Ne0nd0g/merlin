@@ -61,7 +61,7 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Args[1:] = program and arguments to be executed on the host OS of the running agent
 func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
-		job, err := agents.AddJob(agentID, Args[0], Args[1:])
+		job, err := agents.AddJob(agentID, "cmd", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}

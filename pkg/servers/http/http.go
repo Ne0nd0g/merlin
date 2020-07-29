@@ -170,6 +170,8 @@ func New(options map[string]string) (*Server, error) {
 	jwtKey := []byte(core.RandStringBytesMaskImprSrc(32)) // Used to sign and encrypt JWT
 	opaqueKey := gopaque.CryptoDefault.NewKey(nil)
 	s.ctx = &handlers.HTTPContext{PSK: options["PSK"], JWTKey: jwtKey, OpaqueKey: opaqueKey}
+
+	// Add handler with context
 	for _, url := range s.urls {
 		mux.HandleFunc(url, s.ctx.AgentHTTP)
 	}
@@ -194,6 +196,22 @@ func New(options map[string]string) (*Server, error) {
 	return &s, nil
 }
 
+// Renew generates a new Server object and retains original encryption keys
+func Renew(ctx handlers.ContextInterface, options map[string]string) (*Server, error) {
+	tempServer, err := New(options)
+	if err != nil {
+		return tempServer, err
+	}
+
+	// Retain server's original JWT key used to sign and encrypt authorization JWT
+	tempServer.ctx.JWTKey = ctx.(handlers.HTTPContext).JWTKey
+
+	// Retain server's original OPAQUE key used with OPAQUE registration/authorization
+	tempServer.ctx.OpaqueKey = ctx.(handlers.HTTPContext).OpaqueKey
+
+	return tempServer, nil
+}
+
 // GetConfiguredOptions returns the server's current configuration for options that can be set by the user
 func (s *Server) GetConfiguredOptions() map[string]string {
 	options := make(map[string]string)
@@ -208,6 +226,11 @@ func (s *Server) GetConfiguredOptions() map[string]string {
 		options["X509Key"] = s.x509Key
 	}
 	return options
+}
+
+// GetContext returns the Server's current context information such as encryption keys
+func (s *Server) GetContext() handlers.ContextInterface {
+	return *s.ctx
 }
 
 // GetInterface function returns the interface that the server is bound to

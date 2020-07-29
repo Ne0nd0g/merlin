@@ -108,11 +108,11 @@ func (l *Listener) Restart(options map[string]string) error {
 	// Create a new instance
 	switch l.Server.GetProtocol() {
 	case servers.HTTP, servers.HTTPS, servers.HTTP2:
-		l.Server, err = http.New(options)
+		l.Server, err = http.Renew(l.Server.GetContext(), options)
 	case servers.H2C:
-		l.Server, err = http2.New(options)
+		l.Server, err = http2.Renew(l.Server.GetContext(), options)
 	case servers.HTTP3:
-		l.Server, err = http3.New(options)
+		l.Server, err = http3.Renew(l.Server.GetContext(), options)
 	default:
 		err = fmt.Errorf("invalid server protocol: %d (%s)", l.Server.GetProtocol(), servers.GetProtocol(l.Server.GetProtocol()))
 	}
