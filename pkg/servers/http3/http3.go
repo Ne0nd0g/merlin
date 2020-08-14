@@ -112,6 +112,9 @@ func New(options map[string]string) (*Server, error) {
 		if err != nil {
 			return &s, err
 		}
+		// Leave empty to force the use of the server's TLSConfig
+		s.x509Cert = ""
+		s.x509Key = ""
 	} else {
 		s.x509Cert = options["X509Cert"]
 		s.x509Key = options["X509Key"]
@@ -120,9 +123,6 @@ func New(options map[string]string) (*Server, error) {
 	if errI != nil {
 		return &s, errI
 	}
-	// Leave empty to force the use of the server's TLSConfig
-	s.x509Cert = ""
-	s.x509Key = ""
 
 	if insecure {
 		m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for HTTP/3 server on %s:%s\r\n", options["Interface"], options["Port"])
@@ -175,6 +175,7 @@ func New(options map[string]string) (*Server, error) {
 		QuicConfig: &quic.Config{
 			// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
 			MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
+			KeepAlive:      false,
 		},
 	}
 
@@ -314,12 +315,15 @@ func (s *Server) Status() int {
 
 // Stop function stops the HTTP3 server
 func (s *Server) Stop() error {
-	err := s.Transport.(*http3.Server).CloseGracefully(time.Second * 20)
+	// The http3 Close() sends a QUIC CONNECTION_CLOSE frame
+	err := s.Transport.(*http3.Server).Close()
+	// As of quic-go v0.17.3 CloseGracefully is not implemented which means no CONNECTION_CLOSE or GOAWAY frames are sent
+	// CloseGracefully() will not release the port since it is not implemented
+	//err := s.Transport.(*http3.Server).CloseGracefully(time.Second * 0)
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP3 server:\r\n%s", err.Error())
 	}
 	s.State = servers.Closed
 
-	// TODO figure out why the port binding isn't released after it has been shutdown
-	return fmt.Errorf("the bind port was not released due to an uknown error; create a new listener if needed")
+	return nil
 }
