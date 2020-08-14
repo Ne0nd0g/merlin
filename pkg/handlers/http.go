@@ -95,6 +95,28 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Make sure the Authorization header contains a bearer token
+	if !strings.Contains(token, "Bearer eyJ") {
+		if core.Verbose {
+			m := "incoming request did not contain a Bearer token"
+			message("warn", m)
+			logging.Server(m)
+		}
+		w.WriteHeader(404)
+		return
+	}
+
+	// Make sure the content type is: application/octet-stream; charset=utf-8
+	if r.Header.Get("Content-Type") != "application/octet-stream; charset=utf-8" {
+		if core.Verbose {
+			m := "incoming request did not contain a Content-Type header of: application/octet-stream; charset=utf-8"
+			message("warn", m)
+			logging.Server(m)
+		}
+		w.WriteHeader(404)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 
 		var returnMessage messages.Base
@@ -128,7 +150,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT using HTTP interface JWT key; Given to authenticated agents by server
 		agentID, errValidate = util.ValidateJWT(strings.Split(token, " ")[1], ctx.JWTKey)
 		// If agentID was returned, then message contained a JWT encrypted with the HTTP interface key
-		if (errValidate != nil) && (agentID == uuid.Nil) {
+		if (errValidate != nil) && (agentID == uuid.Nil) { // Unauthenticated Agents
 			if core.Verbose {
 				message("warn", errValidate.Error())
 				message("note", "trying again with interface PSK")
@@ -138,6 +160,15 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			key = hashedKey[:]
 			agentID, errValidate = util.ValidateJWT(strings.Split(token, " ")[1], key)
 			if errValidate != nil {
+				// Check to see if the request matches traffic that could be an orphaned agent
+				// An orphaned agent will have a JWT encrypted with server's JWT key, not the PSK
+				if len(token) == 402 && r.ContentLength > 409 {
+					m := fmt.Sprintf("Orphaned agent request detected from %s, instructing agent to OPAQUE authenticate", r.RemoteAddr)
+					message("note", m)
+					logging.Server(m)
+					w.WriteHeader(401)
+					return
+				}
 				if core.Verbose {
 					message("warn", errValidate.Error())
 				}
@@ -171,7 +202,13 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 						w.WriteHeader(404)
 						return
 					}
-					logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
+					if serverAuthInit.Type == "ReRegister" {
+						m := fmt.Sprintf("Un-Registered agent %s sent OPAQUE authentication, instructing agent to OPAQUE register", agentID)
+						message("note", m)
+						logging.Server(m)
+					} else {
+						logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
+					}
 
 					// Encode return message into a gob
 					errAuthInit := gob.NewEncoder(messagePayloadBytes).Encode(serverAuthInit)
@@ -221,7 +258,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 				default:
-					message("warn", "invalid message type")
+					message("warn", fmt.Sprintf("invalid message type: %s for unauthenticated JWT", k.Type))
 					w.WriteHeader(404)
 					return
 				}
@@ -274,12 +311,15 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
 				}
+				m := fmt.Sprintf("New authenticated agent checkin for %s from %s at %s", j.ID.String(), r.RemoteAddr, time.Now().UTC().Format(time.RFC3339))
+				message("success", m)
+				logging.Server(m)
 			default:
 				message("warn", fmt.Sprintf("Invalid Activity: %s", j.Type))
 				w.WriteHeader(404)
 				return
 			}
-		} else {
+		} else { // Authenticated Agents
 			// If not using the PSK, the agent has previously authenticated
 			if core.Debug {
 				message("info", "Authenticated JWT")

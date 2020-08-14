@@ -258,7 +258,8 @@ func OPAQUEAuthenticateInit(m messages.Base) (messages.Base, error) {
 
 	// Check to see if this agent is already known to the server
 	if !isAgent(m.ID) {
-		return returnMessage, fmt.Errorf("the %s agent has not OPAQUE registered", m.ID.String())
+		returnMessage.Type = "ReRegister"
+		return returnMessage, nil
 	}
 
 	// 1 - Receive the user's UserAuthInit
@@ -333,7 +334,7 @@ func OPAQUEAuthenticateComplete(m messages.Base) (messages.Base, error) {
 		message("warn", fmt.Sprintf("there was an error finishing authentication:\r\n%s", errAuthFinish.Error()))
 	}
 
-	message("success", fmt.Sprintf("New authenticated agent checkin for %s at %s", m.ID.String(), time.Now().UTC().Format(time.RFC3339)))
+	//message("success", fmt.Sprintf("New authenticated agent checkin for %s at %s", m.ID.String(), time.Now().UTC().Format(time.RFC3339)))
 	if core.Debug {
 		message("debug", "Leaving agents.OPAQUEAuthenticateComplete function without error")
 	}

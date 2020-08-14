@@ -334,6 +334,10 @@ func (a *Agent) initialCheckIn() bool {
 }
 
 func (a *Agent) statusCheckIn() {
+	if a.Debug {
+		message("debug", "Entering into agent.statusCheckIn()")
+	}
+
 	statusMessage := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
@@ -348,6 +352,47 @@ func (a *Agent) statusCheckIn() {
 		if a.Verbose {
 			message("warn", reqErr.Error())
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
+		}
+
+		// Handle HTTP3 Errors
+		if a.Proto == "http3" {
+			e := ""
+			n := false
+
+			// Application error 0x0 is typically the result of the server sending a CONNECTION_CLOSE frame
+			if strings.Contains(reqErr.Error(), "Application error 0x0") {
+				n = true
+				e = "Building new HTTP/3 client because received QUIC CONNECTION_CLOSE frame with NO_ERROR transport error code"
+			}
+
+			// Handshake timeout happens when a new client was not able to reach the server and setup a crypto handshake for the first time (no listener or no access)
+			if strings.Contains(reqErr.Error(), "NO_ERROR: Handshake did not complete in time") {
+				n = true
+				e = "Building new HTTP/3 client because QUIC HandshakeTimeout reached"
+			}
+
+			// No recent network activity happens when a PING timeout occurs.  KeepAlive setting can be used to prevent MaxIdleTimeout
+			// When the client has previously established a crypto handshake but does not hear back from it's PING frame the server within the client's MaxIdleTimeout
+			// Typically happens when the Merlin Server application is killed/quit without sending a CONNECTION_CLOSE frame from stopping the listener
+			if strings.Contains(reqErr.Error(), "NO_ERROR: No recent network activity") {
+				n = true
+				e = "Building new HTTP/3 client because QUIC MaxIdleTimeout reached"
+			}
+
+			if a.Debug {
+				message("debug", fmt.Sprintf("HTTP/3 error: %s", reqErr.Error()))
+			}
+
+			if n {
+				if a.Verbose {
+					message("note", e)
+				}
+				var errClient error
+				a.Client, errClient = getClient(a.Proto, "", "")
+				if errClient != nil {
+					message("warn", fmt.Sprintf("there was an error getting a new HTTP/3 client: %s", errClient.Error()))
+				}
+			}
 		}
 		return
 	}
@@ -440,10 +485,15 @@ func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, err
 	case "http3":
 		transport = &http3.RoundTripper{
 			QuicConfig: &quic.Config{
-				// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
-				MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
+				// Opted for a long timeout to prevent the client from sending a PING Frame
+				// If MaxIdleTimeout is too high, agent will never get an error if the server is off line and will perpetually run without exiting because MaxFailedCheckins is never incremented
+				//MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
+				MaxIdleTimeout: time.Second * 30,
 				// KeepAlive will send a HTTP/2 PING frame to keep the connection alive
-				KeepAlive: false,
+				// If this isn't used, and the agent's sleep is greater than the MaxIdleTimeout, then the connection will timeout
+				KeepAlive: true,
+				// HandshakeTimeout is how long the client will wait to hear back while setting up the initial crypto handshake w/ server
+				HandshakeTimeout: time.Second * 30,
 			},
 			TLSClientConfig: TLSConfig,
 		}
@@ -491,7 +541,7 @@ func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, err
 // The response message will be decrypted, decoded, and return a messages.Base struct.
 func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, error) {
 	if a.Debug {
-		message("debug", "Entering into agent.sendMessage")
+		message("debug", "Entering into agent.sendMessage()")
 	}
 	if a.Verbose {
 		message("note", fmt.Sprintf("Sending %s message to %s", m.Type, a.URL))
@@ -538,15 +588,32 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 		// Send the request
 		var client merlinClient // Why do I need to prove that a.Client is merlinClient type?
 		client = *a.Client
+		if a.Debug {
+			message("debug", fmt.Sprintf("Sending POST request size: %d to: %s", req.ContentLength, a.URL))
+		}
 		resp, err := client.Do(req)
 
 		if err != nil {
-			return returnMessage, fmt.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
+			return returnMessage, fmt.Errorf("there was an error with the %s client while performing a POST:\r\n%s", a.Proto, err.Error())
 		}
 		if a.Debug {
 			message("debug", fmt.Sprintf("HTTP Response:\r\n%+v", resp))
 		}
-		if resp.StatusCode != 200 {
+
+		switch resp.StatusCode {
+		case 200:
+			break
+		case 401:
+			if a.Verbose {
+				message("note", "server returned a 401, reauthenticating orphaned agent")
+			}
+			msg := messages.Base{
+				Version: 1.0,
+				ID:      a.ID,
+				Type:    "ReAuthenticate",
+			}
+			return msg, err
+		default:
 			return returnMessage, fmt.Errorf("there was an error communicating with the server:\r\n%d", resp.StatusCode)
 		}
 
@@ -615,7 +682,7 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 	}
 
 	if a.ID != m.ID {
-		return returnMessage, fmt.Errorf("the input message UUID did not match this agent's UUID")
+		return returnMessage, fmt.Errorf("the input message UUID did not match this agent's UUID %s:%s", a.ID, m.ID)
 	}
 	var c messages.CmdResults
 	if m.Token != "" {
@@ -1239,6 +1306,15 @@ func (a *Agent) opaqueAuthenticate() error {
 
 	if errAuthInitResp != nil {
 		return fmt.Errorf("there was an error sending the agent OPAQUE authentication initialization message:\r\n%s", errAuthInitResp.Error())
+	}
+
+	// When the Merlin server has restarted but doesn't know the agent
+	if authInitResp.Type == "ReRegister" {
+		if a.Verbose {
+			message("note", "Received OPAQUE ReRegister response, setting initial to false")
+		}
+		a.initial = false
+		return nil
 	}
 
 	if authInitResp.Type != "AuthInit" {

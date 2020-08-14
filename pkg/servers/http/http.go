@@ -20,8 +20,6 @@ package http
 // HTTP2 is in this package because net/http inherently supports the protocol
 
 import (
-	// Standard
-	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -75,7 +73,12 @@ func init() {
 func GetOptions(protocol string) map[string]string {
 	options := make(map[string]string)
 	options["Interface"] = "127.0.0.1"
-	options["Port"] = "443"
+	if protocol == "http" {
+		options["Port"] = "80"
+	} else {
+		options["Port"] = "443"
+	}
+
 	//options["Protocol"] = protocol
 	options["PSK"] = "merlin"
 	options["URLS"] = "/"
@@ -256,7 +259,7 @@ func (s *Server) GetProtocolString() string {
 	case servers.HTTPS:
 		return "HTTPS"
 	case servers.HTTP2:
-		return "HTTP/2"
+		return "HTTP2"
 	default:
 		return "UNKNOWN"
 	}
@@ -339,7 +342,8 @@ func (s *Server) Status() int {
 
 // Stop function stops the server
 func (s *Server) Stop() error {
-	err := s.Transport.(*http.Server).Shutdown(context.Background())
+	// Don't use Shutdown because it won't immediately release the port and will allow traffic to continue
+	err := s.Transport.(*http.Server).Close()
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP server:\r\n%s", err.Error())
 	}
