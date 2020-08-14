@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -270,12 +271,14 @@ func TestWrongUUID(t *testing.T) {
 		Token:   agent.JWT,
 	}
 
+	// Send a message with a new UUID that does not match the agent; Expecting agent to return an error
 	_, errHandler := agent.messageHandler(m)
 	if errHandler == nil {
 		t.Error("the agent handled a message with a wrong UUID without returning an error")
 	}
+
 	if errHandler != nil {
-		if errHandler.Error() != "the input message UUID did not match this agent's UUID" {
+		if !strings.Contains(errHandler.Error(), "the input message UUID did not match this agent's UUID") {
 			t.Error(errHandler)
 		}
 	}

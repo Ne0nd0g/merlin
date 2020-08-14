@@ -248,12 +248,11 @@ func (s *Server) Status() int {
 
 // Stop the HTTP2 server
 func (s *Server) Stop() error {
-	var err error
 	// Shutdown gracefully shuts down the server without interrupting any active connections.
 	// This will keep the agent checking in since it is an active connection
 	//err = s.Transport.(*http.Server).Shutdown(context.Background())
 	// Close immediately closes all active net.Listeners and any connections in state StateNew, StateActive, or StateIdle.
-	err = s.Transport.(*http.Server).Close()
+	err := s.Transport.(*http.Server).Close()
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP server:\r\n%s", err.Error())
 	}
