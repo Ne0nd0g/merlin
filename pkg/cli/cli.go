@@ -613,6 +613,12 @@ func menuListener(cmd []string) {
 		menuSetMain()
 	case "restart":
 		MessageChannel <- listenerAPI.Restart(shellListener.id)
+		um, options := listenerAPI.GetListenerConfiguredOptions(shellListener.id)
+		if um.Error {
+			MessageChannel <- um
+			break
+		}
+		prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m" + options["Name"] + "\033[31m]»\033[0m ")
 	case "set":
 		MessageChannel <- listenerAPI.SetOption(shellListener.id, cmd)
 	case "start":
@@ -853,6 +859,14 @@ func menuListenerSetup(cmd []string) {
 		shellListener = listener{id: id, name: shellListenerOptions["Name"]}
 		startMessage := listenerAPI.Start(shellListener.name)
 		MessageChannel <- startMessage
+		um, options := listenerAPI.GetListenerConfiguredOptions(shellListener.id)
+		if um.Error {
+			MessageChannel <- um
+			break
+		}
+		shellMenuContext = "listener"
+		prompt.Config.AutoComplete = getCompleter("listener")
+		prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m" + options["Name"] + "\033[31m]»\033[0m ")
 	case "stop":
 		MessageChannel <- listenerAPI.Stop(shellListener.name)
 	default:
@@ -1222,7 +1236,6 @@ func menuHelpListener() {
 		{"delete", "Delete this listener", "delete <listener_name>"},
 		{"info", "Display all configurable information the current listener", ""},
 		{"main", "Return to the main menu", ""},
-		{"remove", "Stop this listener and delete it", ""},
 		{"restart", "Restart this listener", ""},
 		{"set", "Set a configurable option", "set <option_name>"},
 		{"show", "Display all configurable information about a listener", ""},
