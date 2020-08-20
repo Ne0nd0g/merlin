@@ -867,8 +867,6 @@ func menuListenerSetup(cmd []string) {
 		shellMenuContext = "listener"
 		prompt.Config.AutoComplete = getCompleter("listener")
 		prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m" + options["Name"] + "\033[31m]»\033[0m ")
-	case "stop":
-		MessageChannel <- listenerAPI.Stop(shellListener.name)
 	default:
 		if len(cmd) > 1 {
 			executeCommand(cmd[0], cmd[1:])
@@ -1197,7 +1195,7 @@ func menuHelpListenersMain() {
 	table.Render()
 }
 
-// The help menu for the main or root Listeners menu
+// The help menu for Listeners template, or setup, menu
 func menuHelpListenerSetup() {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
@@ -1214,7 +1212,6 @@ func menuHelpListenerSetup() {
 		{"set", "Set a configurable option", "set <option_name>"},
 		{"show", "Display all configurable information about a listener", ""},
 		{"start", "Create and start the listener", ""},
-		{"stop", "Stop the listener", ""},
 		{"*", "Anything else will be execute on the host operating system", ""},
 	}
 
