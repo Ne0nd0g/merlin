@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added API packages for agents, listeners, modules, and messages to separate the CLI from the server
 - Added a channel for user messages that the CLI reads from and then prints them to STDOUT
 - Added 4 modules from the D(COM) V(ulnerability) S(canner) Framework to `windows\x64\powershell\lateral\dcom"`
+- Added Sphinx documentation to `docs\` to replace GitHub wiki with ReadTheDocs
 
 ## Fixed
 
