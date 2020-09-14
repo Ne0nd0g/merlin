@@ -47,7 +47,7 @@ func init() {
 			return
 		}
 		// Change the file's permissions
-		errChmod := serverLog.Chmod(0640)
+		errChmod := os.Chmod(serverLog.Name(), 0600)
 		if errChmod != nil {
 			message("warn", fmt.Sprintf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error()))
 		}
@@ -69,6 +69,7 @@ func Server(logMessage string) {
 	_, err := serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
 	if err != nil {
 		message("warn", "there was an error writing to the Merlin Server log file")
+		message("warn", err.Error())
 	}
 }
 

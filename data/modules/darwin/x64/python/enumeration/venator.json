@@ -1,0 +1,38 @@
+{
+  "base": {
+    "name": "Venator",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Richie Cyrus (@rrcyrus)"],
+    "path": ["darwin", "x64", "python", "enumeration", "venator.json"],
+    "platform": "darwin",
+    "arch": "x64",
+    "lang": "python",
+    "privilege": true,
+    "remote": "https://raw.githubusercontent.com/richiercyrus/Venator/master/Venator.py",
+    "options": [
+      {"name": "help", "value": "", "required": false, "flag": "-h", "description":"show the help message"},
+      {"name": "fileName", "value": "", "required": false, "flag": "-f", "description":"File Name - Name of your output file (by default the name is the hostname of the system)"},
+      {"name": "directory", "value": "", "required": false, "flag": "-d", "description":"Directory - Directory of your output file (by default it is the current working directory)"},
+      {"name": "aws", "value": "", "required": false, "flag": "-a", "description":"Your AWS Key if you want to upload to S3 Bucket. S3 upload functionality is live: python Venator.py -a <BUCKET_NAME>:<AWS_KEY_ID>:<AWS_KEY_SECRET>:<AWS_REGION>"}
+    ],
+    "description": "Venator is a python tool used for gathering data for the purpose of proactive macOS detection. Support for High Sierra & Mojave using native macOS python version (2.7.x). Happy Hunting!",
+    "notes": "This script must be run as root. The Venator project is located at https://github.com/richiercyrus/Venator . Make sure you download the output file!\r\n\r\n\t**OPSEC NOTE** This module connects directly to GitHub to download a file.",
+    "commands": [
+      "python",
+      "-c",
+      "\"import urllib2",
+      ";",
+      "script = urllib2.urlopen('https://raw.githubusercontent.com/richiercyrus/Venator/master/Venator.py')",
+      ";",
+      "exec(script.read()",
+      "{{help.Flag}}",
+      "{{fileName}}",
+      "{{directory}}",
+      "{{aws}}",
+      ")",
+      "\""
+    ],
+    "Comments": "Currently the module arguments do not work"
+  }
+}

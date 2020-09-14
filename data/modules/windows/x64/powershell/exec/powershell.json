@@ -1,0 +1,26 @@
+{
+  "base": {
+    "name": "PowerShell",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": [],
+    "path": ["windows", "x64", "powershell", "exec", "powershell.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "powershell",
+    "privilege": false,
+    "notes": "Use quotes if you want to run multiple commands or shell features such as redirection or pipeline",
+    "remote": "",
+    "local": [],
+    "options": [
+      {"name": "Version", "value": "2.0", "required": false, "flag": "-Version", "description": "Starts the specified version of Windows PowerShell."},
+      {"name": "WindowStyle", "value": "Hidden", "required": false, "flag": "-WindowStyle", "description": " Sets the window style to Normal, Minimized, Maximized or Hidden."},
+      {"name": "EncodedCommand", "value": "", "required": false, "flag": "-EncodedCommand", "description": " Accepts a base-64-encoded string version of a command"},
+      {"name": "Command", "value": "", "required": false, "flag": "-Command", "description": "Command to run in PowerShell terminal"}
+    ],
+    "description": "Execute a command in a PowerShell terminal. Useful to run a single command across all agents",
+    "commands": [
+      "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "{{Version}}", "{{WindowStyle}}", "{{EncodedCommand}}","{{Command}}"
+    ]
+  }
+}

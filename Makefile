@@ -20,6 +20,8 @@ HOST ?=
 XHOST =-X main.host=$(HOST)
 PROTO ?= h2
 XPROTO =-X main.protocol=$(PROTO)
+JA3 ?=
+XJA3 =-X main.ja3=$(JA3)
 LDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
 WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
 # TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries
@@ -117,56 +119,57 @@ agent-javascript:
 
 # Make directory 'data' and then agents, db, log, x509; Copy src folder, README, and requirements
 package-server-windows:
-	${PACKAGE} ${DIR}/${MSERVER}-${W}-v${VERSION}.7z ${F}
-	cd ${DIR};${PACKAGE} ${MSERVER}-${W}-v${VERSION}.7z ${MSERVER}-${W}.exe
+	${PACKAGE} ${DIR}/${MSERVER}-${W}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}-${W}.7z ${MSERVER}-${W}.exe
 
 package-server-linux:
-	${PACKAGE} ${DIR}/${MSERVER}-${L}-v${VERSION}.7z ${F}
-	cd ${DIR};${PACKAGE} ${MSERVER}-${L}-v${VERSION}.7z ${MSERVER}-${L}
+	${PACKAGE} ${DIR}/${MSERVER}-${L}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}-${L}.7z ${MSERVER}-${L}
 
 package-server-darwin:
-	${PACKAGE} ${DIR}/${MSERVER}-${D}-v${VERSION}.7z ${F}
-	cd ${DIR};${PACKAGE} ${MSERVER}-${D}-v${VERSION}.7z ${MSERVER}-${D}
+	${PACKAGE} ${DIR}/${MSERVER}-${D}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}-${D}.7z ${MSERVER}-${D}
 
 package-agent-windows:
-	${PACKAGE} ${DIR}/${MAGENT}-${W}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${W}-v${VERSION}.7z ${MAGENT}-${W}.exe
+	${PACKAGE} ${DIR}/${MAGENT}-${W}.7z ${F2}
+	cd ${DIR};${PACKAGE} ${MAGENT}-${W}.7z ${MAGENT}-${W}.exe
 	mkdir -p ${BIN}windows
 	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
 
 package-agent-linux:
-	${PACKAGE} ${DIR}/${MAGENT}-${L}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${L}-v${VERSION}.7z ${MAGENT}-${L}
+	${PACKAGE} ${DIR}/${MAGENT}-${L}.7z ${F2}
+	cd ${DIR};${PACKAGE} ${MAGENT}-${L}.7z ${MAGENT}-${L}
 	mkdir -p ${BIN}linux
 	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
 	
 package-agent-darwin:
-	${PACKAGE} ${DIR}/${MAGENT}-${D}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${D}-v${VERSION}.7z ${MAGENT}-${D}
+	${PACKAGE} ${DIR}/${MAGENT}-${D}.7z ${F2}
+	cd ${DIR};${PACKAGE} ${MAGENT}-${D}.7z ${MAGENT}-${D}
 	mkdir -p ${BIN}darwin/
 	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/
 
 package-agent-dll:
-	${PACKAGE} ${DIR}/${MAGENT}-DLL-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-DLL-v${VERSION}.7z merlin.dll
+	${PACKAGE} ${DIR}/${MAGENT}-DLL.7z ${F2}
+	cd ${DIR};${PACKAGE} ${MAGENT}-DLL.7z merlin.dll
 	cp ${DIR}/merlin.dll ${BIN}dll
 
 package-prism-windows:
-	${PACKAGE} ${DIR}/PRISM-${W}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${W}-v${VERSION}.7z PRISM-${W}.exe
+	${PACKAGE} ${DIR}/PRISM-${W}.7z ${F2}
+	cd ${DIR};${PACKAGE} PRISM-${W}.7z PRISM-${W}.exe
 	cp ${DIR}/PRISM-${W}.exe ${BIN}windows/
 
 package-prism-linux:
-	${PACKAGE} ${DIR}/PRISM-${L}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${L}-v${VERSION}.7z PRISM-${L}
+	${PACKAGE} ${DIR}/PRISM-${L}.7z ${F2}
+	cd ${DIR};${PACKAGE} PRISM-${L}.7z PRISM-${L}
 	cp ${DIR}/PRISM-${L} ${BIN}linux/
 
 package-prism-darwin:
-	${PACKAGE} ${DIR}/PRISM-${D}-v${VERSION}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${D}-v${VERSION}.7z PRISM-${D}
+	${PACKAGE} ${DIR}/PRISM-${D}.7z ${F2}
+	cd ${DIR};${PACKAGE} PRISM-${D}.7z PRISM-${D}
 	cp ${DIR}/PRISM-${D} ${BIN}darwin/
 
-package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-prism-windows package-server-windows package-server-linux package-server-darwin
+# Package agents and PRISM first so that they can be included in the Server distro
+package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-prism-windows package-prism-linux package-prism-darwin package-server-linux package-server-windows package-server-darwin
 
 clean:
 	rm -rf ${DIR}*

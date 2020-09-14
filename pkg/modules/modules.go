@@ -22,11 +22,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -38,6 +38,7 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
 )
@@ -57,7 +58,7 @@ type Module struct {
 	Description  string      `json:"description"`          // A description of what the module does
 	Notes        string      `json:"notes"`                // Additional information or notes about the module
 	Commands     []string    `json:"commands"`             // A list of commands to be run on the agent
-	SourceRemote string      `json:"remote"`               // Online or remote source code for a module (i.e. https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1)
+	SourceRemote string      `json:"remote"`               // Online or remote source code for a module
 	SourceLocal  []string    `json:"local"`                // The local file path to the script or payload
 	Options      []Option    `json:"options"`              // A list of configurable options/arguments for the module
 	Powershell   interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
@@ -80,18 +81,20 @@ type PowerShell struct {
 }
 
 // Run function returns an array of commands to execute the module on an agent
-func (m *Module) Run() ([]string, error) {
+func Run(m Module) ([]string, error) {
 	if m.Agent == uuid.FromStringOrNil("00000000-0000-0000-0000-000000000000") {
 		return nil, errors.New("agent not set for module")
 	}
 
-	platform, platformError := agents.GetAgentFieldValue(m.Agent, "platform")
-	if platformError != nil {
-		return nil, platformError
-	}
+	if strings.ToLower(m.Agent.String()) != "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		platform, platformError := agents.GetAgentFieldValue(m.Agent, "platform")
+		if platformError != nil {
+			return nil, platformError
+		}
 
-	if !strings.EqualFold(m.Platform, platform) {
-		return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
+		if !strings.EqualFold(m.Platform, platform) {
+			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
+		}
 	}
 
 	// Check every 'required' option to make sure it isn't null
@@ -104,7 +107,7 @@ func (m *Module) Run() ([]string, error) {
 	}
 
 	if strings.ToLower(m.Type) == "extended" {
-		extendedCommand, err := getExtendedCommand(m)
+		extendedCommand, err := getExtendedCommand(&m)
 		if err != nil {
 			return nil, err
 		}
@@ -117,24 +120,27 @@ func (m *Module) Run() ([]string, error) {
 
 	for _, o := range m.Options {
 		for k := len(command) - 1; k >= 0; k-- {
+			reName := regexp.MustCompile(`(?iU)({{2}` + o.Name + `}{2})`)
+			reFlag := regexp.MustCompile(`(?iU)({{2}` + o.Name + `.Flag}{2})`)
+			reValue := regexp.MustCompile(`(?iU)({{2}` + o.Name + `.Value}{2})`)
 			// Check if an option was set WITHOUT the Flag or Value qualifiers
-			if strings.Contains(command[k], "{{"+o.Name+"}}") {
+			if reName.MatchString(command[k]) {
 				if o.Value != "" {
-					command[k] = strings.Replace(command[k], "{{"+o.Name+"}}", o.Flag+" "+o.Value, -1)
+					command[k] = reName.ReplaceAllString(command[k], o.Flag+" "+o.Value)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Flag qualifier
-			} else if strings.Contains(command[k], "{{"+o.Name+".Flag}}") {
+			} else if reFlag.MatchString(command[k]) {
 				if strings.ToLower(o.Value) == "true" {
-					command[k] = strings.Replace(command[k], "{{"+o.Name+".Flag}}", o.Flag, -1)
+					command[k] = reFlag.ReplaceAllString(command[k], o.Flag)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
 				// Check if an option was set WITH just the Value qualifier
-			} else if strings.Contains(command[k], "{{"+o.Name+".Value}}") {
+			} else if reValue.MatchString(command[k]) {
 				if o.Value != "" {
-					command[k] = strings.Replace(command[k], "{{"+o.Name+".Value}}", o.Value, -1)
+					command[k] = reValue.ReplaceAllString(command[k], o.Value)
 				} else {
 					command = append(command[:k], command[k+1:]...)
 				}
@@ -203,11 +209,12 @@ func GetModuleList() func(string) []string {
 }
 
 // SetOption is used to change the passed in module option's value. Used when a user is configuring a module
-func (m *Module) SetOption(option string, value string) (string, error) {
+func (m *Module) SetOption(option string, value []string) (string, error) {
 	// Verify this option exists
 	for k, v := range m.Options {
 		if option == v.Name {
-			m.Options[k].Value = value
+			// Take in a slice of string for arguments that contain spaces; https://github.com/Ne0nd0g/merlin/issues/88
+			m.Options[k].Value = strings.Join(value, " ")
 			return fmt.Sprintf("%s set to %s", v.Name, m.Options[k].Value), nil
 		}
 	}

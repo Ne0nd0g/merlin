@@ -4,6 +4,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.9.0 - 2020-09-13
+
+### Added
+
+- Incorporated a fork of `github.com/CUCyber/ja3client` allowing the Merlin agent to establish TLS connections from a JA3 signature
+- Added `ja3` to agent.New() function
+- Added `-ja3` to agent command line arguments and JA3 to Make file for hard coding initial signature
+- Added `PSK=` to Make file
+- Added `set ja3` to Agent menu allowing operators to change TLS client profile at any time
+- Created new `merlinClient` interface to handle abstract http clients and changed the Agent.Client to that interface
+- Updated Dockerfile to support Go modules
+- Added support for plain-text HTTP/1.1 (http) and plain-text HTTP/2.0 (h2c)
+- Increased initial JWT lifetime from 10 seconds to 60 seconds
+- BASH module `linux\x64\bash\exec\bash.json` to run a single BASH command across all agents
+- PowerShell module `windows\x64\powershell\exec\powershell.json` to run a single PowerShell command across all agents
+- macOS Orchard module `darwin\x64\javascript\enumeration\orchard.json` a JavaScript for Automation (JXA) tool to do Active Directory enumeration
+- macOS HealthInspector module `darwin\x64\javascript\enumeration\healthinspector.json` a JXA situational awareness helper by simply reading specific files on a filesystem
+- macOS Bifrost module `darwin\x64\objective-c\kerberos\bifrost.json` an Objective-C library and console to interact with Heimdal APIs for macOS Kerberos
+- macOS Venator module  `darwin\x64\python\enumeration\venator.json` a python tool used to gather data for proactive detection of malicious activity on macOS devices
+- macOS SwiftBelt module `darwin\x64\swift\enumeration\swiftbelt.json` A MacOS enumerator similar to @harmjoy's Seatbelt
+- Added `unset` command to modules to reset an option to nil
+- Job result messages now include the agent ID
+- Added new Listeners menu to create or remove multiple agent listeners per running Merlin Server instance
+- Added new `servers` and `listeners` packages to handle new Listeners menu
+- A single listener can now handle multiple URLS instead of just `/`
+- Can enable/disable verbose and debug output from CLI main menu with `set vervose true`
+- Added API packages for agents, listeners, modules, and messages to separate the CLI from the server
+- Added a channel for user messages that the CLI reads from and then prints them to STDOUT
+- Added 4 modules from the D(COM) V(ulnerability) S(canner) Framework to `windows\x64\powershell\lateral\dcom"`
+- Added Sphinx documentation to `docs\` to replace GitHub wiki with ReadTheDocs
+
+## Fixed
+
+- Catch errors returned when starting a server (i.e insufficient privileges to bind to a port)
+- hq listener would fail when in-memory x.509 certificates were used
+- Invoke-M.i.m.i.k.a.t.z module points to the updated version of M.i.m.i.k.a.t.z (2.2.0) in the Empire 3.0 repository
+- [Issue 88](https://github.com/Ne0nd0g/merlin/issues/88) - Set option will now take all arguments after a space
+- Added module type to LinEnum, MimiPenguin, and SwapDigger
+- [Issue 71](https://github.com/Ne0nd0g/merlin/issues/71) - Run a module against all agents
+
+## Changed
+
+- Made module variables case-insensitive. Values will still match input case
+- Moved `GetTLSCertificates()` and `CheckInsecureFingerprint()` to utils package
+- Moved JWT create, validate, decrypt functions to the utils package
+- Moved Agent handling code to a new handlers package
+- All packages _should_ be sending messages to the CLI through the message API package
+- Upgraded gopaque library to v0.1.0
+- Upgraded kyber library to v3.0.12
+
+## Removed
+
+- Removed all command line arguments from Merlin Server executable in favor of run-time Listeners menu
+
+## Security
+
+- OPAQUE go library used static decryption key and allowed EnvU to be decrypted without the correct password (PwdU)
+  [gopaque - Issue 2](https://github.com/cretz/gopaque/issues/2)
+- Symmetric encryption key was use with OPAQUE User Authentication instead of OPAQUE password (PwdU)
+
+## 0.8.1 - 2019-10-08
+
+### Fixed
+
+- [Issue 77](https://github.com/Ne0nd0g/merlin/issues/77) - Set server and agent log files with `0640` permissions
+
 ## 0.8.0 - 2019-08-20
 
 ### Added

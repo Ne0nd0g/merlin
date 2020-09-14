@@ -40,9 +40,10 @@ import (
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
-	"go.dedis.ch/kyber"
+	"go.dedis.ch/kyber/v3"
 
 	// Merlin
+	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
@@ -81,6 +82,7 @@ type agent struct {
 	OPAQUEServerAuth gopaque.ServerAuth             // OPAQUE Server Authentication information used to derive shared secret
 	OPAQUEServerReg  gopaque.ServerRegister         // OPAQUE server registration information
 	OPAQUERecord     gopaque.ServerRegisterComplete // Holds the OPAQUE kU, EnvU, PrivS, PubU
+	JA3              string                         // The JA3 signature applied to the agent's TLS client
 }
 
 // KeyExchange is used to exchange public keys between the server and agent
@@ -256,7 +258,8 @@ func OPAQUEAuthenticateInit(m messages.Base) (messages.Base, error) {
 
 	// Check to see if this agent is already known to the server
 	if !isAgent(m.ID) {
-		return returnMessage, fmt.Errorf("the %s agent has not OPAQUE registered", m.ID.String())
+		returnMessage.Type = "ReRegister"
+		return returnMessage, nil
 	}
 
 	// 1 - Receive the user's UserAuthInit
@@ -331,7 +334,7 @@ func OPAQUEAuthenticateComplete(m messages.Base) (messages.Base, error) {
 		message("warn", fmt.Sprintf("there was an error finishing authentication:\r\n%s", errAuthFinish.Error()))
 	}
 
-	message("success", fmt.Sprintf("New authenticated agent checkin for %s at %s", m.ID.String(), time.Now().UTC().Format(time.RFC3339)))
+	//message("success", fmt.Sprintf("New authenticated agent checkin for %s at %s", m.ID.String(), time.Now().UTC().Format(time.RFC3339)))
 	if core.Debug {
 		message("debug", "Leaving agents.OPAQUEAuthenticateComplete function without error")
 	}
@@ -453,8 +456,9 @@ func UpdateInfo(m messages.Base) error {
 		message("debug", fmt.Sprintf("Agent failedCheckin: %d", p.FailedCheckin))
 		message("debug", fmt.Sprintf("Agent proto: %s", p.Proto))
 		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
+		message("debug", fmt.Sprintf("Agent JA3 signature: %s", p.JA3))
 	}
-	Log(m.ID, fmt.Sprintf("Processing AgentInfo message:"))
+	Log(m.ID, "Processing AgentInfo message:")
 	Log(m.ID, fmt.Sprintf("\tAgent Version: %s ", p.Version))
 	Log(m.ID, fmt.Sprintf("\tAgent Build: %s ", p.Build))
 	Log(m.ID, fmt.Sprintf("\tAgent waitTime: %s ", p.WaitTime))
@@ -464,6 +468,7 @@ func UpdateInfo(m messages.Base) error {
 	Log(m.ID, fmt.Sprintf("\tAgent failedCheckin: %d ", p.FailedCheckin))
 	Log(m.ID, fmt.Sprintf("\tAgent proto: %s ", p.Proto))
 	Log(m.ID, fmt.Sprintf("\tAgent KillDate: %s", time.Unix(p.KillDate, 0).UTC().Format(time.RFC3339)))
+	Log(m.ID, fmt.Sprintf("\tAgent JA3 signature: %s", p.JA3))
 
 	Agents[m.ID].Version = p.Version
 	Agents[m.ID].Build = p.Build
@@ -474,6 +479,7 @@ func UpdateInfo(m messages.Base) error {
 	Agents[m.ID].FailedCheckin = p.FailedCheckin
 	Agents[m.ID].Proto = p.Proto
 	Agents[m.ID].KillDate = p.KillDate
+	Agents[m.ID].JA3 = p.JA3
 
 	Agents[m.ID].Architecture = p.SysInfo.Architecture
 	Agents[m.ID].HostName = p.SysInfo.HostName
@@ -543,6 +549,7 @@ func ShowInfo(agentID uuid.UUID) {
 		{"Agent Failed Check In", strconv.Itoa(Agents[agentID].FailedCheckin)},
 		{"Agent Kill Date", time.Unix(Agents[agentID].KillDate, 0).UTC().Format(time.RFC3339)},
 		{"Agent Communication Protocol", Agents[agentID].Proto},
+		{"Agent JA3 TLS Client Signature", Agents[agentID].JA3},
 	}
 	table.AppendBulk(data)
 	fmt.Println()
@@ -550,22 +557,30 @@ func ShowInfo(agentID uuid.UUID) {
 	fmt.Println()
 }
 
-// message is used to print a message to the command line
+// message is used to send a broadcast message to all connected clients
 func message(level string, message string) {
+	m := messageAPI.UserMessage{
+		Message: message,
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 	switch level {
 	case "info":
-		color.Cyan("[i]" + message)
+		m.Level = messageAPI.Info
 	case "note":
-		color.Yellow("[-]" + message)
+		m.Level = messageAPI.Note
 	case "warn":
-		color.Red("[!]" + message)
+		m.Level = messageAPI.Warn
 	case "debug":
-		color.Red("[DEBUG]" + message)
+		m.Level = messageAPI.Debug
 	case "success":
-		color.Green("[+]" + message)
+		m.Level = messageAPI.Success
+	case "plain":
+		m.Level = messageAPI.Plain
 	default:
-		color.Red("[_-_]Invalid message level: " + message)
+		m.Level = messageAPI.Plain
 	}
+	messageAPI.SendBroadcastMessage(m)
 }
 
 // AddJob creates a job and adds it to the specified agent's channel and returns the Job ID or an error
@@ -760,6 +775,17 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			p.Args = job.Args[1]
 		}
 		m.Payload = p
+	case "ja3":
+		m.Type = "AgentControl"
+		p := messages.AgentControl{
+			Command: job.Args[0],
+			Job:     job.ID,
+		}
+
+		if len(job.Args) == 2 {
+			p.Args = job.Args[1]
+		}
+		m.Payload = p
 	case "Minidump":
 		m.Type = "Module"
 		p := messages.Module{
@@ -796,7 +822,7 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 		m.Payload = p
 	default:
 		m.Type = "ServerOk"
-		return m, errors.New("invalid job type, sending ServerOK")
+		return m, fmt.Errorf("invalid job type: %s, sending ServerOK", m.Type)
 	}
 	return m, nil
 }
@@ -887,7 +913,7 @@ func newAgent(agentID uuid.UUID) (agent, error) {
 		}
 
 		// Change the file's permissions
-		errChmod := agentLog.Chmod(0640)
+		errChmod := os.Chmod(agentLog.Name(), 0600)
 		if errChmod != nil {
 			return agent, fmt.Errorf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error())
 		}
@@ -898,7 +924,7 @@ func newAgent(agentID uuid.UUID) (agent, error) {
 		}
 	}
 	// Open agent's log file for writing
-	f, err := os.OpenFile(filepath.Join(agentsDir, agentID.String(), "agent_log.txt"), os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(filepath.Clean(filepath.Join(agentsDir, agentID.String(), "agent_log.txt")), os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		return agent, fmt.Errorf("there was an error openeing the %s agent's log file:\r\n%s", agentID.String(), err.Error())
 	}
@@ -936,16 +962,15 @@ func JobResults(m messages.Base) error {
 	p := m.Payload.(messages.CmdResults)
 	Log(m.ID, fmt.Sprintf("Results for job: %s", p.Job))
 
-	fmt.Println()
-	message("success", fmt.Sprintf("Results for job %s at %s", p.Job, time.Now().UTC().Format(time.RFC3339)))
-	fmt.Println()
+	message("success", fmt.Sprintf("Results for %s job %s at %s", m.ID, p.Job, time.Now().UTC().Format(time.RFC3339)))
+
 	if len(p.Stdout) > 0 {
 		Log(m.ID, fmt.Sprintf("Command Results (stdout):\r\n%s", p.Stdout))
-		color.Green(p.Stdout)
+		message("plain", color.GreenString("%s", p.Stdout))
 	}
 	if len(p.Stderr) > 0 {
 		Log(m.ID, fmt.Sprintf("Command Results (stderr):\r\n%s", p.Stderr))
-		color.Red(p.Stderr)
+		message("plain", color.RedString("%s", p.Stderr))
 	}
 
 	if core.Debug {
@@ -976,7 +1001,7 @@ func FileTransfer(m messages.Base) error {
 			Log(m.ID, errorMessage.Error())
 			return errorMessage
 		}
-		message("success", fmt.Sprintf("Results for job %s", p.Job))
+		message("success", fmt.Sprintf("Results for %s job %s at %s", m.ID, p.Job, time.Now().UTC().Format(time.RFC3339)))
 		downloadBlob, downloadBlobErr := base64.StdEncoding.DecodeString(p.FileBlob)
 
 		if downloadBlobErr != nil {
@@ -985,7 +1010,7 @@ func FileTransfer(m messages.Base) error {
 			return errorMessage
 		}
 		downloadFile := filepath.Join(agentsDir, m.ID.String(), f)
-		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0644)
+		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0600)
 		if writingErr != nil {
 			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
 			Log(m.ID, errorMessage.Error())
@@ -1066,5 +1091,3 @@ type Job struct {
 	Args    []string
 	Created time.Time
 }
-
-// TODO configure all message to be displayed on the CLI to be returned as errors and not written to the CLI here

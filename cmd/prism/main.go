@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -55,6 +56,14 @@ var verbose = false
 var debug = false
 var merlinJWT string
 var host string
+var ja3 = ""
+
+type merlinClient interface {
+	Do(req *http.Request) (*http.Response, error)
+	Get(url string) (resp *http.Response, err error)
+	Head(url string) (resp *http.Response, err error)
+	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
+}
 
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
@@ -64,13 +73,14 @@ func main() {
 	protocol := flag.String("proto", "h2", "Protocol for the agent to connect with [https (HTTP/1.1), h2 (HTTP/2), hq (QUIC or HTTP/3.0)]")
 	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
 	flag.StringVar(&host, "host", host, "HTTP Host header")
+	flag.StringVar(&ja3, "ja3", ja3, "JA3 signature string (not the MD5 hash). Overrides -proto flag")
 	flag.Usage = usage
 	flag.Parse()
 
 	var err error
 
 	// Setup and run agent
-	a, errNew := agent.New(*protocol, url, host, psk, proxy, verbose, debug)
+	a, errNew := agent.New(*protocol, url, host, psk, ja3, proxy, verbose, debug)
 	if errNew != nil {
 		message("warn", errNew.Error())
 		os.Exit(1)
@@ -134,7 +144,9 @@ func opaqueRegister(a agent.Agent) error {
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
-	regInitResp, errRegInitResp := sendMessage("POST", regInitBase, a.Client)
+	var client merlinClient = *a.Client
+
+	regInitResp, errRegInitResp := sendMessage("POST", regInitBase, client)
 
 	if errRegInitResp != nil {
 		return fmt.Errorf("there was an error sending the agent OPAQUE user registration initialization message:\r\n%s", errRegInitResp.Error())
@@ -189,7 +201,10 @@ func sendPre8Message(a agent.Agent) error {
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	resp, err := a.Client.Do(req)
+
+	var client merlinClient = *a.Client
+
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return fmt.Errorf("there was an error sending the request:\r\n%s", err.Error())
@@ -218,7 +233,7 @@ func sendPre8Message(a agent.Agent) error {
 
 // sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
 // The response message will be decrypted, decoded, and return a messages.Base struct.
-func sendMessage(method string, m messages.Base, client *http.Client) (messages.Base, error) {
+func sendMessage(method string, m messages.Base, client merlinClient) (messages.Base, error) {
 	if debug {
 		message("debug", "Entering into agent.sendMessage")
 	}

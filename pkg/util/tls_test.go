@@ -152,7 +152,8 @@ func TestTLSCertGeneration(t *testing.T) {
 		//timeAfter must be 2 years after timeBefore
 		certYear, certMonth, certDay := cer.NotBefore.Date()
 		acertYear, acertMonth, acertDay := cer.NotAfter.Date()
-		if acertYear != (certYear+2) || certDay != acertDay || certMonth != acertMonth {
+		ecertYear, ecertMonth, ecertDay := cer.NotBefore.AddDate(2, 0, 0).Date()
+		if acertYear != ecertYear || certDay != ecertDay || certMonth != ecertMonth {
 			t.Error("Generated times for cert after inconsistent. Got:", acertYear, acertMonth, acertDay,
 				"Expected:", certYear+2, certMonth, certDay)
 		}
