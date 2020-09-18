@@ -147,7 +147,7 @@ func New(options map[string]string) (*Server, error) {
 		}
 		if insecure {
 			m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for %s server on %s:%s\r\n", proto, options["Interface"], options["Port"])
-			m += "Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates"
+			m += "Additional details: https://merlin-c2.readthedocs.io/en/latest/server/x509.html"
 			messages.SendBroadcastMessage(messages.UserMessage{
 				Level:   messages.Warn,
 				Message: m,
