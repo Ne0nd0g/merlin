@@ -45,7 +45,7 @@ func main() {
 		color.Blue("Version: " + merlin.Version)
 		color.Blue("Build: " + build)
 		color.Yellow("Merlin Server does not take any command line arguments")
-		color.Yellow("Visit the Merlin wiki for additional information: https://github.com/Ne0nd0g/Merlin/wiki")
+		color.Yellow("Visit the Merlin wiki for additional information: https://merlin-c2.readthedocs.io/en/latest/")
 		flag.PrintDefaults()
 		os.Exit(0)
 	}

@@ -176,3 +176,14 @@ clean:
 
 #Build all files for release distribution
 distro: clean all package-all
+
+#Create all agents and move them to Merlin's data/bin directory; Used with Docker container
+generate-agents: agent-windows agent-dll agent-linux agent-darwin
+	mkdir -p ${BIN}windows/
+	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
+	mkdir -p ${BIN}dll
+	cp ${DIR}/merlin.dll ${BIN}dll
+	mkdir -p ${BIN}linux/
+	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
+	mkdir -p ${BIN}darwin/
+	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/

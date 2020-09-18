@@ -1093,7 +1093,7 @@ func menuHelpMain() {
 	fmt.Println()
 	MessageChannel <- messages.UserMessage{
 		Level:   messages.Info,
-		Message: "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Main-Menu",
+		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/main.html",
 		Time:    time.Now().UTC(),
 		Error:   false,
 	}
@@ -1125,7 +1125,7 @@ func menuHelpModule() {
 	fmt.Println()
 	MessageChannel <- messages.UserMessage{
 		Level:   messages.Info,
-		Message: "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Module-Menu",
+		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/modules.html",
 		Time:    time.Now().UTC(),
 		Error:   false,
 	}
@@ -1163,7 +1163,7 @@ func menuHelpAgent() {
 	fmt.Println()
 	MessageChannel <- messages.UserMessage{
 		Level:   messages.Info,
-		Message: "Visit the wiki for additional information https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu",
+		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html",
 		Time:    time.Now().UTC(),
 		Error:   false,
 	}
@@ -1193,6 +1193,13 @@ func menuHelpListenersMain() {
 	table.AppendBulk(data)
 	fmt.Println()
 	table.Render()
+	fmt.Println()
+	MessageChannel <- messages.UserMessage{
+		Level:   messages.Info,
+		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html",
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 }
 
 // The help menu for Listeners template, or setup, menu
@@ -1218,6 +1225,13 @@ func menuHelpListenerSetup() {
 	table.AppendBulk(data)
 	fmt.Println()
 	table.Render()
+	fmt.Println()
+	MessageChannel <- messages.UserMessage{
+		Level:   messages.Info,
+		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html",
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 }
 
 // The help menu for a specific, instantiated, listener
@@ -1245,6 +1259,13 @@ func menuHelpListener() {
 	table.AppendBulk(data)
 	fmt.Println()
 	table.Render()
+	fmt.Println()
+	MessageChannel <- messages.UserMessage{
+		Level:   messages.Info,
+		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html",
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 }
 
 func filterInput(r rune) (rune, bool) {
