@@ -596,6 +596,7 @@ func menuListener(cmd []string) {
 			MessageChannel <- statusMessage
 			break
 		}
+		shellListener.status = listenerAPI.GetListenerStatus(shellListener.id).Message
 		if options != nil {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Name", "Value"})
@@ -858,6 +859,7 @@ func menuListenerSetup(cmd []string) {
 
 		shellListener = listener{id: id, name: shellListenerOptions["Name"]}
 		startMessage := listenerAPI.Start(shellListener.name)
+		shellListener.status = listenerAPI.GetListenerStatus(id).Message
 		MessageChannel <- startMessage
 		um, options := listenerAPI.GetListenerConfiguredOptions(shellListener.id)
 		if um.Error {
