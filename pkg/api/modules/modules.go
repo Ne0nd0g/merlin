@@ -68,7 +68,7 @@ func RunModule(module modules.Module) []messages.UserMessage {
 		}
 		for id := range agents.Agents {
 			// Make sure OS platform match
-			if strings.EqualFold(agents.Agents[id].Platform, module.Platform) {
+			if !strings.EqualFold(agents.Agents[id].Platform, module.Platform) {
 				m := fmt.Sprintf("Module platform %s does not match agent %s platform %s. Skipping job...",
 					module.Platform, id, agents.Agents[id].Platform)
 				um := messages.UserMessage{
