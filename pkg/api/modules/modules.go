@@ -82,7 +82,8 @@ func RunModule(module modules.Module) []messages.UserMessage {
 			}
 			switch strings.ToLower(module.Type) {
 			case "standard":
-				returnMessages = append(returnMessages, agentAPI.CMD(id, r))
+				// Standard modules use the `cmd` message type that must be in position 0
+				returnMessages = append(returnMessages, agentAPI.CMD(id, append([]string{"cmd"}, r...)))
 			case "extended":
 				// Was using Method: r[0]
 				job, err := agents.AddJob(id, r[0], r[1:])
@@ -98,11 +99,12 @@ func RunModule(module modules.Module) []messages.UserMessage {
 			}
 		}
 		return returnMessages
-		// Single Agent
 	}
+	// Single Agent
 	switch strings.ToLower(module.Type) {
 	case "standard":
-		returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, r))
+		// Standard modules use the `cmd` message type that must be in position 0
+		returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, append([]string{"cmd"}, r...)))
 	case "extended":
 		job, err := agents.AddJob(module.Agent, r[0], r[1:])
 		if err != nil {

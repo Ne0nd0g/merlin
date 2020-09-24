@@ -59,6 +59,7 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 // CMD is used to send a command to the agent to run a command or execute a program
 // Args[0] = "cmd"
 // Args[1:] = program and arguments to be executed on the host OS of the running agent
+// Used with `cmd` and `shell` commands as well as through "standard" modules
 func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
 		job, err := agents.AddJob(agentID, "cmd", Args[1:])
