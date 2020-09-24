@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.9.1 - 2020-09-23
+
+### Fixed
+
+- Modules were not sending the first value from the modules commands section
+- [Pull 97](https://github.com/Ne0nd0g/merlin/pull/97) - Incorrectly validated the module and agent platforms when the agent was set to "all"
+
 ## 0.9.0 - 2020-09-13
 
 ### Added
