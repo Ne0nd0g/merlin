@@ -39,6 +39,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
+	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
 )
@@ -363,6 +364,8 @@ func getExtendedCommand(m *Module) ([]string, error) {
 	switch strings.ToLower(m.Name) {
 	case "minidump":
 		extendedCommand, err = minidump.Parse(m.getMapFromOptions())
+	case "sharpgen":
+		extendedCommand, err = sharpgen.Parse(m.getMapFromOptions())
 	case "shellcodeinjection":
 		extendedCommand, err = shellcode.Parse(m.getMapFromOptions())
 	case "srdi":
