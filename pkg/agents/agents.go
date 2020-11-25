@@ -794,6 +794,14 @@ func GetMessageForJob(agentID uuid.UUID, job Job) (messages.Base, error) {
 			Args:    job.Args,
 		}
 		m.Payload = p
+	case "CreateProcess":
+		m.Type = "Module"
+		p := messages.Module{
+			Command: job.Type,
+			Job:     job.ID,
+			Args:    job.Args,
+		}
+		m.Payload = p
 	case "upload":
 		m.Type = "FileTransfer"
 		// TODO add error handling; check 2 args (src, dst)
