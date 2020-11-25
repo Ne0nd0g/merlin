@@ -1,0 +1,22 @@
+{
+  "base": {
+    "name": "CreateProcess",
+    "type": "extended",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": [],
+    "path": ["windows", "x64", "go", "exec", "createProcess.json"],
+    "platform": "Windows",
+    "arch": "x64",
+    "lang": "Go",
+    "privilege": false,
+    "remote": "",
+    "local": [""],
+    "options": [
+      {"name": "shellcode", "value": "", "required": true, "flag": "", "description":"Path to a raw binary file or a text file containing shellcode in either \\\\x90 OR 0x90 format"},
+      {"name": "spawnto", "value":  "C:\\WIndows\\System32\\dllhost.exe", "required":  true, "flag": "", "description": "The file path to  the executable that will be spawned and the shellcode will be injected into"},
+      {"name": "args", "value":  "", "required":  false, "flag": "", "description": "Arguments for the spawnto process. They will actually be used"}
+    ],
+    "description": "This  module will create a process from the spawnto argument and inject/execute the contents of the shelldcode argument. This modules uses anonymous pipes to collect STDOUT/STDERR",
+    "notes": "Shellcode itself, instead of a file path, can be set for the shellcode option so long as there are no spaces"
+  }
+}

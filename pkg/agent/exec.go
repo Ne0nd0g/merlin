@@ -82,6 +82,14 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 	return errors.New("shellcode execution is not implemented for this operating system")
 }
 
+// ExecuteShellcodeCreateProcessWithPipe creates a child process, redirects STDOUT/STDERR to an anonymous pipe, injects/executes shellcode, and retrieves output
+func ExecuteShellcodeCreateProcessWithPipe(sc string, spawnto string, args string) (stdout string, stderr string, err error) {
+	sc = ""
+	spawnto = ""
+	args = ""
+	return stdout, stderr, fmt.Errorf("CreateProcess modules in not implemented for this operating  system")
+}
+
 // miniDump is a Windows only module function to dump the memory of the provided process
 //lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func miniDump(tempDir string, process string, inPid uint32) (map[string]interface{}, error) {
