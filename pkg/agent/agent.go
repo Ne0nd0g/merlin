@@ -699,8 +699,7 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 				message("note", "FileTransfer type: Download")
 			}
 
-			d, _ := filepath.Split(p.FileLocation)
-			_, directoryPathErr := os.Stat(d)
+			_, directoryPathErr := os.Stat(filepath.Dir(p.FileLocation))
 			if directoryPathErr != nil {
 				c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
 					"directory %s:\r\n", p.FileLocation)

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Added `windows/x64/go/exec/createProcess` extended module with redirected STDOUT/STDERR over anonymous pipes
+- Added `windows/x64/go/exec/donut` extended module that leveraged [go-dounut](https://github.com/binject/go-donut)
+- Added `execute-assembly` and `execute-pe` commands to Agent menu
+- Added `ExecuteAssembly` and `ExecutePE` to Agent API
+
+### Changes
+
+- All commands typed into the `Merlin»` are immediately parsed with [go-shellwords](https://github.com/mattn/go-shellwords)
+- Removed `go-shellwords` processing from Agent API functions CD, Download, Upload, and LS
 
 ## 0.9.1 - 2020-09-23
 

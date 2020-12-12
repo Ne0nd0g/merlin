@@ -31,6 +31,7 @@ import (
 	// 3rd Party
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
+	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
 
@@ -112,7 +113,16 @@ func Shell() {
 		}
 
 		line = strings.TrimSpace(line)
-		cmd := strings.Fields(line)
+		//cmd := strings.Fields(line)
+		cmd, err := shellwords.Parse(line)
+		if err != nil {
+			MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("error parsing command line arguments:\r\n%s", err),
+				Time:    time.Now().UTC(),
+				Error:   false,
+			}
+		}
 
 		if len(cmd) > 0 {
 			switch shellMenuContext {
@@ -337,6 +347,10 @@ func Shell() {
 					MessageChannel <- agentAPI.CMD(shellAgent, cmd)
 				case "download":
 					MessageChannel <- agentAPI.Download(shellAgent, cmd)
+				case "execute-assembly":
+					MessageChannel <- agentAPI.ExecuteAssembly(shellAgent, cmd)
+				case "execute-pe":
+					MessageChannel <- agentAPI.ExecutePE(shellAgent, cmd)
 				case "execute-shellcode":
 					MessageChannel <- agentAPI.ExecuteShellcode(shellAgent, cmd)
 				case "exit", "quit":
@@ -355,7 +369,6 @@ func Shell() {
 				case "kill":
 					menuSetMain()
 					MessageChannel <- agentAPI.Kill(shellAgent, cmd)
-
 				case "ls":
 					MessageChannel <- agentAPI.LS(shellAgent, cmd)
 				case "main":
@@ -959,6 +972,8 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("cmd"),
 		readline.PcItem("back"),
 		readline.PcItem("download"),
+		readline.PcItem("execute-assembly"),
+		readline.PcItem("execute-pe"),
 		readline.PcItem("execute-shellcode",
 			readline.PcItem("self"),
 			readline.PcItem("remote"),
@@ -1146,10 +1161,12 @@ func menuHelpAgent() {
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
+		{"execute-assembly", "Execute a .NET 4.0 assembly", "execute-assembly <assembly path> [<assembly args>, <spawnto path>, <spawnto args>]"},
+		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args>, <spawnto path>, <spawnto args>]"},
 		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
 		{"info", "Display all information about the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
-		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
+		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"set", "Set the value for one of the agent's options", "ja3, killdate, maxretry, padding, skew, sleep"},

@@ -123,10 +123,10 @@ func ParseShellcode(shellcode string) ([]byte, error) {
 func parseHex(str []string) ([]byte, error) {
 	hexString := strings.Join(str, "")
 
+	// see if it is Base64 encoded
 	data, err := base64.StdEncoding.DecodeString(hexString)
 	if err == nil {
-		s := string(data)
-		hexString = s
+		return data, err
 	}
 
 	// see if string is prefixed with 0x

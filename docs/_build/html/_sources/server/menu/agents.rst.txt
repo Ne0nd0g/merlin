@@ -18,6 +18,13 @@ help
                         | (DEPRECIATED)                  |
       back              | Return to the main menu        |
       download          | Download a file from the agent | download <remote_file>
+      execute-assembly  | Execute a .NET 4.0 assembly    | execute-assembly <assembly
+                        |                                | path> [<assembly args>,
+                        |                                | <spawnto path>, <spawnto
+                        |                                | args>]
+      execute-pe        | Execute a Windows PE (EXE)     | execute-pe <pe path>
+                        |                                | [<pe args>, <spawnto
+                        |                                | path>, <spawnto args>]
       execute-shellcode | Execute shellcode              | self, remote <pid>,
                         |                                | RtlCreateUserThread <pid>
       info              | Display all information about  |
@@ -42,7 +49,7 @@ help
 cd
 --
 
-The ``cd`` command is used to change the current working directory the Merlin agent is using. Relative paths can be used (i.e. ``./../`` or ``downloads\\Merlin``). This command uses native Go and will not execute the ``cd`` binary program found on the host operating system.
+The ``cd`` command is used to change the current working directory the Merlin agent is using. Relative paths can be used (e.g.,. ``./../`` or ``downloads\\Merlin``). This command uses native Go and will not execute the ``cd`` binary program found on the host operating system.
 
 | The ``\`` in a Windows directory must be escaped like ``C:\\Windows\\System32``.
 
@@ -80,9 +87,9 @@ download
 
 The ``download`` command is used to download a file from the host where the agent is running back to the Merlin server. The file will be automatically saved in a folder with a name of the agent's identifier in the `data\agents\c1090dbc-f2f7-4d90-a241-86e0c0217786` directory.
 
-**NOTE:** Because ``\`` is used to escape a character, file paths require two (i.e ``C:\\Windows``)
+**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
 
-**NOTE:** Enclose file paths containing a space with quotation marks (i.e. ``"C:\\Windows\\Program Files\\"``)
+**NOTE:** Enclose file paths containing a space with quotation marks (e.g.,. ``"C:\\Windows\\Program Files\\"``)
 
 .. code-block:: text
 
@@ -105,13 +112,121 @@ The ``exit`` command is used to quit the Merlin server. The user will be prompte
     yes
     [!]Quitting...
 
+execute-assembly
+-----------------
+
+The ``execute-assembly`` command uses `go-donut <https://github.com/Binject/go-donut>`_ to convert a .NET assembly into shellcode and then uses the ``windows/x64/go/exec/createProcess`` Merlin module to execute the shellcode.
+
+Currently this command only supports .NET v4.0 assemblies. For more granular control, use the ``windows/x64/go/exec/donut`` module.
+
+The command is executed as: ``execute-assembly <assembly path> [<assembly args> <spawnto path> <spawnto args>]``
+
+The command requires the file path to the assembly you wish to execute in the ``<assembly path>`` argument. All other arguments are optional. The ``<spawnto path>`` argument is the process that will be started on the target and where the shellcode will be injected and executed. If a ``<spawnto path>`` is not provided, ``C:\WIndows\System32\dllhost.exe`` will be used. The ``<spawnto args>`` value is used as an argument when starting the spawnto process.
+
+**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
+
+**NOTE:** Use quotes to enclose multiple arguments for ``<assembly args>`` (e.g., ``execute-assembly Seatbelt.exe "LocalGroups LocalUsers"``)
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» execute-assembly Seatbelt.exe "DotNet IdleTime" "C:\\Windows\\System32\\WerFault.exe" /?
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-] Created job dmAfzDPUsM for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+
+    [+] Results for c1090dbc-f2f7-4d90-a241-86e0c0217786 job dmAfzDPUsM
+
+
+
+                            %&&@@@&&
+                            &&&&&&&%%%,                       #&&@@@@@@%%%%%%###############%
+                            &%&   %&%%                        &////(((&%%%%%#%################//((((###%%%%%%%%%%%%%%%
+    %%%%%%%%%%%######%%%#%%####%  &%%**#                      @////(((&%%%%%%######################(((((((((((((((((((
+    #%#%%%%%%%#######%#%%#######  %&%,,,,,,,,,,,,,,,,         @////(((&%%%%%#%#####################(((((((((((((((((((
+    #%#%%%%%%#####%%#%#%%#######  %%%,,,,,,  ,,.   ,,         @////(((&%%%%%%%######################(#(((#(#((((((((((
+    #####%%%####################  &%%......  ...   ..         @////(((&%%%%%%%###############%######((#(#(####((((((((
+    #######%##########%#########  %%%......  ...   ..         @////(((&%%%%%#########################(#(#######((#####
+    ###%##%%####################  &%%...............          @////(((&%%%%%%%%##############%#######(#########((#####
+    #####%######################  %%%..                       @////(((&%%%%%%%################
+                            &%&   %%%%%      Seatbelt         %////(((&%%%%%%%%#############*
+                            &%%&&&%%%%%        v1.1.0         ,(((&%%%%%%%%%%%%%%%%%,
+                             #%%%%##,
+
+
+    ====== DotNet ======
+
+      Installed CLR Versions
+          2.0.50727
+          4.0.30319
+
+      Installed .NET Versions
+          3.5.30729.4926
+          4.8.03752
+
+      Anti-Malware Scan Interface (AMSI)
+          OS supports AMSI           : True
+         .NET version support AMSI   : True
+            [!] The highest .NET version is enrolled in AMSI!
+            [*] You can invoke .NET version 3.5 to bypass AMSI.
+    ====== IdleTime ======
+
+      CurrentUser : DESKTOP-H35RK21\rastley
+      Idletime    : 00h:06m:02s:766ms (362766 milliseconds)
+
+
+
+    [*] Completed collection in 0.122 seconds
+
+execute-pe
+-----------------
+
+The ``execute-pe`` command uses `go-donut <https://github.com/Binject/go-donut>`_ to convert a Windows Portable Executable (PE), commonly an .exe, into shellcode and then uses the ``windows/x64/go/exec/createProcess`` Merlin module to execute the shellcode.
+
+The command is executed as: ``execute-pe <assembly path> [<assembly args> <spawnto path> <spawnto args>]``
+
+The command requires the file path to the PE you wish to execute in the ``<pe path>`` argument. All other arguments are optional. The ``<spawnto path>`` argument is the process that will be started on the target and where the shellcode will be injected and executed. If a ``<spawnto path>`` is not provided, ``C:\WIndows\System32\dllhost.exe`` will be used. The ``<spawnto args>`` value is used as an argument when starting the spawnto process.
+
+**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
+
+**NOTE:** Use quotes to enclose multiple arguments for ``<pe args>`` (e.g., ``execute-pe mimikatz.exe "coffee exit"``)
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» execute-pe mimikatz.exe "coffee exit" C:\\Windows\\System32\\WerFault.exe Testing
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-] Created job BSvJZFvbRZ for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+
+    [+] Results for c1090dbc-f2f7-4d90-a241-86e0c0217786 job BSvJZFvbRZ
+
+
+      .#####.   mimikatz 2.2.0 (x64) #19041 Sep 18 2020 19:18:29
+     .## ^ ##.  "A La Vie, A L'Amour" - (oe.eo)
+     ## / \ ##  /*** Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )
+     ## \ / ##       > https://blog.gentilkiwi.com/mimikatz
+     '## v ##'       Vincent LE TOUX             ( vincent.letoux@gmail.com )
+      '#####'        > https://pingcastle.com / https://mysmartlogon.com ***/
+
+    mimikatz(commandline) # coffee
+
+        ( (
+         ) )
+      .______.
+      |      |]
+      \      /
+       `----'
+
+    mimikatz(commandline) # exit
+    Bye!
+
+
 execute-shellcode
 -----------------
 
 The ``execute-shellcode`` command is used to have the Agent execute the provided shellcode. This command became available in version ``0.6.4`` and is only supported for Windows agents.
 
 The ``execute-shellcode`` command takes the shellcode you want to execute at the last argument. Shellcode can be provided using an absolute filepath or by pasting it directly into the terminal in one of the following formats:
-  * Hex (i.e. `5051525356`)
+  * Hex (e.g.,. `5051525356`)
   * ``0x50, 0x51, 0x52, 0x53, 0x56`` with or without spaces and commas
   * ``\x50\x51\x52\x53\x56``
   * Base64 encoded version of the above formats
@@ -241,7 +356,7 @@ The ``kill`` control type instructs the agent to exit or die. There is no respon
 ls
 --
 
-The ``ls`` command is used to list a directory's contents using native Go functions within Merlin. This command will not execute the ``ls`` or ``dir`` binary programs found on their associated host operating systems. If a directory is not specified, Merlin will list the contents of the current working directory. When specifying a Windows path, you must escape the backslash (i.e. `C:\\Temp`). Wrap file paths containing a space in quotations. Alternatively, Linux file paths with a space can be called without quotes by escaping the space (i.e. ``/root/some\ folder/``). Relative paths can be used (i.e. ``./../`` or ``downloads\\Merlin``) and they are resolved to their absolute path.
+The ``ls`` command is used to list a directory's contents using native Go functions within Merlin. This command will not execute the ``ls`` or ``dir`` binary programs found on their associated host operating systems. If a directory is not specified, Merlin will list the contents of the current working directory. When specifying a Windows path, you must escape the backslash (e.g.,. `C:\\Temp`). Wrap file paths containing a space in quotations. Alternatively, Linux file paths with a space can be called without quotes by escaping the space (e.g.,. ``/root/some\ folder/``). Relative paths can be used (e.g.,. ``./../`` or ``downloads\\Merlin``) and they are resolved to their absolute path.
 
 .. code-block:: text
 
@@ -311,7 +426,7 @@ ja3
 
 `JA3 is a method for fingerprinting TLS clients on the wire <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_. Every TLS client has a unique signature depending on its configuration of the following TLS options: ``SSLVersion,Ciphers,Extensions,EllipticCurves,EllipticCurvePointFormats``.
 
-The ``ja3`` option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (i.e. Merlin). `This <https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f>`_ article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from https://ja3er.com/
+The ``ja3`` option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (e.g.,. Merlin). `This <https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f>`_ article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from https://ja3er.com/
 
 **NOTE:** Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The ``-ja3`` flag will override the the ``-proto`` flag and will cause the agent to use the protocol provided in the JA3 hash.
 
@@ -396,7 +511,7 @@ shell
 The ``shell`` command is used to task the agent to run a program on the host and return STDOUT/STDERR. When issuing a command to an agent from
 the server, the agent will execute the provided binary file for the program you specified and also pass along any
 arguments you provide. It is important to note that program must be in the path. This allows an operator to specify and
-use a shell (i.e. cmd.exe, powershell.exe, or /bin/bash) or to execute the program directly *WITHOUT* a shell.
+use a shell (e.g.,. cmd.exe, powershell.exe, or /bin/bash) or to execute the program directly *WITHOUT* a shell.
 For instance, ``ping.exe`` is typically in the host's %PATH% variable on Windows and works *without* specifying ``cmd.exe``.
 However, the ``ver`` command is not an executable in the %PATH% and therefore *must* be run from ``cmd.exe``.
 
@@ -462,7 +577,7 @@ Quoted Arguments
 ^^^^^^^^^^^^^^^^
 
 When running a command on an agent from the server, the provided arguments are passed to executable that was called.
-As long as there are no special characters (i.e ``\`` , ``&`` , ``;`` , ``|`` , ``>`` , ``<`` etc.) the command will be processed fine.
+As long as there are no special characters (e.g., ``\`` , ``&`` , ``;`` , ``|`` , ``>`` , ``<`` etc.) the command will be processed fine.
 
 For example, this command will work fine because it does not have any special characters:
 
@@ -558,9 +673,9 @@ upload
 
 The ``upload`` command is used to upload a file *from* the Merlin server *to* the host where the Merlin agent is running. The command is called by proving the location of the file on the Merlin server followed by the location to save the file on the host where the Merlin agent is running.
 
-**NOTE:** Because ``\`` is used to escape a character, file paths require two (i.e ``C:\\Windows``)
+**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
 
-**NOTE:** Enclose file paths containing a space with quotation marks (i.e. ``"C:\\Windows\\Program Files\\"``)
+**NOTE:** Enclose file paths containing a space with quotation marks (e.g.,. ``"C:\\Windows\\Program Files\\"``)
 
 .. code-block:: text
 
