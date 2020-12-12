@@ -103,14 +103,30 @@ func GetJob(method string, shellcode string, pid string) ([]string, error) {
 	return nil, errors.New("a valid shellcode method was not provided")
 }
 
+// ParseShellcode determines if the inputs is a file and/or what format the shellcode  is in (hex, binary, CSharp)
+// Input string can be a file path or shellcode itself
+func ParseShellcode(shellcode string) ([]byte, error) {
+	// Check if shellcode argument is a file path
+	f, errF := os.Stat(shellcode)
+	// If it is, check to see if it using  what format it is using?
+	if errF != nil {
+		return parseHex([]string{shellcode})
+	} else {
+		if f.IsDir() {
+			return nil, fmt.Errorf("a directory was provided instead of a file: %s", shellcode)
+		}
+		return parseShellcodeFile(shellcode)
+	}
+}
+
 // parseHex evaluates a string array to determine its format and returns a byte array of the hex
 func parseHex(str []string) ([]byte, error) {
 	hexString := strings.Join(str, "")
 
+	// see if it is Base64 encoded
 	data, err := base64.StdEncoding.DecodeString(hexString)
 	if err == nil {
-		s := string(data)
-		hexString = s
+		return data, err
 	}
 
 	// see if string is prefixed with 0x
