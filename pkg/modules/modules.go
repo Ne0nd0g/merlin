@@ -38,7 +38,9 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+
 	// Merlin Modules
+	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
@@ -365,6 +367,8 @@ func getExtendedCommand(m *Module) ([]string, error) {
 	switch strings.ToLower(m.Name) {
 	case "createprocess":
 		extendedCommand, err = createprocess.Parse(m.getMapFromOptions())
+	case "donut":
+		extendedCommand, err = donut.Parse(m.getMapFromOptions())
 	case "minidump":
 		extendedCommand, err = minidump.Parse(m.getMapFromOptions())
 	case "shellcodeinjection":

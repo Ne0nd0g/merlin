@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html4" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -26,10 +26,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -225,9 +225,9 @@ original functionality. The only significant change is that the
 <h2>Update DLL<a class="headerlink" href="#update-dll" title="Permalink to this headline">¶</a></h2>
 <p>The following steps can be used to update the DLL in the script using PowerShell:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">$Base64String</span> <span class="pre">=</span> <span class="pre">[System.Convert]::ToBase64String($PEBytes)</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">(Get-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1)</span> <span class="pre">|</span> <span class="pre">foreach-object</span> <span class="pre">{$_</span> <span class="pre">-replace</span> <span class="pre">'^\$global\:merlin</span> <span class="pre">\=</span> <span class="pre">(.*)',</span> <span class="pre">('$global:merlin</span> <span class="pre">=</span> <span class="pre">'</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;</span> <span class="pre">+</span> <span class="pre">$Base64String</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;)}</span> <span class="pre">|</span> <span class="pre">Set-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1</span></code></p></li>
+<li><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">$Base64String</span> <span class="pre">=</span> <span class="pre">[System.Convert]::ToBase64String($PEBytes)</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">(Get-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1)</span> <span class="pre">|</span> <span class="pre">foreach-object</span> <span class="pre">{$_</span> <span class="pre">-replace</span> <span class="pre">'^\$global\:merlin</span> <span class="pre">\=</span> <span class="pre">(.*)',</span> <span class="pre">('$global:merlin</span> <span class="pre">=</span> <span class="pre">'</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;</span> <span class="pre">+</span> <span class="pre">$Base64String</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;)}</span> <span class="pre">|</span> <span class="pre">Set-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1</span></code></li>
 </ul>
 </div>
 </div>
