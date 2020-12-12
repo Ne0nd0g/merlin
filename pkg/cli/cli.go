@@ -348,9 +348,9 @@ func Shell() {
 				case "download":
 					MessageChannel <- agentAPI.Download(shellAgent, cmd)
 				case "execute-assembly":
-					MessageChannel <- agentAPI.ExecuteAssembly(shellAgent, cmd)
+					go func() { MessageChannel <- agentAPI.ExecuteAssembly(shellAgent, cmd) }()
 				case "execute-pe":
-					MessageChannel <- agentAPI.ExecutePE(shellAgent, cmd)
+					go func() { MessageChannel <- agentAPI.ExecutePE(shellAgent, cmd) }()
 				case "execute-shellcode":
 					MessageChannel <- agentAPI.ExecuteShellcode(shellAgent, cmd)
 				case "exit", "quit":
@@ -399,6 +399,8 @@ func Shell() {
 							}
 						}
 					}
+				case "sharpgen":
+					go func() { MessageChannel <- agentAPI.SharpGen(shellAgent, cmd) }()
 				case "status":
 					status := agents.GetAgentStatus(shellAgent)
 					if status == "Active" {
@@ -995,6 +997,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("skew"),
 			readline.PcItem("sleep"),
 		),
+		readline.PcItem("sharpgen"),
 		readline.PcItem("status"),
 		readline.PcItem("upload"),
 	)
@@ -1170,6 +1173,7 @@ func menuHelpAgent() {
 		{"main", "Return to the main menu", ""},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"set", "Set the value for one of the agent's options", "ja3, killdate, maxretry, padding, skew, sleep"},
+		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
 		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},

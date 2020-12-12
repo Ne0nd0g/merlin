@@ -42,6 +42,7 @@ import (
 	// Merlin Modules
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
+	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
 	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
@@ -371,6 +372,8 @@ func getExtendedCommand(m *Module) ([]string, error) {
 		extendedCommand, err = donut.Parse(m.getMapFromOptions())
 	case "minidump":
 		extendedCommand, err = minidump.Parse(m.getMapFromOptions())
+	case "sharpgen":
+		extendedCommand, err = sharpgen.Parse(m.getMapFromOptions())
 	case "shellcodeinjection":
 		extendedCommand, err = shellcode.Parse(m.getMapFromOptions())
 	case "srdi":
