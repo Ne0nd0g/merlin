@@ -87,9 +87,11 @@ download
 
 The ``download`` command is used to download a file from the host where the agent is running back to the Merlin server. The file will be automatically saved in a folder with a name of the agent's identifier in the `data\agents\c1090dbc-f2f7-4d90-a241-86e0c0217786` directory.
 
-**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
+.. note::
+    Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
 
-**NOTE:** Enclose file paths containing a space with quotation marks (e.g.,. ``"C:\\Windows\\Program Files\\"``)
+.. note::
+    Enclose file paths containing a space with quotation marks (e.g.,. ``"C:\\Windows\\Program Files\\"``)
 
 .. code-block:: text
 
@@ -123,9 +125,11 @@ The command is executed as: ``execute-assembly <assembly path> [<assembly args> 
 
 The command requires the file path to the assembly you wish to execute in the ``<assembly path>`` argument. All other arguments are optional. The ``<spawnto path>`` argument is the process that will be started on the target and where the shellcode will be injected and executed. If a ``<spawnto path>`` is not provided, ``C:\WIndows\System32\dllhost.exe`` will be used. The ``<spawnto args>`` value is used as an argument when starting the spawnto process.
 
-**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
+.. note::
+    Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
 
-**NOTE:** Use quotes to enclose multiple arguments for ``<assembly args>`` (e.g., ``execute-assembly Seatbelt.exe "LocalGroups LocalUsers"``)
+.. note::
+    Use quotes to enclose multiple arguments for ``<assembly args>`` (e.g., ``execute-assembly Seatbelt.exe "LocalGroups LocalUsers"``)
 
 .. code-block:: text
 
@@ -182,13 +186,15 @@ execute-pe
 
 The ``execute-pe`` command uses `go-donut <https://github.com/Binject/go-donut>`_ to convert a Windows Portable Executable (PE), commonly an .exe, into shellcode and then uses the ``windows/x64/go/exec/createProcess`` Merlin module to execute the shellcode.
 
-The command is executed as: ``execute-pe <assembly path> [<assembly args> <spawnto path> <spawnto args>]``
+The command is executed as: ``execute-pe <pe path> [<pe args> <spawnto path> <spawnto args>]``
 
 The command requires the file path to the PE you wish to execute in the ``<pe path>`` argument. All other arguments are optional. The ``<spawnto path>`` argument is the process that will be started on the target and where the shellcode will be injected and executed. If a ``<spawnto path>`` is not provided, ``C:\WIndows\System32\dllhost.exe`` will be used. The ``<spawnto args>`` value is used as an argument when starting the spawnto process.
 
-**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
+.. note::
+    Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
 
-**NOTE:** Use quotes to enclose multiple arguments for ``<pe args>`` (e.g., ``execute-pe mimikatz.exe "coffee exit"``)
+.. note::
+    Use quotes to enclose multiple arguments for ``<pe args>`` (e.g., ``execute-pe mimikatz.exe "coffee exit"``)
 
 .. code-block:: text
 
@@ -232,9 +238,11 @@ The ``execute-shellcode`` command takes the shellcode you want to execute at the
   * Base64 encoded version of the above formats
   * A file containing any of the above formats or just a raw byte file
 
-**WARNING** Shellcode injection and execution could cause a process to crash so choose wisely
+.. warning::
+    Shellcode injection and execution could cause a process to crash so choose wisely
 
-**NOTE** If Cobalt Strike's Beacon is injected using one of these methods, exiting the Beacon will cause the process to die too.
+.. note::
+    If Cobalt Strike's Beacon is injected using one of these methods, exiting the Beacon will cause the process to die too.
 
 The agent can execute shellcode using one of the following methods:
   * self_
@@ -300,7 +308,8 @@ The ``userapc`` method creates a thread in another process using the `QueueUserA
 
 Syntax is ``execute-shellcode userapc <PID> <SHELLCODE>`` where PID is the Process ID you want to execute the shellcode under.
 
-**NOTE:** This method is highly unstable and therefore was intentionally not added to the tab completion list of available methods. The current implementation requires the process to have more than 1 thread. All remaining threads will have a user-mode APC queued to execute the shellcode and could result in multiple instances of execution. This method frequently causes processes to crash. Additionally, the shellcode might not execute at all if none of the threads were in an alertable state. The `svchost.exe` process usually provides a little better choice, but still not guaranteed.
+.. note::
+    This method is highly unstable and therefore was intentionally not added to the tab completion list of available methods. The current implementation requires the process to have more than 1 thread. All remaining threads will have a user-mode APC queued to execute the shellcode and could result in multiple instances of execution. This method frequently causes processes to crash. Additionally, the shellcode might not execute at all if none of the threads were in an alertable state. The ``svchost.exe`` process usually provides a little better choice, but still not guaranteed.
 
 .. code-block:: text
 
@@ -428,7 +437,8 @@ ja3
 
 The ``ja3`` option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (e.g.,. Merlin). `This <https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f>`_ article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from https://ja3er.com/
 
-**NOTE:** Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The ``-ja3`` flag will override the the ``-proto`` flag and will cause the agent to use the protocol provided in the JA3 hash.
+.. note::
+    Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The ``-ja3`` flag will override the the ``-proto`` flag and will cause the agent to use the protocol provided in the JA3 hash.
 
 This example will create a TLS client with a JA3 hash of ``51a7ad14509fd614c7bb3a50c4982b8c`` that matches Java based malware such as Neutrino and Nuclear Exploit Kit (EK).
 
@@ -504,6 +514,40 @@ The ``sleep`` control type is used to change the amount of time that an agent wi
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set sleep 15s
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+sharpgen
+--------
+
+.. warning::
+    The .NET Core 2.1 SDK must be manually installed by the operator and the SharpGen executable must be built before the ``sharpgen`` command can be used
+
+The ``sharpgen`` command leverages Ryan Cobb's `SharpGen <https://github.com/cobbr/SharpGen>`_ project and the `.NET Core 2.1 SDK <https://dotnet.microsoft.com/download/dotnet-core/2.1>`_ to dynamically compile and execute .NET assemblies. After assembly is compiled, the same steps documented in `execute-assembly`_ are followed. SharpGen also leverages functionality from the `SharpSploit <https://github.com/cobbr/SharpSploit>`_ project that can be called directly from this ``shargen`` command. This command uses a hardcoded output that places compiled executables to the Merlin root directory as ``sharpgen.exe``.
+
+For more granular control and additional configuration options, use the ``windows/x64/csharp/misc/SharpGen`` module.
+
+SharpGen is git a submodule in the ``data/src/cobbr/SharpGen`` directory. From this directory, run the ``dotnet build -c release`` command to build the ``SharpGen.dll`` executable.
+
+The ``sharpgen`` command is executed as: ``shaprgen <code> [<spawnto path> <spawnto args>]``
+
+The ``code`` positional argument is the .NET code you want to compile and execute. All code is automatically wraped in ``Console.WriteLine();`` and it does not need to be included again. All other arguments are optional. The ``<spawnto path>`` argument is the process that will be started on the target and where the shellcode will be injected and executed. If a ``<spawnto path>`` is not provided, ``C:\WIndows\System32\dllhost.exe`` will be used. The ``<spawnto args>`` value is used as an argument when starting the spawnto process.
+
+.. note::
+    Use ``\`` to escape any characters inside of the code argument and use quotes to enclose the entire code argument (e.g., ``"new Tokens().MakeToken(\"RAstley\", \"\", \"P@ssword\")"``)
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sharpgen "new SharpSploit.Credentials.Tokens().GetSystem()"
+    [-] Created job oeOBXfBuPS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Results for c1090dbc-f2f7-4d90-a241-86e0c0217786 job oeOBXfBuPS
+
+    Getting system...
+    Impersonate NT AUTHORITY\SYSTEM...
+    Processes for NT AUTHORITY\SYSTEM: 25
+    Attempting to impersonate: NT AUTHORITY\SYSTEM
+    Attempting to impersonate: NT AUTHORITY\SYSTEM
+    Impersonated: NT AUTHORITY\SYSTEM
+    True
 
 shell
 -----
@@ -673,9 +717,11 @@ upload
 
 The ``upload`` command is used to upload a file *from* the Merlin server *to* the host where the Merlin agent is running. The command is called by proving the location of the file on the Merlin server followed by the location to save the file on the host where the Merlin agent is running.
 
-**NOTE:** Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
+.. note::
+    Because ``\`` is used to escape a character, file paths require two (e.g., ``C:\\Windows``)
 
-**NOTE:** Enclose file paths containing a space with quotation marks (e.g.,. ``"C:\\Windows\\Program Files\\"``)
+.. note::
+    Enclose file paths containing a space with quotation marks (e.g.,. ``"C:\\Windows\\Program Files\\"``)
 
 .. code-block:: text
 

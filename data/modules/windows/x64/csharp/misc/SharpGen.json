@@ -24,9 +24,12 @@
       {"name": "source-file", "value": "", "required": false, "flag": "-s", "description":"The source code to compile"},
       {"name": "class-name", "value": "", "required": false, "flag": "-c", "description":"The name of the class to be generated"},
       {"name": "confuse", "value": "", "required": false, "flag": "--confuse", "description":"The ConfuserEx ProjectFile configuration"},
-      {"name": "code", "value": "Console.WriteLine(Mimikatz.LogonPasswords());", "required": false, "flag": "", "description":"CSharp code to compile"}
+      {"name": "code", "value": "Console.WriteLine(Mimikatz.LogonPasswords());", "required": false, "flag": "", "description":"CSharp code to compile"},
+      {"name": "verbose", "value": "", "required": false, "flag": "", "description":"Show dotnet compilation output"},
+      {"name": "spawnto", "value":  "C:\\WIndows\\System32\\dllhost.exe", "required":  true, "flag": "", "description": "The file path to the executable that will be spawned and the shellcode will be injected into"},
+      {"name": "args", "value":  "", "required":  false, "flag": "", "description": "Arguments for the spawnto process. They will actually be used"}
     ],
-    "description": "SharpGen is a .NET Core console application that utilizes the Rosyln C# compiler to quickly cross-compile .NET Framework console applications or libraries.\r\n\tGitHub: https://github.com/cobbr/SharpGen\r\n\tIntroductory blog post: https://cobbr.io/SharpGen.html",
-    "notes": "This module is based on Ryan Cobb's SharpGen projects at https://github.com/cobbr/SharpGen.\r\n\t.NET core 2.1 must ALREADY be installed on the Merlin server: https://dotnet.microsoft.com/download"
+    "description": "SharpGen is a .NET Core console application that utilizes the Rosyln C# compiler to quickly cross-compile .NET Framework console applications or libraries.\r\n\tGitHub: https://github.com/cobbr/SharpGen\r\n\tIntroductory blog post: https://cobbr.io/SharpGen.html.\r\n\tThe generated .NET assembly will be converted to shellcode and executed on target host in the spawnto process.",
+    "notes": "This module is based on Ryan Cobb's SharpGen projects at https://github.com/cobbr/SharpGen.\r\n\t.NET CORE 2.1 SDK must ALREADY be installed on the Merlin server: https://dotnet.microsoft.com/download/dotnet-core/2.1.\r\n\tThe SharpGen DLL must be built ahead of time. This can be done by issuing the 'dotnet build -c release' command from the 'data/src/cobbr/SharpGen' directory to build the `SharpGen.dll` executable.\r\n\tSharpGen can be run on other operating systems such as Linux and macOS.\r\n\tView the SharpSploit API reference for additional commands at: https://sharpsploit.cobbr.io/api/index.html"
   }
 }

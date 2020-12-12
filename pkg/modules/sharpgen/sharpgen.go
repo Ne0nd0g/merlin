@@ -22,25 +22,25 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package sharpgen
 
 import (
+	// standard
+	"encoding/base64"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 )
 
 // Parse is the initial entry point for all extended modules. All validation checks and processing will be performed here
 // The function input types are limited to strings and therefore require additional processing
 func Parse(options map[string]string) ([]string, error) {
-
-	// Check to make sure enough arguments were received
-	if len(options) != 13 {
-		return nil, fmt.Errorf("14 arguments were expected, %d were provided", len(options))
-	}
-
 	// Verify the expected options are present
-	opts := []string{"dotnetbin", "sharpgenbin", "help", "file", "dotnet", "output-kind", "platform", "no-optimization", "assembly-name", "source-file", "class-name", "confuse", "code"}
+	opts := []string{"dotnetbin", "sharpgenbin", "help", "file", "dotnet", "output-kind", "platform", "no-optimization", "assembly-name", "source-file", "class-name", "confuse", "code", "verbose", "spawnto", "args"}
 
 	for _, opt := range opts {
 		if _, ok := options[opt]; !ok {
@@ -48,118 +48,204 @@ func Parse(options map[string]string) ([]string, error) {
 		}
 	}
 
-	// Check 'dotnetbin' argument first
-	_, errStat := os.Stat(options["dotnetbin"])
-	// Make sure it exists
-	if os.IsNotExist(errStat) {
-		// Check to see if it is in the PATH
-		_, errDotNet := exec.LookPath(options["dotnetbin"])
-		if errDotNet != nil {
-			return nil, fmt.Errorf("unable to find dotnet core executable %s\r\nVisit https://dotnet.microsoft.com/download", options["dotnetbin"])
-		}
-	}
-
-	// Check that the SharpGen binary exists
-	// TODO Build SharpGen binary if it isn't there
-	if path.IsAbs(options["sharpgenbin"]) {
-		s, errA := os.Stat(options["sharpgenbin"])
-		if os.IsExist(errA) {
-			return nil, fmt.Errorf("the provided absoultue filepath does not exist: %s\r\n%s\r\nBuild SharpGen from it's source directory with: dotnet build -c release", options["sharpgenbin"], errA)
-		}
-		// Check file permissions
-		if s.Mode()&0111 == 0 {
-			return nil, fmt.Errorf("the %s file does not have execute permissions: %s", options["sharpgenbin"], s.Mode().Perm())
-		}
-	} else {
-		dll := core.CurrentDir
-		s, errDLL := os.Stat(path.Join(dll, options["sharpgenbin"]))
-		if os.IsNotExist(errDLL) {
-			return nil, fmt.Errorf("unable to find SharpGen executable %s\r\n%s\r\nBuild SharpGen from it's source directory with: dotnet build -c release", options["sharpgenbin"], errDLL)
-		}
-		// Check file permissions
-		if s.Mode()&0111 == 0 {
-			return nil, fmt.Errorf("the %s file does not have execute permissions: %s", options["sharpgenbin"], s.Mode().Perm())
-		}
-	}
-
-	// Parse options for set arguments
-	args := []string{options["sharpgenbin"]}
+	var sharpGenConfig Config
 
 	// Help flag
 	if strings.ToLower(options["help"]) == "true" {
-		args = append(args, "--help")
-	}
-
-	// Output file flag
-	args = append(args, "--file", options["file"])
-
-	// dotnet version; If blank use the default
-	if options["dotnet"] != "" {
-		args = append(args, "--dotnet-framework", options["dotnet"])
-	}
-
-	// OutputKind
-	if options["output-kind"] != "" {
-		args = append(args, "--output-kind", options["output-kind"])
-	}
-
-	// Platform
-	if options["platform"] != "" {
-		args = append(args, "--platform", options["platform"])
+		sharpGenConfig.Help = true
 	}
 
 	// No Optimization
-	if options["no-optimization"] != "" {
-		args = append(args, "--no-optimization", options["no-optimization"])
+	if options["no-optimization"] == "true" {
+		sharpGenConfig.Optimization = true
 	}
 
-	// Assembly Name
-	if options["assembly-name"] != "" {
-		args = append(args, "--assembly-name", options["assembly-name"])
+	// Verbose
+	if options["verbose"] == "true" {
+		sharpGenConfig.Verbose = true
 	}
 
 	// Source File
 	if options["source-file"] != "" {
 		// Check to make sure the file is there
-		if _, errSource := os.Stat(options["source-file"]); os.IsNotExist(errSource) {
+		_, errSource := os.Stat(options["source-file"])
+		if os.IsNotExist(errSource) {
 			return nil, fmt.Errorf("unable to find source-file: %s\r\n%s", options["source-file"], errSource)
 		}
-		args = append(args, "--source-file", options["source-file"])
-	}
-
-	// Class Name
-	if options["class-name"] != "" {
-		args = append(args, "--class-name", options["class-name"])
+		sharpGenConfig.SourceCode = options["source-file"]
 	}
 
 	// ConfuserEx project file
 	if options["confuse"] != "" {
 		// Check to make sure the file is there
-		if _, errConfuse := os.Stat(options["confuse"]); os.IsNotExist(errConfuse) {
+		_, errConfuse := os.Stat(options["confuse"])
+		if os.IsNotExist(errConfuse) {
 			return nil, fmt.Errorf("unable to find ConfuserEx ProjectFile: %s\r\n%s", options["confuse"], errConfuse)
 		}
-		args = append(args, "--confuse", options["confuse"])
+		sharpGenConfig.Confuse = options["confuse"]
 	}
 
-	// Inline code; This is a positional argument
-	if (options["code"] != "") && (options["source-file"] == "") {
-		args = append(args, options["code"])
+	// Output file flag
+	dir, _ := filepath.Split(options["file"])
+	if dir == "" {
+		sharpGenConfig.OutputFile = filepath.Join(core.CurrentDir, options["file"])
+	} else {
+		sharpGenConfig.OutputFile = options["file"]
+	}
+
+	sharpGenConfig.DotNetVersion = options["dotnet"]       // dotnet version; If blank use the default
+	sharpGenConfig.OutputKind = options["output-kind"]     // OutputKind
+	sharpGenConfig.Platform = options["platform"]          // Platform
+	sharpGenConfig.AssemblyName = options["assembly-name"] // Assembly Name
+	sharpGenConfig.ClassName = options["class-name"]       // Class Name
+	sharpGenConfig.InlineCode = options["code"]            // Inline code; This is a positional argument
+	sharpGenConfig.SharpGenBin = options["sharpgenbin"]    // The location of SharpGen.dll
+	sharpGenConfig.DotNetBin = options["dotnetbin"]        // Location of the `dotnet` Core 2.1 SDK executable
+
+	// Compile application and get bytes
+	err := Generate(&sharpGenConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Use Donut to turn .NET program into shellcode
+	donutConfig := donut.GetDonutDefaultConfig()
+	donutConfig.DotNetMode = true
+	donutConfig.ExitOpt = 2
+	donutConfig.Type = 2 //DONUT_MODULE_NET_EXE = 2; .NET EXE. Executes Main if no class and method provided
+	donutConfig.Runtime = "v4.0.30319"
+	donutConfig.Entropy = 3
+	donutConfig.Parameters = "" // TODO add module option for executable arguments when running
+
+	// Convert assembly into shellcode with donut
+	donutBuffer, err := donut.BytesFromConfig(sharpGenConfig.OutputFile, donutConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error turning assembly into shellcode bytes with donut:\r\n%s", err)
+	}
+
+	return []string{"CreateProcess", base64.StdEncoding.EncodeToString(donutBuffer.Bytes()), options["spawnto"], options["args"]}, nil
+}
+
+// Generate uses .NET core to compile source code and return the assembly as bytes
+func Generate(config *Config) error {
+	// Check 'dotnetbin' argument first
+	_, errStat := os.Stat(config.DotNetBin)
+	// Make sure it exists
+	if os.IsNotExist(errStat) {
+		// Check to see if it is in the PATH
+		p, errDotNet := exec.LookPath(config.DotNetBin)
+		if errDotNet != nil {
+			return fmt.Errorf("unable to find dotnet core executable %s\r\nEnsure .NET Core 2.1 SDK is installed: https://dotnet.microsoft.com/download", config.DotNetBin)
+		}
+		_, err := os.Stat(p)
+		if err != nil {
+			return fmt.Errorf("there was an error validating the dotnet executable %s:\r\n%s", p, err)
+		}
+		config.DotNetBin = p
+	}
+
+	// Check that the SharpGen binary exists
+	// TODO Build SharpGen binary if it isn't there
+	// Check the file path provided in the execute module
+	if path.IsAbs(config.SharpGenBin) {
+		_, errA := os.Stat(config.SharpGenBin)
+		if errA != nil {
+			return fmt.Errorf("the provided SharpGen filepath does not exist: %s\r\n%s\r\nBuild SharpGen from it's source directory with: dotnet build -c release", config.SharpGenBin, errA)
+		}
+	} else {
+		// Check Merlin's root directory
+		dll := core.CurrentDir
+		p := path.Join(dll, config.SharpGenBin)
+		_, errDLL := os.Stat(p)
+		if os.IsNotExist(errDLL) {
+			return fmt.Errorf("unable to find SharpGen executable %s\r\n%s\r\nBuild SharpGen from it's source directory with: dotnet build -c release", config.SharpGenBin, errDLL)
+		}
+		config.SharpGenBin = p
+	}
+
+	// Build arguments
+	args := []string{config.SharpGenBin}
+
+	if config.Help {
+		args = append(args, "--help")
+	} else {
+		// File
+		if config.OutputFile == "" {
+			return fmt.Errorf("an output file name must be provided")
+		}
+		args = append(args, "--file", config.OutputFile)
+
+		// OutputKind
+		if config.OutputKind != "" {
+			args = append(args, "--output-kind", config.OutputKind)
+		}
+
+		// Platform
+		if config.Platform != "" {
+			args = append(args, "--platform", config.Platform)
+		}
+
+		// Optimization
+		if config.Optimization {
+			args = append(args, "--no-optimization")
+		}
+
+		// Assembly Name
+		if config.AssemblyName != "" {
+			args = append(args, "--assembly-name", config.AssemblyName)
+		}
+
+		// SourceFile
+		if config.SourceCode != "" {
+			args = append(args, "--source-file", config.SourceCode)
+		}
+
+		// Class Name
+		if config.ClassName != "" {
+			args = append(args, "--class-name", config.ClassName)
+		}
+
+		// ConfuserEx
+		if config.Confuse != "" {
+			args = append(args, "--confuse", config.Confuse)
+		}
+
+		// Inline Code
+		if config.InlineCode != "" && config.SourceCode == "" {
+			args = append(args, config.InlineCode)
+		}
 	}
 
 	// Execute SharpGen
-	cmd := exec.Command(options["dotnetbin"], args...)
+	cmd := exec.Command(config.DotNetBin, args...)
 	// TODO Need to send back a messages.UserMessage
-	if core.Verbose {
+	if config.Verbose {
 		fmt.Println(cmd.String())
 	}
-	stdoutStderr, err := cmd.CombinedOutput()
+	stdOut, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("there was an error executing SharpGen: %s", err)
+		return fmt.Errorf("there was an error executing SharpGen: %s", err)
 	}
 	// TODO Need to send back a messages.UserMessage
-	if core.Verbose {
-		fmt.Println(fmt.Sprintf("%s", stdoutStderr))
+	if config.Verbose {
+		fmt.Println(fmt.Sprintf("%s", stdOut))
 	}
+	return nil
+}
 
-	return nil, nil
+type Config struct {
+	DotNetBin     string // Location of the `dotnet` executable
+	SharpGenBin   string // Location of the SharpGen DLL
+	DotNetVersion string // The Dotnet Framework version to target (net35 or net40)
+	OutputFile    string // Location where the generated .NET assembly will be save
+	OutputKind    string // The OutputKind to use (dll or console)
+	Platform      string // The Platform to use (AnyCpy, x86, or x64)
+	AssemblyName  string // The name of the assembly to be generated
+	SourceCode    string // The source code to compile
+	InlineCode    string // CSharp code to compile
+	ClassName     string // The name of the class to be generated
+	Optimization  bool   // Don't use source code optimization
+	Confuse       string // The ConfuserEx ProjectFile configuration
+	Verbose       bool   // Enable verbose output to STDOUT
+	Help          bool   // Print Help
 }

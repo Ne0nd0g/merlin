@@ -10,8 +10,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Added `windows/x64/go/exec/createProcess` extended module with redirected STDOUT/STDERR over anonymous pipes
 - Added `windows/x64/go/exec/donut` extended module that leveraged [go-dounut](https://github.com/binject/go-donut)
-- Added `execute-assembly` and `execute-pe` commands to Agent menu
-- Added `ExecuteAssembly` and `ExecutePE` to Agent API
+- Added `windows/x64/csharp/misc/SharpGen` extended module that leverages [SharpGen](https://github.com/cobbr/SharpGen)
+  - Requires [.NET Core 2.1 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.1) to be manually installed by the operator
+- Added `execute-assembly`, `execute-pe`, and `sharpgen` commands to Agent menu
+- Added `ExecuteAssembly`, `ExecutePE`, and `SharpGen` functions to Agent API
 
 ### Changes
 
