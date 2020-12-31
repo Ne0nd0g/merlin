@@ -110,10 +110,9 @@ func Parse(options map[string]string) ([]string, error) {
 
 	// Use Donut to turn .NET program into shellcode
 	donutConfig := donut.GetDonutDefaultConfig()
-	donutConfig.DotNetMode = true
 	donutConfig.ExitOpt = 2
 	donutConfig.Type = 2 //DONUT_MODULE_NET_EXE = 2; .NET EXE. Executes Main if no class and method provided
-	donutConfig.Runtime = "v4.0.30319"
+	//donutConfig.Runtime = "v4.0.30319"
 	donutConfig.Entropy = 3
 	donutConfig.Parameters = "" // TODO add module option for executable arguments when running
 

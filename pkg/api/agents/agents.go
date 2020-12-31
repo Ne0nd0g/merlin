@@ -135,10 +135,9 @@ func ExecuteAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 	// Build Donut Config
 	config := donut.GetDonutDefaultConfig()
-	config.DotNetMode = true
 	config.ExitOpt = 2
 	config.Type = 2 //DONUT_MODULE_NET_EXE = 2; .NET EXE. Executes Main if no class and method provided
-	config.Runtime = "v4.0.30319"
+	//config.Runtime = "v4.0.30319"
 	config.Entropy = 3
 	config.Parameters = params
 
