@@ -18,7 +18,7 @@ import (
 // Parse is the initial entry point for all extended modules. All validation checks and processing will be performed here
 // The function input types are limited to strings and therefore require additional processing
 func Parse(options map[string]string) ([]string, error) {
-	arguments := []string{"arch", "bypass", "class", "domain", "entropy", "format", "method", "name", "output", "parameters", "runtime", "server", "entrypoint", "unicode", "exit", "thread", "compress", "dotnet", "sourcefile", "spawnto", "args", "verbose"}
+	arguments := []string{"arch", "bypass", "class", "domain", "entropy", "format", "method", "name", "output", "parameters", "runtime", "server", "entrypoint", "unicode", "exit", "thread", "compress", "sourcefile", "spawnto", "args", "verbose"}
 
 	for _, argument := range arguments {
 		if _, ok := options[argument]; !ok {
@@ -202,11 +202,6 @@ func GetDonutConfig(options map[string]string) (*donut.DonutConfig, error) {
 		config.Compress = 4 // Xpress Huffman
 	default:
 		return nil, fmt.Errorf("invalid donut compress argument: %s", options["compress"])
-	}
-
-	// .NET Mode, set true for .NET exe and DLL files (autodetect not implemented)
-	if strings.ToLower(options["dotnet"]) == "true" {
-		config.DotNetMode = true
 	}
 
 	// Verify the input file exists
