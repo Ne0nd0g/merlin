@@ -18,48 +18,47 @@
 package messages
 
 import (
+	// Standard
 	"crypto/rsa"
 	"encoding/gob"
+	"fmt"
+
+	// 3rd Party
 	"github.com/satori/go.uuid"
 )
 
 // init registers message types with gob that are an interface for Base.Payload
 func init() {
-	gob.Register(AgentControl{})
-	gob.Register(AgentInfo{})
-	gob.Register(CmdPayload{})
-	gob.Register(CmdResults{})
-	gob.Register(FileTransfer{})
 	gob.Register(KeyExchange{})
-	gob.Register(Module{})
-	gob.Register(NativeCmd{})
-	gob.Register(Shellcode{})
+	gob.Register(AgentInfo{})
 	gob.Register(SysInfo{})
 }
+
+const (
+
+	// To Server
+	CHECKIN     = 1 // StatusCheckIn
+	OPAQUE      = 2
+	JOBS        = 3
+	KEYEXCHANGE = 4
+
+	// To Agent
+	IDLE = 10
+)
 
 // Base is the base JSON Object for HTTP POST payloads
 type Base struct {
 	Version float32     `json:"version"`
 	ID      uuid.UUID   `json:"id"`
-	Type    string      `json:"type"`
+	Type    int         `json:"type"`
 	Payload interface{} `json:"payload,omitempty"`
 	Padding string      `json:"padding"`
 	Token   string      `json:"token,omitempty"`
 }
 
-// FileTransfer is the JSON payload to transfer files between the server and agent
-type FileTransfer struct {
-	FileLocation string `json:"dest"`
-	FileBlob     string `json:"blob"`
-	IsDownload   bool   `json:"download"`
-	Job          string `json:"job"`
-}
-
-// CmdPayload is the JSON payload for commands to execute on an agent
-type CmdPayload struct {
-	Command string `json:"executable"`
-	Args    string `json:"args"`
-	Job     string `json:"job"`
+// KeyExchange is a JSON payload used to exchange public keys for encryption
+type KeyExchange struct {
+	PublicKey rsa.PublicKey `json:"publickey"`
 }
 
 // SysInfo is a JSON payload containing information about the system where the agent is running
@@ -71,22 +70,6 @@ type SysInfo struct {
 	HostName     string   `json:"hostname,omitempty"`
 	Pid          int      `json:"pid,omitempty"`
 	Ips          []string `json:"ips,omitempty"`
-}
-
-// CmdResults is a JSON payload that contains the results of an executed command from an agent
-type CmdResults struct {
-	Job     string `json:"job"`
-	Stdout  string `json:"stdout"`
-	Stderr  string `json:"stderr"`
-	Padding string `json:"padding"` // Padding to help evade detection
-}
-
-// AgentControl is a JSON payload to send control messages to the agent (i.e. kill or die)
-type AgentControl struct {
-	Job     string `json:"job"`
-	Command string `json:"command"`
-	Args    string `json:"args,omitempty"`
-	Result  string `json:"result"`
 }
 
 // AgentInfo is a JSON payload containing information about the agent and its configuration
@@ -104,31 +87,20 @@ type AgentInfo struct {
 	JA3           string  `json:"ja3,omitempty"`
 }
 
-// Shellcode is a JSON payload containing shellcode and the method for execution
-type Shellcode struct {
-	Method string `json:"method"`
-	Bytes  string `json:"bytes"` // Base64 string of shellcode bytes
-	Job    string `json:"job"`
-	PID    uint32 `json:"pid,omitempty"` // Process ID for remote injection
-}
-
-// Module is a JSON payload used to send module directives.
-type Module struct {
-	Job     string   `json:"job"`
-	Command string   `json:"command"`
-	Args    []string `json:"args,omitempty"`
-	Result  string   `json:"result"`
-}
-
-// NativeCmd is a JSON payload to execute commands native inside of Merlin using go instead of executing the binary
-// program on the host (i.e. ls)
-type NativeCmd struct {
-	Job     string `json:"job"`
-	Command string `json:"command"`
-	Args    string `json:"args,omitempty"`
-}
-
-// KeyExchange is a JSON payload used to exchange public keys for encryption
-type KeyExchange struct {
-	PublicKey rsa.PublicKey `json:"publickey"`
+// String returns the text representation of a message constant
+func String(messageType int) string {
+	switch messageType {
+	case KEYEXCHANGE:
+		return "KeyExchange"
+	case CHECKIN:
+		return "StatusCheckIn"
+	case JOBS:
+		return "Jobs"
+	case OPAQUE:
+		return "OPAQUE"
+	case IDLE:
+		return "Idle"
+	default:
+		return fmt.Sprintf("Invalid: %d", messageType)
+	}
 }

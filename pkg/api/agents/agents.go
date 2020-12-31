@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	// 3rd Party
 	uuid "github.com/satori/go.uuid"
@@ -33,6 +34,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
@@ -47,11 +49,25 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	} else {
 		return messages.ErrorMessage("a directory path must be provided")
 	}
-	job, err := agents.AddJob(agentID, "cd", args)
+	job, err := jobs.Add(agentID, "cd", args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
 	return messages.JobMessage(agentID, job)
+}
+
+// ClearJobs removes any jobs the queue that have been created, but NOT sent to the agent
+func ClearJobs(agentID uuid.UUID) messages.UserMessage {
+	err := jobs.Clear(agentID)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.UserMessage{
+		Level:   messages.Success,
+		Message: fmt.Sprintf("jobs cleared for agent %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)),
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
 }
 
 // CMD is used to send a command to the agent to run a command or execute a program
@@ -60,7 +76,7 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Used with `cmd` and `shell` commands as well as through "standard" modules
 func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
-		job, err := agents.AddJob(agentID, "cmd", Args[1:])
+		job, err := jobs.Add(agentID, "cmd", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -74,7 +90,7 @@ func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Args[1] = file path to download
 func Download(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) >= 2 {
-		job, err := agents.AddJob(agentID, "download", []string{Args[1]})
+		job, err := jobs.Add(agentID, "download", []string{Args[1]})
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -140,7 +156,7 @@ func ExecuteAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	}
 
 	// Add job to the Agent's queue
-	job, err := agents.AddJob(agentID, j[0], j[1:])
+	job, err := jobs.Add(agentID, j[0], j[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -200,7 +216,7 @@ func ExecutePE(agentID uuid.UUID, Args []string) messages.UserMessage {
 	}
 
 	// Add job to the Agent's queue
-	job, err := agents.AddJob(agentID, j[0], j[1:])
+	job, err := jobs.Add(agentID, j[0], j[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -209,7 +225,7 @@ func ExecutePE(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 // ExecuteShellcode calls the corresponding shellcode module to create a job that executes the provided shellcode
 // Args[0] = "execute-shellcode
-// Args[1] = Shellcode execution method [self, remote, retlcreateuserthread, userapc]
+// Args[1] = Shellcode execution method [self, remote, rtlcreateuserthread, userapc]
 func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
 		options := make(map[string]string)
@@ -251,7 +267,7 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 				m := fmt.Sprintf("there was an error parsing the shellcode:\r\n%s", errSh.Error())
 				return messages.ErrorMessage(m)
 			}
-			job, err := agents.AddJob(agentID, sh[0], sh[1:])
+			job, err := jobs.Add(agentID, sh[0], sh[1:])
 			if err != nil {
 				return messages.ErrorMessage(err.Error())
 			}
@@ -261,10 +277,111 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
 }
 
+func GetAgents() (agentList []uuid.UUID) {
+	for id, _ := range agents.Agents {
+		agentList = append(agentList, id)
+	}
+	return
+}
+
+func GetAgentsRows() (header []string, rows [][]string) {
+	header = []string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"}
+	for _, agent := range agents.Agents {
+		// Convert proto (i.e. h2 or hq) to user friendly string
+		var proto string
+		switch agent.Proto {
+		case "http":
+			proto = "HTTP/1.1 clear-text"
+		case "https":
+			proto = "HTTP/1.1 over TLS"
+		case "h2c":
+			proto = "HTTP/2 clear-text"
+		case "h2":
+			proto = "HTTP/2 over TLS"
+		case "http3":
+			proto = "HTTP/3 (HTTP/2 over QUIC)"
+		default:
+			proto = fmt.Sprintf("Unknown: %s", agent.Proto)
+		}
+		status, _ := GetAgentStatus(agent.ID)
+		rows = append(rows, []string{agent.ID.String(), agent.Platform + "/" + agent.Architecture, agent.UserName,
+			agent.HostName, proto, status})
+	}
+	return
+}
+
+func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
+	var rows [][]string
+	a, ok := agents.Agents[agentID]
+	if !ok {
+		return rows, messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
+	}
+
+	status, message := GetAgentStatus(agentID)
+	if message.Error {
+		return rows, message
+	}
+
+	rows = [][]string{
+		{"Status", status},
+		{"ID", a.ID.String()},
+		{"Platform", a.Platform},
+		{"Architecture", a.Architecture},
+		{"UserName", a.UserName},
+		{"User GUID", a.UserGUID},
+		{"Hostname", a.HostName},
+		{"Process ID", strconv.Itoa(a.Pid)},
+		{"IP", fmt.Sprintf("%v", a.Ips)},
+		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
+		{"Last Check In", a.StatusCheckIn.Format(time.RFC3339)},
+		{"Agent Version", a.Version},
+		{"Agent Build", a.Build},
+		{"Agent Wait Time", a.WaitTime},
+		{"Agent Wait Time Skew", strconv.FormatInt(a.Skew, 10)},
+		{"Agent Message Padding Max", strconv.Itoa(a.PaddingMax)},
+		{"Agent Max Retries", strconv.Itoa(a.MaxRetry)},
+		{"Agent Failed Check In", strconv.Itoa(a.FailedCheckin)},
+		{"Agent Kill Date", time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)},
+		{"Agent Communication Protocol", a.Proto},
+		{"Agent JA3 TLS Client Signature", a.JA3},
+	}
+	return rows, messages.UserMessage{}
+}
+
+// GetAgentStatus determines if the agent is active, delayed, or dead based on its last checkin time
+func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
+	var status string
+	agent, ok := agents.Agents[agentID]
+	if !ok {
+		return status, messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
+	}
+	dur, errDur := time.ParseDuration(agent.WaitTime)
+	if errDur != nil {
+		return status, messages.ErrorMessage(fmt.Sprintf("Error converting %s to a time duration: %s", agent.WaitTime, errDur))
+	}
+	if agent.StatusCheckIn.Add(dur).After(time.Now()) {
+		status = "Active"
+	} else if agent.StatusCheckIn.Add(dur * time.Duration(agent.MaxRetry+1)).After(time.Now()) { // +1 to account for skew
+		status = "Delayed"
+	} else {
+		status = "Dead"
+	}
+	return status, messages.UserMessage{}
+}
+
+// GetJobsForAgent enumerates all jobs and their status
+func GetJobsForAgent(agentID uuid.UUID) ([][]string, messages.UserMessage) {
+	jobs, err := jobs.GetTableActive(agentID)
+	if err != nil {
+		return nil, messages.ErrorMessage(err.Error())
+	}
+	return jobs, messages.UserMessage{}
+}
+
 // Kill instructs the agent to quit running
 func Kill(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
-		job, err := agents.AddJob(agentID, "kill", Args[0:])
+		job, err := jobs.Add(agentID, "kill", Args[0:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -279,7 +396,7 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
 		args = []string{Args[1]}
 	}
-	job, err := agents.AddJob(agentID, "ls", args)
+	job, err := jobs.Add(agentID, "ls", args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -288,17 +405,30 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 // PWD is used to print the Agent's current working directory
 func PWD(agentID uuid.UUID, Args []string) messages.UserMessage {
-	job, err := agents.AddJob(agentID, "pwd", Args)
+	job, err := jobs.Add(agentID, "pwd", Args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
 	return messages.JobMessage(agentID, job)
 }
 
+// Remove deletes the agent from the server
+func Remove(agentID uuid.UUID) messages.UserMessage {
+	err := agents.RemoveAgent(agentID)
+	if err == nil {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Agent %s was removed from the server at %s", agentID, time.Now().UTC().Format(time.RFC3339)),
+		}
+	}
+	return messages.ErrorMessage(err.Error())
+}
+
 // SetJA3 is used to change the Agent's JA3 signature
 func SetJA3(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
-		job, err := agents.AddJob(agentID, "ja3", Args[1:])
+		job, err := jobs.Add(agentID, "ja3", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -316,7 +446,7 @@ func SetKillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
 			m = m + "\r\nKill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995"
 			return messages.ErrorMessage(m)
 		}
-		job, err := agents.AddJob(agentID, "killdate", Args[1:])
+		job, err := jobs.Add(agentID, "killdate", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -328,7 +458,7 @@ func SetKillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
 // SetMaxRetry configures the amount of times an Agent will try to checkin before it quits
 func SetMaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
-		job, err := agents.AddJob(agentID, "maxretry", Args[1:])
+		job, err := jobs.Add(agentID, "maxretry", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -340,7 +470,7 @@ func SetMaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 // SetPadding configures the maxium size for the random amount of padding added to each message
 func SetPadding(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
-		job, err := agents.AddJob(agentID, "padding", Args[1:])
+		job, err := jobs.Add(agentID, "padding", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -352,7 +482,7 @@ func SetPadding(agentID uuid.UUID, Args []string) messages.UserMessage {
 // SetSleep configures the Agent's sleep time between checkins
 func SetSleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
-		job, err := agents.AddJob(agentID, "sleep", Args[1:])
+		job, err := jobs.Add(agentID, "sleep", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -364,7 +494,7 @@ func SetSleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 // SetSkew configures the amount of skew an Agent uses to randomize checkin times
 func SetSkew(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
-		job, err := agents.AddJob(agentID, "skew", Args[1:])
+		job, err := jobs.Add(agentID, "skew", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -425,7 +555,7 @@ func SharpGen(agentID uuid.UUID, Args []string) messages.UserMessage {
 	}
 
 	// Add job to the Agent's queue
-	job, err := agents.AddJob(agentID, j[0], j[1:])
+	job, err := jobs.Add(agentID, j[0], j[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -443,7 +573,7 @@ func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 			m := fmt.Sprintf("there was an error accessing the source upload file:\r\n%s", errF.Error())
 			return messages.ErrorMessage(m)
 		}
-		job, err := agents.AddJob(agentID, "upload", Args[1:3])
+		job, err := jobs.Add(agentID, "upload", Args[1:3])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}

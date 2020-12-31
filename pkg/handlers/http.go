@@ -36,8 +36,10 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
 	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
@@ -148,12 +150,15 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		//w.Header().Set("Content-Type", "application/octet-stream")
 
 		// Validate JWT using HTTP interface JWT key; Given to authenticated agents by server
+		if core.Verbose {
+			message("note", "Checking to see if authorization JWT was signed by server's interface key...")
+		}
 		agentID, errValidate = util.ValidateJWT(strings.Split(token, " ")[1], ctx.JWTKey)
 		// If agentID was returned, then message contained a JWT encrypted with the HTTP interface key
 		if (errValidate != nil) && (agentID == uuid.Nil) { // Unauthenticated Agents
 			if core.Verbose {
 				message("warn", errValidate.Error())
-				message("note", "trying again with interface PSK")
+				message("note", "Authorization JWT not signed with server's interface key, trying again with PSK...")
 			}
 			// Validate JWT using interface PSK; Used by unauthenticated agents
 			hashedKey := sha256.Sum256([]byte(ctx.PSK))
@@ -162,7 +167,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			if errValidate != nil {
 				// Check to see if the request matches traffic that could be an orphaned agent
 				// An orphaned agent will have a JWT encrypted with server's JWT key, not the PSK
-				if len(token) == 402 && r.ContentLength > 409 {
+				if len(token) == 402 && r.ContentLength > 390 {
 					m := fmt.Sprintf("Orphaned agent request detected from %s, instructing agent to OPAQUE authenticate", r.RemoteAddr)
 					message("note", m)
 					logging.Server(m)
@@ -170,13 +175,14 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				if core.Verbose {
+					message("note", "Authorization JWT not signed with PSK, returning 404...")
 					message("warn", errValidate.Error())
 				}
 				w.WriteHeader(404)
 				return
 			}
 			if core.Debug {
-				message("info", "Unauthenticated JWT")
+				message("info", "UnAuthenticated JWT")
 			}
 
 			// Decrypt the HTTP payload, a JWE, using interface PSK
@@ -187,29 +193,25 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 					message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", k))
 				}
 				if core.Verbose {
-					message("note", fmt.Sprintf("Received %s message, decrypted JWE with interface PSK", k.Type))
+					message("note", fmt.Sprintf("Received %s message, decrypted JWE with interface PSK", messages.String(k.Type)))
 				}
 
 				messagePayloadBytes := new(bytes.Buffer)
 
 				// Allowed unauthenticated message types w/ PSK signed JWT and PSK encrypted JWT
 				switch k.Type {
-				case "AuthInit":
-					serverAuthInit, err := agents.OPAQUEAuthenticateInit(k)
+				// OPAQUE_REG_INIT
+				// OPAQUE_REG_COMPLETE
+				// OPAQUE_AUTH_INIT
+				case messages.OPAQUE:
+					//serverAuthInit, err := agents.OPAQUEAuthenticateInit(k)
+					serverAuthInit, err := opaque.UnAuthHandler(agentID, k.Payload.(opaque.Opaque), ctx.OpaqueKey)
 					if err != nil {
 						logging.Server(err.Error())
 						message("warn", err.Error())
 						w.WriteHeader(404)
 						return
 					}
-					if serverAuthInit.Type == "ReRegister" {
-						m := fmt.Sprintf("Un-Registered agent %s sent OPAQUE authentication, instructing agent to OPAQUE register", agentID)
-						message("note", m)
-						logging.Server(m)
-					} else {
-						logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
-					}
-
 					// Encode return message into a gob
 					errAuthInit := gob.NewEncoder(messagePayloadBytes).Encode(serverAuthInit)
 					if errAuthInit != nil {
@@ -219,46 +221,8 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 						w.WriteHeader(404)
 						return
 					}
-				case "RegInit":
-					serverRegInit, err := agents.OPAQUERegistrationInit(k, ctx.OpaqueKey)
-					if err != nil {
-						logging.Server(err.Error())
-						message("warn", err.Error())
-						w.WriteHeader(404)
-						return
-					}
-					logging.Server(fmt.Sprintf("Received new agent OPAQUE user registration initialization from %s", agentID))
-
-					// Encode return message into a gob
-					errRegInit := gob.NewEncoder(messagePayloadBytes).Encode(serverRegInit)
-					if errRegInit != nil {
-						m := fmt.Sprintf("there was an error encoding the return message into a gob:\r\n%s", errRegInit.Error())
-						logging.Server(m)
-						message("warn", m)
-						w.WriteHeader(404)
-						return
-					}
-				case "RegComplete":
-					serverRegComplete, err := agents.OPAQUERegistrationComplete(k)
-					if err != nil {
-						logging.Server(err.Error())
-						message("warn", err.Error())
-						w.WriteHeader(404)
-						return
-					}
-					logging.Server(fmt.Sprintf("Received new agent OPAQUE user registration complete from %s", agentID))
-
-					// Encode return message into a gob
-					errRegInit := gob.NewEncoder(messagePayloadBytes).Encode(serverRegComplete)
-					if errRegInit != nil {
-						m := fmt.Sprintf("there was an error encoding the return message into a gob:\r\n%s", errRegInit.Error())
-						logging.Server(m)
-						message("warn", m)
-						w.WriteHeader(404)
-						return
-					}
 				default:
-					message("warn", fmt.Sprintf("invalid message type: %s for unauthenticated JWT", k.Type))
+					message("warn", fmt.Sprintf("invalid message type: %s for unauthenticated JWT", messages.String(k.Type)))
 					w.WriteHeader(404)
 					return
 				}
@@ -283,14 +247,19 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(404)
 					return
 				}
-
 				return
 			}
 			if core.Verbose {
 				message("note", "Unauthenticated JWT w/ Authenticated JWE agent session key")
 			}
 			// Decrypt the HTTP payload, a JWE, using agent session key
-			j, errDecrypt := util.DecryptJWE(jweString, agents.GetEncryptionKey(agentID))
+			ky, errKy := agents.GetEncryptionKey(agentID)
+			if errKy != nil {
+				message("warn", errKy.Error())
+				w.WriteHeader(404)
+				return
+			}
+			j, errDecrypt := util.DecryptJWE(jweString, ky)
 			if errDecrypt != nil {
 				message("warn", errDecrypt.Error())
 				w.WriteHeader(404)
@@ -306,16 +275,11 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 
 			// Allowed authenticated message with PSK JWT and JWE encrypted with derived secret
 			switch j.Type {
-			case "AuthComplete":
-				returnMessage, err = agents.OPAQUEAuthenticateComplete(j)
-				if err != nil {
-					logging.Server(fmt.Sprintf("Received new agent OPAQUE authentication from %s", agentID))
-				}
-				m := fmt.Sprintf("New authenticated agent checkin for %s from %s at %s", j.ID.String(), r.RemoteAddr, time.Now().UTC().Format(time.RFC3339))
-				message("success", m)
-				logging.Server(m)
+			// OPAQUE_AUTH_COMPLETE
+			case messages.OPAQUE:
+				returnMessage, err = opaque.Handler(agentID, j.Payload.(opaque.Opaque))
 			default:
-				message("warn", fmt.Sprintf("Invalid Activity: %s", j.Type))
+				message("warn", fmt.Sprintf("Invalid Activity: %s", messages.String(j.Type)))
 				w.WriteHeader(404)
 				return
 			}
@@ -326,7 +290,13 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Decrypt JWE
-			key = agents.GetEncryptionKey(agentID)
+			var errKey error
+			key, errKey = agents.GetEncryptionKey(agentID)
+			if errKey != nil {
+				message("warn", fmt.Sprintf("unable to get JWE encryption key:\r\n%s", errKey))
+				w.WriteHeader(404)
+				return
+			}
 
 			j, errDecrypt := util.DecryptJWE(jweString, key)
 			if errDecrypt != nil {
@@ -346,46 +316,44 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			// If both an agentID and error were returned, then the claims were likely bad and the agent needs to re-authenticate
 			if (errValidate != nil) && (agentID != uuid.Nil) {
 				message("warn", fmt.Sprintf("Agent %s connected with expired JWT. Instructing agent to re-authenticate", agentID))
-				j.Type = "ReAuthenticate"
+				j.Type = messages.OPAQUE
+				j.Payload = opaque.Opaque{
+					Type: opaque.ReAuthenticate,
+				}
 			}
 
 			// Authenticated and authorized message types
 			switch j.Type {
-			case "KeyExchange":
-				returnMessage, err = agents.KeyExchange(j)
-			case "StatusCheckIn":
-				returnMessage, err = agents.StatusCheckIn(j)
-			case "CmdResults":
-				err = agents.JobResults(j)
-			case "AgentInfo":
-				err = agents.UpdateInfo(j)
-			case "FileTransfer":
-				err = agents.FileTransfer(j)
-			case "ReAuthenticate":
-				returnMessage, err = agents.OPAQUEReAuthenticate(agentID)
+			case messages.JOBS:
+				returnMessage, err = jobs.Handler(j)
+			case messages.CHECKIN:
+				returnMessage, err = jobs.Idle(j.ID)
+			//case messages.OPAQUE_RE_AUTH:
+			//returnMessage, err = agents.OPAQUEReAuthenticate(agentID)
 			default:
-				err = fmt.Errorf("invalid message type: %s", j.Type)
+				err = fmt.Errorf("invalid message type: %d", j.Type)
 			}
 		}
 
 		if err != nil {
-			m := fmt.Sprintf("There was an error during while handling a message from agent %s:\r\n%s", agentID, err.Error())
+			m := fmt.Sprintf("There was an error handling a message from agent %s:\r\n%s", agentID, err.Error())
 			logging.Server(m)
 			message("warn", m)
 			w.WriteHeader(404)
 			return
 		}
 
-		if returnMessage.Type == "" {
-			returnMessage.Type = "ServerOk"
+		if returnMessage.Type == 0 {
+			returnMessage.Type = messages.IDLE
 			returnMessage.ID = agentID
 		}
 		if core.Verbose {
-			message("note", fmt.Sprintf("Sending "+returnMessage.Type+" message type to agent"))
+			message("note", fmt.Sprintf("Sending %s message type to agent", messages.String(returnMessage.Type)))
 		}
 
 		// Get JWT to add to message.Base for all messages except re-authenticate messages
-		if returnMessage.Type != "ReAuthenticate" {
+		// OPAQUE_RE_AUTH
+		if returnMessage.Type != messages.OPAQUE {
 			jsonWebToken, errJWT := util.GetJWT(agentID, ctx.JWTKey)
 			if errJWT != nil {
 				message("warn", errJWT.Error())
@@ -399,14 +367,37 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		returnMessageBytes := new(bytes.Buffer)
 		errReturnMessageBytes := gob.NewEncoder(returnMessageBytes).Encode(returnMessage)
 		if errReturnMessageBytes != nil {
-			m := fmt.Sprintf("there was an error encoding the %s return message for agent %s into a GOB:\r\n%s", returnMessage.Type, agentID, errReturnMessageBytes.Error())
+			m := fmt.Sprintf("there was an error encoding the %s return message for agent %s into a GOB:\r\n%s", messages.String(returnMessage.Type), agentID, errReturnMessageBytes.Error())
 			logging.Server(m)
 			message("warn", m)
 			return
 		}
 
 		// Get JWE
-		key = agents.GetEncryptionKey(agentID)
+		var errKey2 error
+		key, errKey2 = agents.GetEncryptionKey(agentID)
+		if errKey2 != nil {
+			message("warn", fmt.Sprintf("unable to get JWE encryption key:\r\n%s", errKey2))
+			w.WriteHeader(404)
+			return
+		}
+
+		// Agent can't be removed until after the JWE key is obtained to encrypt the message
+		if returnMessage.Type == messages.JOBS {
+			for _, job := range returnMessage.Payload.([]jobs.Job) {
+				if job.Type == jobs.CONTROL {
+					if strings.ToLower(job.Payload.(jobs.Command).Command) == "kill" {
+						err := agents.RemoveAgent(job.AgentID)
+						if err != nil {
+							message("warn", err.Error())
+						} else {
+							message("info", fmt.Sprintf("Agent %s was removed from the server at %s", agentID, time.Now().UTC().Format(time.RFC3339)))
+						}
+					}
+				}
+			}
+		}
+
 		jwe, errJWE := core.GetJWESymetric(returnMessageBytes.Bytes(), key)
 		if errJWE != nil {
 			logging.Server(errJWE.Error())
@@ -423,19 +414,6 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			logging.Server(m)
 			message("warn", m)
 			return
-		}
-
-		// Remove the agent from the server after successfully sending the kill message
-		if returnMessage.Type == "AgentControl" {
-			if returnMessage.Payload.(messages.AgentControl).Command == "kill" {
-				err := agents.RemoveAgent(agentID)
-				if err != nil {
-					message("warn", err.Error())
-					return
-				}
-				message("info", fmt.Sprintf("Agent %s was removed from the server", agentID))
-				return
-			}
 		}
 
 	} else if r.Method == "GET" {
