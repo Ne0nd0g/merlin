@@ -14,11 +14,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Requires [.NET Core 2.1 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.1) to be manually installed by the operator
 - Added `execute-assembly`, `execute-pe`, and `sharpgen` commands to Agent menu
 - Added `ExecuteAssembly`, `ExecutePE`, and `SharpGen` functions to Agent API
+- New Jobs structure so that multiple jobs and results can be sent between client and server during a single interaction
+- Job processing checks to ensure returned results have a valid request token and had not previously completed
+- Created constants for message types for easier comparison and switching
+- Added a new `jobs` command to view created and sent jobs
+- Added a new `clear` command to remove any jobs that have not been sent to the agent
 
 ### Changes
 
 - All commands typed into the `Merlin»` are immediately parsed with [go-shellwords](https://github.com/mattn/go-shellwords)
 - Removed `go-shellwords` processing from Agent API functions CD, Download, Upload, and LS
+- Modified agent structure to contain an input and out job channel
+- Changed Agent go routine from messageHandler to function that continuously checks the job channel
+- Job results are returned when the agent checks in again, not immediately after executed
+- Moved OPAQUE functions to its own package at `pkg/opaque`
+- Reduced base message payload types to just opaque, jobs, and checkin; Jobs payload now contains all other types
+- Removed argument parsing from Agent's exec command. All parsing is done server side before being sent to the agent
+- Removed RSA key exchange since it wasn't being used for anything
+- Moved functions that output tables to the agent API that returns rows; CLI package prints them
+- Removed CLI completer functions from `pkg/agents` and implemented functionality in agent API and CLI package
 
 ## 0.9.1 - 2020-09-23
 

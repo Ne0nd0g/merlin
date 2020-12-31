@@ -24,21 +24,13 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-
-	// 3rd Party
-	"github.com/mattn/go-shellwords"
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
-func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
+func ExecuteCommand(name string, args []string) (stdout string, stderr string) {
 	var cmd *exec.Cmd
 
-	argS, errS := shellwords.Parse(arg)
-	if errS != nil {
-		return "", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", arg, errS.Error())
-	}
-
-	cmd = exec.Command(name, argS...) // #nosec G204
+	cmd = exec.Command(name, args...) // #nosec G204
 
 	out, err := cmd.CombinedOutput()
 	stdout = string(out)

@@ -33,9 +33,6 @@ import (
 
 	// Sub Repositories
 	"golang.org/x/sys/windows"
-
-	// 3rd Party
-	"github.com/mattn/go-shellwords"
 )
 
 const (
@@ -74,15 +71,10 @@ const (
 )
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
-func ExecuteCommand(name string, arg string) (stdout string, stderr string) {
+func ExecuteCommand(name string, args []string) (stdout string, stderr string) {
 	var cmd *exec.Cmd
 
-	argS, errS := shellwords.Parse(arg)
-	if errS != nil {
-		return "", fmt.Sprintf("There was an error parsing command line argments: %s\r\n%s", arg, errS.Error())
-	}
-
-	cmd = exec.Command(name, argS...)
+	cmd = exec.Command(name, args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true} //Only difference between this and agent.go
 

@@ -67,6 +67,16 @@ The ``cd`` command is used to change the current working directory the Merlin ag
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job gwFQhcsKJi at 2019-02-27T01:17:30Z
     Changed working directory to C:\Program Files (x86)
 
+clear
+-----
+
+The ``clear`` command will cancel all jobs in the queue that have not been sent to the agent yet.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» clear
+    [+] jobs cleared for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
 cmd
 ---
 
@@ -351,6 +361,22 @@ The ``info`` command is used to get information about a specific agent.
     | Agent Kill Date           | 1970-01-01T00:00:00Z                          |
     | Agent Failed Logins       | 0                                             |
     +---------------------------+-----------------------------------------------+
+
+jobs
+----
+
+The ``jobs`` command will display a table of all active jobs assigned to the agent. The output will not include jobs that have already completed.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» jobs
+
+          ID     | STATUS  |     TYPE     |       CREATED        |         SENT
+    +------------+---------+--------------+----------------------+----------------------+
+      whFGRWHudV | Sent    | NativeCmd    | 2020-12-18T11:45:07Z | 2020-12-18T11:45:38Z
+      UxegCkyROR | Sent    | AgentControl | 2020-12-18T11:45:11Z | 2020-12-18T11:45:38Z
+      YqhfUvxkqZ | Created | CmdPayload   | 2020-12-18T11:45:44Z |
+
 
 kill
 ----

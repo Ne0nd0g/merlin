@@ -27,6 +27,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
 )
 
@@ -86,7 +87,7 @@ func RunModule(module modules.Module) []messages.UserMessage {
 				returnMessages = append(returnMessages, agentAPI.CMD(id, append([]string{"cmd"}, r...)))
 			case "extended":
 				// Was using Method: r[0]
-				job, err := agents.AddJob(id, r[0], r[1:])
+				job, err := jobs.Add(id, r[0], r[1:])
 				if err != nil {
 					returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 				} else {
@@ -106,7 +107,7 @@ func RunModule(module modules.Module) []messages.UserMessage {
 		// Standard modules use the `cmd` message type that must be in position 0
 		returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, append([]string{"cmd"}, r...)))
 	case "extended":
-		job, err := agents.AddJob(module.Agent, r[0], r[1:])
+		job, err := jobs.Add(module.Agent, r[0], r[1:])
 		if err != nil {
 			returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 		} else {

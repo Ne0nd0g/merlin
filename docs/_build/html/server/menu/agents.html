@@ -106,6 +106,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Agent Menu</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#help">help</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cd">cd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#clear">clear</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#cmd">cmd</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#back">back</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#download">download</a></li>
@@ -120,6 +121,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#info">info</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#jobs">jobs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#kill">kill</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ls">ls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#quit">quit</a></li>
@@ -283,6 +285,14 @@ Changed working directory to /usr/bin
 [-]Created job gwFQhcsKJi for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 at 2019-02-27T01:17:26Z
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job gwFQhcsKJi at 2019-02-27T01:17:30Z
 Changed working directory to C:\Program Files (x86)
+</pre></div>
+</div>
+</div>
+<div class="section" id="clear">
+<h2>clear<a class="headerlink" href="#clear" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">clear</span></code> command will cancel all jobs in the queue that have not been sent to the agent yet.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» clear
+[+] jobs cleared for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 </pre></div>
 </div>
 </div>
@@ -545,6 +555,19 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job NPQGRnt
 | Agent Kill Date           | 1970-01-01T00:00:00Z                          |
 | Agent Failed Logins       | 0                                             |
 +---------------------------+-----------------------------------------------+
+</pre></div>
+</div>
+</div>
+<div class="section" id="jobs">
+<h2>jobs<a class="headerlink" href="#jobs" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">jobs</span></code> command will display a table of all active jobs assigned to the agent. The output will not include jobs that have already completed.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» jobs
+
+      ID     | STATUS  |     TYPE     |       CREATED        |         SENT
++------------+---------+--------------+----------------------+----------------------+
+  whFGRWHudV | Sent    | NativeCmd    | 2020-12-18T11:45:07Z | 2020-12-18T11:45:38Z
+  UxegCkyROR | Sent    | AgentControl | 2020-12-18T11:45:11Z | 2020-12-18T11:45:38Z
+  YqhfUvxkqZ | Created | CmdPayload   | 2020-12-18T11:45:44Z |
 </pre></div>
 </div>
 </div>
