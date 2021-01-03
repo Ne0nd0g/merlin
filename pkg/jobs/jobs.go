@@ -98,8 +98,8 @@ type info struct {
 
 // Command is the structure to send a task for the agent to execute
 type Command struct {
-	Command string
-	Args    []string
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
 }
 
 // Shellcode is a JSON payload containing shellcode and the method for execution
