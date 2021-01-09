@@ -2,7 +2,7 @@
 
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2019  Russel Van Tuyl
+// Copyright (C) 2021  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
-package agent
+package commands
 
 import (
 	// Standard
@@ -70,8 +70,8 @@ const (
 	THREAD_SET_CONTEXT = 0x0010
 )
 
-// ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
-func ExecuteCommand(name string, args []string) (stdout string, stderr string) {
+// executeCommand is function used to instruct an agent to execute a command on the host operating system
+func executeCommand(name string, args []string) (stdout string, stderr string) {
 	var cmd *exec.Cmd
 
 	cmd = exec.Command(name, args...)

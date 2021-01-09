@@ -16,6 +16,7 @@ require (
 	github.com/dgraph-io/badger v1.6.2 // indirect
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
 	github.com/fatih/color v1.7.0
+	github.com/fzipp/gocyclo v0.3.1 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/gojp/goreportcard v0.0.0-20200415071653-59167b516f3f // indirect
 	github.com/golang/example v0.0.0-20170904185048-46695d81d1fa // indirect

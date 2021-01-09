@@ -20,10 +20,13 @@ package opaque
 import (
 	// Standard
 	"bytes"
+	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/agent/cli"
 	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"golang.org/x/crypto/pbkdf2"
 	"time"
 
 	// 3rd Party
@@ -55,6 +58,13 @@ const (
 type Opaque struct {
 	Type    int    // The type of OPAQUE message from the constants
 	Payload []byte // OPAQUE payload data
+}
+
+type User struct {
+	reg  *gopaque.UserRegister     // User Registration
+	auth *gopaque.UserAuth         // User Authentication
+	Kex  *gopaque.KeyExchangeSigma // User Key Exchange
+	pwdU []byte                    // User Password
 }
 
 // registrationInit is used to register an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
@@ -309,8 +319,6 @@ func Handler(agentID uuid.UUID, opaque Opaque) (messages.Base, error) {
 				returnMessage.Payload = jobs
 			}
 		}
-	case ReAuthenticate:
-		returnMessage.Payload, err = reAuthenticate(agentID)
 	default:
 		err = fmt.Errorf(fmt.Sprintf("invalid OPAQUE type for authenticated handler: %d", opaque.Type))
 	}
@@ -333,6 +341,9 @@ func UnAuthHandler(agentID uuid.UUID, opaque Opaque, key kyber.Scalar) (messages
 	if core.Debug {
 		message("debug", "Entering into opaque.UnAuthHandler() function...")
 	}
+	if core.Verbose {
+		message("note", fmt.Sprintf("Received OPAQUE message type: %d", opaque.Type))
+	}
 	var err error
 	returnMessage := messages.Base{
 		ID:      agentID,
@@ -347,6 +358,8 @@ func UnAuthHandler(agentID uuid.UUID, opaque Opaque, key kyber.Scalar) (messages
 		returnMessage.Payload, err = registrationComplete(agentID, opaque)
 	case AuthInit:
 		returnMessage.Payload, err = authenticateInit(agentID, opaque)
+	case ReAuthenticate:
+		returnMessage.Payload, err = reAuthenticate(agentID)
 	default:
 		err = fmt.Errorf(fmt.Sprintf("invalid OPAQUE type for un authenticated handler: %d", opaque.Type))
 	}
@@ -358,6 +371,145 @@ func UnAuthHandler(agentID uuid.UUID, opaque Opaque, key kyber.Scalar) (messages
 		message("debug", "Leaving opaque.UnAuthHandler() function without error")
 	}
 	return returnMessage, nil
+}
+
+//RegisterInit is used to perform the OPAQUE Password Authenticated Key Exchange (PAKE) protocol Registration
+func UserRegisterInit(AgentID uuid.UUID) (Opaque, *User, error) {
+	cli.Message(cli.DEBUG, "Entering into opaque.UserRegisterInit...")
+	var user User
+	// Generate a random password and run it through 5000 iterations of PBKDF2; Used with OPAQUE
+	x := core.RandStringBytesMaskImprSrc(30)
+	user.pwdU = pbkdf2.Key([]byte(x), AgentID.Bytes(), 5000, 32, sha256.New)
+
+	// Build OPAQUE User Registration Initialization
+	user.reg = gopaque.NewUserRegister(gopaque.CryptoDefault, AgentID.Bytes(), nil)
+	userRegInit := user.reg.Init(user.pwdU)
+
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE UserID: %x", userRegInit.UserID))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE Alpha: %v", userRegInit.Alpha))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PwdU: %x", user.pwdU))
+
+	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
+	if errUserRegInitBytes != nil {
+		return Opaque{}, &user, fmt.Errorf("there was an error marshalling the OPAQUE user registration initialization message to bytes:\r\n%s", errUserRegInitBytes.Error())
+	}
+
+	// Message to be sent to the server
+	regInit := Opaque{
+		Type:    RegInit,
+		Payload: userRegInitBytes,
+	}
+
+	return regInit, &user, nil
+}
+
+func UserRegisterComplete(regInitResp Opaque, user *User) (Opaque, error) {
+	cli.Message(cli.DEBUG, "Entering into opaque.UserRegisterComplete...")
+
+	if regInitResp.Type != RegInit {
+		return Opaque{}, fmt.Errorf("expected OPAQUE message type %d, got %d", RegInit, regInitResp.Type)
+	}
+
+	var serverRegInit gopaque.ServerRegisterInit
+
+	errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload)
+	if errServerRegInit != nil {
+		return Opaque{}, fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
+	}
+
+	cli.Message(cli.NOTE, "Received OPAQUE server registration initialization message")
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE Beta: %v", serverRegInit.Beta))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE V: %v", serverRegInit.V))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubS: %s", serverRegInit.ServerPublicKey))
+
+	// TODO extend gopaque to run RwdU through n iterations of PBKDF2
+	userRegComplete := user.reg.Complete(&serverRegInit)
+
+	userRegCompleteBytes, errUserRegCompleteBytes := userRegComplete.ToBytes()
+	if errUserRegCompleteBytes != nil {
+		return Opaque{}, fmt.Errorf("there was an error marshalling the OPAQUE user registration complete message to bytes:\r\n%s", errUserRegCompleteBytes.Error())
+	}
+
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE EnvU: %x", userRegComplete.EnvU))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubU: %v", userRegComplete.UserPublicKey))
+
+	// message to be sent to the server
+	regComplete := Opaque{
+		Type:    RegComplete,
+		Payload: userRegCompleteBytes,
+	}
+
+	return regComplete, nil
+}
+
+// UserAuthenticateInit is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
+func UserAuthenticateInit(AgentID uuid.UUID, user *User) (Opaque, error) {
+	cli.Message(cli.DEBUG, "Entering into opaque.UserAuthenticateInit...")
+
+	// 1 - Create a NewUserAuth with an embedded key exchange
+	user.Kex = gopaque.NewKeyExchangeSigma(gopaque.CryptoDefault)
+	user.auth = gopaque.NewUserAuth(gopaque.CryptoDefault, AgentID.Bytes(), user.Kex)
+
+	// 2 - Call Init with the password and send the resulting UserAuthInit to the server
+	userAuthInit, err := user.auth.Init(user.pwdU)
+	if err != nil {
+		return Opaque{}, fmt.Errorf("there was an error creating the OPAQUE user authentication initialization message:\r\n%s", err.Error())
+	}
+
+	userAuthInitBytes, errUserAuthInitBytes := userAuthInit.ToBytes()
+	if errUserAuthInitBytes != nil {
+		return Opaque{}, fmt.Errorf("there was an error marshalling the OPAQUE user authentication initialization message to bytes:\r\n%s", errUserAuthInitBytes.Error())
+	}
+
+	// message to be sent to the server
+	authInit := Opaque{
+		Type:    AuthInit,
+		Payload: userAuthInitBytes,
+	}
+
+	return authInit, nil
+}
+
+func UserAuthenticateComplete(authInitResp Opaque, user *User) (Opaque, error) {
+	cli.Message(cli.DEBUG, "Entering into opaque.UserAuthenticateComplete...")
+
+	if authInitResp.Type != AuthInit {
+		return Opaque{}, fmt.Errorf("expected OPAQUE message type: %d, recieved: %d", AuthInit, authInitResp.Type)
+	}
+
+	// 3 - Receive the server's ServerAuthComplete
+	var serverComplete gopaque.ServerAuthComplete
+
+	errServerComplete := serverComplete.FromBytes(gopaque.CryptoDefault, authInitResp.Payload)
+	if errServerComplete != nil {
+		return Opaque{}, fmt.Errorf("there was an error unmarshalling the OPAQUE server complete message from bytes:\r\n%s", errServerComplete.Error())
+	}
+
+	// 4 - Call Complete with the server's ServerAuthComplete. The resulting UserAuthFinish has user and server key
+	// information. This would be the last step if we were not using an embedded key exchange. Since we are, take the
+	// resulting UserAuthComplete and send it to the server.
+	cli.Message(cli.NOTE, "Received OPAQUE server complete message")
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE Beta: %x", serverComplete.Beta))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE V: %x", serverComplete.V))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubS: %x", serverComplete.ServerPublicKey))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE EnvU: %x", serverComplete.EnvU))
+
+	_, userAuthComplete, errUserAuth := user.auth.Complete(&serverComplete)
+	if errUserAuth != nil {
+		return Opaque{}, fmt.Errorf("there was an error completing OPAQUE authentication:\r\n%s", errUserAuth)
+	}
+
+	userAuthCompleteBytes, errUserAuthCompleteBytes := userAuthComplete.ToBytes()
+	if errUserAuthCompleteBytes != nil {
+		return Opaque{}, fmt.Errorf("there was an error marshalling the OPAQUE user authentication complete message to bytes:\r\n%s", errUserAuthCompleteBytes.Error())
+	}
+
+	authComplete := Opaque{
+		Type:    AuthComplete,
+		Payload: userAuthCompleteBytes,
+	}
+
+	return authComplete, nil
 }
 
 // message is used to send send messages to STDOUT where the server is running and not intended to be sent to CLI

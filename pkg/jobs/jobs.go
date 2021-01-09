@@ -87,6 +87,7 @@ type Job struct {
 
 //  info is a structure for holding data for single task assigned to a single agent
 type info struct {
+	AgentID   uuid.UUID // ID of the agent the job belong to
 	Type      string    // Type of job
 	Token     uuid.UUID // A unique token for each task that acts like a CSRF token to prevent multiple job messages
 	Status    int       // Use JOB_ constants
@@ -127,8 +128,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	// TODO turn this into a method of the agent struct
 	if core.Debug {
 		message("debug", fmt.Sprintf("In jobs.Job function for agent: %s", agentID.String()))
-		message("debug", fmt.Sprintf("In jobs.Add function for type: %s", jobType))
-		message("debug", fmt.Sprintf("In agents.AddJob function for command: %s", jobArgs))
+		message("debug", fmt.Sprintf("In jobs.Add function for type: %s, arguments: %v", jobType, jobType))
 	}
 
 	agent, ok := agents.Agents[agentID]
@@ -140,7 +140,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 
 	switch jobType {
 	case "agentInfo":
-		job.Type = NATIVE
+		job.Type = CONTROL
 		job.Payload = Command{
 			Command: "agentInfo",
 		}
@@ -176,7 +176,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 
 		p := FileTransfer{
 			FileLocation: jobArgs[0],
-			IsDownload:   false,
+			IsDownload:   true,
 		}
 		job.Payload = p
 	case "initialize":
@@ -313,7 +313,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		p := FileTransfer{
 			FileLocation: jobArgs[1],
 			FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
-			IsDownload:   true, // The agent will be downloading the file provided by the server in the FileBlob field
+			IsDownload:   false,
 		}
 		job.Payload = p
 	default:
@@ -341,6 +341,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 				//agents.Agents[a].JobChannel <- job
 				// Add job to the list
 				Jobs[job.ID] = info{
+					AgentID: a,
 					Token:   token,
 					Type:    String(job.Type),
 					Status:  CREATED,
@@ -369,6 +370,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		JobsChannel[agentID] <- job
 		// Add job to the list
 		Jobs[job.ID] = info{
+			AgentID: agentID,
 			Token:   token,
 			Type:    String(job.Type),
 			Status:  CREATED,
@@ -424,6 +426,9 @@ func Clear(agentID uuid.UUID) error {
 
 // Get returns a list of jobs that need to be sent to the agent
 func Get(agentID uuid.UUID) ([]Job, error) {
+	if core.Debug {
+		message("debug", "Entering into jobs.Get() function...")
+	}
 	var jobs []Job
 	_, ok := agents.Agents[agentID]
 	if !ok {
@@ -453,9 +458,12 @@ func Get(agentID uuid.UUID) ([]Job, error) {
 			}
 			if core.Debug {
 				message("debug", fmt.Sprintf("Channel command string: %+v", job))
-				message("debug", fmt.Sprintf("Job type: %s", messages.String(job.Type)))
+				message("debug", fmt.Sprintf("Job type: %s", String(job.Type)))
 			}
 		}
+	}
+	if core.Debug {
+		message("debug", fmt.Sprintf("Returning jobs:\r\n%+v", jobs))
 	}
 	return jobs, nil
 }
@@ -608,6 +616,9 @@ func Idle(agentID uuid.UUID) (messages.Base, error) {
 
 // GetTableActive returns a list of rows that contain information about active jobs
 func GetTableActive(agentID uuid.UUID) ([][]string, error) {
+	if core.Debug {
+		message("debug", fmt.Sprintf("entering into jobs.GetTableActive for agent %s", agentID.String()))
+	}
 	var jobs [][]string
 	_, ok := agents.Agents[agentID]
 	if !ok {
@@ -615,32 +626,35 @@ func GetTableActive(agentID uuid.UUID) ([][]string, error) {
 	}
 
 	for id, job := range Jobs {
-		var status string
-		switch job.Status {
-		case CREATED:
-			status = "Created"
-		case SENT:
-			status = "Sent"
-		case RETURNED:
-			status = "Returned"
-		default:
-			status = fmt.Sprintf("Unknown job status: %d", job.Status)
-		}
-		var zeroTime time.Time
-		// Don't add completed or canceled jobs
-		if job.Status != COMPLETE && job.Status != CANCELED {
-			var sent string
-			if job.Sent != zeroTime {
-				sent = job.Sent.Format(time.RFC3339)
+		if job.AgentID == agentID {
+			//message("debug", fmt.Sprintf("GetTableActive(%s) ID: %s, Job: %+v", agentID.String(), id, job))
+			var status string
+			switch job.Status {
+			case CREATED:
+				status = "Created"
+			case SENT:
+				status = "Sent"
+			case RETURNED:
+				status = "Returned"
+			default:
+				status = fmt.Sprintf("Unknown job status: %d", job.Status)
 			}
-			// <JobID>, <JobStatus>, <JobType>, <Created>, <Sent>
-			jobs = append(jobs, []string{
-				id,
-				status,
-				job.Type,
-				job.Created.Format(time.RFC3339),
-				sent,
-			})
+			var zeroTime time.Time
+			// Don't add completed or canceled jobs
+			if job.Status != COMPLETE && job.Status != CANCELED {
+				var sent string
+				if job.Sent != zeroTime {
+					sent = job.Sent.Format(time.RFC3339)
+				}
+				// <JobID>, <JobStatus>, <JobType>, <Created>, <Sent>
+				jobs = append(jobs, []string{
+					id,
+					status,
+					job.Type,
+					job.Created.Format(time.RFC3339),
+					sent,
+				})
+			}
 		}
 	}
 	return jobs, nil

