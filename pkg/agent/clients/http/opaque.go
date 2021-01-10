@@ -28,6 +28,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
+var regInit bool // True if the Agent has completed registration initialization
+
 // opaqueAuth is the top-level function that subsequently runs OPAQUE registration and authentication
 func (client *Client) opaqueAuth(register bool) (messages.Base, error) {
 	cli.Message(cli.DEBUG, "Entering into clients.http.opaqueAuth()...")
@@ -38,6 +40,10 @@ func (client *Client) opaqueAuth(register bool) (messages.Base, error) {
 
 	// OPAQUE Registration
 	if register { // If the client has previously registered, then this will not be empty
+		// The Agent  had completed registration at one time
+		if client.opaque != nil {
+			regInit = false // Reset regInit so that it can start registration from scratch instead of starting with RegComplete
+		}
 		// OPAQUE Registration steps
 		err := client.opaqueRegister()
 		if err != nil {
@@ -79,19 +85,22 @@ func (client *Client) opaqueRegister() error {
 		return fmt.Errorf("there was an error creating the OPAQUE User Registration Initialization message:\r\n%s", err)
 	}
 	msg.Payload = payload
-	// Send OPAQUE RegInit message to the server
-	cli.Message(cli.DEBUG, "Sending OPAQUE RegInit message")
-	msg, err = client.SendMerlinMessage(msg)
-	if err != nil {
-		return fmt.Errorf("there was an error sending the OPAQUE User Registration Initialization message to the server:\r\n%s", err)
-	}
-	// Verify the message is for this agent
-	if msg.ID != client.AgentID {
-		return fmt.Errorf("message ID %s does not match agent ID %s", msg.ID, client.AgentID)
-	}
-	// Verify the payload type is correct
-	if msg.Type != messages.OPAQUE {
-		return fmt.Errorf("expected message type %s, recieved type %s", messages.String(messages.OPAQUE), messages.String(msg.Type))
+	if !regInit {
+		// Send OPAQUE RegInit message to the server
+		cli.Message(cli.DEBUG, "Sending OPAQUE RegInit message")
+		msg, err = client.SendMerlinMessage(msg)
+		if err != nil {
+			return fmt.Errorf("there was an error sending the OPAQUE User Registration Initialization message to the server:\r\n%s", err)
+		}
+		// Verify the message is for this agent
+		if msg.ID != client.AgentID {
+			return fmt.Errorf("message ID %s does not match agent ID %s", msg.ID, client.AgentID)
+		}
+		// Verify the payload type is correct
+		if msg.Type != messages.OPAQUE {
+			return fmt.Errorf("expected message type %s, recieved type %s", messages.String(messages.OPAQUE), messages.String(msg.Type))
+		}
+		regInit = true
 	}
 
 	// Build OPAQUE RegComplete message

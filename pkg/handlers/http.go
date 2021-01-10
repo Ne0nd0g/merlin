@@ -241,7 +241,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				// Encode JWE into gob
 				errJWEBuffer := gob.NewEncoder(w).Encode(jwe)
 				if errJWEBuffer != nil {
-					m := fmt.Errorf("there was an error writing the %s response message to the HTTP stream:\r\n%s", k.Type, errJWEBuffer.Error())
+					m := fmt.Errorf("there was an error writing the %s response message to the HTTP stream:\r\n%s", messages.String(k.Type), errJWEBuffer.Error())
 					logging.Server(m.Error())
 					message("warn", m.Error())
 					w.WriteHeader(404)
