@@ -55,11 +55,13 @@ const (
 	ReAuthenticate = 6
 )
 
+// Opaque is a structure that is embedded into Merlin messages as a payload used to complete OPAQUE registration and authentication
 type Opaque struct {
 	Type    int    // The type of OPAQUE message from the constants
 	Payload []byte // OPAQUE payload data
 }
 
+// User is the structure that holds information for the various steps of the OPAQUE protocol as the user
 type User struct {
 	reg         *gopaque.UserRegister         // User Registration
 	regComplete *gopaque.UserRegisterComplete // User Registration Complete
@@ -404,6 +406,7 @@ func UserRegisterInit(AgentID uuid.UUID) (Opaque, *User, error) {
 	return regInit, &user, nil
 }
 
+// UserRegisterComplete consumes the Server's response and finishes OPAQUE registration
 func UserRegisterComplete(regInitResp Opaque, user *User) (Opaque, error) {
 	cli.Message(cli.DEBUG, "Entering into opaque.UserRegisterComplete...")
 
@@ -474,6 +477,7 @@ func UserAuthenticateInit(AgentID uuid.UUID, user *User) (Opaque, error) {
 	return authInit, nil
 }
 
+// UserAuthenticateComplete consumes the Server's authentication message and finishes the user authentication and key exchange
 func UserAuthenticateComplete(authInitResp Opaque, user *User) (Opaque, error) {
 	cli.Message(cli.DEBUG, "Entering into opaque.UserAuthenticateComplete...")
 

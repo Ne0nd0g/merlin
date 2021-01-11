@@ -27,8 +27,6 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
-var regInit bool // True if the Agent has completed registration initialization
-
 // opaqueAuth is the top-level function that subsequently runs OPAQUE registration and authentication
 func (client *Client) opaqueAuth(register bool) (messages.Base, error) {
 	cli.Message(cli.DEBUG, "Entering into clients.http.opaqueAuth()...")
@@ -39,9 +37,12 @@ func (client *Client) opaqueAuth(register bool) (messages.Base, error) {
 
 	// OPAQUE Registration
 	if register { // If the client has previously registered, then this will not be empty
-		// The Agent  had completed registration at one time
+		// Reset the OPAQUE User structure for when the Agent previously successfully authenticated
+		// but the Agent needs to re-register with a new server
 		if client.opaque != nil {
-			regInit = false // Reset regInit so that it can start registration from scratch instead of starting with RegComplete
+			if client.opaque.Kex != nil { // Only exists after successful authentication which occurs after registration
+				client.opaque = nil
+			}
 		}
 		// OPAQUE Registration steps
 		err := client.opaqueRegister()
