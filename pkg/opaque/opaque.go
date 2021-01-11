@@ -61,10 +61,11 @@ type Opaque struct {
 }
 
 type User struct {
-	reg  *gopaque.UserRegister     // User Registration
-	auth *gopaque.UserAuth         // User Authentication
-	Kex  *gopaque.KeyExchangeSigma // User Key Exchange
-	pwdU []byte                    // User Password
+	reg         *gopaque.UserRegister         // User Registration
+	regComplete *gopaque.UserRegisterComplete // User Registration Complete
+	auth        *gopaque.UserAuth             // User Authentication
+	Kex         *gopaque.KeyExchangeSigma     // User Key Exchange
+	pwdU        []byte                        // User Password
 }
 
 // registrationInit is used to register an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
@@ -410,28 +411,31 @@ func UserRegisterComplete(regInitResp Opaque, user *User) (Opaque, error) {
 		return Opaque{}, fmt.Errorf("expected OPAQUE message type %d, got %d", RegInit, regInitResp.Type)
 	}
 
-	var serverRegInit gopaque.ServerRegisterInit
+	// Check to see if OPAQUE User Registration was previously completed
+	if user.regComplete == nil {
+		var serverRegInit gopaque.ServerRegisterInit
 
-	errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload)
-	if errServerRegInit != nil {
-		return Opaque{}, fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
+		errServerRegInit := serverRegInit.FromBytes(gopaque.CryptoDefault, regInitResp.Payload)
+		if errServerRegInit != nil {
+			return Opaque{}, fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
+		}
+
+		cli.Message(cli.NOTE, "Received OPAQUE server registration initialization message")
+		cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE Beta: %v", serverRegInit.Beta))
+		cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE V: %v", serverRegInit.V))
+		cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubS: %s", serverRegInit.ServerPublicKey))
+
+		// TODO extend gopaque to run RwdU through n iterations of PBKDF2
+		user.regComplete = user.reg.Complete(&serverRegInit)
 	}
 
-	cli.Message(cli.NOTE, "Received OPAQUE server registration initialization message")
-	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE Beta: %v", serverRegInit.Beta))
-	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE V: %v", serverRegInit.V))
-	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubS: %s", serverRegInit.ServerPublicKey))
-
-	// TODO extend gopaque to run RwdU through n iterations of PBKDF2
-	userRegComplete := user.reg.Complete(&serverRegInit)
-
-	userRegCompleteBytes, errUserRegCompleteBytes := userRegComplete.ToBytes()
+	userRegCompleteBytes, errUserRegCompleteBytes := user.regComplete.ToBytes()
 	if errUserRegCompleteBytes != nil {
 		return Opaque{}, fmt.Errorf("there was an error marshalling the OPAQUE user registration complete message to bytes:\r\n%s", errUserRegCompleteBytes.Error())
 	}
 
-	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE EnvU: %x", userRegComplete.EnvU))
-	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubU: %v", userRegComplete.UserPublicKey))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE EnvU: %x", user.regComplete.EnvU))
+	cli.Message(cli.DEBUG, fmt.Sprintf("OPAQUE PubU: %v", user.regComplete.UserPublicKey))
 
 	// message to be sent to the server
 	regComplete := Opaque{

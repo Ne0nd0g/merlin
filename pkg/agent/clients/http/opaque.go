@@ -21,7 +21,6 @@ import (
 	// Standard
 	"crypto/sha256"
 	"fmt"
-
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/agent/cli"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
@@ -79,13 +78,12 @@ func (client *Client) opaqueRegister() error {
 		return err
 	}
 
-	// Build OPAQUE RegInit message
-	payload, user, err := opaque.UserRegisterInit(client.AgentID)
-	if err != nil {
-		return fmt.Errorf("there was an error creating the OPAQUE User Registration Initialization message:\r\n%s", err)
-	}
-	msg.Payload = payload
-	if !regInit {
+	if client.opaque == nil {
+		// Build OPAQUE RegInit message
+		msg.Payload, client.opaque, err = opaque.UserRegisterInit(client.AgentID)
+		if err != nil {
+			return fmt.Errorf("there was an error creating the OPAQUE User Registration Initialization message:\r\n%s", err)
+		}
 		// Send OPAQUE RegInit message to the server
 		cli.Message(cli.DEBUG, "Sending OPAQUE RegInit message")
 		msg, err = client.SendMerlinMessage(msg)
@@ -100,15 +98,17 @@ func (client *Client) opaqueRegister() error {
 		if msg.Type != messages.OPAQUE {
 			return fmt.Errorf("expected message type %s, recieved type %s", messages.String(messages.OPAQUE), messages.String(msg.Type))
 		}
-		regInit = true
+	} else {
+		msg.Payload = opaque.Opaque{
+			Type: opaque.RegInit,
+		}
 	}
 
 	// Build OPAQUE RegComplete message
-	payload, err = opaque.UserRegisterComplete(msg.Payload.(opaque.Opaque), user)
+	msg.Payload, err = opaque.UserRegisterComplete(msg.Payload.(opaque.Opaque), client.opaque)
 	if err != nil {
 		return fmt.Errorf("there was an error creating the OPAQUE User Registration Complete message:\r\n%s", err)
 	}
-	msg.Payload = payload
 	// Send OPAQUE RegComplete to the server
 	cli.Message(cli.DEBUG, "Sending OPAQUE RegComplete message")
 	msg, err = client.SendMerlinMessage(msg)
@@ -127,7 +127,7 @@ func (client *Client) opaqueRegister() error {
 	if msg.Payload.(opaque.Opaque).Type != opaque.RegComplete {
 		return fmt.Errorf("expected OPAQUE message type %d, recieved type %d", opaque.RegComplete, msg.Payload.(opaque.Opaque).Type)
 	}
-	client.opaque = user
+
 	cli.Message(cli.NOTE, "OPAQUE registration complete")
 	return nil
 }
