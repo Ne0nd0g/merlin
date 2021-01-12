@@ -434,13 +434,12 @@ func (client *Client) Set(key string, value string) error {
 	case "ja3":
 		ja3String := strings.Trim(value, "\"'")
 		client.Client, err = getClient(client.Protocol, client.Proxy, ja3String)
-		if err != nil {
-			if ja3String != "" {
-				cli.Message(cli.NOTE, fmt.Sprintf("Set agent JA3 signature to:%s", ja3String))
-			} else if ja3String == "" {
-				cli.Message(cli.NOTE, fmt.Sprintf("Setting agent client back to default using %s protocol", client.Protocol))
-			}
+		if ja3String != "" {
+			cli.Message(cli.NOTE, fmt.Sprintf("Set agent JA3 signature to:%s", ja3String))
+		} else if ja3String == "" {
+			cli.Message(cli.NOTE, fmt.Sprintf("Setting agent client back to default using %s protocol", client.Protocol))
 		}
+		client.JA3 = ja3String
 	case "jwt":
 		// TODO Parse the JWT to make sure it is valid first
 		client.JWT = value
@@ -456,6 +455,8 @@ func (client *Client) Set(key string, value string) error {
 
 // Get is a generic function that is used to retrieve the value of a Client's field
 func (client *Client) Get(key string) string {
+	cli.Message(cli.DEBUG, "Entering into clients.http.Get()...")
+	cli.Message(cli.DEBUG, fmt.Sprintf("Key: %s", key))
 	switch strings.ToLower(key) {
 	case "ja3":
 		return client.JA3

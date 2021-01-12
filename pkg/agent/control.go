@@ -157,5 +157,6 @@ func (a *Agent) getAgentInfoMessage() messages.AgentInfo {
 		KillDate:      a.KillDate,
 		JA3:           a.Client.Get("ja3"),
 	}
+	cli.Message(cli.DEBUG, fmt.Sprintf("Returning AgentInfo message:\r\n%+v", agentInfoMessage))
 	return agentInfoMessage
 }

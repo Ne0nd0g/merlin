@@ -42,7 +42,7 @@ func ExecuteShellcode(cmd jobs.Shellcode) jobs.Results {
 	}
 
 	cli.Message(cli.INFO, fmt.Sprintf("Shelcode execution method: %s", cmd.Method))
-	cli.Message(cli.INFO, fmt.Sprintf("Executing shellcode %s", shellcodeBytes))
+	cli.Message(cli.INFO, fmt.Sprintf("Executing shellcode %x", shellcodeBytes))
 
 	switch cmd.Method {
 	case "self":
