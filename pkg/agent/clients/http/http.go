@@ -377,12 +377,8 @@ func (client *Client) SendMerlinMessage(m messages.Base) (messages.Base, error) 
 	case 200:
 		break
 	case 401:
-		cli.Message(cli.NOTE, "server returned a 401, re-registering and re-authenticating this orphaned agent")
+		cli.Message(cli.NOTE, "Server returned a 401, re-registering and re-authenticating this orphaned agent")
 		return client.Auth("opaque", true)
-	case 405:
-		cli.Message(cli.NOTE, "server returned a 405, re-authenticating the agent")
-		// TODO This needs to be dynamic so that it doesn't depend on OPAQUE
-		return client.opaqueAuthenticate()
 	default:
 		return returnMessage, fmt.Errorf("there was an error communicating with the server:\r\n%d", resp.StatusCode)
 	}

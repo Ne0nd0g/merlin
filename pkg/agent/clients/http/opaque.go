@@ -21,6 +21,7 @@ import (
 	// Standard
 	"crypto/sha256"
 	"fmt"
+
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/agent/cli"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
@@ -89,6 +90,7 @@ func (client *Client) opaqueRegister() error {
 		cli.Message(cli.DEBUG, "Sending OPAQUE RegInit message")
 		msg, err = client.SendMerlinMessage(msg)
 		if err != nil {
+			client.opaque = nil
 			return fmt.Errorf("there was an error sending the OPAQUE User Registration Initialization message to the server:\r\n%s", err)
 		}
 		// Verify the message is for this agent
