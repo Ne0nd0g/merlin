@@ -24,6 +24,7 @@ JA3 ?=
 XJA3 =-X main.ja3=$(JA3)
 LDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
 WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
+WINAGENTLDFLAGSDEBUG=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
 # TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries
 GCFLAGS=-gcflags=all=-trimpath=$(GOPATH)
 ASMFLAGS=-asmflags=all=-trimpath=$(GOPATH)# -asmflags=-trimpath=$(GOPATH)
@@ -67,6 +68,10 @@ server-windows:
 # Compile Agent - Windows x64
 agent-windows:
 	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
+
+# Compile Agent - Windows x64 with DEBUG output
+agent-windows-debug:
+	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGSDEBUG} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${W}-DEBUG.exe cmd/merlinagent/main.go
 
 # Compile Agent - Windows x64 DLL - main() - Console
 agent-dll:

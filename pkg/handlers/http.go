@@ -350,6 +350,9 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		if core.Verbose {
 			message("note", fmt.Sprintf("Sending %s message type to agent", messages.String(returnMessage.Type)))
 		}
+		if core.Debug {
+			message("debug", fmt.Sprintf("Sending message to agent:\r\n%+v", returnMessage))
+		}
 
 		// Get JWT to add to message.Base for all messages except re-authenticate messages
 		// OPAQUE_RE_AUTH

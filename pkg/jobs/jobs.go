@@ -176,7 +176,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 
 		p := FileTransfer{
 			FileLocation: jobArgs[0],
-			IsDownload:   true,
+			IsDownload:   false,
 		}
 		job.Payload = p
 	case "initialize":
@@ -313,7 +313,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		p := FileTransfer{
 			FileLocation: jobArgs[1],
 			FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
-			IsDownload:   false,
+			IsDownload:   true,
 		}
 		job.Payload = p
 	default:
@@ -562,23 +562,24 @@ func Handler(m messages.Base) (messages.Base, error) {
 			}
 			messageAPI.SendBroadcastMessage(userMessage)
 		}
-		// See if there are any new jobs to send back
-		agentJobs, err := Get(agent.ID)
-		if err != nil {
-			return returnMessage, err
-		}
-		returnJobs = append(returnJobs, agentJobs...)
 	}
-
-	if core.Debug {
-		message("debug", "Leaving jobs.Handle() function...")
+	// See if there are any new jobs to send back
+	agentJobs, err := Get(m.ID)
+	if err != nil {
+		return returnMessage, err
 	}
+	returnJobs = append(returnJobs, agentJobs...)
 
 	if len(returnJobs) > 0 {
 		returnMessage.Type = messages.JOBS
-		returnMessage.Payload = jobs
+		returnMessage.Payload = returnJobs
 	} else {
 		returnMessage.Type = messages.IDLE
+	}
+
+	if core.Debug {
+		message("debug", fmt.Sprintf("Message that will be returned to the Agent:\r\n%+v", returnMessage))
+		message("debug", "Leaving jobs.Handle() function...")
 	}
 	return returnMessage, nil
 }
