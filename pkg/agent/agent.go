@@ -197,7 +197,12 @@ func (a *Agent) Run() error {
 			os.Exit(0)
 		}
 		// Sleep
-		sleep := a.WaitTime + (time.Duration(rand.Int63n(a.Skew)) * time.Millisecond)
+		var sleep time.Duration
+		if a.Skew > 0 {
+			sleep = a.WaitTime + (time.Duration(rand.Int63n(a.Skew)) * time.Millisecond)
+		} else {
+			sleep = a.WaitTime
+		}
 		cli.Message(cli.NOTE, fmt.Sprintf("Sleeping for %s at %s", sleep.String(), time.Now().UTC().Format(time.RFC3339)))
 		time.Sleep(sleep)
 	}
