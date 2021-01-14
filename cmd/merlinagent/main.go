@@ -63,7 +63,7 @@ func main() {
 	flag.StringVar(&killdate, "killdate", killdate, "The date, as a Unix EPOCH timestamp, that the agent will quit running")
 	flag.StringVar(&maxretry, "maxretry", maxretry, "The maximum amount of failed checkins before the agent will quit running")
 	flag.StringVar(&padding, "padding", padding, "The maximum amount of data that will be randomly selected and appended to every message")
-	flag.StringVar(&useragent, "useragent", useragent, "The HTTP User-Agent header string that Agent will use while sending traffic")
+	flag.StringVar(&useragent, "useragent", useragent, "The HTTP User-Agent header string that the Agent will use while sending traffic")
 
 	flag.Usage = usage
 	flag.Parse()

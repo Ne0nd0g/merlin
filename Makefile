@@ -22,9 +22,21 @@ PROTO ?= h2
 XPROTO =-X main.protocol=$(PROTO)
 JA3 ?=
 XJA3 =-X main.ja3=$(JA3)
-LDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
-WINAGENTLDFLAGS=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -H=windowsgui -buildid="
-WINAGENTLDFLAGSDEBUG=-ldflags "-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} -buildid="
+KILLDATE ?= 0
+XKILLDATE =-X main.killdate=$(KILLDATE)
+MAXRETRY ?= 7
+XMAXRETRY =-X main.maxretry=$(MAXRETRY)
+PADDING ?= 4096
+XPADDING =-X main.padding=$(PADDING)
+SKEW ?= 0
+XSKEW =-X main.skew=$(SKEW)
+USERAGENT ?= Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36
+XUSERAGENT =-X "main.useragent=$(USERAGENT)"
+SLEEP ?= 30s
+XSLEEP = -X main.sleep=$(SLEEP)
+LDFLAGS=-ldflags '-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} ${XKILLDATE} ${XMAXRETRY} ${XPADDING} ${XSKEW} ${XUSERAGENT} ${XSLEEP} -buildid='
+WINAGENTLDFLAGS=-ldflags '-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} ${XKILLDATE} ${XMAXRETRY} ${XPADDING} ${XSKEW} ${XUSERAGENT} ${XSLEEP} -H=windowsgui -buildid='
+WINAGENTLDFLAGSDEBUG=-ldflags '-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} ${XKILLDATE} ${XMAXRETRY} ${XPADDING} ${XSKEW} ${XUSERAGENT} ${XSLEEP} -buildid='
 # TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries
 GCFLAGS=-gcflags=all=-trimpath=$(GOPATH)
 ASMFLAGS=-asmflags=all=-trimpath=$(GOPATH)# -asmflags=-trimpath=$(GOPATH)

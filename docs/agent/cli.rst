@@ -13,16 +13,26 @@ The following command line flags can be used when executing Merlin agent:
             HTTP Host header
       -ja3 string
             JA3 signature string (not the MD5 hash). Overrides -proto flag
+      -killdate string
+            The date, as a Unix EPOCH timestamp, that the agent will quit running (default "0")
+      -maxretry string
+            The maximum amount of failed checkins before the agent will quit running (default "7")
+      -padding string
+            The maximum amount of data that will be randomly selected and appended to every message (default "4096")
       -proto string
             Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default "h2")
       -proxy string
             Hardcoded proxy to use for http/1.1 traffic only that will override host configuration
       -psk string
             Pre-Shared Key used to encrypt initial communications (default "merlin")
-      -sleep duration
-            Time for agent to sleep (default 30s)
+      -skew string
+            Amount of skew, or variance, between agent checkins (default "3000")
+      -sleep string
+            Time for agent to sleep (default "30s")
       -url string
             Full URL for agent to connect to (default "https://127.0.0.1:443")
+      -useragent string
+            The HTTP User-Agent header string that Agent will use while sending traffic (default "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36")
       -v    Enable verbose output
       -version
             Print the agent version and exit
@@ -45,6 +55,21 @@ JA3
 The ``-ja3`` flag allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (i.e. Merlin). `This <https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f>`_ article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from https://ja3er.com/
 
 **NOTE:** Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The ``-ja3`` flag will override the the ``-proto`` flag and will cause the agent to use the protocol provided in the JA3 hash.
+
+KillDate
+^^^^^^^^
+
+The ``-killdate`` flag is used to specify the date, as an Unix epoch timestamp, that the agent should quit running. `EpochConverter <https://www.epochconverter.com>`_ is a good resource to generate or convert a timestamp. The default value is ``0`` which means the Agent does not have a killdate.
+
+MaxRetry
+^^^^^^^^
+
+The ``-maxretry`` flag is the maximum amount of failed checkins before the agent will quit running. The default value is 7.
+
+Padding
+^^^^^^^
+
+The ``-padding`` flag is maximum amount of data that will be randomly selected and appended to every message. The default value is 4096 bytes. The data padding is intended to increase the detection difficulty for idle checkin behavior when the message size was fixed everytime.
 
 Proto
 ^^^^^
@@ -71,6 +96,11 @@ PSK
 
 The ``-psk`` flag is used to specify the Pre-Shared Key (PSK) that the Merlin Agent uses to initiate communication with the Merlin Server. The first message is encrypted with the PSK and subsequent messages establish a new session based encryption key using the `OPAQUE protocol <https://eprint.iacr.org/2018/163.pdf>`_ from `this <https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-03>`__ IETF draft. Additional information about OPAQUE can be found here: `Merlin Goes OPAQUE for Key Exchange <https://posts.specterops.io/merlin-goes-opaque-for-key-exchange-420db3a58713>`_.
 
+Skew
+^^^^
+
+The ``-skew`` flag is the amount of skew, or variance, between agent checkins. The default value is 3000
+
 Sleep
 ^^^^^
 
@@ -80,6 +110,11 @@ URL
 ^^^
 
 The ``-url`` flag is used to specify the Uniformed Resource Locator (URL) that the agent will attempt to communicate with. Include the protocol (i.e. ``https``), the host (i.e. ``127.0.0.1``), the page (i.e ``/`` or ``/news.php``), and optionally port (i.e. ``:443``). This will result in ``https://127.0.0.1:443/``. **NOTE:** By default the Merlin agent will communicate on the loopback adapter.
+
+UserAgent
+^^^^^^^^^
+
+The ``-useragent`` flag is the HTTP User-Agent header string that the Agent will use while sending traffic. The default value is: ``Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36``.
 
 Verbose
 ^^^^^^^
