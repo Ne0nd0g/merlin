@@ -37,14 +37,15 @@ import (
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
-	"golang.org/x/crypto/pbkdf2"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agent"
+	merlinHTTP "github.com/Ne0nd0g/merlin/pkg/agent/clients/http"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
 // GLOBAL VARIABLES
@@ -57,6 +58,7 @@ var debug = false
 var merlinJWT string
 var host string
 var ja3 = ""
+var useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 "
 
 type merlinClient interface {
 	Do(req *http.Request) (*http.Response, error)
@@ -80,10 +82,37 @@ func main() {
 	var err error
 
 	// Setup and run agent
-	a, errNew := agent.New(*protocol, url, host, psk, ja3, proxy, verbose, debug)
+	agentConfig := agent.Config{
+		Sleep:    "30s",
+		Skew:     "3000",
+		KillDate: "0",
+		MaxRetry: "7",
+	}
+	a, errNew := agent.New(agentConfig)
 	if errNew != nil {
 		message("warn", errNew.Error())
 		os.Exit(1)
+	}
+
+	// Get the client
+	var errClient error
+	clientConfig := merlinHTTP.Config{
+		AgentID:     a.ID,
+		Protocol:    *protocol,
+		Host:        host,
+		URL:         url,
+		Proxy:       proxy,
+		UserAgent:   useragent,
+		PSK:         psk,
+		JA3:         ja3,
+		Padding:     "0",
+		AuthPackage: "opaque",
+	}
+	a.Client, errClient = merlinHTTP.New(clientConfig)
+	if errClient != nil {
+		if verbose {
+			color.Red(errClient.Error())
+		}
 	}
 
 	k := sha256.Sum256([]byte(psk))
@@ -98,7 +127,7 @@ func main() {
 
 	// Check for v0.7.0 or earlier
 	message("info", fmt.Sprintf("Connecting to %s checking for Merlin server version v0.7.0.BETA or earlier", url))
-	err = sendPre8Message(a)
+	err = sendPre8Message(*a)
 	if err != nil {
 		if verbose {
 			message("warn", err.Error())
@@ -110,7 +139,7 @@ func main() {
 
 	// Send message to server and see if I get a RegInit message that can be decrypted
 	message("info", fmt.Sprintf("Connecting to %s checking for Merlin server version v0.8.0.BETA or greater", url))
-	err = opaqueRegister(a)
+	err = opaqueRegister(*a)
 	if err != nil {
 		if verbose {
 			message("warn", err.Error())
@@ -122,38 +151,26 @@ func main() {
 // opaqueAuthenticate is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
 func opaqueRegister(a agent.Agent) error {
 
-	// Generate a random password and run it through 5000 iterations of PBKDF2
-	x := core.RandStringBytesMaskImprSrc(30)
-	pwdU := pbkdf2.Key([]byte(x), a.ID.Bytes(), 5000, 32, sha256.New)
-
-	// 1 - Create a NewUserRegister
-	userReg := gopaque.NewUserRegister(gopaque.CryptoDefault, a.ID.Bytes(), nil)
-	userRegInit := userReg.Init(pwdU)
-
-	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
-	if errUserRegInitBytes != nil {
-		return fmt.Errorf("there was an error marshalling the OPAQUE user registration initialization message to bytes:\r\n%s", errUserRegInitBytes.Error())
-	}
-
 	// message to be sent to the server
 	regInitBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "RegInit",
-		Payload: userRegInitBytes,
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+		Type:    messages.OPAQUE,
 	}
+	o, _, err := opaque.UserRegisterInit(a.ID)
+	if err != nil {
+		return err
+	}
+	regInitBase.Payload = o
 
-	var client merlinClient = *a.Client
-
-	regInitResp, errRegInitResp := sendMessage("POST", regInitBase, client)
+	regInitResp, errRegInitResp := a.Client.SendMerlinMessage(regInitBase)
 
 	if errRegInitResp != nil {
 		return fmt.Errorf("there was an error sending the agent OPAQUE user registration initialization message:\r\n%s", errRegInitResp.Error())
 	}
 
-	if regInitResp.Type != "RegInit" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", regInitResp.Type)
+	if regInitResp.Type != messages.OPAQUE {
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", messages.String(regInitResp.Type))
 	}
 
 	// If we get this far then it means we sent a message to the server encrypted with the correct psk and it responded
@@ -170,8 +187,7 @@ func opaqueRegister(a agent.Agent) error {
 		return fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
 	}
 
-	if a.Verbose {
-		message("info", fmt.Sprintf("OPAQUE Alpha:\t%s", userRegInit.Alpha))
+	if verbose {
 		message("info", fmt.Sprintf("OPAQUE Beta:\t\t%s", serverRegInit.Beta))
 		message("info", fmt.Sprintf("OPAQUE V:\t\t%s", serverRegInit.V))
 		message("info", fmt.Sprintf("OPAQUE PubS:\t\t%s", serverRegInit.ServerPublicKey))
@@ -181,11 +197,11 @@ func opaqueRegister(a agent.Agent) error {
 }
 
 func sendPre8Message(a agent.Agent) error {
-	g := messages.Base{
+	g := OldBase{
 		Version: 1.0,
 		ID:      a.ID,
 		Type:    "StatusCheckIn",
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+		Padding: core.RandStringBytesMaskImprSrc(10),
 	}
 
 	b := new(bytes.Buffer)
@@ -202,8 +218,7 @@ func sendPre8Message(a agent.Agent) error {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	var client merlinClient = *a.Client
-
+	client := &http.Client{}
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -211,7 +226,7 @@ func sendPre8Message(a agent.Agent) error {
 	}
 
 	var payload json.RawMessage
-	j := messages.Base{
+	j := OldBase{
 		Payload: &payload,
 	}
 
@@ -395,4 +410,13 @@ func usage() {
 	fmt.Printf("Merlin PRISM\r\n")
 	flag.PrintDefaults()
 	os.Exit(0)
+}
+
+type OldBase struct {
+	Version float32     `json:"version"`
+	ID      uuid.UUID   `json:"id"`
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload,omitempty"`
+	Padding string      `json:"padding"`
+	Token   string      `json:"token,omitempty"`
 }
