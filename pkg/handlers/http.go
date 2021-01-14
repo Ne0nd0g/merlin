@@ -168,7 +168,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				// Check to see if the request matches traffic that could be an orphaned agent
 				// An orphaned agent will have a JWT encrypted with server's JWT key, not the PSK
 				if len(token) == 402 && r.ContentLength > 390 {
-					m := fmt.Sprintf("Orphaned agent request detected from %s, instructing agent to OPAQUE authenticate", r.RemoteAddr)
+					m := fmt.Sprintf("Orphaned agent request detected from %s, instructing agent to re-register and authenticate", r.RemoteAddr)
 					message("note", m)
 					logging.Server(m)
 					w.WriteHeader(401)
@@ -241,7 +241,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				// Encode JWE into gob
 				errJWEBuffer := gob.NewEncoder(w).Encode(jwe)
 				if errJWEBuffer != nil {
-					m := fmt.Errorf("there was an error writing the %s response message to the HTTP stream:\r\n%s", k.Type, errJWEBuffer.Error())
+					m := fmt.Errorf("there was an error writing the %s response message to the HTTP stream:\r\n%s", messages.String(k.Type), errJWEBuffer.Error())
 					logging.Server(m.Error())
 					message("warn", m.Error())
 					w.WriteHeader(404)
@@ -270,7 +270,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				message("debug", fmt.Sprintf("[DEBUG]POST DATA: %v", j))
 			}
 			if core.Verbose {
-				message("info", fmt.Sprintf("Received %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
+				message("info", fmt.Sprintf("Received %s message from %s at %s", messages.String(j.Type), j.ID, time.Now().UTC().Format(time.RFC3339)))
 			}
 
 			// Allowed authenticated message with PSK JWT and JWE encrypted with derived secret
@@ -310,7 +310,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if core.Verbose {
 				message("note", "Authenticated JWT w/ Authenticated JWE agent session key")
-				message("info", fmt.Sprintf("Received %s message from %s at %s", j.Type, j.ID, time.Now().UTC().Format(time.RFC3339)))
+				message("info", fmt.Sprintf("Received %s message from %s at %s", messages.String(j.Type), j.ID, time.Now().UTC().Format(time.RFC3339)))
 			}
 
 			// If both an agentID and error were returned, then the claims were likely bad and the agent needs to re-authenticate
@@ -328,10 +328,10 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				returnMessage, err = jobs.Handler(j)
 			case messages.CHECKIN:
 				returnMessage, err = jobs.Idle(j.ID)
-			//case messages.OPAQUE_RE_AUTH:
-			//returnMessage, err = agents.OPAQUEReAuthenticate(agentID)
+			case messages.OPAQUE:
+				returnMessage, err = opaque.UnAuthHandler(agentID, j.Payload.(opaque.Opaque), ctx.OpaqueKey)
 			default:
-				err = fmt.Errorf("invalid message type: %d", j.Type)
+				err = fmt.Errorf("invalid message type: %s", messages.String(j.Type))
 			}
 		}
 
@@ -349,6 +349,9 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if core.Verbose {
 			message("note", fmt.Sprintf("Sending %s message type to agent", messages.String(returnMessage.Type)))
+		}
+		if core.Debug {
+			message("debug", fmt.Sprintf("Sending message to agent:\r\n%+v", returnMessage))
 		}
 
 		// Get JWT to add to message.Base for all messages except re-authenticate messages

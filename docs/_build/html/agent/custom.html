@@ -196,7 +196,7 @@
 <div class="section" id="basic">
 <h2>Basic<a class="headerlink" href="#basic" title="Permalink to this headline">¶</a></h2>
 <p>The provided Make file can be used to build a new agent from <strong>source</strong>. It is recommended that you first use
-<code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">github.com/Ne0nd0g/Merlin</span></code> to pull a copy of the Merlin source code to the host. Move into the Merlin root
+<code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">github.com/Ne0nd0g/merlin</span></code> to pull a copy of the Merlin source code to the host. Move into the Merlin root
 directory where the Make file is located.</p>
 <ul class="simple">
 <li>Windows agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-windows</span></code></li>
@@ -220,29 +220,53 @@ commandline arguments and allows the Agent to simply be executed. The table belo
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td>URL</td>
-<td>Full URL for agent to connect to (default “<a class="reference external" href="https://127.0.0.1:443">https://127.0.0.1:443</a>”)</td>
-<td>same as the <code class="docutils literal notranslate"><span class="pre">-url</span></code> commandline flag</td>
+<tr class="row-even"><td>HOST</td>
+<td>HTTP Host header</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-host</span></code> commandline flag</td>
 </tr>
-<tr class="row-odd"><td>PSK</td>
-<td>Pre-Shared Key used to encrypt initial communications (default “merlin”)</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-psk</span></code> commandline flag</td>
+<tr class="row-odd"><td>JA3</td>
+<td>JA3 signature string (not the MD5 hash). Overrides -proto flag</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> commandline flag</td>
+</tr>
+<tr class="row-even"><td>KILLDATE</td>
+<td>The date, as a Unix EPOCH timestamp, that the agent will quit running</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-killdate</span></code> commandline flag</td>
+</tr>
+<tr class="row-odd"><td>MAXRETRY</td>
+<td>The maximum amount of failed checkins before the agent will quit running</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-maxretry</span></code> commandline flag</td>
+</tr>
+<tr class="row-even"><td>PADDING</td>
+<td>The maximum amount of data that will be randomly selected and appended to every message</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-padding</span></code> commandline flag</td>
+</tr>
+<tr class="row-odd"><td>PROTO</td>
+<td>Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default ‘h2’)</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-proto</span></code> commandline flag</td>
 </tr>
 <tr class="row-even"><td>PROXY</td>
 <td>Hardcoded proxy to use for http/1.1 traffic only that will override host configuration</td>
 <td>same as <code class="docutils literal notranslate"><span class="pre">-proxy</span></code> commandline flag</td>
 </tr>
-<tr class="row-odd"><td>HOST</td>
-<td>HTTP Host header</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-host</span></code> commandline flag</td>
+<tr class="row-odd"><td>PSK</td>
+<td>Pre-Shared Key used to encrypt initial communications (default “merlin”)</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-psk</span></code> commandline flag</td>
 </tr>
-<tr class="row-even"><td>PROTO</td>
-<td>Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default ‘h2’)</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-proto</span></code> commandline flag</td>
+<tr class="row-even"><td>SKEW</td>
+<td>Amount of skew, or variance, between agent checkins</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-skew</span></code> commandline flag</td>
 </tr>
-<tr class="row-odd"><td>JA3</td>
-<td>JA3 signature string (not the MD5 hash). Overrides -proto flag</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> commandline flag</td>
+<tr class="row-odd"><td>SLEEP</td>
+<td>The amount of time the Agent will sleep between checkins Must use golang time notation (e.g., <code class="docutils literal notranslate"><span class="pre">10s</span></code> for ten seconds)</td>
+<td>same as <code class="docutils literal notranslate"><span class="pre">-sleep</span></code> command line flag</td>
+</tr>
+<tr class="row-even"><td>URL</td>
+<td>Full URL for agent to connect to (default “<a class="reference external" href="https://127.0.0.1:443">https://127.0.0.1:443</a>”)</td>
+<td>same as the <code class="docutils literal notranslate"><span class="pre">-url</span></code> commandline flag</td>
+</tr>
+<tr class="row-odd"><td>USERAGENT</td>
+<td>The HTTP User-Agent header string that Agent will use while sending traffic</td>
+<td>same sas the <code class="docutils literal notranslate"><span class="pre">-useragent</span></code> commandline flag</td>
 </tr>
 </tbody>
 </table>
@@ -256,8 +280,7 @@ does not have a GUI component. The reason this is used is so that the Merlin Age
 This behavior is intentional so that the user will not see the application window. This is done with the LDFLAGS when
 building the agent using the <code class="docutils literal notranslate"><span class="pre">-H=windowsgui</span></code> option as shown <a class="reference external" href="https://golang.org/cmd/link/">here</a></p>
 <p>This causes problems when a user <strong>WANTS</strong> to see the Merlin Agent verbose or debug output. To view Merlin verbose/debug
-output, recompile the agent after removing <code class="docutils literal notranslate"><span class="pre">-H=windowsgui</span></code> from the Make file. Alternatively, compile the Windows
-agent with: <code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">build</span> <span class="pre">-o</span> <span class="pre">Merlin.exe</span> <span class="pre">cmd/merlinagent/main.go</span></code>.</p>
+output, use the Makefile <code class="docutils literal notranslate"><span class="pre">agent-windows-debug</span></code> target (e.g., <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-windows-debug</span></code>)</p>
 </div>
 <div class="section" id="cross-compiling">
 <h2>Cross-Compiling<a class="headerlink" href="#cross-compiling" title="Permalink to this headline">¶</a></h2>

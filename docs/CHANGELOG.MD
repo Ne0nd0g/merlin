@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Created constants for message types for easier comparison and switching
 - Added a new `jobs` command to view created and sent jobs
 - Added a new `clear` command to remove any jobs that have not been sent to the agent
+- Added `killdate`, `maxretry`, `useragent`, `padding`, `skew` to Merlin Agent command line arguments and Makefile
+- Added checks to OPAQUE handling to ensure resliency if server is not available or has an error during registration
+- Added Makefile `agent-windows-debug` build target to enable viewing verbose and debug messages
 
 ### Changes
 
@@ -33,6 +36,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Removed RSA key exchange since it wasn't being used for anything
 - Moved functions that output tables to the agent API that returns rows; CLI package prints them
 - Removed CLI completer functions from `pkg/agents` and implemented functionality in agent API and CLI package
+- Restructured Merlin Agent code into multiple go files
+- Created generic MerlinClient interface to facilitate using different protocols
+- Changed HTTP server timeout from 10 seconds to 30 seconds
 
 ## 0.9.1 - 2020-09-23
 
