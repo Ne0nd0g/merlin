@@ -90,9 +90,6 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	var agentID uuid.UUID
 	var errValidate error
 
-	hashedKey := sha256.Sum256([]byte("test"))
-	key := hashedKey[:]
-
 	agentID, errValidate = validateJWT(strings.Split(token, " ")[1], []byte("xZF7fvaGD6p2yeLyf9i7O9gBBHk05B0u"))
 	if errValidate != nil {
 		// Validate JWT using interface PSK; Used by unauthenticated agents

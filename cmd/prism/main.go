@@ -22,24 +22,15 @@ package main
 import (
 	// Standard
 	"bytes"
-	"crypto/sha256"
-	"encoding/gob"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
-	"time"
-
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
-
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agent"
 	merlinHTTP "github.com/Ne0nd0g/merlin/pkg/agent/clients/http"
@@ -52,20 +43,11 @@ import (
 var url = "https://127.0.0.1:443"
 var psk = "merlin"
 var proxy = ""
-var secret []byte
 var verbose = false
 var debug = false
-var merlinJWT string
 var host string
 var ja3 = ""
 var useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 "
-
-type merlinClient interface {
-	Do(req *http.Request) (*http.Response, error)
-	Get(url string) (resp *http.Response, err error)
-	Head(url string) (resp *http.Response, err error)
-	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
-}
 
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
@@ -113,16 +95,6 @@ func main() {
 		if verbose {
 			color.Red(errClient.Error())
 		}
-	}
-
-	k := sha256.Sum256([]byte(psk))
-	secret = k[:]
-
-	// Set initial JWT
-	merlinJWT, err = getJWT(a.ID)
-	if err != nil {
-		message("warn", err.Error())
-		os.Exit(1)
 	}
 
 	// Check for v0.7.0 or earlier
@@ -197,7 +169,7 @@ func opaqueRegister(a agent.Agent) error {
 }
 
 func sendPre8Message(a agent.Agent) error {
-	g := OldBase{
+	g := oldBase{
 		Version: 1.0,
 		ID:      a.ID,
 		Type:    "StatusCheckIn",
@@ -226,7 +198,7 @@ func sendPre8Message(a agent.Agent) error {
 	}
 
 	var payload json.RawMessage
-	j := OldBase{
+	j := oldBase{
 		Payload: &payload,
 	}
 
@@ -244,147 +216,6 @@ func sendPre8Message(a agent.Agent) error {
 		return fmt.Errorf("received JSON message did not contain an message type of AgentControl")
 	}
 	return nil
-}
-
-// sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
-// The response message will be decrypted, decoded, and return a messages.Base struct.
-func sendMessage(method string, m messages.Base, client merlinClient) (messages.Base, error) {
-	if debug {
-		message("debug", "Entering into agent.sendMessage")
-	}
-	if verbose {
-		message("note", fmt.Sprintf("Sending %s message to %s", m.Type, url))
-	}
-
-	var returnMessage messages.Base
-
-	// Convert messages.Base to gob
-	messageBytes := new(bytes.Buffer)
-	errGobEncode := gob.NewEncoder(messageBytes).Encode(m)
-	if errGobEncode != nil {
-		return returnMessage, fmt.Errorf("there was an error encoding the %s message to a gob:\r\n%s", m.Type, errGobEncode.Error())
-	}
-
-	// Get JWE
-	jweString, errJWE := core.GetJWESymetric(messageBytes.Bytes(), secret)
-	if errJWE != nil {
-		return returnMessage, errJWE
-	}
-
-	// Encode JWE into gob
-	jweBytes := new(bytes.Buffer)
-	errJWEBuffer := gob.NewEncoder(jweBytes).Encode(jweString)
-	if errJWEBuffer != nil {
-		return returnMessage, fmt.Errorf("there was an error encoding the %s JWE string to a gob:\r\n%s", m.Type, errJWEBuffer.Error())
-	}
-
-	switch strings.ToLower(method) {
-	case "post":
-		req, reqErr := http.NewRequest("POST", url, jweBytes)
-		if reqErr != nil {
-			return returnMessage, fmt.Errorf("there was an error building the HTTP request:\r\n%s", reqErr.Error())
-		}
-
-		if req != nil {
-			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
-			req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", merlinJWT))
-		}
-
-		// Send the request
-		resp, err := client.Do(req)
-		if err != nil {
-			return returnMessage, fmt.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
-		}
-		if debug {
-			message("debug", fmt.Sprintf("HTTP Response:\r\n%+v", resp))
-		}
-		if resp.StatusCode != 200 {
-			return returnMessage, fmt.Errorf("there was an error communicating with the server:\r\n%d", resp.StatusCode)
-		}
-
-		contentType := resp.Header.Get("Content-Type")
-		if contentType == "" {
-			return returnMessage, fmt.Errorf("the response did not contain a Content-Type header")
-		}
-
-		// Check to make sure the response contains the application/octet-stream Content-Type header
-		isOctet := false
-		for _, v := range strings.Split(contentType, ",") {
-			if strings.ToLower(v) == "application/octet-stream" {
-				isOctet = true
-			}
-		}
-
-		if !isOctet {
-			return returnMessage, fmt.Errorf("the response message did not contain the application/octet-stream Content-Type header")
-		}
-
-		// Check to make sure message response contained data
-		if resp.ContentLength == 0 {
-			return returnMessage, fmt.Errorf("the response message did not contain any data")
-		}
-
-		var jweString string
-
-		// Decode GOB from server response into JWE
-		errD := gob.NewDecoder(resp.Body).Decode(&jweString)
-		if errD != nil {
-			return returnMessage, fmt.Errorf("there was an error decoding the gob message:\r\n%s", errD.Error())
-		}
-
-		// Decrypt JWE to messages.Base
-		respMessage, errDecrypt := core.DecryptJWE(jweString, secret)
-		if errDecrypt != nil {
-			return returnMessage, errDecrypt
-		}
-
-		return respMessage, nil
-	default:
-		return returnMessage, fmt.Errorf("%s is an invalid method for sending a message", method)
-	}
-
-}
-
-// getJWT is used to send an unauthenticated JWT on the first message to the server
-func getJWT(agentID uuid.UUID) (string, error) {
-	// Create encrypter
-	encrypter, encErr := jose.NewEncrypter(jose.A256GCM,
-		jose.Recipient{
-			Algorithm: jose.DIRECT, // Doesn't create a per message key
-			Key:       secret},
-		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
-	if encErr != nil {
-		return "", fmt.Errorf("there was an error creating the JWT encryptor:\r\n%s", encErr.Error())
-	}
-
-	// Create signer
-	signer, errSigner := jose.NewSigner(jose.SigningKey{
-		Algorithm: jose.HS256,
-		Key:       secret},
-		(&jose.SignerOptions{}).WithType("JWT"))
-	if errSigner != nil {
-		return "", fmt.Errorf("there was an error creating the JWT signer:\r\n%s", errSigner.Error())
-	}
-
-	// Build JWT claims
-	cl := jwt.Claims{
-		IssuedAt: jwt.NewNumericDate(time.Now().UTC()),
-		ID:       agentID.String(),
-	}
-
-	agentJWT, err := jwt.SignedAndEncrypted(signer, encrypter).Claims(cl).CompactSerialize()
-	if err != nil {
-		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s", err)
-	}
-
-	// Parse it to check for errors
-	_, errParse := jwt.ParseSignedAndEncrypted(agentJWT)
-	if errParse != nil {
-		return "", fmt.Errorf("there was an error parsing the encrypted JWT:\r\n%s", errParse.Error())
-	}
-
-	return agentJWT, nil
 }
 
 // message is used to print a message to the command line
@@ -412,7 +243,7 @@ func usage() {
 	os.Exit(0)
 }
 
-type OldBase struct {
+type oldBase struct {
 	Version float32     `json:"version"`
 	ID      uuid.UUID   `json:"id"`
 	Type    string      `json:"type"`
