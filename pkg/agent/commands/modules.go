@@ -90,22 +90,22 @@ func MiniDump(cmd jobs.Command) (jobs.FileTransfer, error) {
 
 	//copied and pasted from upload func, modified appropriately
 	if miniDumpErr != nil {
-		return jobs.FileTransfer{}, fmt.Errorf("There was an error executing the miniDump module:\r\n%s", miniDumpErr.Error())
-	} else {
-		fileHash := sha256.New()
-		_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
-		if errW != nil {
-			cli.Message(cli.WARN, fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
-		}
-
-		cli.Message(cli.NOTE, fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
-			len(miniD["FileContent"].([]byte)),
-			fileHash.Sum(nil)))
-
-		return jobs.FileTransfer{
-			FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
-			FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
-			IsDownload:   true,
-		}, nil
+		return jobs.FileTransfer{}, fmt.Errorf("there was an error executing the miniDump module:\r\n%s", miniDumpErr.Error())
 	}
+
+	fileHash := sha256.New()
+	_, errW := io.WriteString(fileHash, string(miniD["FileContent"].([]byte)))
+	if errW != nil {
+		cli.Message(cli.WARN, fmt.Sprintf("There was an error generating the SHA256 file hash e:\r\n%s", errW.Error()))
+	}
+
+	cli.Message(cli.NOTE, fmt.Sprintf("Uploading minidump file of size %d bytes and a SHA1 hash of %x to the server",
+		len(miniD["FileContent"].([]byte)),
+		fileHash.Sum(nil)))
+
+	return jobs.FileTransfer{
+		FileLocation: fmt.Sprintf("%s.%d.dmp", miniD["ProcName"], miniD["ProcID"]),
+		FileBlob:     base64.StdEncoding.EncodeToString(miniD["FileContent"].([]byte)),
+		IsDownload:   true,
+	}, nil
 }

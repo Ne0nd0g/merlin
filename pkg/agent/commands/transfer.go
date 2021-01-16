@@ -19,7 +19,7 @@ package commands
 
 import (
 	// Standard
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 Only used to get hash of a file
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -72,23 +72,23 @@ func Upload(transfer jobs.FileTransfer) (jobs.FileTransfer, error) {
 		cli.Message(cli.WARN, fmt.Sprintf("There was an error reading %s", transfer.FileLocation))
 		cli.Message(cli.WARN, fileDataErr.Error())
 		return jobs.FileTransfer{}, fmt.Errorf("there was an error reading %s:\r\n%s", transfer.FileLocation, fileDataErr.Error())
-	} else {
-		fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
-		_, errW := io.WriteString(fileHash, string(fileData))
-		if errW != nil {
-			cli.Message(cli.WARN, fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
-		}
-
-		cli.Message(cli.NOTE, fmt.Sprintf("Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
-			transfer.FileLocation,
-			len(fileData),
-			fileHash.Sum(nil)))
-
-		ft := jobs.FileTransfer{
-			FileLocation: transfer.FileLocation,
-			FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
-			IsDownload:   true,
-		}
-		return ft, nil
 	}
+
+	fileHash := sha1.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
+	_, errW := io.WriteString(fileHash, string(fileData))
+	if errW != nil {
+		cli.Message(cli.WARN, fmt.Sprintf("There was an error generating the SHA1 file hash e:\r\n%s", errW.Error()))
+	}
+
+	cli.Message(cli.NOTE, fmt.Sprintf("Uploading file %s of size %d bytes and a SHA1 hash of %x to the server",
+		transfer.FileLocation,
+		len(fileData),
+		fileHash.Sum(nil)))
+
+	ft := jobs.FileTransfer{
+		FileLocation: transfer.FileLocation,
+		FileBlob:     base64.StdEncoding.EncodeToString([]byte(fileData)),
+		IsDownload:   true,
+	}
+	return ft, nil
 }

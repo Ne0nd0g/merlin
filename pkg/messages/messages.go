@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2019  Russel Van Tuyl
+// Copyright (C) 2021  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -37,12 +37,19 @@ func init() {
 const (
 
 	// To Server
-	CHECKIN     = 1 // StatusCheckIn
-	OPAQUE      = 2
-	JOBS        = 3
+
+	// CHECKIN is used by the Agent to identify that it is checking in with the server
+	CHECKIN = 1 // StatusCheckIn
+	// OPAQUE is used to denote that embedded message contains an opaque structure
+	OPAQUE = 2
+	// JOBS is used to denote that the embedded message contains a list of job structures
+	JOBS = 3
+	// KEYEXCHANGE is used to denote that embedded message contains a key exchange structure
 	KEYEXCHANGE = 4
 
 	// To Agent
+
+	// IDLE is used to notify the Agent that server has no tasks and that the Agent should idle
 	IDLE = 10
 )
 

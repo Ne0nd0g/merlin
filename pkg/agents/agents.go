@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2019  Russel Van Tuyl
+// Copyright (C) 2021  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -40,9 +40,10 @@ import (
 // Global Variables
 
 // Agents contains all of the instantiated agent object that are accessed by other modules
-var Agents = make(map[uuid.UUID]*agent)
+var Agents = make(map[uuid.UUID]*Agent)
 
-type agent struct {
+// Agent is a server side structure that holds information about a Merlin Agent
+type Agent struct {
 	ID               uuid.UUID
 	Platform         string
 	Architecture     string
@@ -144,7 +145,7 @@ func GetEncryptionKey(agentID uuid.UUID) ([]byte, error) {
 }
 
 // UpdateInfo is used to update an agent's information with the passed in message data
-func (a *agent) UpdateInfo(info messages.AgentInfo) {
+func (a *Agent) UpdateInfo(info messages.AgentInfo) {
 	if core.Debug {
 		message("debug", "Entering into agents.UpdateInfo function")
 	}
@@ -199,7 +200,7 @@ func (a *agent) UpdateInfo(info messages.AgentInfo) {
 }
 
 // Log is used to write log messages to the agent's log file
-func (a *agent) Log(logMessage string) {
+func (a *Agent) Log(logMessage string) {
 	if core.Debug {
 		message("debug", "Entering into agents.Log")
 	}
@@ -273,11 +274,11 @@ func isAgent(agentID uuid.UUID) bool {
 }
 
 // New creates a new Agent and returns the object but does not add it to the global agents map
-func New(agentID uuid.UUID) (agent, error) {
+func New(agentID uuid.UUID) (Agent, error) {
 	if core.Debug {
 		message("debug", "Entering into agents.newAgent function")
 	}
-	var agent agent
+	var agent Agent
 	if isAgent(agentID) {
 		return agent, fmt.Errorf("the %s agent already exists", agentID)
 	}

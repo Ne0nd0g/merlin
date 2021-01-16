@@ -47,11 +47,17 @@ func init() {
 }
 
 const (
-	RegInit        = 1
-	RegComplete    = 2
-	AuthInit       = 3
-	AuthComplete   = 4
-	ReRegister     = 5
+	// RegInit is used to denote that the embedded payload contains data for the OPAQUE protocol Registration Initialization step
+	RegInit = 1
+	// RegComplete is used to denote that the embedded payload contains data for the OPAQUE protocol Registration Complete step
+	RegComplete = 2
+	// AuthInit is used to denote that the embedded payload contains data for the OPAQUE protocol Authorization Initialization step
+	AuthInit = 3
+	// AuthComplete is used to denote that the embedded payload contains data for the OPAQUE protocol Authorization Complete step
+	AuthComplete = 4
+	// ReRegister is used to instruct the Agent it needs to execute the OPAQUE Registration process with the server
+	ReRegister = 5
+	// ReAuthenticate is used to instruct the Agent it needs to execute the OPAQUE Authentication process with the server
 	ReAuthenticate = 6
 )
 
@@ -290,7 +296,7 @@ func reAuthenticate(agentID uuid.UUID) (Opaque, error) {
 	return returnMessage, nil
 }
 
-// Handles OPAQUE messages for authenticated agents
+// Handler processes and dispatches OPAQUE messages for authenticated agents
 // Messages should only allow:
 // AuthComplete
 func Handler(agentID uuid.UUID, opaque Opaque) (messages.Base, error) {
@@ -314,12 +320,12 @@ func Handler(agentID uuid.UUID, opaque Opaque) (messages.Base, error) {
 				message("warn", fmt.Sprintf("there was an error adding the agentInfo job:\r\n%s", errAdd))
 			}
 			// Get job from queue
-			jobs, err := jobs.Get(agentID)
+			jobsList, err := jobs.Get(agentID)
 			if err != nil {
 				message("warn", err.Error())
 			} else {
 				returnMessage.Type = messages.JOBS
-				returnMessage.Payload = jobs
+				returnMessage.Payload = jobsList
 			}
 		}
 	default:
@@ -376,7 +382,7 @@ func UnAuthHandler(agentID uuid.UUID, opaque Opaque, key kyber.Scalar) (messages
 	return returnMessage, nil
 }
 
-//RegisterInit is used to perform the OPAQUE Password Authenticated Key Exchange (PAKE) protocol Registration
+// UserRegisterInit is used to perform the OPAQUE Password Authenticated Key Exchange (PAKE) protocol Registration
 func UserRegisterInit(AgentID uuid.UUID) (Opaque, *User, error) {
 	cli.Message(cli.DEBUG, "Entering into opaque.UserRegisterInit...")
 	var user User

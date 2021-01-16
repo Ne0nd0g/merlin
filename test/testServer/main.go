@@ -28,6 +28,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/gob"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -103,8 +105,10 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if len(agents.GetEncryptionKey(agentID)) > 0 {
-		key = agents.GetEncryptionKey(agentID)
+	key, errKey := agents.GetEncryptionKey(agentID)
+	if errKey != nil {
+		w.WriteHeader(404)
+		return
 	}
 
 	// Decrypt JWE
@@ -123,18 +127,20 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	// User Agent based actions
 	switch r.UserAgent() {
 	case "invalidMessageBaseType":
-		returnMessage.Type = "Test"
+		returnMessage.Type = 200
 	}
 
 	// Message type based action
 	switch j.Type {
-	case "AgentInfo":
-		err = agents.UpdateInfo(j)
-	case "AuthInit":
-		returnMessage, err = agents.OPAQUEAuthenticateInit(j)
-	case "AuthComplete":
-		returnMessage, err = agents.OPAQUEAuthenticateComplete(j)
-	case "BadPayload":
+	case messages.JOBS:
+		returnMessage, err = jobs.Handler(j)
+	case messages.OPAQUE:
+		if j.Payload.(opaque.Opaque).Type == opaque.AuthComplete {
+			returnMessage, err = opaque.Handler(j.ID, j.Payload.(opaque.Opaque))
+		} else {
+			returnMessage, err = opaque.UnAuthHandler(j.ID, j.Payload.(opaque.Opaque), gopaque.CryptoDefault.NewKey(nil))
+		}
+	case 201:
 		w.Header().Set("Content-Type", "application/octet-stream")
 		errBadPayload := gob.NewEncoder(w).Encode([]byte("Hack the planet!"))
 		if errBadPayload != nil {

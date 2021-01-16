@@ -28,9 +28,7 @@ import (
 
 // ExecuteCommand is function used to instruct an agent to execute a command on the host operating system
 func executeCommand(name string, args []string) (stdout string, stderr string) {
-	var cmd *exec.Cmd
-
-	cmd = exec.Command(name, args...) // #nosec G204
+	cmd := exec.Command(name, args...) // #nosec G204
 
 	out, err := cmd.CombinedOutput()
 	stdout = string(out)
@@ -75,6 +73,7 @@ func ExecuteShellcodeQueueUserAPC(shellcode []byte, pid uint32) error {
 }
 
 // ExecuteShellcodeCreateProcessWithPipe creates a child process, redirects STDOUT/STDERR to an anonymous pipe, injects/executes shellcode, and retrieves output
+//lint:ignore SA4009 Function needs to mirror exec_windows.go and inputs must be used
 func ExecuteShellcodeCreateProcessWithPipe(sc string, spawnto string, args string) (stdout string, stderr string, err error) {
 	sc = ""
 	spawnto = ""

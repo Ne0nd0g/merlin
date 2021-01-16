@@ -40,16 +40,17 @@ require (
 	github.com/securego/gosec v0.0.0-20200401082031-e946c8c39989 // indirect
 	go.dedis.ch/kyber/v3 v3.0.12
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899
-	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20200904194848-62affa334b73
+	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
+	golang.org/x/mod v0.4.1 // indirect
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	golang.org/x/net/http2/h2demo v0.0.0-20200904194848-62affa334b73 // indirect
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
-	golang.org/x/sys v0.0.0-20200909081042-eff7692f9009
-	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20200915201639-f4cefd1cb5ba // indirect
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+	golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963 // indirect
 	golang.org/x/tools/gopls v0.5.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1
+	honnef.co/go/tools v0.1.0 // indirect
 )
 
 go 1.14

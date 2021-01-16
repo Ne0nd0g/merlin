@@ -276,13 +276,16 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
 }
 
+// GetAgents returns a list of existing Agent UUID values
 func GetAgents() (agentList []uuid.UUID) {
-	for id, _ := range agents.Agents {
+	for id := range agents.Agents {
 		agentList = append(agentList, id)
 	}
 	return
 }
 
+// GetAgentsRows returns a row of data for every agent that includes information about it such as
+// the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
 	header = []string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"}
 	for _, agent := range agents.Agents {
@@ -309,6 +312,7 @@ func GetAgentsRows() (header []string, rows [][]string) {
 	return
 }
 
+// GetAgentInfo returns rows of data about an Agent's configuration that can be displayed in a table
 func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 	var rows [][]string
 	a, ok := agents.Agents[agentID]
@@ -370,11 +374,11 @@ func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
 
 // GetJobsForAgent enumerates all jobs and their status
 func GetJobsForAgent(agentID uuid.UUID) ([][]string, messages.UserMessage) {
-	jobs, err := jobs.GetTableActive(agentID)
+	jobsRows, err := jobs.GetTableActive(agentID)
 	if err != nil {
 		return nil, messages.ErrorMessage(err.Error())
 	}
-	return jobs, messages.UserMessage{}
+	return jobsRows, messages.UserMessage{}
 }
 
 // Kill instructs the agent to quit running

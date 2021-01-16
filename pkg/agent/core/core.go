@@ -18,6 +18,12 @@
 package core
 
 // Global Variables
+
+// Verbose indicates if the agent should write messages to STDOUT
 var Verbose = false
+
+// Debug is used to troubleshoot problems and results in very detailed information being displayed on STDOUT
 var Debug = false
+
+// Version is the Merlin Agent's version number
 var Version = "0.10.0-Beta"

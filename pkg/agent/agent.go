@@ -199,7 +199,7 @@ func (a *Agent) Run() error {
 		// Sleep
 		var sleep time.Duration
 		if a.Skew > 0 {
-			sleep = a.WaitTime + (time.Duration(rand.Int63n(a.Skew)) * time.Millisecond)
+			sleep = a.WaitTime + (time.Duration(rand.Int63n(a.Skew)) * time.Millisecond) // #nosec G404 - Does not need to be cryptographically secure, deterministic is OK
 		} else {
 			sleep = a.WaitTime
 		}

@@ -1,7 +1,7 @@
 /*
 Merlin is a post-exploitation command and control framework.
 This file is part of Merlin.
-Copyright (C) 2019  Russel Van Tuyl
+Copyright (C) 2021  Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

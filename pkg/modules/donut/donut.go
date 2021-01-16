@@ -42,16 +42,20 @@ func Parse(options map[string]string) ([]string, error) {
 		f, err := os.Create(options["output"])
 		if err != nil {
 			// TODO Move to a CLI API call instead of writing to STDOUT
-			fmt.Println(fmt.Sprintf("there was an error creating the donut output file:\r\n%s", err))
+			fmt.Printf("\r\nthere was an error creating the donut output file:\r\n%s\r\n", err)
 		}
-		defer f.Close()
+
+		defer func() {
+			err = f.Close()
+		}()
+
 		_, err = donutBuffer.WriteTo(f)
 		if err != nil {
 			// TODO Move to a CLI API call instead of writing to STDOUT
-			fmt.Println(fmt.Sprintf("there was an error writing donut shellcode to a file:\r\n%s", err))
+			fmt.Printf("\r\nthere was an error writing donut shellcode to a file:\r\n%s\r\n", err)
 		} else {
 			// TODO Move to a CLI API call instead of writing to STDOUT
-			fmt.Println(fmt.Sprintf("Wrote donut file to: %s", options["output"]))
+			fmt.Printf("\r\nWrote donut file to: %s\r\n", options["output"])
 		}
 	}
 

@@ -1,7 +1,7 @@
 /*
 Merlin is a post-exploitation command and control framework.
 This file is part of Merlin.
-Copyright (C) 2019  Russel Van Tuyl
+Copyright (C) 2021  Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -111,12 +111,11 @@ func ParseShellcode(shellcode string) ([]byte, error) {
 	// If it is, check to see if it using  what format it is using?
 	if errF != nil {
 		return parseHex([]string{shellcode})
-	} else {
-		if f.IsDir() {
-			return nil, fmt.Errorf("a directory was provided instead of a file: %s", shellcode)
-		}
-		return parseShellcodeFile(shellcode)
 	}
+	if f.IsDir() {
+		return nil, fmt.Errorf("a directory was provided instead of a file: %s", shellcode)
+	}
+	return parseShellcodeFile(shellcode)
 }
 
 // parseHex evaluates a string array to determine its format and returns a byte array of the hex

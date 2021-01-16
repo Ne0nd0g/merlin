@@ -14,6 +14,7 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
 package cli
 
 import (
@@ -25,10 +26,15 @@ import (
 )
 
 const (
-	INFO    = 1
-	NOTE    = 2
-	WARN    = 3
-	DEBUG   = 4
+	// INFO is used to print informational messages to STDOUT with "[i]"
+	INFO = 1
+	// NOTE is used to print verbose or non-sensitive messages to STDOUT with "[-]"
+	NOTE = 2
+	// WARN is used to print error messages or other failures to STDOUT with "[!]"
+	WARN = 3
+	// DEBUG is used to print debugging messages to STDOUT with "[DEBUG]"
+	DEBUG = 4
+	// SUCCESS is used to print successful or important messages to STDOUT with "[+]"
 	SUCCESS = 5
 )
 

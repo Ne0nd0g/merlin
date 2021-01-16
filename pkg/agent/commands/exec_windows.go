@@ -72,9 +72,7 @@ const (
 
 // executeCommand is function used to instruct an agent to execute a command on the host operating system
 func executeCommand(name string, args []string) (stdout string, stderr string) {
-	var cmd *exec.Cmd
-
-	cmd = exec.Command(name, args...)
+	cmd := exec.Command(name, args...)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true} //Only difference between this and agent.go
 

@@ -307,7 +307,7 @@ func (client *Client) SendMerlinMessage(m messages.Base) (messages.Base, error) 
 	jweBytes := new(bytes.Buffer)
 	errJWEBuffer := gob.NewEncoder(jweBytes).Encode(jweString)
 	if errJWEBuffer != nil {
-		return returnMessage, fmt.Errorf("there was an error encoding the %s JWE string to a gob:\r\n%s", m.Type, errJWEBuffer.Error())
+		return returnMessage, fmt.Errorf("there was an error encoding the %s JWE string to a gob:\r\n%s", messages.String(m.Type), errJWEBuffer.Error())
 	}
 
 	req, reqErr := http.NewRequest("POST", client.URL, jweBytes)

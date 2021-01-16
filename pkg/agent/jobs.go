@@ -60,7 +60,7 @@ func executeJob() {
 					Type:    jobs.FILETRANSFER,
 					Payload: ft,
 				}
-				break
+				continue
 			}
 		case jobs.MODULE:
 			switch strings.ToLower(job.Payload.(jobs.Command).Command) {
@@ -77,7 +77,7 @@ func executeJob() {
 					Type:    jobs.FILETRANSFER,
 					Payload: ft,
 				}
-				break
+				continue
 			default:
 				result.Stderr = fmt.Sprintf("unknown module command: %s", job.Payload.(jobs.Command).Command)
 			}
@@ -156,9 +156,6 @@ func (a *Agent) jobHandler(Jobs []jobs.Job) {
 					Payload: result,
 				}
 			}
-		} else {
-			// If the job belongs to a linked agent
-			// NOT IMPLEMENTED YET
 		}
 	}
 }

@@ -53,27 +53,46 @@ func init() {
 }
 
 const (
-	CREATED  = 1
-	SENT     = 2
-	RETURNED = 3 // For when job will send back chunked messages and hasn't finished
+	// CREATED is used to denote that job has been created
+	CREATED = 1
+	// SENT is used to denote that the job has been sent to the Agent
+	SENT = 2
+	// RETURNED is for when a chunk has been returned but the job hasn't finished running
+	RETURNED = 3
+	// COMPLETE is used to denote that the job has finished running and the Agent has sent back the results
 	COMPLETE = 4
-	CANCELED = 5 // Jobs that were cancelled with the "clear" command
+	// CANCELED is used to denoted jobs that were cancelled with the "clear" command
+	CANCELED = 5
 
 	// To Agent
-	CMD          = 10 // CmdPayload
-	CONTROL      = 11 // AgentControl
-	SHELLCODE    = 12 // Shellcode
-	NATIVE       = 13 // NativeCmd
+
+	// CMD is used to send CmdPayload messages
+	CMD = 10 // CmdPayload
+	// CONTROL is used to send AgentControl messages
+	CONTROL = 11 // AgentControl
+	// SHELLCODE is used to send shellcode messages
+	SHELLCODE = 12 // Shellcode
+	// NATIVE is used to send NativeCmd messages
+	NATIVE = 13 // NativeCmd
+	// FILETRANSFER is used to send FileTransfer messages for upload/download operations
 	FILETRANSFER = 14 // FileTransfer
-	OK           = 15 // ServerOK
-	MODULE       = 16 // Module
+	// OK is used to signify that there is nothing to do, or to idle
+	OK = 15 // ServerOK
+	// MODULE is used to send Module messages
+	MODULE = 16 // Module
 
 	// From Agent
-	RESULT    = 20
+
+	// RESULT is used by the Agent to return a result message
+	RESULT = 20
+	// AGENTINFO is used by the Agent to return information about its configuration
 	AGENTINFO = 21
 )
 
+// JobsChannel contains a map of all instantiated jobs created on the server by each Agent's ID
 var JobsChannel = make(map[uuid.UUID]chan Job)
+
+// Jobs is a map that contains specific information about an individual job and is embedded in the JobsChannel
 var Jobs = make(map[string]info)
 
 // Job is used to task an agent to run a command
@@ -297,7 +316,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		uploadFile, uploadFileErr := ioutil.ReadFile(jobArgs[0])
 		if uploadFileErr != nil {
 			// TODO send "ServerOK"
-			return "", fmt.Errorf("there was an error reading %s: %v", job.Type, uploadFileErr)
+			return "", fmt.Errorf("there was an error reading %s: %v", String(job.Type), uploadFileErr)
 		}
 		fileHash := sha256.New()
 		_, err := io.WriteString(fileHash, string(uploadFile))
@@ -504,10 +523,9 @@ func Handler(m messages.Base) (messages.Base, error) {
 				// Agent will send back error messages that are not the result of a job
 				if job.Type != RESULT {
 					return returnMessage, err
-				} else {
-					if core.Debug {
-						message("debug", fmt.Sprintf("Received %s message without job token.\r\n%s", messages.String(job.Type), err))
-					}
+				}
+				if core.Debug {
+					message("debug", fmt.Sprintf("Received %s message without job token.\r\n%s", messages.String(job.Type), err))
 				}
 			}
 			switch job.Type {

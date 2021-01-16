@@ -1,7 +1,7 @@
 /*
 Merlin is a post-exploitation command and control framework.
 This file is part of Merlin.
-Copyright (C) 2020  Russel Van Tuyl
+Copyright (C) 2021  Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
 // Additional licenses for external programs and code libraries are at the end of the file
 // Moved to the end of the file because it was generating IDE errors with that many lines of comment
+
 package sharpgen
 
 import (
@@ -216,7 +217,7 @@ func Generate(config *Config) error {
 	}
 
 	// Execute SharpGen
-	cmd := exec.Command(config.DotNetBin, args...)
+	cmd := exec.Command(config.DotNetBin, args...) // #nosec G204 Intended to run this way
 	// TODO Need to send back a messages.UserMessage
 	if config.Verbose {
 		fmt.Println(cmd.String())
@@ -227,11 +228,12 @@ func Generate(config *Config) error {
 	}
 	// TODO Need to send back a messages.UserMessage
 	if config.Verbose {
-		fmt.Println(fmt.Sprintf("%s", stdOut))
+		fmt.Printf("\r\n%s\r\n", stdOut)
 	}
 	return nil
 }
 
+// Config is a structure that contains all the necessary information for the SharpGen module to create a payload
 type Config struct {
 	DotNetBin     string // Location of the `dotnet` executable
 	SharpGenBin   string // Location of the SharpGen DLL
