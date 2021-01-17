@@ -36,10 +36,11 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/jobs"
+	merlinJob "github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
+	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
@@ -205,7 +206,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 				// OPAQUE_AUTH_INIT
 				case messages.OPAQUE:
 					//serverAuthInit, err := agents.OPAQUEAuthenticateInit(k)
-					serverAuthInit, err := opaque.UnAuthHandler(agentID, k.Payload.(opaque.Opaque), ctx.OpaqueKey)
+					serverAuthInit, err := OPAQUEUnAuthHandler(agentID, k.Payload.(opaque.Opaque), ctx.OpaqueKey)
 					if err != nil {
 						logging.Server(err.Error())
 						message("warn", err.Error())
@@ -277,7 +278,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			switch j.Type {
 			// OPAQUE_AUTH_COMPLETE
 			case messages.OPAQUE:
-				returnMessage, err = opaque.Handler(agentID, j.Payload.(opaque.Opaque))
+				returnMessage, err = OPAQUEHandler(agentID, j.Payload.(opaque.Opaque))
 			default:
 				message("warn", fmt.Sprintf("Invalid Activity: %s", messages.String(j.Type)))
 				w.WriteHeader(404)
@@ -329,7 +330,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			case messages.CHECKIN:
 				returnMessage, err = jobs.Idle(j.ID)
 			case messages.OPAQUE:
-				returnMessage, err = opaque.UnAuthHandler(agentID, j.Payload.(opaque.Opaque), ctx.OpaqueKey)
+				returnMessage, err = OPAQUEUnAuthHandler(agentID, j.Payload.(opaque.Opaque), ctx.OpaqueKey)
 			default:
 				err = fmt.Errorf("invalid message type: %s", messages.String(j.Type))
 			}
@@ -387,9 +388,9 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Agent can't be removed until after the JWE key is obtained to encrypt the message
 		if returnMessage.Type == messages.JOBS {
-			for _, job := range returnMessage.Payload.([]jobs.Job) {
-				if job.Type == jobs.CONTROL {
-					if strings.ToLower(job.Payload.(jobs.Command).Command) == "kill" {
+			for _, job := range returnMessage.Payload.([]merlinJob.Job) {
+				if job.Type == merlinJob.CONTROL {
+					if strings.ToLower(job.Payload.(merlinJob.Command).Command) == "kill" {
 						err := agents.RemoveAgent(job.AgentID)
 						if err != nil {
 							message("warn", err.Error())

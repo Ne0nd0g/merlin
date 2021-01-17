@@ -27,8 +27,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
+	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 )
 
 // GetModuleListCompleter return a tab completer of available modules for CLI interactions

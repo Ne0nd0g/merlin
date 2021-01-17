@@ -28,13 +28,14 @@ import (
 	"time"
 
 	// 3rd Party
-	"github.com/cretz/gopaque/gopaque"
 	"github.com/satori/go.uuid"
+
 	// Merlin
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
 // Global Variables
@@ -44,33 +45,31 @@ var Agents = make(map[uuid.UUID]*Agent)
 
 // Agent is a server side structure that holds information about a Merlin Agent
 type Agent struct {
-	ID               uuid.UUID
-	Platform         string
-	Architecture     string
-	UserName         string
-	UserGUID         string
-	HostName         string
-	Ips              []string
-	Pid              int
-	agentLog         *os.File
-	InitialCheckIn   time.Time
-	StatusCheckIn    time.Time
-	Version          string
-	Build            string
-	WaitTime         string
-	PaddingMax       int
-	MaxRetry         int
-	FailedCheckin    int
-	Skew             int64
-	Proto            string
-	KillDate         int64
-	RSAKeys          *rsa.PrivateKey                // RSA Private/Public key pair; Private key used to decrypt messages
-	PublicKey        rsa.PublicKey                  // Public key used to encrypt messages
-	Secret           []byte                         // secret is used to perform symmetric encryption operations
-	OPAQUEServerAuth gopaque.ServerAuth             // OPAQUE Server Authentication information used to derive shared secret
-	OPAQUEServerReg  gopaque.ServerRegister         // OPAQUE server registration information
-	OPAQUERecord     gopaque.ServerRegisterComplete // Holds the OPAQUE kU, EnvU, PrivS, PubU
-	JA3              string                         // The JA3 signature applied to the agent's TLS client
+	ID             uuid.UUID
+	Platform       string
+	Architecture   string
+	UserName       string
+	UserGUID       string
+	HostName       string
+	Ips            []string
+	Pid            int
+	agentLog       *os.File
+	InitialCheckIn time.Time
+	StatusCheckIn  time.Time
+	Version        string
+	Build          string
+	WaitTime       string
+	PaddingMax     int
+	MaxRetry       int
+	FailedCheckin  int
+	Skew           int64
+	Proto          string
+	KillDate       int64
+	RSAKeys        *rsa.PrivateKey // RSA Private/Public key pair; Private key used to decrypt messages
+	PublicKey      rsa.PublicKey   // Public key used to encrypt messages
+	Secret         []byte          // secret is used to perform symmetric encryption operations
+	OPAQUE         *opaque.Server  // Holds information about OPAQUE Registration and Authentication
+	JA3            string          // The JA3 signature applied to the agent's TLS client
 }
 
 // KeyExchange is used to exchange public keys between the server and agent
