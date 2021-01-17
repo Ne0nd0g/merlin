@@ -28,8 +28,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/gob"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/jobs"
-	"github.com/Ne0nd0g/merlin/pkg/opaque"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -50,6 +48,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/handlers"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
+	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 )
 
 func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
@@ -133,9 +133,9 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 		returnMessage, err = jobs.Handler(j)
 	case messages.OPAQUE:
 		if j.Payload.(opaque.Opaque).Type == opaque.AuthComplete {
-			returnMessage, err = opaque.Handler(j.ID, j.Payload.(opaque.Opaque))
+			returnMessage, err = handlers.OPAQUEHandler(j.ID, j.Payload.(opaque.Opaque))
 		} else {
-			returnMessage, err = opaque.UnAuthHandler(j.ID, j.Payload.(opaque.Opaque), gopaque.CryptoDefault.NewKey(nil))
+			returnMessage, err = handlers.OPAQUEUnAuthHandler(j.ID, j.Payload.(opaque.Opaque), gopaque.CryptoDefault.NewKey(nil))
 		}
 	case 201:
 		w.Header().Set("Content-Type", "application/octet-stream")
