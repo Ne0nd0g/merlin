@@ -480,3 +480,10 @@ func (client *Client) Auth(auth string, register bool) (messages.Base, error) {
 	}
 
 }
+
+func (client *Client) Initial(agent messages.AgentInfo) (messages.Base, error) {
+	cli.Message(cli.DEBUG, "Entering clients.http.Initial function")
+	cli.Message(cli.DEBUG, fmt.Sprintf("Input AgentInfo:\r\n%+v", agent))
+	// Authenticate
+	return client.Auth("opaque", true)
+}

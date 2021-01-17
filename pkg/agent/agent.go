@@ -189,7 +189,16 @@ func (a *Agent) Run() error {
 			cli.Message(cli.NOTE, "Checking in...")
 			a.statusCheckIn()
 		} else {
-			a.Initial = a.initialCheckIn()
+			msg, err := a.Client.Initial(a.getAgentInfoMessage())
+			if err != nil {
+				a.FailedCheckin++
+				cli.Message(cli.WARN, err.Error())
+				cli.Message(cli.NOTE, fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
+			} else {
+				a.messageHandler(msg)
+				a.Initial = true
+				a.iCheckIn = time.Now().UTC()
+			}
 		}
 		// Determine if the max number of failed checkins has been reached
 		if a.FailedCheckin >= a.MaxRetry {
@@ -206,27 +215,6 @@ func (a *Agent) Run() error {
 		cli.Message(cli.NOTE, fmt.Sprintf("Sleeping for %s at %s", sleep.String(), time.Now().UTC().Format(time.RFC3339)))
 		time.Sleep(sleep)
 	}
-}
-
-// initialCheckin is the function that runs when an agent is first started to complete registration and authentication
-func (a *Agent) initialCheckIn() bool {
-	cli.Message(cli.DEBUG, "Entering initialCheckIn function")
-
-	// Authenticate
-	msg, err := a.Client.Auth("opaque", true)
-	if err != nil {
-		a.FailedCheckin++
-		cli.Message(cli.WARN, err.Error())
-		cli.Message(cli.NOTE, fmt.Sprintf("%d out of %d total failed checkins", a.FailedCheckin, a.MaxRetry))
-		return false
-	}
-	// Handle and returned messages from the authentication process
-	a.messageHandler(msg)
-
-	cli.Message(cli.DEBUG, "Leaving initialCheckIn function, returning True")
-
-	a.iCheckIn = time.Now().UTC()
-	return true
 }
 
 // statusCheckIn is the function that agent runs at every sleep/skew interval to check in with the server for jobs
