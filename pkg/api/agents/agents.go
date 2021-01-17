@@ -75,7 +75,7 @@ func ClearJobs(agentID uuid.UUID) messages.UserMessage {
 // Args[1:] = program and arguments to be executed on the host OS of the running agent
 // Used with `cmd` and `shell` commands as well as through "standard" modules
 func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 0 {
+	if len(Args) > 1 {
 		job, err := jobs.Add(agentID, "cmd", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
