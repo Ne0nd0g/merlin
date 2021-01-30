@@ -17,14 +17,21 @@
 
 package mythic
 
-import uuid "github.com/satori/go.uuid"
+import (
+	uuid "github.com/satori/go.uuid"
+)
 
 const (
-	CHECKIN        = "checkin"
-	TASKING        = "get_tasking"
-	RESPONSE       = "post_response"
-	STATUS_SUCCESS = "success"
-	STATUS_ERROR   = "error"
+	CHECKIN      = "checkin"
+	TASKING      = "get_tasking"
+	RESPONSE     = "post_response"
+	STATUS_ERROR = "error"
+	RSA_STAGING  = "staging_rsa"
+	UPLOAD       = "upload"
+
+	// Custom
+	DOWNLOAD_INIT = 300
+	DOWNLOAD_SEND = 301
 )
 
 // CheckIn is the initial structure sent to Mythic
@@ -57,16 +64,19 @@ type Error struct {
 	Error  string `json:"error"`
 }
 
+// Tasking is used by the agent to request a specified number of tasks from the server
 type Tasking struct {
 	Action string `json:"action"`
 	Size   int    `json:"tasking_size"`
 }
 
+// Tasks holds a list of tasks for the agent to process
 type Tasks struct {
 	Action string `json:"action"`
 	Tasks  []Task `json:"tasks"`
 }
 
+// Task contains the task identifier, command, and parameters for the agent to execute
 type Task struct {
 	ID      string  `json:"id"`
 	Command string  `json:"command"`
@@ -74,14 +84,16 @@ type Task struct {
 	Time    float64 `json:"timestamp"`
 }
 
+// Job structure
 type Job struct {
 	Type    int    `json:"type"`
 	Payload string `json:"payload"`
 }
 
+// PostResponse is the structure used to sent a list of messages from the agent to the server
 type PostResponse struct {
 	Action    string               `json:"action"`
-	Responses []ClientTaskResponse `json:"responses"`
+	Responses []ClientTaskResponse `json:"responses"` // TODO This needs to be an interface so it can handle both ClientTaskResponse and FileDownloadInitialMessage
 }
 
 // ClientTaskResponse is the structure used to return the results of a task to the Mythic server
@@ -98,10 +110,80 @@ type ClientTaskResponse struct {
 type ServerTaskResponse struct {
 	ID     string `json:"task_id"`
 	Status string `json:"status"`
-	Error  string `json:"error`
+	Error  string `json:"error"`
+	FileID string `json:"file_id"`
 }
 
+// ServerPostResponse structure holds a list of ServerTaskResponse structure
 type ServerPostResponse struct {
 	Action    string               `json:"action"`
 	Responses []ServerTaskResponse `json:"responses"`
+}
+
+// RSARequest is used by the client to send the server it's RSA public key
+// https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/initial-checkin#eke-by-generating-client-side-rsa-keys
+type RSARequest struct {
+	Action    string `json:"action"`     // staging_rsa
+	PubKey    string `json:"pub_key"`    // base64 of public RSA key
+	SessionID string `json:"session_id"` // 20 character string; unique session ID for this callback
+}
+
+// RSAResponse contains the derived session key that is encrypted with the agent's RSA key
+// https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/initial-checkin#eke-by-generating-client-side-rsa-keys
+type RSAResponse struct {
+	Action     string `json:"action"`      // staging_rsa
+	ID         string `json:"uuid"`        // new UUID for the next message
+	SessionKey string `json:"session_key"` // Base64( RSAPub( new aes session key ) )
+	SessionID  string `json:"session_id"`  // same 20 char string back
+}
+
+// PostResponse is the structure used to sent a list of messages from the agent to the server
+type PostResponseFile struct {
+	Action    string                       `json:"action"`
+	Responses []FileDownloadInitialMessage `json:"responses"`
+}
+
+// FileDownloadInitialMessage contains the information for the initial step of the file download process
+type FileDownloadInitialMessage struct {
+	NumChunks    int    `json:"total_chunks"`
+	TaskID       string `json:"task_id"`
+	FullPath     string `json:"full_path"`
+	IsScreenshot bool   `json:"is_screenshot"`
+}
+
+type PostResponseDownload struct {
+	Action    string         `json:"action"`
+	Responses []FileDownload `json:"responses"`
+}
+
+// FileDownload sends a chunk of Base64 encoded data from the agent to the server
+type FileDownload struct {
+	Chunk  int    `json:"chunk_num"`
+	FileID string `json:"file_id"` // UUID from FileDownloadResponse
+	TaskID string `json:"task_id"`
+	Data   string `json:"chunk_data"` // Base64 encoded data
+}
+
+// DownloadResponse is the servers response to a FileDownload message
+type DownloadResponse struct {
+	Status string `json:"status"`
+	TaskID string `json:"task_id"`
+}
+
+// UploadRequest is message
+// https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/action-upload
+type UploadRequest struct {
+	Action string `json:"action"`
+	TaskID string `json:"task_id"`    // the associated task that caused the agent to pull down this file
+	FileID string `json:"file_id"`    // the file specified to pull down to the target
+	Path   string `json:"full_path"`  // ull path to uploaded file on Agent's host
+	Size   int    `json:"chunk_size"` // bytes of file per chunk
+	Chunk  int    `json:"chunk_num"`  // which chunk are we currently pulling down
+}
+
+// UploadResponse is the message sent from the server to an agent
+// https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/action-upload
+type UploadResponse struct {
+	Path   string `json:"remote_path"`
+	FileID string `json:"file_id"`
 }
