@@ -313,9 +313,9 @@ func TestAgentInitialCheckIn(t *testing.T) {
 	//wait until set up
 	<-setup
 
-	authenticated := a.initialCheckIn()
-	if authenticated == false {
-		t.Error("the agent did not successfully authenticate")
+	_, err = a.Client.Initial(a.getAgentInfoMessage())
+	if err != nil {
+		t.Errorf("error with initial checkin:\r\n%s", err)
 	}
 	close(ended)
 }
@@ -348,8 +348,8 @@ func TestBadAuthentication(t *testing.T) {
 	//wait until set up
 	<-setup
 
-	authenticated := a.initialCheckIn()
-	if authenticated != false {
+	_, err = a.Client.Initial(a.getAgentInfoMessage())
+	if err == nil {
 		t.Error("the agent successfully authenticated with the wrong PSK")
 	}
 	close(ended)
