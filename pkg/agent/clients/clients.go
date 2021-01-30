@@ -24,6 +24,7 @@ import (
 
 // ClientInterface is a structure definition of required functions a client must implement to be used with a Merlin Agent
 type ClientInterface interface {
+	Initial(info messages.AgentInfo) (messages.Base, error)
 	SendMerlinMessage(base messages.Base) (messages.Base, error)
 	Set(key string, value string) error
 	Get(key string) string

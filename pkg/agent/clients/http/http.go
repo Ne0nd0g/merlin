@@ -480,3 +480,11 @@ func (client *Client) Auth(auth string, register bool) (messages.Base, error) {
 	}
 
 }
+
+// Initial executes the specific steps required to establish a connection with the C2 server and checkin or register an agent
+func (client *Client) Initial(agent messages.AgentInfo) (messages.Base, error) {
+	cli.Message(cli.DEBUG, "Entering clients.http.Initial function")
+	cli.Message(cli.DEBUG, fmt.Sprintf("Input AgentInfo:\r\n%+v", agent))
+	// Authenticate
+	return client.Auth("opaque", true)
+}
