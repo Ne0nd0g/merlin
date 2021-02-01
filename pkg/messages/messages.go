@@ -77,6 +77,7 @@ type SysInfo struct {
 	HostName     string   `json:"hostname,omitempty"`
 	Pid          int      `json:"pid,omitempty"`
 	Ips          []string `json:"ips,omitempty"`
+	Domain       string   `json:"domain,omitempty"`
 }
 
 // AgentInfo is a JSON payload containing information about the agent and its configuration
