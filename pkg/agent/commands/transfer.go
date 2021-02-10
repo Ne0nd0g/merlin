@@ -34,6 +34,7 @@ import (
 
 // Download receives a job from the server to download a file to host where the Agent is running
 func Download(transfer jobs.FileTransfer) jobs.Results {
+	cli.Message(cli.DEBUG, "Entering into commands.Download() function")
 	var result jobs.Results
 
 	// Agent will be downloading a file from the server
@@ -64,6 +65,7 @@ func Download(transfer jobs.FileTransfer) jobs.Results {
 
 // Upload receives a job from the server to upload a file from the host to the Merlin server
 func Upload(transfer jobs.FileTransfer) (jobs.FileTransfer, error) {
+	cli.Message(cli.DEBUG, "Entering into commands.Upload() function")
 	// Agent will uploading a file to the server
 	cli.Message(cli.NOTE, "FileTransfer type: Upload")
 

