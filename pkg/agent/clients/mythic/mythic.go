@@ -25,7 +25,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -455,7 +455,7 @@ func (client *Client) convertToMerlinMessage(data []byte) (messages.Base, error)
 			return messages.Base{}, fmt.Errorf("there was an error Base64 decoding the RSA session key:\r\n%s", err)
 		}
 		// Decrypt with RSA Private key and update the Client's secret key to use the session key
-		hash := sha1.New()
+		hash := sha1.New() // #nosec G401
 		client.secret, err = rsa.DecryptOAEP(hash, rand.Reader, client.privKey, key, nil)
 		if err != nil {
 			return messages.Base{}, fmt.Errorf("there was an error decrypting the returned RSA session key:\r\n%s", err)
@@ -781,7 +781,10 @@ func (client *Client) aesEncrypt(plaintext []byte) ([]byte, error) {
 
 	// HMAC
 	hash := hmac.New(sha256.New, client.secret)
-	hash.Write(ciphertext)
+	_, err = hash.Write(ciphertext)
+	if err != nil {
+		return nil, fmt.Errorf("there was an error in the aesEncrypt function writing the HMAC:\r\n%s", err)
+	}
 
 	// IV + Ciphertext + HMAC
 	return append(ciphertext, hash.Sum(nil)...), nil
@@ -813,7 +816,10 @@ func (client *Client) aesDecrypt(ciphertext []byte) ([]byte, error) {
 
 	// Verify the HMAC hash
 	h := hmac.New(sha256.New, client.secret)
-	h.Write(append(iv, ciphertext...))
+	_, err = h.Write(append(iv, ciphertext...))
+	if err != nil {
+		return nil, fmt.Errorf("there was an error in the aesDecrypt function writing the HMAC:\r\n%s", err)
+	}
 	if !hmac.Equal(h.Sum(nil), hash) {
 		return nil, fmt.Errorf("there was an error validating the AES HMAC hash, expected: %x but got: %x", h.Sum(nil), hash)
 	}
