@@ -33,7 +33,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 )
 
-// Handler processes and dispatches OPAQUE messages for authenticated agents
+// OPAQUEHandler processes and dispatches OPAQUE messages for authenticated agents
 // Messages should only allow:
 // AuthComplete
 func OPAQUEHandler(agentID uuid.UUID, o opaque.Opaque) (messages.Base, error) {
@@ -78,7 +78,7 @@ func OPAQUEHandler(agentID uuid.UUID, o opaque.Opaque) (messages.Base, error) {
 	return returnMessage, nil
 }
 
-// UnAuthHandler accepts messages from an unauthenticated agent
+// OPAQUEUnAuthHandler accepts messages from an unauthenticated agent
 // Messages should only allow:
 // RegInit
 // RegComplete

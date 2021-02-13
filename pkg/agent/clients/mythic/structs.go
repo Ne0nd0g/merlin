@@ -22,16 +22,25 @@ import (
 )
 
 const (
-	CHECKIN      = "checkin"
-	TASKING      = "get_tasking"
-	RESPONSE     = "post_response"
-	STATUS_ERROR = "error"
-	RSA_STAGING  = "staging_rsa"
-	UPLOAD       = "upload"
+	// CHECKIN is Mythic action https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/initial-checkin
+	CHECKIN = "checkin"
+	// TASKING is a Mythic action https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/action_get_tasking
+	TASKING = "get_tasking"
+	// RESPONSE is used to send a message back to the Mythic server https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/action-post_response
+	RESPONSE = "post_response"
+	// StatusError is used to when there is an error
+	StatusError = "error"
+	// RSAStaging is used to setup and complete the RSA key exchange https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/initial-checkin
+	RSAStaging = "staging_rsa"
+	// UPLOAD is a Mythic action https://docs.mythic-c2.net/customizing/c2-related-development/c2-profile-code/agent-side-coding/action-upload
+	UPLOAD = "upload"
 
 	// Custom
-	DOWNLOAD_INIT = 300
-	DOWNLOAD_SEND = 301
+
+	// DownloadInit is used as the first download message from the Mythic server
+	DownloadInit = 300
+	// DownloadSend is used after the init message to send the file
+	DownloadSend = 301
 )
 
 // CheckIn is the initial structure sent to Mythic
@@ -137,7 +146,7 @@ type RSAResponse struct {
 	SessionID  string `json:"session_id"`  // same 20 char string back
 }
 
-// PostResponse is the structure used to sent a list of messages from the agent to the server
+// PostResponseFile is the structure used to sent a list of messages from the agent to the server
 type PostResponseFile struct {
 	Action    string                       `json:"action"`
 	Responses []FileDownloadInitialMessage `json:"responses"`
@@ -151,6 +160,7 @@ type FileDownloadInitialMessage struct {
 	IsScreenshot bool   `json:"is_screenshot"`
 }
 
+// PostResponseDownload is used to send a response to the Mythic server
 type PostResponseDownload struct {
 	Action    string         `json:"action"`
 	Responses []FileDownload `json:"responses"`
