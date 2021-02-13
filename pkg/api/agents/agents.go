@@ -76,7 +76,7 @@ func ClearJobs(agentID uuid.UUID) messages.UserMessage {
 // Used with `cmd` and `shell` commands as well as through "standard" modules
 func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		job, err := jobs.Add(agentID, "cmd", Args[1:])
+		job, err := jobs.Add(agentID, Args[0], Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}

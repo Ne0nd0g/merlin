@@ -39,6 +39,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Restructured Merlin Agent code into multiple go files
 - Created generic MerlinClient interface to facilitate using different protocols
 - Changed HTTP server timeout from 10 seconds to 30 seconds
+- Changed the `shell` command to actually use the operating system's default shell
+- Changed the old `cmd` & `shell` commands to just the `run` which executes the program directly without a shell
+
+## Removed
+
+- Removed the `cmd` command from the Agents menu
 
 ## 0.9.1 - 2020-09-23
 

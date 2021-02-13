@@ -14,6 +14,8 @@ help
            COMMAND      |          DESCRIPTION           |            OPTIONS
     +-------------------+--------------------------------+--------------------------------+
       cd                | Change directories             | cd ../../ OR cd c:\\Users
+      clear             | Clear any UNSENT jobs from the |
+                        | queue                          |
       cmd               | Execute a command on the agent | cmd ping -c 3 8.8.8.8
                         | (DEPRECIATED)                  |
       back              | Return to the main menu        |
@@ -22,22 +24,30 @@ help
                         |                                | path> [<assembly args>,
                         |                                | <spawnto path>, <spawnto
                         |                                | args>]
-      execute-pe        | Execute a Windows PE (EXE)     | execute-pe <pe path>
-                        |                                | [<pe args>, <spawnto
-                        |                                | path>, <spawnto args>]
+      execute-pe        | Execute a Windows PE (EXE)     | execute-pe <pe path> [<pe
+                        |                                | args>, <spawnto path>,
+                        |                                | <spawnto args>]
       execute-shellcode | Execute shellcode              | self, remote <pid>,
                         |                                | RtlCreateUserThread <pid>
       info              | Display all information about  |
                         | the agent                      |
+      jobs              | Display all active jobs for    |
+                        | the agent                      |
       kill              | Instruct the agent to die or   |
                         | quit                           |
-      ls                | List directory contents        | ls /etc OR ls C:\\Users
+      ls                | List directory contents        | ls /etc OR ls C:\\Users OR ls
+                        |                                | C:/Users
       main              | Return to the main menu        |
       pwd               | Display the current working    | pwd
                         | directory                      |
+      run               | Execute a program directly,    | run ping -c 3 8.8.8.8
+                        | without using a shell          |
       set               | Set the value for one of the   | ja3, killdate, maxretry,
                         | agent's options                | padding, skew, sleep
+      sharpgen          | Use SharpGen to compile and    | sharpgen <code> [<spawnto
+                        | execute a .NET assembly        | path>, <spawnto args>]
       shell             | Execute a command on the agent | shell ping -c 3 8.8.8.8
+                        | using the host's default shell |
       status            | Print the current status of    |
                         | the agent                      |
       upload            | Upload a file to the agent     | upload <local_file>
@@ -76,11 +86,6 @@ The ``clear`` command will cancel all jobs in the queue that have not been sent 
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» clear
     [+] jobs cleared for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
-
-cmd
----
-
-**THIS COMMAND HAS BEEN DEPRECIATED IN FAVOR OF THE** shell_ **COMMAND**.
 
 back
 ----
@@ -442,6 +447,137 @@ quit
 
 The ``quit`` command is used to exit out of the Merlin Server application. This is also an alias for the ``exit`` command.
 
+run
+---
+
+The ``run`` command is used to task the agent to run a program on the host and return STDOUT/STDERR. When issuing a command to an agent from
+the server, the agent will execute the provided binary file for the program you specified and also pass along any
+arguments you provide. It is important to note that program must be in the path. This allows an operator to specify and
+use a shell (e.g.,. cmd.exe, powershell.exe, or /bin/bash) or to execute the program directly *WITHOUT* a shell.
+For instance, ``ping.exe`` is typically in the host's %PATH% variable on Windows and works *without* specifying ``cmd.exe``.
+However, the ``ver`` command is not an executable in the %PATH% and therefore *must* be run from ``cmd.exe``.
+Use the shell_ command if you want to use the operating system's default shell directly.
+
+Example using ping:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run ping 8.8.8.8
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job DTBnkIfnus for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [+]Results for job DTBnkIfnus
+
+    Pinging 8.8.8.8 with 32 bytes of data:
+    Reply from 8.8.8.8: bytes=32 time=23ms TTL=54
+    Reply from 8.8.8.8: bytes=32 time=368ms TTL=54
+    Reply from 8.8.8.8: bytes=32 time=26ms TTL=54
+    Reply from 8.8.8.8: bytes=32 time=171ms TTL=54
+
+    Ping statistics for 8.8.8.8:
+        Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
+    Approximate round trip times in milli-seconds:
+        Minimum = 23ms, Maximum = 368ms, Average = 147ms
+
+Example running ``ver`` *without* ``cmd.exe``:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run ver
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job iOMPERNYGT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [+]Results for job iOMPERNYGT
+    exec: "ver": executable file not found in %PATH%
+
+Example running ``ver`` *with* ``cmd.exe``:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run cmd.exe /c ver
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job IxVXgyIkhS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [+]Results for job IxVXgyIkhS
+
+    Microsoft Windows [Version 10.0.16299.64]
+
+Shell Functions
+^^^^^^^^^^^^^^^
+
+Some commands and capabilities are components of a shell and can *ONLY* be used with a shell.
+For example, the ``dir`` command is a component of ``cmd.exe`` and is not its own program executable.
+Therefore, ``dir`` can only be used within the ``cmd.exe`` shell.
+In order to use the `dir`, you must provide executable of the shell environment where that command resides.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run cmd.exe /c dir
+
+The pipe and redirection characters ``|`` , ``>`` , and ``<`` , are also functions of a shell environment.
+If you want to use them, you must do so *WITH* a shell.
+For Linux, an example would be:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»run bash -c "cat /etc/passwd | grep root"
+
+Quoted Arguments
+^^^^^^^^^^^^^^^^
+
+When running a command on an agent from the server, the provided arguments are passed to executable that was called.
+As long as there are no special characters (e.g., ``\`` , ``&`` , ``;`` , ``|`` , ``>`` , ``<`` etc.) the command will be processed fine.
+
+For example, this command will work fine because it does not have any special characters:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run powershell.exe Get-Service -Name win* -Exclude WinRM
+
+However, this command **WILL** fail because of the ``|`` symbol. The command will still execute, but will stop processing everything after the ``|`` symbol.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run powershell.exe Get-Service -Name win* -Exclude WinRM | fl
+
+To circumvent this, enclose the entire argument in quotes. The outer most quotes will be removed when the arguments are
+passed. Any inner quotes need to be escaped. The argument can be enclosed in double quotes or single quotes.
+The command be executed in both of these ways:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run powershell.exe "Get-Service -Name win* -Exclude WinRM | fl"
+
+**OR**
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run powershell.exe "Get-Service -Name \"win*\" -Exclude "WinRM" | fl"
+
+**OR**
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run powershell.exe 'Get-Service -Name \'win*\' -Exclude 'WinRM' | fl'
+
+Escape Sequence
+^^^^^^^^^^^^^^^
+
+Following along with the Quoted Arguments section above, the ``\`` symbol will be interpreted as an escape sequence.
+This is beneficial because it can be used to escape other characters like the pipe symbol, ``|`` .
+However, it can work against you when working with Windows file paths and the arguments are not enclosed in quotes.
+
+This command will fail because the ``\`` itself needs to escaped. Notice the error message shows ``C:WindowsSystem32``:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run cmd.exe /c C:\Windows\System32
+    [-]Created job hBYxRfaRBG for agent 21a0fc5f-14ad-4c43-b41e-57eab1feb0e1
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job hBYxRfaRBG
+    [+]'C:WindowsSystem32' is not recognized as an internal or external command,
+    operable program or batch file.
+    [!]exit status 1
+
+To correctly issue the command either escape the ``\`` or enclose the commands in quotes:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run cmd.exe /c dir C:\\Windows\\System32
+
 set
 ---
 
@@ -578,46 +714,16 @@ The ``code`` positional argument is the .NET code you want to compile and execut
 shell
 -----
 
-The ``shell`` command is used to task the agent to run a program on the host and return STDOUT/STDERR. When issuing a command to an agent from
-the server, the agent will execute the provided binary file for the program you specified and also pass along any
-arguments you provide. It is important to note that program must be in the path. This allows an operator to specify and
-use a shell (e.g.,. cmd.exe, powershell.exe, or /bin/bash) or to execute the program directly *WITHOUT* a shell.
-For instance, ``ping.exe`` is typically in the host's %PATH% variable on Windows and works *without* specifying ``cmd.exe``.
-However, the ``ver`` command is not an executable in the %PATH% and therefore *must* be run from ``cmd.exe``.
+The ``shell`` command is used to task the agent to execute the provided arguments using the operating system's default
+shell and return STDOUT/STDERR. On Windows the ``%COMSPEC%`` shell is used and if it is ``cmd.exe`` then the ``/c``
+argument is used. For macOS and Linux, the ``/bin/sh`` shell is used with the ``-c`` argument.
+Use the run_ command to execute a program directly without invoking the shell.
 
-Example using ping:
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell  ping 8.8.8.8
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job DTBnkIfnus for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
-    [+]Results for job DTBnkIfnus
-
-    Pinging 8.8.8.8 with 32 bytes of data:
-    Reply from 8.8.8.8: bytes=32 time=23ms TTL=54
-    Reply from 8.8.8.8: bytes=32 time=368ms TTL=54
-    Reply from 8.8.8.8: bytes=32 time=26ms TTL=54
-    Reply from 8.8.8.8: bytes=32 time=171ms TTL=54
-
-    Ping statistics for 8.8.8.8:
-        Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
-    Approximate round trip times in milli-seconds:
-        Minimum = 23ms, Maximum = 368ms, Average = 147ms
-
-Example running ``ver`` *without* ``cmd.exe``:
+Example using ``ver``:
 
 .. code-block:: text
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell ver
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job iOMPERNYGT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
-    [+]Results for job iOMPERNYGT
-    exec: "ver": executable file not found in %PATH%
-
-Example running ``ver`` *with* ``cmd.exe``:
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell cmd.exe /c ver
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job IxVXgyIkhS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
     [+]Results for job IxVXgyIkhS
 
@@ -629,19 +735,16 @@ Shell Functions
 Some commands and capabilities are components of a shell and can *ONLY* be used with a shell.
 For example, the ``dir`` command is a component of ``cmd.exe`` and is not its own program executable.
 Therefore, ``dir`` can only be used within the ``cmd.exe`` shell.
-In order to use the `dir`, you must provide executable of the shell environment where that command resides.
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd cmd.exe /c dir
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell dir
 
 The pipe and redirection characters ``|`` , ``>`` , and ``<`` , are also functions of a shell environment.
-If you want to use them, you must do so *WITH* a shell.
-For Linux, an example would be:
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»cmd bash -c "cat /etc/passwd | grep root"
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell "cat /etc/passwd | grep root"
 
 Quoted Arguments
 ^^^^^^^^^^^^^^^^
@@ -653,33 +756,33 @@ For example, this command will work fine because it does not have any special ch
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd powershell.exe Get-Service -Name win* -Exclude WinRM
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell powershell.exe Get-Service -Name win* -Exclude WinRM
 
 However, this command **WILL** fail because of the ``|`` symbol. The command will still execute, but will stop processing everything after the ``|`` symbol.
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd powershell.exe Get-Service -Name win* -Exclude WinRM | fl
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell powershell.exe Get-Service -Name win* -Exclude WinRM | fl
 
 To circumvent this, enclose the entire argument in quotes. The outer most quotes will be removed when the arguments are
-passed and any inner quotes will remain. The argument can be enclosed in double quotes or single quotes.
+passed. The argument can be enclosed in double quotes or single quotes. All other quotes need to be escaped
 The command be executed in both of these ways:
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd powershell.exe "Get-Service -Name win* -Exclude WinRM | fl"
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell powershell.exe "Get-Service -Name win* -Exclude WinRM | fl"
 
 **OR**
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd powershell.exe "Get-Service -Name "win*" -Exclude "WinRM" | fl"
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell powershell.exe "Get-Service -Name \"win*\" -Exclude "WinRM" | fl"
 
 **OR**
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd powershell.exe 'Get-Service -Name 'win*' -Exclude 'WinRM' | fl'
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell powershell.exe 'Get-Service -Name \'win*\' -Exclude 'WinRM' | fl'
 
 Escape Sequence
 ^^^^^^^^^^^^^^^
@@ -688,22 +791,25 @@ Following along with the Quoted Arguments section above, the ``\`` symbol will b
 This is beneficial because it can be used to escape other characters like the pipe symbol, ``|`` .
 However, it can work against you when working with Windows file paths and the arguments are not enclosed in quotes.
 
-This command will fail because the ``\`` itself needs to escaped. Notice the error message shows ``C:WindowsSystem32``:
+This command will fail because the ``\`` itself needs to escaped. Notice the error message shows File Not Found:
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell cmd.exe /c C:\Windows\System32
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell dir C:\Windows\System32
     [-]Created job hBYxRfaRBG for agent 21a0fc5f-14ad-4c43-b41e-57eab1feb0e1
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job hBYxRfaRBG
-    [+]'C:WindowsSystem32' is not recognized as an internal or external command,
-    operable program or batch file.
-    [!]exit status 1
+    [+]  Volume in drive C has no label.
+     Volume Serial Number is AC57-CFB9
+
+     Directory of C:\
+
+    File Not Found
 
 To correctly issue the command either escape the ``\`` or enclose the commands in quotes:
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» cmd cmd.exe /c dir C:\\Windows\\System32
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell dir C:\\Windows\\System32
 
 main
 ----

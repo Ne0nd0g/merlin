@@ -32,7 +32,11 @@ func ExecuteCommand(cmd jobs.Command) jobs.Results {
 	cli.Message(cli.SUCCESS, fmt.Sprintf("Executing command: %s %s", cmd.Command, cmd.Args))
 
 	var results jobs.Results
-	results.Stdout, results.Stderr = executeCommand(cmd.Command, cmd.Args)
+	if cmd.Command == "shell" {
+		results.Stdout, results.Stderr = shell(cmd.Args)
+	} else {
+		results.Stdout, results.Stderr = executeCommand(cmd.Command, cmd.Args)
+	}
 
 	if results.Stderr != "" {
 		cli.Message(cli.WARN, fmt.Sprintf("There was an error executing the command: %s %s", cmd.Command, cmd.Args))

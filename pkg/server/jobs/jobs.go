@@ -80,15 +80,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		job.Payload = merlinJob.Command{
 			Command: "agentInfo",
 		}
-	case "cmd":
-		job.Type = merlinJob.CMD
-		payload := merlinJob.Command{
-			Command: jobArgs[0],
-		}
-		if len(jobArgs) > 1 {
-			payload.Args = jobArgs[1:]
-		}
-		job.Payload = payload
+
 	case "shellcode":
 		job.Type = merlinJob.SHELLCODE
 		payload := merlinJob.Shellcode{
@@ -181,6 +173,22 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "run":
+		job.Type = merlinJob.CMD
+		payload := merlinJob.Command{
+			Command: jobArgs[0],
+		}
+		if len(jobArgs) > 1 {
+			payload.Args = jobArgs[1:]
+		}
+		job.Payload = payload
+	case "shell":
+		job.Type = merlinJob.CMD
+		payload := merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
+		job.Payload = payload
 	case "skew":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{

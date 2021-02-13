@@ -344,8 +344,6 @@ func Shell() {
 					MessageChannel <- agentAPI.CD(shellAgent, cmd)
 				case "clear":
 					MessageChannel <- agentAPI.ClearJobs(shellAgent)
-				case "cmd", "shell":
-					MessageChannel <- agentAPI.CMD(shellAgent, cmd)
 				case "download":
 					MessageChannel <- agentAPI.Download(shellAgent, cmd)
 				case "execute-assembly":
@@ -387,6 +385,8 @@ func Shell() {
 					menuSetMain()
 				case "pwd":
 					MessageChannel <- agentAPI.PWD(shellAgent, cmd)
+				case "run", "shell":
+					MessageChannel <- agentAPI.CMD(shellAgent, cmd)
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
@@ -1150,9 +1150,10 @@ func menuHelpAgent() {
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
 		{"pwd", "Display the current working directory", "pwd"},
+		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},
 		{"set", "Set the value for one of the agent's options", "ja3, killdate, maxretry, padding, skew, sleep"},
 		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
-		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
+		{"shell", "Execute a command on the agent using the host's default shell", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 		{"*", "Anything else will be execute on the host operating system", ""},
