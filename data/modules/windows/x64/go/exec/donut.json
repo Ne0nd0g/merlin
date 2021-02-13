@@ -1,0 +1,40 @@
+{
+  "base": {
+    "name": "Donut",
+    "type": "extended",
+    "author": ["Russel Van Tuyl (@Ne0nd0g)"],
+    "credits": ["TheWover", "odzhan", "awgh"],
+    "path": ["windows", "x64", "go", "exec", "donut.json"],
+    "platform": "Windows",
+    "arch": "x64",
+    "lang": "Go",
+    "privilege": false,
+    "remote": "",
+    "local": [""],
+    "options": [
+      {"name": "arch", "value":  "3", "required": true, "flag": "-a", "description": "Target architecture for loader : 1=x86, 2=amd64, 3=x86+amd64(default)"},
+      {"name": "bypass", "value":  "3", "required": true, "flag": "-b", "description": "Behavior for bypassing AMSI/WLDP : 1=None, 2=Abort on fail, 3=Continue on fail.(default)"},
+      {"name": "class", "value":  "", "required": false, "flag": "-c", "description": "Optional class name. (required for .NET DLL) Can also include namespace: e.g namespace.class"},
+      {"name": "domain", "value":  "", "required": false, "flag": "-d", "description": "AppDomain name to create for .NET. If entropy is enabled, one will be generated randomly"},
+      {"name": "entropy", "value":  "3", "required": true, "flag": "-e", "description": "Entropy level. 1=None, 2=Generate random names, 3=Generate random names + use symmetric encryption (default)"},
+      {"name": "format", "value":  "1", "required": true, "flag": "-f", "description": "The output format of loader saved to file. 1=Binary (default), 2=Base64, 3=C, 4=Ruby, 5=Python, 6=PowerShell, 7=C#, 8=Hexadecimal"},
+      {"name": "method", "value":  "", "required": false, "flag": "-m", "description": "Optional method or function for DLL. (a method is required for .NET DLL)"},
+      {"name": "name", "value":  "", "required": false, "flag": "-n", "description": "Module name for HTTP staging. If entropy is enabled, this is generated randomly"},
+      {"name": "output", "value":  "", "required": false, "flag": "-o", "description": "Specifies where Donut should save the loader. Default is \"loader.bin\" in the current directory"},
+      {"name": "parameters", "value":  "", "required": false, "flag": "-p", "description": "Optional parameters/command line inside quotations for DLL method/function or EXE"},
+      {"name": "runtime", "value":  "", "required": false, "flag": "-r", "description": "CLR runtime version. MetaHeader used by default or v4.0.30319 if none available"},
+      {"name": "server", "value":  "", "required": false, "flag": "-s", "description": "URL for the HTTP server that will host a Donut module"},
+      {"name": "entrypoint", "value":  "", "required": false, "flag": "-t", "description": "Run the entrypoint of an unmanaged/native EXE as a thread and wait for thread to end"},
+      {"name": "unicode", "value":  "false", "required": false, "flag": "-w", "description": "Command line is passed to unmanaged DLL function in UNICODE format. (default is ANSI)"},
+      {"name": "exit", "value":  "2", "required": true, "flag": "-x", "description": "Determines how the loader should exit. 1=exit thread, 2=exit process"},
+      {"name": "thread", "value":  "false", "required": false, "flag": "-y", "description": "Creates a new thread for the loader and continues execution at the address of host process"},
+      {"name": "compress", "value": "1", "required": true, "flag": "-z", "description": "Pack/Compress file. 1=disable, 2=LZNT1, 3=Xpress, 4=Xpress Huffman"},
+      {"name": "sourcefile", "value": "", "required": true, "flag": "", "description": ".NET assembly, EXE, DLL, VBS, JS or XSL file to execute in-memory"},
+      {"name": "verbose", "value": "false", "required": false, "flag": "-v", "description": "Enable verbose output while building shellcode. Set to \"true\" to enable."},
+      {"name": "spawnto", "value":  "C:\\WIndows\\System32\\dllhost.exe", "required":  true, "flag": "", "description": "The file path to the executable that will be spawned and the shellcode will be injected into"},
+      {"name": "args", "value":  "", "required":  false, "flag": "", "description": "Arguments for the spawnto process. They will actually be used"}
+    ],
+    "description": "Donut is a position-independent code that enables in-memory execution of VBScript, JScript, EXE, DLL files and dotNET assemblies. This module will generate the donut shellcode and execute it with the \"windows\\x64\\go\\exec\\createProcess\" module",
+    "notes": "\tOriginal Donut project: https://github.com/TheWover/donut\r\n\tDonut Go implementation: https://github.com/Binject/go-donut"
+  }
+}

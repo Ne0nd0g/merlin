@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2019  Russel Van Tuyl
+// Copyright (C) 2021  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,12 +31,12 @@ import (
 	// 3rd Party
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
+	"github.com/mattn/go-shellwords"
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/agents"
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
@@ -112,7 +112,16 @@ func Shell() {
 		}
 
 		line = strings.TrimSpace(line)
-		cmd := strings.Fields(line)
+		//cmd := strings.Fields(line)
+		cmd, err := shellwords.Parse(line)
+		if err != nil {
+			MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("error parsing command line arguments:\r\n%s", err),
+				Time:    time.Now().UTC(),
+				Error:   false,
+			}
+		}
 
 		if len(cmd) > 0 {
 			switch shellMenuContext {
@@ -333,10 +342,14 @@ func Shell() {
 					menuSetMain()
 				case "cd":
 					MessageChannel <- agentAPI.CD(shellAgent, cmd)
-				case "cmd", "shell":
-					MessageChannel <- agentAPI.CMD(shellAgent, cmd)
+				case "clear":
+					MessageChannel <- agentAPI.ClearJobs(shellAgent)
 				case "download":
 					MessageChannel <- agentAPI.Download(shellAgent, cmd)
+				case "execute-assembly":
+					go func() { MessageChannel <- agentAPI.ExecuteAssembly(shellAgent, cmd) }()
+				case "execute-pe":
+					go func() { MessageChannel <- agentAPI.ExecutePE(shellAgent, cmd) }()
 				case "execute-shellcode":
 					MessageChannel <- agentAPI.ExecuteShellcode(shellAgent, cmd)
 				case "exit", "quit":
@@ -351,17 +364,29 @@ func Shell() {
 				case "?", "help":
 					menuHelpAgent()
 				case "info":
-					agents.ShowInfo(shellAgent)
+					rows, message := agentAPI.GetAgentInfo(shellAgent)
+					if message.Error {
+						MessageChannel <- message
+					} else {
+						displayTable([]string{}, rows)
+					}
+				case "jobs":
+					jobs, message := agentAPI.GetJobsForAgent(shellAgent)
+					if message.Message != "" {
+						MessageChannel <- message
+					}
+					displayJobTable(jobs)
 				case "kill":
 					menuSetMain()
 					MessageChannel <- agentAPI.Kill(shellAgent, cmd)
-
 				case "ls":
 					MessageChannel <- agentAPI.LS(shellAgent, cmd)
 				case "main":
 					menuSetMain()
 				case "pwd":
 					MessageChannel <- agentAPI.PWD(shellAgent, cmd)
+				case "run", "shell":
+					MessageChannel <- agentAPI.CMD(shellAgent, cmd)
 				case "set":
 					if len(cmd) > 1 {
 						switch cmd[1] {
@@ -386,8 +411,13 @@ func Shell() {
 							}
 						}
 					}
+				case "sharpgen":
+					go func() { MessageChannel <- agentAPI.SharpGen(shellAgent, cmd) }()
 				case "status":
-					status := agents.GetAgentStatus(shellAgent)
+					status, message := agentAPI.GetAgentStatus(shellAgent)
+					if message.Error {
+						MessageChannel <- message
+					}
 					if status == "Active" {
 						MessageChannel <- messages.UserMessage{
 							Level:   messages.Plain,
@@ -468,33 +498,8 @@ func menuUse(cmd []string) {
 func menuAgent(cmd []string) {
 	switch cmd[0] {
 	case "list":
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"})
-		table.SetAlignment(tablewriter.ALIGN_CENTER)
-		for k, v := range agents.Agents {
-			// Convert proto (i.e. h2 or hq) to user friendly string
-			var proto string
-			switch v.Proto {
-			case "http":
-				proto = "HTTP/1.1 clear-text"
-			case "https":
-				proto = "HTTP/1.1 over TLS"
-			case "h2c":
-				proto = "HTTP/2 clear-text"
-			case "h2":
-				proto = "HTTP/2 over TLS"
-			case "http3":
-				proto = "HTTP/3 (HTTP/2 over QUIC)"
-			default:
-				proto = fmt.Sprintf("Unknown: %s", v.Proto)
-			}
-
-			table.Append([]string{k.String(), v.Platform + "/" + v.Architecture, v.UserName,
-				v.HostName, proto, agents.GetAgentStatus(k)})
-		}
-		fmt.Println()
-		table.Render()
-		fmt.Println()
+		header, rows := agentAPI.GetAgentsRows()
+		displayTable(header, rows)
 	case "interact":
 		if len(cmd) > 1 {
 			i, errUUID := uuid.FromString(cmd[1])
@@ -520,32 +525,16 @@ func menuAgent(cmd []string) {
 					Error:   true,
 				}
 			} else {
-				errRemove := agents.RemoveAgent(i)
-				if errRemove != nil {
-					MessageChannel <- messages.UserMessage{
-						Level:   messages.Warn,
-						Message: errRemove.Error(),
-						Time:    time.Now().UTC(),
-						Error:   true,
-					}
-				} else {
-					m := fmt.Sprintf("Agent %s was removed from the server at %s",
-						cmd[1], time.Now().UTC().Format(time.RFC3339))
-					MessageChannel <- messages.UserMessage{
-						Level:   messages.Info,
-						Message: m,
-						Time:    time.Now().UTC(),
-						Error:   false,
-					}
-				}
+				MessageChannel <- agentAPI.Remove(i)
 			}
 		}
 	}
 }
 
 func menuSetAgent(agentID uuid.UUID) {
-	for k := range agents.Agents {
-		if agentID == agents.Agents[k].ID {
+	agentList := agentAPI.GetAgents()
+	for _, id := range agentList {
+		if agentID == id {
 			shellAgent = agentID
 			prompt.Config.AutoComplete = getCompleter("agent")
 			prompt.SetPrompt("\033[31mMerlin[\033[32magent\033[31m][\033[33m" + shellAgent.String() + "\033[31m]»\033[0m ")
@@ -596,6 +585,7 @@ func menuListener(cmd []string) {
 			MessageChannel <- statusMessage
 			break
 		}
+		shellListener.status = listenerAPI.GetListenerStatus(shellListener.id).Message
 		if options != nil {
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Name", "Value"})
@@ -858,6 +848,7 @@ func menuListenerSetup(cmd []string) {
 
 		shellListener = listener{id: id, name: shellListenerOptions["Name"]}
 		startMessage := listenerAPI.Start(shellListener.name)
+		shellListener.status = listenerAPI.GetListenerStatus(id).Message
 		MessageChannel <- startMessage
 		um, options := listenerAPI.GetListenerConfiguredOptions(shellListener.id)
 		if um.Error {
@@ -907,17 +898,17 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("agent",
 			readline.PcItem("list"),
 			readline.PcItem("interact",
-				readline.PcItemDynamic(agents.GetAgentList()),
+				readline.PcItemDynamic(agentListCompleter()),
 			),
 		),
 		readline.PcItem("banner"),
 		readline.PcItem("help"),
 		readline.PcItem("interact",
-			readline.PcItemDynamic(agents.GetAgentList()),
+			readline.PcItemDynamic(agentListCompleter()),
 		),
 		readline.PcItem("listeners"),
 		readline.PcItem("remove",
-			readline.PcItemDynamic(agents.GetAgentList()),
+			readline.PcItemDynamic(agentListCompleter()),
 		),
 		readline.PcItem("sessions"),
 		readline.PcItem("use",
@@ -943,7 +934,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("set",
 			readline.PcItem("Agent",
 				readline.PcItem("all"),
-				readline.PcItemDynamic(agents.GetAgentList()),
+				readline.PcItemDynamic(agentListCompleter()),
 			),
 			readline.PcItemDynamic(shellModule.GetOptionsList()),
 		),
@@ -954,9 +945,13 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 
 	// Agent Menu
 	var agent = readline.NewPrefixCompleter(
+		readline.PcItem("cd"),
+		readline.PcItem("clear"),
 		readline.PcItem("cmd"),
 		readline.PcItem("back"),
 		readline.PcItem("download"),
+		readline.PcItem("execute-assembly"),
+		readline.PcItem("execute-pe"),
 		readline.PcItem("execute-shellcode",
 			readline.PcItem("self"),
 			readline.PcItem("remote"),
@@ -964,9 +959,9 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
+		readline.PcItem("jobs"),
 		readline.PcItem("kill"),
 		readline.PcItem("ls"),
-		readline.PcItem("cd"),
 		readline.PcItem("pwd"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
@@ -978,6 +973,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("skew"),
 			readline.PcItem("sleep"),
 		),
+		readline.PcItem("sharpgen"),
 		readline.PcItem("status"),
 		readline.PcItem("upload"),
 	)
@@ -1141,17 +1137,23 @@ func menuHelpAgent() {
 
 	data := [][]string{
 		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
+		{"clear", "Clear any UNSENT jobs from the queue", ""},
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
+		{"execute-assembly", "Execute a .NET 4.0 assembly", "execute-assembly <assembly path> [<assembly args>, <spawnto path>, <spawnto args>]"},
+		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args>, <spawnto path>, <spawnto args>]"},
 		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
 		{"info", "Display all information about the agent", ""},
+		{"jobs", "Display all active jobs for the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
-		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users"},
+		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
 		{"pwd", "Display the current working directory", "pwd"},
+		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},
 		{"set", "Set the value for one of the agent's options", "ja3, killdate, maxretry, padding, skew, sleep"},
-		{"shell", "Execute a command on the agent", "shell ping -c 3 8.8.8.8"},
+		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
+		{"shell", "Execute a command on the agent using the host's default shell", "shell ping -c 3 8.8.8.8"},
 		{"status", "Print the current status of the agent", ""},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 		{"*", "Anything else will be execute on the host operating system", ""},
@@ -1277,6 +1279,34 @@ func filterInput(r rune) (rune, bool) {
 	return r, true
 }
 
+func displayJobTable(rows [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetBorder(false)
+	table.SetHeader([]string{"ID", "Status", "Type", "Created", "Sent"})
+
+	table.AppendBulk(rows)
+	fmt.Println()
+	table.Render()
+	fmt.Println()
+}
+
+// displayTable writes arbitrary data rows to STDOUT
+func displayTable(header []string, rows [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetBorder(false)
+
+	if len(header) > 0 {
+		table.SetHeader(header)
+	}
+
+	table.AppendBulk(rows)
+	fmt.Println()
+	table.Render()
+	fmt.Println()
+}
+
 // confirm reads in a string and returns true if the string is y or yes but does not provide the prompt question
 func confirm(question string) bool {
 	reader := bufio.NewReader(os.Stdin)
@@ -1388,6 +1418,18 @@ func printUserMessage() {
 			}
 		}
 	}()
+}
+
+// agentListCompleter returns a list of agents that exist and is used for command line tab completion
+func agentListCompleter() func(string) []string {
+	return func(line string) []string {
+		a := make([]string, 0)
+		agentList := agentAPI.GetAgents()
+		for _, id := range agentList {
+			a = append(a, id.String())
+		}
+		return a
+	}
 }
 
 type listener struct {

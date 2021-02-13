@@ -10,7 +10,7 @@ Basic
 -----
 
 The provided Make file can be used to build a new agent from **source**. It is recommended that you first use
-``go get github.com/Ne0nd0g/Merlin`` to pull a copy of the Merlin source code to the host. Move into the Merlin root
+``go get github.com/Ne0nd0g/merlin`` to pull a copy of the Merlin source code to the host. Move into the Merlin root
 directory where the Make file is located.
 
 * Windows agent: ``make agent-windows``
@@ -30,12 +30,18 @@ commandline arguments and allows the Agent to simply be executed. The table belo
    :header: "Option", "Description", "Notes"
    :widths: auto
 
-    URL, Full URL for agent to connect to (default "https://127.0.0.1:443"), same as the ``-url`` commandline flag
-    PSK, Pre-Shared Key used to encrypt initial communications (default "merlin"), same as ``-psk`` commandline flag
-    PROXY, Hardcoded proxy to use for http/1.1 traffic only that will override host configuration, same as ``-proxy`` commandline flag
     HOST, HTTP Host header, same as ``-host`` commandline flag
-    PROTO, "Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default 'h2')", same as ``-proto`` commandline flag
     JA3, JA3 signature string (not the MD5 hash). Overrides -proto flag, same as ``-ja3`` commandline flag
+    KILLDATE, "The date, as a Unix EPOCH timestamp, that the agent will quit running", same as ``-killdate`` commandline flag
+    MAXRETRY, The maximum amount of failed checkins before the agent will quit running, same as ``-maxretry`` commandline flag
+    PADDING, The maximum amount of data that will be randomly selected and appended to every message, same as ``-padding`` commandline flag
+    PROTO, "Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default 'h2')", same as ``-proto`` commandline flag
+    PROXY, Hardcoded proxy to use for http/1.1 traffic only that will override host configuration, same as ``-proxy`` commandline flag
+    PSK, Pre-Shared Key used to encrypt initial communications (default "merlin"), same as ``-psk`` commandline flag
+    SKEW, "Amount of skew, or variance, between agent checkins", same as ``-skew`` commandline flag
+    SLEEP, "The amount of time the Agent will sleep between checkins Must use golang time notation (e.g., ``10s`` for ten seconds)", same as ``-sleep`` command line flag
+    URL, Full URL for agent to connect to (default "https://127.0.0.1:443"), same as the ``-url`` commandline flag
+    USERAGENT, The HTTP User-Agent header string that Agent will use while sending traffic, same sas the ``-useragent`` commandline flag
 
 An example of creating a new Linux HTTP agent that is using domain fronting through ``https://merlin.com/c2endpoint.php`` using a PSK of ``SecurePassword1``:
 
@@ -50,8 +56,7 @@ This behavior is intentional so that the user will not see the application windo
 building the agent using the ``-H=windowsgui`` option as shown `here <https://golang.org/cmd/link/>`_
 
 This causes problems when a user **WANTS** to see the Merlin Agent verbose or debug output. To view Merlin verbose/debug
-output, recompile the agent after removing ``-H=windowsgui`` from the Make file. Alternatively, compile the Windows
-agent with: ``go build -o Merlin.exe cmd/merlinagent/main.go``.
+output, use the Makefile ``agent-windows-debug`` target (e.g., ``make agent-windows-debug``)
 
 Cross-Compiling
 ---------------

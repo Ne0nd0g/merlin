@@ -1,7 +1,7 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html4" lang="en" >
 <head>
   <meta charset="utf-8">
   
@@ -26,10 +26,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -98,11 +98,16 @@
 <li class="toctree-l2"><a class="reference internal" href="#debug">Debug</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#host">Host</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ja3">JA3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#killdate">KillDate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#maxretry">MaxRetry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#padding">Padding</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#proto">Proto</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#proxy">Proxy</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#psk">PSK</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#skew">Skew</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sleep">Sleep</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#url">URL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#useragent">UserAgent</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#verbose">Verbose</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version">Version</a></li>
 </ul>
@@ -204,16 +209,26 @@
         HTTP Host header
   -ja3 string
         JA3 signature string (not the MD5 hash). Overrides -proto flag
+  -killdate string
+        The date, as a Unix EPOCH timestamp, that the agent will quit running (default &quot;0&quot;)
+  -maxretry string
+        The maximum amount of failed checkins before the agent will quit running (default &quot;7&quot;)
+  -padding string
+        The maximum amount of data that will be randomly selected and appended to every message (default &quot;4096&quot;)
   -proto string
         Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default &quot;h2&quot;)
   -proxy string
         Hardcoded proxy to use for http/1.1 traffic only that will override host configuration
   -psk string
         Pre-Shared Key used to encrypt initial communications (default &quot;merlin&quot;)
-  -sleep duration
-        Time for agent to sleep (default 30s)
+  -skew string
+        Amount of skew, or variance, between agent checkins (default &quot;3000&quot;)
+  -sleep string
+        Time for agent to sleep (default &quot;30s&quot;)
   -url string
         Full URL for agent to connect to (default &quot;https://127.0.0.1:443&quot;)
+  -useragent string
+        The HTTP User-Agent header string that Agent will use while sending traffic (default &quot;Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36&quot;)
   -v    Enable verbose output
   -version
         Print the agent version and exit
@@ -233,6 +248,18 @@
 <p>The <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> flag allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (i.e. Merlin). <a class="reference external" href="https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f">This</a> article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from <a class="reference external" href="https://ja3er.com/">https://ja3er.com/</a></p>
 <p><strong>NOTE:</strong> Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> flag will override the the <code class="docutils literal notranslate"><span class="pre">-proto</span></code> flag and will cause the agent to use the protocol provided in the JA3 hash.</p>
 </div>
+<div class="section" id="killdate">
+<h2>KillDate<a class="headerlink" href="#killdate" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">-killdate</span></code> flag is used to specify the date, as an Unix epoch timestamp, that the agent should quit running. <a class="reference external" href="https://www.epochconverter.com">EpochConverter</a> is a good resource to generate or convert a timestamp. The default value is <code class="docutils literal notranslate"><span class="pre">0</span></code> which means the Agent does not have a killdate.</p>
+</div>
+<div class="section" id="maxretry">
+<h2>MaxRetry<a class="headerlink" href="#maxretry" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">-maxretry</span></code> flag is the maximum amount of failed checkins before the agent will quit running. The default value is 7.</p>
+</div>
+<div class="section" id="padding">
+<h2>Padding<a class="headerlink" href="#padding" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">-padding</span></code> flag is maximum amount of data that will be randomly selected and appended to every message. The default value is 4096 bytes. The data padding is intended to increase the detection difficulty for idle checkin behavior when the message size was fixed everytime.</p>
+</div>
 <div class="section" id="proto">
 <h2>Proto<a class="headerlink" href="#proto" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">-proto</span></code> flag specifies what protocol the Merlin Agent will use to communicate with the server</p>
@@ -250,6 +277,10 @@
 <h2>PSK<a class="headerlink" href="#psk" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">-psk</span></code> flag is used to specify the Pre-Shared Key (PSK) that the Merlin Agent uses to initiate communication with the Merlin Server. The first message is encrypted with the PSK and subsequent messages establish a new session based encryption key using the <a class="reference external" href="https://eprint.iacr.org/2018/163.pdf">OPAQUE protocol</a> from <a class="reference external" href="https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-03">this</a> IETF draft. Additional information about OPAQUE can be found here: <a class="reference external" href="https://posts.specterops.io/merlin-goes-opaque-for-key-exchange-420db3a58713">Merlin Goes OPAQUE for Key Exchange</a>.</p>
 </div>
+<div class="section" id="skew">
+<h2>Skew<a class="headerlink" href="#skew" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">-skew</span></code> flag is the amount of skew, or variance, between agent checkins. The default value is 3000</p>
+</div>
 <div class="section" id="sleep">
 <h2>Sleep<a class="headerlink" href="#sleep" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">-sleep</span></code> flag is used to specify how long the agent will sleep between checkin attempts. <strong>NOTE:</strong> You must include the unit of measurement after the number. For example, <code class="docutils literal notranslate"><span class="pre">30s</span></code> is for thirty seconds and <code class="docutils literal notranslate"><span class="pre">1m</span></code> is for one minute.</p>
@@ -257,6 +288,10 @@
 <div class="section" id="url">
 <h2>URL<a class="headerlink" href="#url" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">-url</span></code> flag is used to specify the Uniformed Resource Locator (URL) that the agent will attempt to communicate with. Include the protocol (i.e. <code class="docutils literal notranslate"><span class="pre">https</span></code>), the host (i.e. <code class="docutils literal notranslate"><span class="pre">127.0.0.1</span></code>), the page (i.e <code class="docutils literal notranslate"><span class="pre">/</span></code> or <code class="docutils literal notranslate"><span class="pre">/news.php</span></code>), and optionally port (i.e. <code class="docutils literal notranslate"><span class="pre">:443</span></code>). This will result in <code class="docutils literal notranslate"><span class="pre">https://127.0.0.1:443/</span></code>. <strong>NOTE:</strong> By default the Merlin agent will communicate on the loopback adapter.</p>
+</div>
+<div class="section" id="useragent">
+<h2>UserAgent<a class="headerlink" href="#useragent" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">-useragent</span></code> flag is the HTTP User-Agent header string that the Agent will use while sending traffic. The default value is: <code class="docutils literal notranslate"><span class="pre">Mozilla/5.0</span> <span class="pre">(Windows</span> <span class="pre">NT</span> <span class="pre">6.1;</span> <span class="pre">Win64;</span> <span class="pre">x64)</span> <span class="pre">AppleWebKit/537.36</span> <span class="pre">(KHTML,</span> <span class="pre">like</span> <span class="pre">Gecko)</span> <span class="pre">Chrome/40.0.2214.85</span> <span class="pre">Safari/537.36</span></code>.</p>
 </div>
 <div class="section" id="verbose">
 <h2>Verbose<a class="headerlink" href="#verbose" title="Permalink to this headline">¶</a></h2>

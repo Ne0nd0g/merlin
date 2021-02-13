@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 0.10.0 - 2021-02-13
+
+### Added
+
+- Added `windows/x64/go/exec/createProcess` extended module with redirected STDOUT/STDERR over anonymous pipes
+- Added `windows/x64/go/exec/donut` extended module that leveraged [go-dounut](https://github.com/binject/go-donut)
+- Added `windows/x64/csharp/misc/SharpGen` extended module that leverages [SharpGen](https://github.com/cobbr/SharpGen)
+  - Requires [.NET Core 2.1 SDK](https://dotnet.microsoft.com/download/dotnet-core/2.1) to be manually installed by the operator
+- Added `execute-assembly`, `execute-pe`, and `sharpgen` commands to Agent menu
+- Added `ExecuteAssembly`, `ExecutePE`, and `SharpGen` functions to Agent API
+- New Jobs structure so that multiple jobs and results can be sent between client and server during a single interaction
+- Job processing checks to ensure returned results have a valid request token and had not previously completed
+- Created constants for message types for easier comparison and switching
+- Added a new `jobs` command to view created and sent jobs
+- Added a new `clear` command to remove any jobs that have not been sent to the agent
+- Added `killdate`, `maxretry`, `useragent`, `padding`, `skew` to Merlin Agent command line arguments and Makefile
+- Added checks to OPAQUE handling to ensure resiliency if server is not available or has an error during registration
+- Added Makefile `agent-windows-debug` build target to enable viewing verbose and debug messages
+- Added Mythic client so [Merlin](https://github.com/MythicAgents/merlin) agent can be used with the [Mythic](https://github.com/its-a-feature/mythic) Framework
+
+### Changes
+
+- All commands typed into the `Merlin»` are immediately parsed with [go-shellwords](https://github.com/mattn/go-shellwords)
+- Removed `go-shellwords` processing from Agent API functions CD, Download, Upload, and LS
+- Modified agent structure to contain an input and out job channel
+- Changed Agent go routine from messageHandler to function that continuously checks the job channel
+- Job results are returned when the agent checks in again, not immediately after executed
+- Moved OPAQUE functions to its own package at `pkg/opaque`
+- Reduced base message payload types to just opaque, jobs, and checkin; Jobs payload now contains all other types
+- Removed argument parsing from Agent's exec command. All parsing is done server side before being sent to the agent
+- Removed RSA key exchange since it wasn't being used for anything
+- Moved functions that output tables to the agent API that returns rows; CLI package prints them
+- Removed CLI completer functions from `pkg/agents` and implemented functionality in agent API and CLI package
+- Restructured Merlin Agent code into multiple go files
+- Created generic MerlinClient interface to facilitate using different protocols
+- Changed HTTP server timeout from 10 seconds to 30 seconds
+- Changed the `shell` command to actually use the operating system's default shell
+- Changed the old `cmd` & `shell` commands to just the `run` which executes the program directly without a shell
+
+## Removed
+
+- Removed the `cmd` command from the Agents menu
+
 ## 0.9.1 - 2020-09-23
 
 ### Fixed

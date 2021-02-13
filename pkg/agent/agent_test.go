@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2019  Russel Van Tuyl
+// Copyright (C) 2021  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,81 +18,169 @@
 package agent
 
 import (
-	// Standard
-	"bytes"
-	"crypto/sha256"
-	"encoding/gob"
-	"fmt"
-	"net/http"
-	"strings"
 	"testing"
 	"time"
 
-	// 3rd Party
-	"github.com/satori/go.uuid"
-
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
+	merlinHTTP "github.com/Ne0nd0g/merlin/pkg/agent/clients/http"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/test/testServer"
 )
 
-// TestNewHTTPAgent ensure the agent.New function returns a http agent without error
-func TestNewHTTPAgent(t *testing.T) {
-	_, err := New("http", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+var agentConfig = Config{
+	Skew:     "100",
+	Sleep:    "10s",
+	MaxRetry: "7",
+	KillDate: "0",
+}
 
-	if err != nil {
+var clientConfig = merlinHTTP.Config{
+	Protocol:    "h2",
+	URL:         "https://127.0.0.1:8080",
+	PSK:         "test",
+	Padding:     "0",
+	AuthPackage: "opaque",
+}
+
+// TestNewAgent ensure the agent.New function handles input for every agent.Config setting without error
+func TestNewAgent(t *testing.T) {
+	if _, err := New(agentConfig); err != nil {
 		t.Error(err)
 	}
 }
 
-// TestNewHTTPSAgent ensure the agent.New function returns a https agent without error
-func TestNewHTTPSAgent(t *testing.T) {
-	_, err := New("https", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
-
+// TestNewAgentClient ensures that the agent.clients.http.New() function handles input for every configuration setting without error
+func TestNewAgentClient(t *testing.T) {
+	a, err := New(agentConfig)
 	if err != nil {
+		t.Error(err)
+	}
+
+	// Setup Client Config
+	config := clientConfig
+	config.AgentID = a.ID
+	config.UserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 12_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Mobile/15E148 Safari/604.1"
+	config.JA3 = "771,49192-49191-49172-49171-159-158-57-51-157-156-61-60-53-47-49196-49195-49188-49187-49162-49161-106-64-56-50,0-10-11-13-23-65281,23-24,0"
+	config.Host = "fake.cloudfront.net"
+	config.Proxy = "http://127.0.0.1:8081"
+
+	if _, err = merlinHTTP.New(config); err != nil {
 		t.Error(err)
 	}
 }
 
-// TestNewH2CAgent ensure the agent.New function returns a HTTP/2 clear-text agent without error
-func TestNewH2CAgent(t *testing.T) {
-	_, err := New("h2c", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+// TestNewHTTPClient ensure the client.New function returns a http client without error
+func TestNewHTTPClient(t *testing.T) {
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 	}
-}
 
-// TestNewH2Agent ensure the agent.New function returns a HTTP/2 agent without error
-func TestNewH2Agent(t *testing.T) {
-	_, err := New("h2", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+	// Client config
+	config := clientConfig
+	config.AgentID = a.ID
+	config.Protocol = "http"
 
-	if err != nil {
+	// Get the client
+	if _, err = merlinHTTP.New(config); err != nil {
 		t.Error(err)
 	}
 }
 
-// TestNewHQAgent ensure the agent.New function returns a HTTP/3 agent without error
-func TestNewHQAgent(t *testing.T) {
-	_, err := New("http3", "https://127.0.0.1:8080", "", "test", "http://127.0.0.1:8081", "", false, false)
+// TestNewHTTPClient ensure the client.New function returns a https client without error
+func TestNewHTTPSClient(t *testing.T) {
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 	}
+
+	// Client config
+	config := clientConfig
+	config.AgentID = a.ID
+	config.Protocol = "https"
+
+	// Get the client
+	if _, err = merlinHTTP.New(config); err != nil {
+		t.Error(err)
+	}
 }
 
-// TestKillDate sends a message with a kill date that has been exceeded
+// TestNewH2CClient ensure the client.New function returns a http/2 clear-text, h2c, client without error
+func TestNewH2CClient(t *testing.T) {
+	a, err := New(agentConfig)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Client config
+	config := clientConfig
+	config.AgentID = a.ID
+	config.Protocol = "h2c"
+
+	// Get the client
+	if _, err = merlinHTTP.New(config); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestNewH2Client ensure the client.New function returns a http/2 client without error
+func TestNewH2Client(t *testing.T) {
+	a, err := New(agentConfig)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Client config
+	config := clientConfig
+	config.AgentID = a.ID
+	config.Protocol = "h2"
+
+	// Get the client
+	if _, err = merlinHTTP.New(config); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestNewHTTP3Client ensure the client.New function returns a http/3 client without error
+func TestNewHTTP3Client(t *testing.T) {
+	a, err := New(agentConfig)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Client config
+	config := clientConfig
+	config.AgentID = a.ID
+	config.Protocol = "http3"
+
+	// Get the client
+	if _, err = merlinHTTP.New(config); err != nil {
+		t.Error(err)
+	}
+}
+
+// TestKillDate validates that Agent will quit running and exit once the kill date has been exceeded
 func TestKillDate(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", "", false, false)
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	agent.KillDate = 1560616599
+	// Get the client
+	clientConfig.AgentID = a.ID
+	a.Client, err = merlinHTTP.New(clientConfig)
+	if err != nil {
+		t.Error(err)
+	}
 
-	errRun := agent.Run()
+	a.KillDate = 1560616599
+	errRun := a.Run()
 	// TODO the function won't actually return unless there is an error
 	if errRun == nil {
 		t.Errorf("the agent did not quit when the killdate was exceeded")
@@ -101,136 +189,48 @@ func TestKillDate(t *testing.T) {
 
 // TestFailedCheckin test for the agent to exit after the amount of failed checkins exceeds the agent's MaxRetry setting
 func TestFailedCheckin(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", "", false, false)
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	agent.FailedCheckin = agent.MaxRetry
+	// Get the client
+	clientConfig.AgentID = a.ID
+	a.Client, err = merlinHTTP.New(clientConfig)
+	if err != nil {
+		t.Error(err)
+	}
 
-	errRun := agent.Run()
+	a.FailedCheckin = a.MaxRetry
+
+	errRun := a.Run()
 	if errRun == nil {
 		t.Errorf("the agent did not quit when the maximum number of failed checkin atttempts were reached")
 	}
 }
 
-// TestInvalidMessageType sends a valid message.Base with an invalid Type string
-func TestInvalidMessageType(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", "", false, false)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	m := messages.Base{
-		Version: 1.0,
-		ID:      agent.ID,
-		Type:    "NotReal",
-		Token:   agent.JWT,
-	}
-	_, errSend := agent.sendMessage("POST", m)
-	if errSend == nil {
-		t.Error("agent handler processed an invalid message type without returning an error")
-	}
-}
-
-// TestInvalidMessage sends a structure that is not a valid message.Base
-func TestInvalidMessage(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8081", "", "test", "", "", false, false)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	//signalling chans for start/end of test
-	setup := make(chan struct{})
-	ended := make(chan struct{})
-
-	go testserver.TestServer{}.Start("8081", ended, setup, t)
-	//wait until set up
-	<-setup
-
-	type testMessage struct {
-		Alpha   string
-		Number  int64
-		Boolean bool
-	}
-
-	m := testMessage{
-		Alpha:   "TestString",
-		Number:  1337,
-		Boolean: false,
-	}
-
-	// Can't use agent.sendMessage because it only accepts valid message.Base objects
-
-	// Convert messages.Base to gob
-	messageBytes := new(bytes.Buffer)
-	errGobEncode := gob.NewEncoder(messageBytes).Encode(m)
-	if errGobEncode != nil {
-		t.Errorf("there was an error gob encoding the message:\r\n%s", errGobEncode.Error())
-		return
-	}
-
-	// Get JWE
-	jweString, errJWE := core.GetJWESymetric(messageBytes.Bytes(), agent.secret)
-	if errJWE != nil {
-		t.Errorf("there was an error getting the JWE:\r\n%s", errJWE.Error())
-		return
-	}
-
-	// Encode JWE into gob
-	jweBytes := new(bytes.Buffer)
-	errJWEBuffer := gob.NewEncoder(jweBytes).Encode(jweString)
-	if errJWEBuffer != nil {
-		t.Errorf("there was an error gob encoding the JWE:\r\n%s", errJWEBuffer.Error())
-		return
-	}
-
-	req, reqErr := http.NewRequest("POST", agent.URL, jweBytes)
-	if reqErr != nil {
-		t.Errorf("there was an error sending the POST request:\r\n%s", reqErr.Error())
-		return
-	}
-
-	if req != nil {
-		req.Header.Set("User-Agent", agent.UserAgent)
-		req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", agent.JWT))
-	}
-
-	// Send the request
-	var client = *agent.Client
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
-		return
-	}
-
-	close(ended)
-
-	if resp == nil {
-		t.Error("the server did not return a response")
-		return
-	}
-
-	if resp.StatusCode != 404 {
-		t.Error("the merlin server did not return a 404 for an invalid message type")
-	}
-
-}
-
 // TestPSK ensure that the agent can't successfully communicate with the server using the wrong PSK
 func TestPSK(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080/merlin", "", "test", "", "", false, false)
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 	}
-	agent.WaitTime = 5000 * time.Millisecond
-	k := sha256.Sum256([]byte("wrongPassword"))
-	agent.secret = k[:]
+	// Get the client
+	var errClient error
+	clientConfig.AgentID = a.ID
+	clientConfig.Protocol = "h2"
+	a.Client, errClient = merlinHTTP.New(clientConfig)
+	if errClient != nil {
+		t.Error(errClient)
+	}
+
+	a.WaitTime = 5000 * time.Millisecond
+	err = a.Client.Set("psk", "wrongPassword")
+	if err != nil {
+		t.Error(err)
+	}
 
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
@@ -242,12 +242,11 @@ func TestPSK(t *testing.T) {
 
 	m := messages.Base{
 		Version: 1.0,
-		ID:      agent.ID,
-		Type:    "StatusOk",
-		Token:   agent.JWT,
+		ID:      a.ID,
+		Type:    messages.CHECKIN,
 	}
 
-	_, errSend := agent.sendMessage("POST", m)
+	_, errSend := a.Client.SendMerlinMessage(m)
 	if errSend == nil {
 		t.Error("Agent successfully sent an encrypted message using the wrong key")
 		return
@@ -256,64 +255,55 @@ func TestPSK(t *testing.T) {
 	close(ended)
 }
 
-// TestWrongUUID sends a valid message to an agent using a UUID that is different from the running agent
-func TestWrongUUID(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", "", false, false)
+// TestOPAQUE verifies that agent is able to successfully complete the OPAQUE protocol Registration and Authentication steps
+func TestOPAQUE(t *testing.T) {
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	m := messages.Base{
-		Version: 1.0,
-		ID:      uuid.NewV4(),
-		Type:    "ServerOk",
-		Token:   agent.JWT,
+	// Get the client
+	config := clientConfig
+	config.AgentID = a.ID
+	config.URL = "https://127.0.0.1:8082"
+	if a.Client, err = merlinHTTP.New(clientConfig); err != nil {
+		t.Error(err)
 	}
 
-	// Send a message with a new UUID that does not match the agent; Expecting agent to return an error
-	_, errHandler := agent.messageHandler(m)
-	if errHandler == nil {
-		t.Error("the agent handled a message with a wrong UUID without returning an error")
-	}
+	// Setup and start test server
+	setup := make(chan struct{}) // Channel to determine when the server setup has completed
+	ended := make(chan struct{}) // Channel to determine when the server has quit
+	go testserver.TestServer{}.Start("8082", ended, setup, t)
+	<-setup //wait until set up
 
-	if errHandler != nil {
-		if !strings.Contains(errHandler.Error(), "the input message UUID did not match this agent's UUID") {
-			t.Error(errHandler)
-		}
-	}
-}
-
-// TestInvalidHTTPTrafficPayload sends a gob encoded string to the server to ensure it handles invalid traffic
-func TestInvalidHTTPTrafficPayload(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8080", "", "test", "", "", false, false)
-
+	// Perform client authentication which consists of both OPAQUE Registration and Authentication
+	_, err = a.Client.Auth("opaque", true)
 	if err != nil {
 		t.Error(err)
 	}
 
-	m := messages.Base{
-		Version: 1.0,
-		ID:      agent.ID,
-		Type:    "BadPayload",
-		Token:   agent.JWT,
-	}
-
-	_, errHandler := agent.sendMessage("POST", m)
-	if errHandler == nil {
-		t.Error("the agent handled a message with a wrong UUID without returning an error")
-	}
+	close(ended)
 }
 
-// TestAuthentication verifies successful authentication using the correct PSK
-func TestAuthentication(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8082/merlin", "", "test", "", "", false, false)
+// TestAgentInitialCheckin verifies the Agent's initialCheckin() function returns without error
+func TestAgentInitialCheckIn(t *testing.T) {
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	agent.WaitTime = 5000 * time.Millisecond
+	a.WaitTime = 5000 * time.Millisecond
+
+	// Get the client
+	config := clientConfig
+	config.AgentID = a.ID
+	config.URL = "https://127.0.0.1:8082/merlin"
+	a.Client, err = merlinHTTP.New(clientConfig)
+	if err != nil {
+		t.Error(err)
+	}
 
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
@@ -323,22 +313,32 @@ func TestAuthentication(t *testing.T) {
 	//wait until set up
 	<-setup
 
-	authenticated := agent.initialCheckIn()
-	if authenticated == false {
-		t.Error("the agent did not successfully authenticate")
+	_, err = a.Client.Initial(a.getAgentInfoMessage())
+	if err != nil {
+		t.Errorf("error with initial checkin:\r\n%s", err)
 	}
 	close(ended)
 }
 
 // TestBadAuthentication verifies unsuccessful authentication using the wrong PSK
 func TestBadAuthentication(t *testing.T) {
-	agent, err := New("h2", "https://127.0.0.1:8083", "", "neverGonnaGiveYouUp", "", "", false, false)
+	a, err := New(agentConfig)
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	agent.WaitTime = 5000 * time.Millisecond
+	a.WaitTime = 5000 * time.Millisecond
+
+	// Get the client
+	config := clientConfig
+	config.AgentID = a.ID
+	config.URL = "https://127.0.0.1:8083"
+	config.PSK = "neverGonnaGiveYouUp"
+	a.Client, err = merlinHTTP.New(clientConfig)
+	if err != nil {
+		t.Error(err)
+	}
 
 	//signalling chans for start/end of test
 	setup := make(chan struct{})
@@ -348,8 +348,8 @@ func TestBadAuthentication(t *testing.T) {
 	//wait until set up
 	<-setup
 
-	authenticated := agent.initialCheckIn()
-	if authenticated != false {
+	_, err = a.Client.Initial(a.getAgentInfoMessage())
+	if err == nil {
 		t.Error("the agent successfully authenticated with the wrong PSK")
 	}
 	close(ended)

@@ -22,48 +22,32 @@ package main
 import (
 	// Standard
 	"bytes"
-	"crypto/sha256"
-	"encoding/gob"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"strings"
-	"time"
-
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
 	"github.com/satori/go.uuid"
-	"golang.org/x/crypto/pbkdf2"
-	"gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
-
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agent"
+	merlinHTTP "github.com/Ne0nd0g/merlin/pkg/agent/clients/http"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
 // GLOBAL VARIABLES
 var url = "https://127.0.0.1:443"
 var psk = "merlin"
 var proxy = ""
-var secret []byte
 var verbose = false
 var debug = false
-var merlinJWT string
 var host string
 var ja3 = ""
-
-type merlinClient interface {
-	Do(req *http.Request) (*http.Response, error)
-	Get(url string) (resp *http.Response, err error)
-	Head(url string) (resp *http.Response, err error)
-	Post(url, contentType string, body io.Reader) (resp *http.Response, err error)
-}
+var useragent = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 "
 
 func main() {
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose output")
@@ -80,25 +64,42 @@ func main() {
 	var err error
 
 	// Setup and run agent
-	a, errNew := agent.New(*protocol, url, host, psk, ja3, proxy, verbose, debug)
+	agentConfig := agent.Config{
+		Sleep:    "30s",
+		Skew:     "3000",
+		KillDate: "0",
+		MaxRetry: "7",
+	}
+	a, errNew := agent.New(agentConfig)
 	if errNew != nil {
 		message("warn", errNew.Error())
 		os.Exit(1)
 	}
 
-	k := sha256.Sum256([]byte(psk))
-	secret = k[:]
-
-	// Set initial JWT
-	merlinJWT, err = getJWT(a.ID)
-	if err != nil {
-		message("warn", err.Error())
-		os.Exit(1)
+	// Get the client
+	var errClient error
+	clientConfig := merlinHTTP.Config{
+		AgentID:     a.ID,
+		Protocol:    *protocol,
+		Host:        host,
+		URL:         url,
+		Proxy:       proxy,
+		UserAgent:   useragent,
+		PSK:         psk,
+		JA3:         ja3,
+		Padding:     "0",
+		AuthPackage: "opaque",
+	}
+	a.Client, errClient = merlinHTTP.New(clientConfig)
+	if errClient != nil {
+		if verbose {
+			color.Red(errClient.Error())
+		}
 	}
 
 	// Check for v0.7.0 or earlier
 	message("info", fmt.Sprintf("Connecting to %s checking for Merlin server version v0.7.0.BETA or earlier", url))
-	err = sendPre8Message(a)
+	err = sendPre8Message(*a)
 	if err != nil {
 		if verbose {
 			message("warn", err.Error())
@@ -110,7 +111,7 @@ func main() {
 
 	// Send message to server and see if I get a RegInit message that can be decrypted
 	message("info", fmt.Sprintf("Connecting to %s checking for Merlin server version v0.8.0.BETA or greater", url))
-	err = opaqueRegister(a)
+	err = opaqueRegister(*a)
 	if err != nil {
 		if verbose {
 			message("warn", err.Error())
@@ -122,38 +123,26 @@ func main() {
 // opaqueAuthenticate is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
 func opaqueRegister(a agent.Agent) error {
 
-	// Generate a random password and run it through 5000 iterations of PBKDF2
-	x := core.RandStringBytesMaskImprSrc(30)
-	pwdU := pbkdf2.Key([]byte(x), a.ID.Bytes(), 5000, 32, sha256.New)
-
-	// 1 - Create a NewUserRegister
-	userReg := gopaque.NewUserRegister(gopaque.CryptoDefault, a.ID.Bytes(), nil)
-	userRegInit := userReg.Init(pwdU)
-
-	userRegInitBytes, errUserRegInitBytes := userRegInit.ToBytes()
-	if errUserRegInitBytes != nil {
-		return fmt.Errorf("there was an error marshalling the OPAQUE user registration initialization message to bytes:\r\n%s", errUserRegInitBytes.Error())
-	}
-
 	// message to be sent to the server
 	regInitBase := messages.Base{
 		Version: 1.0,
 		ID:      a.ID,
-		Type:    "RegInit",
-		Payload: userRegInitBytes,
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+		Type:    messages.OPAQUE,
 	}
+	o, _, err := opaque.UserRegisterInit(a.ID)
+	if err != nil {
+		return err
+	}
+	regInitBase.Payload = o
 
-	var client merlinClient = *a.Client
-
-	regInitResp, errRegInitResp := sendMessage("POST", regInitBase, client)
+	regInitResp, errRegInitResp := a.Client.SendMerlinMessage(regInitBase)
 
 	if errRegInitResp != nil {
 		return fmt.Errorf("there was an error sending the agent OPAQUE user registration initialization message:\r\n%s", errRegInitResp.Error())
 	}
 
-	if regInitResp.Type != "RegInit" {
-		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", regInitResp.Type)
+	if regInitResp.Type != messages.OPAQUE {
+		return fmt.Errorf("invalid message type %s in resopnse to OPAQUE user registration initialization", messages.String(regInitResp.Type))
 	}
 
 	// If we get this far then it means we sent a message to the server encrypted with the correct psk and it responded
@@ -170,8 +159,7 @@ func opaqueRegister(a agent.Agent) error {
 		return fmt.Errorf("there was an error unmarshalling the OPAQUE server register initialization message from bytes:\r\n%s", errServerRegInit.Error())
 	}
 
-	if a.Verbose {
-		message("info", fmt.Sprintf("OPAQUE Alpha:\t%s", userRegInit.Alpha))
+	if verbose {
 		message("info", fmt.Sprintf("OPAQUE Beta:\t\t%s", serverRegInit.Beta))
 		message("info", fmt.Sprintf("OPAQUE V:\t\t%s", serverRegInit.V))
 		message("info", fmt.Sprintf("OPAQUE PubS:\t\t%s", serverRegInit.ServerPublicKey))
@@ -181,11 +169,11 @@ func opaqueRegister(a agent.Agent) error {
 }
 
 func sendPre8Message(a agent.Agent) error {
-	g := messages.Base{
+	g := oldBase{
 		Version: 1.0,
 		ID:      a.ID,
 		Type:    "StatusCheckIn",
-		Padding: core.RandStringBytesMaskImprSrc(a.PaddingMax),
+		Padding: core.RandStringBytesMaskImprSrc(10),
 	}
 
 	b := new(bytes.Buffer)
@@ -202,8 +190,7 @@ func sendPre8Message(a agent.Agent) error {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
-	var client merlinClient = *a.Client
-
+	client := &http.Client{}
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -211,7 +198,7 @@ func sendPre8Message(a agent.Agent) error {
 	}
 
 	var payload json.RawMessage
-	j := messages.Base{
+	j := oldBase{
 		Payload: &payload,
 	}
 
@@ -229,147 +216,6 @@ func sendPre8Message(a agent.Agent) error {
 		return fmt.Errorf("received JSON message did not contain an message type of AgentControl")
 	}
 	return nil
-}
-
-// sendMessage is a generic function to receive a messages.Base struct, encode it, encrypt it, and send it to the server
-// The response message will be decrypted, decoded, and return a messages.Base struct.
-func sendMessage(method string, m messages.Base, client merlinClient) (messages.Base, error) {
-	if debug {
-		message("debug", "Entering into agent.sendMessage")
-	}
-	if verbose {
-		message("note", fmt.Sprintf("Sending %s message to %s", m.Type, url))
-	}
-
-	var returnMessage messages.Base
-
-	// Convert messages.Base to gob
-	messageBytes := new(bytes.Buffer)
-	errGobEncode := gob.NewEncoder(messageBytes).Encode(m)
-	if errGobEncode != nil {
-		return returnMessage, fmt.Errorf("there was an error encoding the %s message to a gob:\r\n%s", m.Type, errGobEncode.Error())
-	}
-
-	// Get JWE
-	jweString, errJWE := core.GetJWESymetric(messageBytes.Bytes(), secret)
-	if errJWE != nil {
-		return returnMessage, errJWE
-	}
-
-	// Encode JWE into gob
-	jweBytes := new(bytes.Buffer)
-	errJWEBuffer := gob.NewEncoder(jweBytes).Encode(jweString)
-	if errJWEBuffer != nil {
-		return returnMessage, fmt.Errorf("there was an error encoding the %s JWE string to a gob:\r\n%s", m.Type, errJWEBuffer.Error())
-	}
-
-	switch strings.ToLower(method) {
-	case "post":
-		req, reqErr := http.NewRequest("POST", url, jweBytes)
-		if reqErr != nil {
-			return returnMessage, fmt.Errorf("there was an error building the HTTP request:\r\n%s", reqErr.Error())
-		}
-
-		if req != nil {
-			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 ")
-			req.Header.Set("Content-Type", "application/octet-stream; charset=utf-8")
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", merlinJWT))
-		}
-
-		// Send the request
-		resp, err := client.Do(req)
-		if err != nil {
-			return returnMessage, fmt.Errorf("there was an error with the HTTP client while performing a POST:\r\n%s", err.Error())
-		}
-		if debug {
-			message("debug", fmt.Sprintf("HTTP Response:\r\n%+v", resp))
-		}
-		if resp.StatusCode != 200 {
-			return returnMessage, fmt.Errorf("there was an error communicating with the server:\r\n%d", resp.StatusCode)
-		}
-
-		contentType := resp.Header.Get("Content-Type")
-		if contentType == "" {
-			return returnMessage, fmt.Errorf("the response did not contain a Content-Type header")
-		}
-
-		// Check to make sure the response contains the application/octet-stream Content-Type header
-		isOctet := false
-		for _, v := range strings.Split(contentType, ",") {
-			if strings.ToLower(v) == "application/octet-stream" {
-				isOctet = true
-			}
-		}
-
-		if !isOctet {
-			return returnMessage, fmt.Errorf("the response message did not contain the application/octet-stream Content-Type header")
-		}
-
-		// Check to make sure message response contained data
-		if resp.ContentLength == 0 {
-			return returnMessage, fmt.Errorf("the response message did not contain any data")
-		}
-
-		var jweString string
-
-		// Decode GOB from server response into JWE
-		errD := gob.NewDecoder(resp.Body).Decode(&jweString)
-		if errD != nil {
-			return returnMessage, fmt.Errorf("there was an error decoding the gob message:\r\n%s", errD.Error())
-		}
-
-		// Decrypt JWE to messages.Base
-		respMessage, errDecrypt := core.DecryptJWE(jweString, secret)
-		if errDecrypt != nil {
-			return returnMessage, errDecrypt
-		}
-
-		return respMessage, nil
-	default:
-		return returnMessage, fmt.Errorf("%s is an invalid method for sending a message", method)
-	}
-
-}
-
-// getJWT is used to send an unauthenticated JWT on the first message to the server
-func getJWT(agentID uuid.UUID) (string, error) {
-	// Create encrypter
-	encrypter, encErr := jose.NewEncrypter(jose.A256GCM,
-		jose.Recipient{
-			Algorithm: jose.DIRECT, // Doesn't create a per message key
-			Key:       secret},
-		(&jose.EncrypterOptions{}).WithType("JWT").WithContentType("JWT"))
-	if encErr != nil {
-		return "", fmt.Errorf("there was an error creating the JWT encryptor:\r\n%s", encErr.Error())
-	}
-
-	// Create signer
-	signer, errSigner := jose.NewSigner(jose.SigningKey{
-		Algorithm: jose.HS256,
-		Key:       secret},
-		(&jose.SignerOptions{}).WithType("JWT"))
-	if errSigner != nil {
-		return "", fmt.Errorf("there was an error creating the JWT signer:\r\n%s", errSigner.Error())
-	}
-
-	// Build JWT claims
-	cl := jwt.Claims{
-		IssuedAt: jwt.NewNumericDate(time.Now().UTC()),
-		ID:       agentID.String(),
-	}
-
-	agentJWT, err := jwt.SignedAndEncrypted(signer, encrypter).Claims(cl).CompactSerialize()
-	if err != nil {
-		return "", fmt.Errorf("there was an error serializing the JWT:\r\n%s", err)
-	}
-
-	// Parse it to check for errors
-	_, errParse := jwt.ParseSignedAndEncrypted(agentJWT)
-	if errParse != nil {
-		return "", fmt.Errorf("there was an error parsing the encrypted JWT:\r\n%s", errParse.Error())
-	}
-
-	return agentJWT, nil
 }
 
 // message is used to print a message to the command line
@@ -395,4 +241,13 @@ func usage() {
 	fmt.Printf("Merlin PRISM\r\n")
 	flag.PrintDefaults()
 	os.Exit(0)
+}
+
+type oldBase struct {
+	Version float32     `json:"version"`
+	ID      uuid.UUID   `json:"id"`
+	Type    string      `json:"type"`
+	Payload interface{} `json:"payload,omitempty"`
+	Padding string      `json:"padding"`
+	Token   string      `json:"token,omitempty"`
 }
