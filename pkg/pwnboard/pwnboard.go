@@ -30,22 +30,25 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
-type PwnBoard struct {
+/*
+The structure of data being sent to the pwnboard server
+*/
+type pwnBoard struct {
 	IPs  string `json:"ip"`
 	Type string `json:"type"`
 }
 
-func updatepwnBoard(pwnboard_url string, ip string) {
+func updatepwnBoard(pwnboardURL string, ip string) {
 	//logging.Server("[*] PwnBoard Data starting")
 	url := "http://127.0.0.1/generic"
-	if strings.Contains(pwnboard_url, "http"){
-		url = fmt.Sprintf("%s/generic", pwnboard_url)
+	if strings.Contains(pwnboardURL, "http"){
+		url = fmt.Sprintf("%s/generic", pwnboardURL)
 	}else{
-		url = fmt.Sprintf("http://%s/generic", pwnboard_url)
+		url = fmt.Sprintf("http://%s/generic", pwnboardURL)
 	}
 
 	// Create the struct
-	data := PwnBoard{
+	data := pwnBoard{
 		IPs:  ip,
 		Type: "merlin",
 	}
@@ -73,15 +76,16 @@ func updatepwnBoard(pwnboard_url string, ip string) {
 	defer resp.Body.Close()
 }
 
-func Updateserver(pwnboard_url string) {
+// Updateserver is the main thread used to keep pwnboard updated of each agents status
+func Updateserver(pwnboardURL string) {
 	for {
 		//logging.Server("Update pwnboard")
 		// Iterate over all registered agents
 		for _, v := range agents.GetAgents() {
 			// If the agent is not dead we'll tell pwnboard
-			status, msg := agents.GetAgentStatus(v)
+			status, _ := agents.GetAgentStatus(v)
 			if status != "Dead"{
-				info, user_msg := agents.GetAgentInfo(v)
+				info, _ := agents.GetAgentInfo(v)
 				if len(info) >=8{
 					// Iterate over the data section looking for the IP field
 					for _, data := range info{
@@ -89,11 +93,11 @@ func Updateserver(pwnboard_url string) {
 							// Perform string parsing on info [127.0.0.1/8 10.1.30.2/24 172.16.2.9/24] -> "127.0.0.1/8", "10.1.30.2/24", "172.16.2.9/24"
 							for _, ip := range strings.Split(data[1][1:len(data[1])-1], " "){
 								// Remove subnet substring
-								unique_ip := strings.Split(ip, "/")[0]
+								uniqueIP := strings.Split(ip, "/")[0]
 								// If the IP is not localhost send it to pwnboard
 								// This will catch a lot of non-existnet IPs but pwnboard will only care about the ones it's aware of.
 								if unique_ip != "127.0.0.1"{
-									updatepwnBoard(pwnboard_url, unique_ip)
+									updatepwnBoard(pwnboardURL, uniqueIP)
 								}
 							}
 						}
