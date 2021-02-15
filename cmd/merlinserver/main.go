@@ -29,6 +29,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli"
+	"github.com/Ne0nd0g/merlin/pkg/pwnboard"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
@@ -54,6 +55,9 @@ func main() {
 	color.Blue(banner.MerlinBanner1)
 	color.Blue("\t\t   Version: %s", merlin.Version)
 	color.Blue("\t\t   Build: %s", build)
+
+	// Start Merlin pwnboard interface
+	go pwnboard.Updateserver("localhost")
 
 	// Start Merlin Command Line Interface
 	cli.Shell()

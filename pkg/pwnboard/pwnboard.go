@@ -1,0 +1,114 @@
+// Merlin is a post-exploitation command and control framework.
+// This file is part of Merlin.
+// Copyright (C) 2019  Russel Van Tuyl
+
+// Merlin is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// any later version.
+
+// Merlin is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+
+package pwnboard
+
+import (
+	"bytes"
+	"fmt"
+	"time"
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/api/agents"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+)
+
+type PwnBoard struct {
+	IPs  string `json:"ip"`
+	Type string `json:"type"`
+}
+
+func updatepwnBoard(pwnboard_url string, ip string) {
+	logging.Server("[*] PwnBoard Data starting")
+	url := "http://127.0.0.1/generic"
+	if strings.Contains(pwnboard_url, "http"){
+		url = fmt.Sprintf("%s/generic", pwnboard_url)
+	}else{
+		url = fmt.Sprintf("http://%s/generic", pwnboard_url)
+	}
+
+	// Create the struct
+	data := PwnBoard{
+		IPs:  ip,
+		Type: "merlin",
+	}
+
+	// Define http client vars
+	client := http.Client{
+		Timeout: 2 * time.Second,
+	}
+
+	// Marshal the data
+	sendit, err := json.Marshal(data)
+	if err != nil {
+		logging.Server(fmt.Sprintf("\n[-] ERROR SENDING POST: %s", err))
+		return
+	}
+
+	// Send the post to pwnboard
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(sendit))
+	if err != nil {
+		logging.Server(fmt.Sprintf("[-] ERROR SENDING POST: %s", err))
+		return
+	}
+	logging.Server("[*] PwnBoard Data away")
+
+	defer resp.Body.Close()
+}
+
+func Updateserver(pwnboard_url string) {
+	for {
+		logging.Server("Update pwnboard")
+		// Iterate over all registered agents
+		for _, v := range agents.GetAgents() {
+			// If the agent is not dead we'll tell pwnboard
+			status, msg := agents.GetAgentStatus(v)
+			if status != "Dead"{
+				logging.Server(fmt.Sprintf("%s is (%s) (%s)", v, status, msg))
+				info, user_msg := agents.GetAgentInfo(v)
+				if len(info) >=8{
+					logging.Server(fmt.Sprintf("[info] %s", info))
+					logging.Server(fmt.Sprintf("[Active] %s", info[0][1]))
+					logging.Server(fmt.Sprintf("[IP] %s", strings.Split(info[8][1], " ")))
+					logging.Server(fmt.Sprintf("[mesg] %s", user_msg))
+					// Iterate over the data section looking for the IP field
+					for _, data := range info{
+						if data[0] == "IP"{
+							// Perform string parsing on info [127.0.0.1/8 10.1.30.2/24 172.16.2.9/24] -> "127.0.0.1/8", "10.1.30.2/24", "172.16.2.9/24"
+							for _, ip := range strings.Split(data[1][1:len(data[1])-1], " "){
+								// Remove subnet substring
+								unique_ip := strings.Split(ip, "/")[0]
+								// If the IP is not localhost send it to pwnboard
+								// This will catch a lot of non-existnet IPs but pwnboard will only care about the ones it's aware of.
+								if unique_ip != "127.0.0.1"{
+									logging.Server(fmt.Sprintf("Sending POST /%s/generic/", unique_ip))
+									updatepwnBoard(pwnboard_url, unique_ip)
+									logging.Server(fmt.Sprintf("Sent POST /%s/generic/", unique_ip))
+									logging.Server("")
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		time.Sleep(4 * time.Second)
+	}
+}
