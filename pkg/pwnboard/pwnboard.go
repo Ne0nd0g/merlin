@@ -36,7 +36,7 @@ type PwnBoard struct {
 }
 
 func updatepwnBoard(pwnboard_url string, ip string) {
-	logging.Server("[*] PwnBoard Data starting")
+	//logging.Server("[*] PwnBoard Data starting")
 	url := "http://127.0.0.1/generic"
 	if strings.Contains(pwnboard_url, "http"){
 		url = fmt.Sprintf("%s/generic", pwnboard_url)
@@ -68,26 +68,21 @@ func updatepwnBoard(pwnboard_url string, ip string) {
 		logging.Server(fmt.Sprintf("[-] ERROR SENDING POST: %s", err))
 		return
 	}
-	logging.Server("[*] PwnBoard Data away")
+	//logging.Server("[*] PwnBoard Data away")
 
 	defer resp.Body.Close()
 }
 
 func Updateserver(pwnboard_url string) {
 	for {
-		logging.Server("Update pwnboard")
+		//logging.Server("Update pwnboard")
 		// Iterate over all registered agents
 		for _, v := range agents.GetAgents() {
 			// If the agent is not dead we'll tell pwnboard
 			status, msg := agents.GetAgentStatus(v)
 			if status != "Dead"{
-				logging.Server(fmt.Sprintf("%s is (%s) (%s)", v, status, msg))
 				info, user_msg := agents.GetAgentInfo(v)
 				if len(info) >=8{
-					logging.Server(fmt.Sprintf("[info] %s", info))
-					logging.Server(fmt.Sprintf("[Active] %s", info[0][1]))
-					logging.Server(fmt.Sprintf("[IP] %s", strings.Split(info[8][1], " ")))
-					logging.Server(fmt.Sprintf("[mesg] %s", user_msg))
 					// Iterate over the data section looking for the IP field
 					for _, data := range info{
 						if data[0] == "IP"{
@@ -98,10 +93,7 @@ func Updateserver(pwnboard_url string) {
 								// If the IP is not localhost send it to pwnboard
 								// This will catch a lot of non-existnet IPs but pwnboard will only care about the ones it's aware of.
 								if unique_ip != "127.0.0.1"{
-									logging.Server(fmt.Sprintf("Sending POST /%s/generic/", unique_ip))
 									updatepwnBoard(pwnboard_url, unique_ip)
-									logging.Server(fmt.Sprintf("Sent POST /%s/generic/", unique_ip))
-									logging.Server("")
 								}
 							}
 						}
