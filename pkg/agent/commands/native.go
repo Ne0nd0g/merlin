@@ -21,9 +21,11 @@ import (
 	// Standard
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/agent/cli"
@@ -39,13 +41,7 @@ func Native(cmd jobs.Command) jobs.Results {
 
 	switch cmd.Command {
 	// TODO create a function for each Native Command that returns a string and error and DOES NOT use (a *Agent)
-	case "ls":
-		listing, err := list(cmd.Args[0])
-		if err != nil {
-			results.Stderr = fmt.Sprintf("there was an error executing the 'ls' command:\r\n%s", err.Error())
-			break
-		}
-		results.Stdout = listing
+
 	case "cd":
 		err := os.Chdir(cmd.Args[0])
 		if err != nil {
@@ -58,6 +54,15 @@ func Native(cmd jobs.Command) jobs.Results {
 				results.Stdout = fmt.Sprintf("Changed working directory to %s", path)
 			}
 		}
+	case "ls":
+		listing, err := list(cmd.Args[0])
+		if err != nil {
+			results.Stderr = fmt.Sprintf("there was an error executing the 'ls' command:\r\n%s", err.Error())
+			break
+		}
+		results.Stdout = listing
+	case "nslookup":
+		results.Stdout, results.Stderr = nslookup(cmd.Args)
 	case "pwd":
 		dir, err := os.Getwd()
 		if err != nil {
@@ -105,4 +110,27 @@ func list(path string) (string, error) {
 		details = details + perms + "\t" + modTime + "\t" + size + "\t" + name + "\n"
 	}
 	return details, nil
+}
+
+// nslookup is used to perform a DNS query using the host's configured resolver
+func nslookup(query []string) (string, string) {
+	var resp string
+	var stderr string
+	for _, q := range query {
+		ip := net.ParseIP(q)
+		if ip != nil {
+			r, err := net.LookupAddr(ip.String())
+			if err != nil {
+				stderr += fmt.Sprintf("there was an error calling the net.LookupAddr function for %s:\r\n%s", q, err)
+			}
+			resp += fmt.Sprintf("Query: %s, Result: %s\r\n", q, strings.Join(r, " "))
+		} else {
+			r, err := net.LookupHost(q)
+			if err != nil {
+				stderr += fmt.Sprintf("there was an error calling the net.LookupHost function for %s:\r\n%s", q, err)
+			}
+			resp += fmt.Sprintf("Query: %s, Result: %s\r\n", q, strings.Join(r, " "))
+		}
+	}
+	return resp, stderr
 }

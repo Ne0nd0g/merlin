@@ -393,6 +393,18 @@ func Kill(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Kill call: %s", Args))
 }
 
+// NSLOOKUP instructs the agent to perform a DNS query on the input
+func NSLOOKUP(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 1 {
+		return messages.ErrorMessage("not enough arguments. A query was not provided")
+	}
+	job, err := jobs.Add(agentID, "nslookup", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // LS uses native Go to list the directory
 func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 	var args []string

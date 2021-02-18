@@ -38,6 +38,7 @@ help
       ls                | List directory contents        | ls /etc OR ls C:\\Users OR ls
                         |                                | C:/Users
       main              | Return to the main menu        |
+      nslookup          | DNS query on host or ip        | nslookup 8.8.8.8
       pwd               | Display the current working    | pwd
                         | directory                      |
       run               | Execute a program directly,    | run ping -c 3 8.8.8.8
@@ -442,6 +443,48 @@ The ``ls`` command is used to list a directory's contents using native Go functi
     -rw-rw-rw-      2018-09-15 00:31:34     174     desktop.ini
     drwxrwxrwx      2018-09-15 00:42:33     0       windows nt
 
+main
+----
+
+The ``main`` command is used to leave the Agent menu and return back to the :doc:`main`. It is an alias for the ``back`` command.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» main
+    Merlin»
+
+nslookup
+--------
+
+The ``nslookup`` command takes a space separated list of IP addresses or hostnames and performs a DNS query using the
+host's resolver and returns the results.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» nslookup 8.8.8.8 9.9.9.9 github.com google.com
+    [-] Created job fQilcQFmlk for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job fQilcQFmlk for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Query: 8.8.8.8, Result: dns.google.
+    Query: 9.9.9.9, Result: dns9.quad9.net.
+    Query: github.com, Result: 192.30.255.113
+    Query: google.com, Result: 142.250.73.238 2607:f8b0:4004:82a::200e
+
+pwd
+---
+
+The ``pwd`` command uses native Go to get and return the current working directory.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» pwd
+    [-]Created job JweUayTyTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job JweUayTyTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Current working directory: C:\Users\Joe
+
 quit
 ----
 
@@ -810,28 +853,6 @@ To correctly issue the command either escape the ``\`` or enclose the commands i
 .. code-block:: text
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell dir C:\\Windows\\System32
-
-main
-----
-
-The ``main`` command is used to leave the Agent menu and return back to the :doc:`main`. It is an alias for the ``back`` command.
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» main
-    Merlin»
-
-pwd
----
-
-The ``pwd`` command uses native Go to get and return the current working directory.
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» pwd
-    [-]Created job JweUayTyTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 at 2019-02-27T01:14:17Z
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job JweUayTyTv at 2019-02-27T01:14:28Z
-    Current working directory: C:\Users\Joe
 
 status
 ------

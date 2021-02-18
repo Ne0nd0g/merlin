@@ -376,6 +376,8 @@ func Shell() {
 						MessageChannel <- message
 					}
 					displayJobTable(jobs)
+				case "nslookup":
+					MessageChannel <- agentAPI.NSLOOKUP(shellAgent, cmd)
 				case "kill":
 					menuSetMain()
 					MessageChannel <- agentAPI.Kill(shellAgent, cmd)
@@ -1149,6 +1151,7 @@ func menuHelpAgent() {
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
+		{"nslookup", "DNS query on host or ip", "nslookup 8.8.8.8"},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},
 		{"set", "Set the value for one of the agent's options", "ja3, killdate, maxretry, padding, skew, sleep"},
