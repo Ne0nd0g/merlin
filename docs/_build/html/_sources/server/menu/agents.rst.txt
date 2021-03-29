@@ -31,10 +31,19 @@ help
                         |                                | RtlCreateUserThread <pid>
       info              | Display all information about  |
                         | the agent                      |
+      invoke-assembly   | Invoke, or execute, a .NET     | <assembly name>, <assembly
+                        | assembly that was previously   | args>
+                        | loaded into the agent's        |
+                        | process                        |
       jobs              | Display all active jobs for    |
                         | the agent                      |
       kill              | Instruct the agent to die or   |
                         | quit                           |
+      load-assembly     | Load a .NET assembly into the  | <assembly path> [<assembly
+                        | agent's process                | name>]
+      list-assemblies   | List the .NET assemblies that  |
+                        | are loaded into the agent's    |
+                        | process                        |
       ls                | List directory contents        | ls /etc OR ls C:\\Users OR ls
                         |                                | C:/Users
       main              | Return to the main menu        |
@@ -368,6 +377,40 @@ The ``info`` command is used to get information about a specific agent.
     | Agent Failed Logins       | 0                                             |
     +---------------------------+-----------------------------------------------+
 
+invoke-assembly
+---------------
+
+The ``invoke-assembly`` command will execute a .NET assembly that was previously loaded into the agent with the
+load-assembly_ command. The first argument is the name of the assembly and all the remaining arguments are passed to
+the assembly for execution. Use the list-assemblies_ command return a list of loaded assemblies.
+The execute-assembly_ command is different because it uses injection to run the assembly in a child process.
+This command runs the assembly in the current process without injection.
+
+.. note::
+    Only CLR v4 is currently supported which can be used to execute both v3.5 and v4 .NET assemblies
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» invoke-assembly Rubeus.exe klist
+    [-] Created job GlPHKaRtmg for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job GlPHKaRtmg for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+       ______        _
+      (_____ \      | |
+       _____) )_   _| |__  _____ _   _  ___
+      |  __  /| | | |  _ \| ___ | | | |/___)
+      | |  \ \| |_| | |_) ) ____| |_| |___ |
+      |_|   |_|____/|____/|_____)____/(___/
+
+      v1.5.0
+
+
+    Action: List Kerberos Tickets (Current User)
+
+    [*] Current LUID    : 0x37913
+
 jobs
 ----
 
@@ -393,6 +436,51 @@ The ``kill`` control type instructs the agent to exit or die. There is no respon
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» kill
     Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+list-assemblies
+---------------
+
+The ``list-assemblies`` command lists .NET assemblies that have been loaded into the agent's process with the load-assembly_ command.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» list-assemblies
+    [-] Created job NIflRstGrR for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job NIflRstGrR for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Loaded Assemblies:
+    seatbelt.exe
+    rubeus.exe
+    sharpdpapi.exe
+    sharpup.exe
+    Hagrid
+
+load-assembly
+-------------
+
+The ``load-assembly`` command loads a .NET assembly into the agent's process. Once the assembly is loaded, it can be executed
+multiple times with the invoke-assembly_ command. The .NET assembly is only sent across the wire one time.
+An option third argument can be provided to reference the assembly as any other name when executed with the
+invoke-assembly_ command.
+
+.. note::
+    Only CLR v4 is currently supported which can be used to execute both v3.5 and v4 .NET assemblies
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» load-assembly /root/Rubeus.exe
+    [-] Created job iQOkWgGqkJ for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job iQOkWgGqkJ for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] successfully loaded rubeus.exe into the default AppDomain
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» load-assembly /root/Rubeus.exe Hagrid
+    [-] Created job YrPdQkcuTG for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job YrPdQkcuTG for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] successfully loaded Hagrid into the default AppDomain
 
 ls
 --

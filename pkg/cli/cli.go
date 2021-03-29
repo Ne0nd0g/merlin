@@ -370,6 +370,8 @@ func Shell() {
 					} else {
 						displayTable([]string{}, rows)
 					}
+				case "invoke-assembly":
+					MessageChannel <- agentAPI.InvokeAssembly(shellAgent, cmd)
 				case "jobs":
 					jobs, message := agentAPI.GetJobsForAgent(shellAgent)
 					if message.Message != "" {
@@ -381,6 +383,12 @@ func Shell() {
 				case "kill":
 					menuSetMain()
 					MessageChannel <- agentAPI.Kill(shellAgent, cmd)
+				case "list-assemblies":
+					MessageChannel <- agentAPI.ListAssemblies(shellAgent)
+				case "load-assembly":
+					MessageChannel <- agentAPI.LoadAssembly(shellAgent, cmd)
+				case "load-clr":
+					MessageChannel <- agentAPI.LoadCLR(shellAgent, cmd)
 				case "ls":
 					MessageChannel <- agentAPI.LS(shellAgent, cmd)
 				case "main":
@@ -961,8 +969,11 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
+		readline.PcItem("invoke-assembly"),
 		readline.PcItem("jobs"),
 		readline.PcItem("kill"),
+		readline.PcItem("list-assemblies"),
+		readline.PcItem("load-assembly"),
 		readline.PcItem("ls"),
 		readline.PcItem("pwd"),
 		readline.PcItem("main"),
@@ -1147,8 +1158,11 @@ func menuHelpAgent() {
 		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args>, <spawnto path>, <spawnto args>]"},
 		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
 		{"info", "Display all information about the agent", ""},
+		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name>, <assembly args>"},
 		{"jobs", "Display all active jobs for the agent", ""},
 		{"kill", "Instruct the agent to die or quit", ""},
+		{"load-assembly", "Load a .NET assembly into the agent's process", "<assembly path> [<assembly name>]"},
+		{"list-assemblies", "List the .NET assemblies that are loaded into the agent's process", ""},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
 		{"nslookup", "DNS query on host or ip", "nslookup 8.8.8.8"},

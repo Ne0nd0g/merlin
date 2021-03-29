@@ -112,12 +112,60 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Command: jobType,
 		}
 		job.Payload = p
+	case "invoke-assembly":
+		if len(jobArgs) < 1 {
+			return "", fmt.Errorf("exected 1 argument for the invoke-assembly command, recieved: %+v", jobArgs)
+		}
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: "clr",
+			Args:    append([]string{jobType}, jobArgs...),
+		}
 	case "kill":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
 			Command: jobArgs[0], // TODO, this should be in jobType position
 		}
 		job.Payload = p
+	case "list-assemblies":
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: "clr",
+			Args:    []string{"list-assemblies"},
+		}
+	case "load-assembly":
+		if len(jobArgs) < 1 {
+			return "", fmt.Errorf("exected 1 argument for the load-assembly command, recieved: %+v", jobArgs)
+		}
+		job.Type = merlinJob.MODULE
+		assembly, err := ioutil.ReadFile(jobArgs[0])
+		if err != nil {
+			return "", fmt.Errorf("there was an error reading the assembly at %s:\n%s", jobArgs[0], err)
+		}
+		fileHash := sha256.New()
+		_, err = io.WriteString(fileHash, string(assembly))
+		if err != nil {
+			message("warn", fmt.Sprintf("there was an error generating a file hash:\n%s", err))
+		}
+		agent.Log(fmt.Sprintf("loading assembly from %s with a SHA256: %s to agent", jobArgs[0], fileHash.Sum(nil)))
+
+		name := filepath.Base(jobArgs[0])
+		if len(jobArgs) > 1 {
+			name = jobArgs[1]
+		}
+		job.Payload = merlinJob.Command{
+			Command: "clr",
+			Args:    []string{jobType, base64.StdEncoding.EncodeToString([]byte(assembly)), name},
+		}
+	case "load-clr":
+		if len(jobArgs) < 1 {
+			return "", fmt.Errorf("exected 1 argument for the load-clr command, recieved: %+v", jobArgs)
+		}
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: "clr",
+			Args:    append([]string{jobType}, jobArgs...),
+		}
 	case "ls":
 		job.Type = merlinJob.NATIVE
 		p := merlinJob.Command{
