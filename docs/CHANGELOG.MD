@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - `load-assembly` to load a .NET assembly into memory
   - `invoke-assembly` to execute a previously loaded .NET assembly
   - `list-assemblies` to list previously loaded .NET assemblies
+- Added `memfd` command to run Linux executables in-memory as an anonymous file
 
 ## 0.10.0 - 2021-02-13
 
