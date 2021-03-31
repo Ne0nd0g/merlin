@@ -376,6 +376,8 @@ func Shell() {
 						MessageChannel <- message
 					}
 					displayJobTable(jobs)
+				case "memfd":
+					MessageChannel <- agentAPI.MEMFD(shellAgent, cmd)
 				case "nslookup":
 					MessageChannel <- agentAPI.NSLOOKUP(shellAgent, cmd)
 				case "kill":
@@ -964,7 +966,9 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 		readline.PcItem("jobs"),
 		readline.PcItem("kill"),
 		readline.PcItem("ls"),
+		readline.PcItem("memfd"),
 		readline.PcItem("pwd"),
+		readline.PcItem("run"),
 		readline.PcItem("main"),
 		readline.PcItem("shell"),
 		readline.PcItem("set",
@@ -1151,6 +1155,7 @@ func menuHelpAgent() {
 		{"kill", "Instruct the agent to die or quit", ""},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
+		{"memfd", "Execute Linux file in memory", "<file path> [<arguments>]"},
 		{"nslookup", "DNS query on host or ip", "nslookup 8.8.8.8"},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},

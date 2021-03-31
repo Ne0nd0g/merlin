@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Added `nslookup` command to execute a DNS query using native Go
+- Added `memfd` command to run Linux executables in-memory as an anonymous file
 
 ## 0.10.0 - 2021-02-13
 

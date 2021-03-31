@@ -168,6 +168,25 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Command: jobType,
 			Args:    jobArgs,
 		}
+	case "memfd":
+		if len(jobArgs) < 1 {
+			return "", fmt.Errorf("expected 1 argument for the memfd command, recieved %d", len(jobArgs))
+		}
+		executable, err := ioutil.ReadFile(jobArgs[0])
+		if err != nil {
+			return "", fmt.Errorf("there was an error reading %s: %v", jobArgs[0], err)
+		}
+		fileHash := sha256.New()
+		_, err = io.WriteString(fileHash, string(executable))
+		if err != nil {
+			message("warn", fmt.Sprintf("There was an error generating file hash:\r\n%s", err.Error()))
+		}
+		b := base64.StdEncoding.EncodeToString(executable)
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    append([]string{b}, jobArgs[1:]...),
+		}
 	case "padding":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{

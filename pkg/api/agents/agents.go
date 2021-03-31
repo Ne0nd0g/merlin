@@ -418,6 +418,18 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
+// MEMFD run a linux executable from memory
+func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 1 {
+		return messages.ErrorMessage("not enough arguments. An executable was not provided")
+	}
+	job, err := jobs.Add(agentID, "memfd", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // PWD is used to print the Agent's current working directory
 func PWD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	job, err := jobs.Add(agentID, "pwd", Args)

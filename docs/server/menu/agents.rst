@@ -38,6 +38,7 @@ help
       ls                | List directory contents        | ls /etc OR ls C:\\Users OR ls
                         |                                | C:/Users
       main              | Return to the main menu        |
+      memfd             | Execute Linux file in memory   | <file path> [<arguments>]
       nslookup          | DNS query on host or ip        | nslookup 8.8.8.8
       pwd               | Display the current working    | pwd
                         | directory                      |
@@ -452,6 +453,31 @@ The ``main`` command is used to leave the Agent menu and return back to the :doc
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» main
     Merlin»
+
+memfd
+-----
+
+The ``memfd`` command loads a Linux executable file into memory (RAM) as an anonymous file using the
+`memfd_create <https://man7.org/linux/man-pages/man2/memfd_create.2.html>`__ API call, executes it, and returns the
+results.
+The file is created with an empty string as its name.
+Less the fact that RAM is a file on Linux, the executable is not written to disk.
+View the `Detecting Linux memfd_create() Fileless Malware with Command Line Forensics
+<https://www.sandflysecurity.com/blog/detecting-linux-memfd_create-fileless-malware-with-command-line-forensics/>`__
+for detection guidance.
+
+.. note::
+    This command will not run on Windows agents
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» memfd /tmp/hello.py
+    [-] Created job ZyeWhgfThk for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job ZyeWhgfThk for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Hello from a Python script
+
 
 nslookup
 --------
