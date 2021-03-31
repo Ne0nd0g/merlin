@@ -65,6 +65,8 @@ func executeJob() {
 				}
 			case jobs.MODULE:
 				switch strings.ToLower(job.Payload.(jobs.Command).Command) {
+				case "clr":
+					result = commands.CLR(job.Payload.(jobs.Command))
 				case "createprocess":
 					result = commands.CreateProcess(job.Payload.(jobs.Command))
 				case "minidump":

@@ -5,6 +5,7 @@ require (
 	github.com/Binject/go-donut v0.0.0-20201215224200-d947cf4d090d
 	github.com/CUCyber/ja3transport v0.0.0-20191126031250-d2ab5557668f // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
+	github.com/Ne0nd0g/go-clr v0.0.0-20210328123835-a2bef244455b
 	github.com/Ne0nd0g/ja3transport v0.0.0-20200203013218-e81e31892d84
 	github.com/akamensky/argparse v1.2.2 // indirect
 	github.com/andybalholm/cascadia v1.2.0 // indirect
@@ -21,7 +22,6 @@ require (
 	github.com/gojp/goreportcard v0.0.0-20200415071653-59167b516f3f // indirect
 	github.com/golang/example v0.0.0-20170904185048-46695d81d1fa // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/google/uuid v1.1.3 // indirect
 	github.com/gophish/gophish v0.11.0 // indirect
 	github.com/kardianos/govendor v1.0.9 // indirect
 	github.com/lib/pq v1.8.0 // indirect
