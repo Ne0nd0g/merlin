@@ -21,6 +21,7 @@ package commands
 
 import (
 	// Standard
+	"fmt"
 	"runtime"
 
 	// Merlin
@@ -32,5 +33,6 @@ import (
 // https://man7.org/linux/man-pages/man2/memfd_create.2.html
 // http://manpages.ubuntu.com/manpages/bionic/man2/memfd_create.2.html
 func Memfd(cmd jobs.Command) (result jobs.Results) {
-	result.stderr = fmt.Sprintf("the memfd command is not implemented for the %s operating system", runtime.GOOS)
+	result.Stderr = fmt.Sprintf("the memfd command is not implemented for the %s operating system", runtime.GOOS)
+	return
 }
