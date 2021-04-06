@@ -77,6 +77,7 @@ func startCLR(runtime string) (results jobs.Results) {
 		err = clr.RedirectStdoutStderr()
 		if err != nil {
 			results.Stderr = fmt.Sprintf("there was an error redirecting STDOUT/STDERR:\n%s", err)
+			cli.Message(cli.WARN, results.Stderr)
 			return
 		}
 	}
@@ -85,9 +86,11 @@ func startCLR(runtime string) (results jobs.Results) {
 	runtimeHost, err = clr.LoadCLR(runtime)
 	if err != nil {
 		results.Stderr = fmt.Sprintf("there was an error calling the startCLR function:\n%s", err)
+		cli.Message(cli.WARN, results.Stderr)
 		return
 	}
 	results.Stdout = fmt.Sprintf("the %s CLR runtime was successfully loaded", runtime)
+	cli.Message(cli.SUCCESS, results.Stdout)
 	return
 }
 
@@ -100,6 +103,7 @@ func loadAssembly(args []string) (results jobs.Results) {
 		for _, v := range assemblies {
 			if v.name == a.name {
 				results.Stderr = fmt.Sprintf("the '%s' assembly is already loaded", a.name)
+				cli.Message(cli.WARN, results.Stderr)
 				return
 			}
 		}
@@ -116,6 +120,7 @@ func loadAssembly(args []string) (results jobs.Results) {
 		assembly, err := base64.StdEncoding.DecodeString(args[0])
 		if err != nil {
 			results.Stderr = fmt.Sprintf("there  was an error decoding the Base64 string: %s", err)
+			cli.Message(cli.WARN, results.Stderr)
 			return
 		}
 
@@ -123,20 +128,24 @@ func loadAssembly(args []string) (results jobs.Results) {
 		a.methodInfo, err = clr.LoadAssembly(runtimeHost, assembly)
 		if err != nil {
 			results.Stderr = fmt.Sprintf("there was an error calling the loadAssembly function:\n%s", err)
+			cli.Message(cli.WARN, results.Stderr)
 			return
 		}
 
 		assemblies = append(assemblies, a)
 		results.Stdout = fmt.Sprintf("successfully loaded %s into the default AppDomain", a.name)
+		cli.Message(cli.SUCCESS, results.Stdout)
 		return
 	}
 	results.Stderr = fmt.Sprintf("expected 2 arguments for the load-assembly command, received %d", len(args))
+	cli.Message(cli.WARN, results.Stderr)
 	return
 }
 
 // invokeAssembly executes a previously loaded assembly
 func invokeAssembly(args []string) (results jobs.Results) {
 	cli.Message(cli.DEBUG, fmt.Sprintf("Received input parameter for invokeAssembly function: %+v", args))
+	cli.Message(cli.NOTE, fmt.Sprintf("Invoking .NET assembly: %s", args))
 	if len(args) > 0 {
 		var isLoaded bool
 		var a assembly
@@ -148,12 +157,20 @@ func invokeAssembly(args []string) (results jobs.Results) {
 		}
 		if isLoaded {
 			results.Stdout, results.Stderr = clr.InvokeAssembly(a.methodInfo, args[1:])
+			if results.Stdout != "" {
+				cli.Message(cli.SUCCESS, results.Stdout)
+			}
+			if results.Stderr != "" {
+				cli.Message(cli.WARN, results.Stderr)
+			}
 			return
 		}
 		results.Stderr = fmt.Sprintf("the '%s' assembly is not loaded", args[0])
+		cli.Message(cli.WARN, results.Stderr)
 		return
 	}
 	results.Stderr = fmt.Sprint("expected at least 1 arguments for the invokeAssembly function, received %d", len(args))
+	cli.Message(cli.WARN, results.Stderr)
 	return
 }
 
@@ -163,5 +180,6 @@ func listAssemblies() (results jobs.Results) {
 	for _, v := range assemblies {
 		results.Stdout += fmt.Sprintf("%s\n", v.name)
 	}
+	cli.Message(cli.SUCCESS, results.Stdout)
 	return
 }
