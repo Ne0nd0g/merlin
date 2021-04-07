@@ -329,7 +329,7 @@ func (client *Client) SendMerlinMessage(m messages.Base) (messages.Base, error) 
 
 	// Send the request
 	cli.Message(cli.DEBUG, fmt.Sprintf("Sending POST request size: %d to: %s", req.ContentLength, client.URL))
-	cli.Message(cli.DEBUG, fmt.Sprintf("HTTP Request:\r\n%+v", req))
+	//cli.Message(cli.DEBUG, fmt.Sprintf("HTTP Request:\r\n%+v", req))
 	resp, err := client.Client.Do(req)
 
 	if err != nil {
