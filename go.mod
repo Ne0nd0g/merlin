@@ -5,7 +5,7 @@ require (
 	github.com/Binject/go-donut v0.0.0-20201215224200-d947cf4d090d
 	github.com/CUCyber/ja3transport v0.0.0-20191126031250-d2ab5557668f // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
-	github.com/Ne0nd0g/go-clr v0.0.0-20210328123835-a2bef244455b
+	github.com/Ne0nd0g/go-clr v1.0.1
 	github.com/Ne0nd0g/ja3transport v0.0.0-20200203013218-e81e31892d84
 	github.com/akamensky/argparse v1.2.2 // indirect
 	github.com/andybalholm/cascadia v1.2.0 // indirect
@@ -45,7 +45,8 @@ require (
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974
 	golang.org/x/net/http2/h2demo v0.0.0-20200904194848-62affa334b73 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f
+	golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57
+	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/tools v0.0.0-20210114065538-d78b04bdf963 // indirect
 	golang.org/x/tools/gopls v0.5.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
