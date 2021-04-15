@@ -164,45 +164,6 @@ func TestNewHTTP3Client(t *testing.T) {
 	}
 }
 
-// TestKillDate validates that Agent will quit running and exit once the kill date has been exceeded
-func TestKillDate(t *testing.T) {
-	a, err := New(agentConfig)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Get the client
-	clientConfig.AgentID = a.ID
-	a.Client, err = merlinHTTP.New(clientConfig)
-	if err != nil {
-		t.Error(err)
-	}
-
-	a.KillDate = 1560616599
-	a.Run()
-}
-
-// TestFailedCheckin test for the agent to exit after the amount of failed checkins exceeds the agent's MaxRetry setting
-func TestFailedCheckin(t *testing.T) {
-	a, err := New(agentConfig)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Get the client
-	clientConfig.AgentID = a.ID
-	a.Client, err = merlinHTTP.New(clientConfig)
-	if err != nil {
-		t.Error(err)
-	}
-
-	a.FailedCheckin = a.MaxRetry
-
-	a.Run()
-}
-
 // TestPSK ensure that the agent can't successfully communicate with the server using the wrong PSK
 func TestPSK(t *testing.T) {
 	a, err := New(agentConfig)
