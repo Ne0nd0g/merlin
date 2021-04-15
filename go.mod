@@ -4,7 +4,6 @@ require (
 	github.com/Binject/debug v0.0.0-20201228082058-60012895f187 // indirect
 	github.com/Binject/go-donut v0.0.0-20201215224200-d947cf4d090d
 	github.com/CUCyber/ja3transport v0.0.0-20191126031250-d2ab5557668f // indirect
-	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/Ne0nd0g/go-clr v1.0.1
 	github.com/Ne0nd0g/ja3transport v0.0.0-20200203013218-e81e31892d84
 	github.com/chzyer/logex v1.1.10 // indirect
