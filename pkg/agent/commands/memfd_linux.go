@@ -75,7 +75,7 @@ func Memfd(cmd jobs.Command) (result jobs.Results) {
 	}
 
 	cli.Message(cli.SUCCESS, fmt.Sprintf("Executing anonymous file from memfd_create with arguments: %s", args))
-	command := exec.Command(fp, args...)
+	command := exec.Command(fp, args...) // #nosec G204
 	stdout, stderr := command.CombinedOutput()
 	if len(stdout) > 0 {
 		result.Stdout = fmt.Sprintf("%s", stdout)
