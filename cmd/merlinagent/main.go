@@ -112,15 +112,11 @@ func main() {
 		if *verbose {
 			color.Red(errClient.Error())
 		}
+		os.Exit(1)
 	}
 
 	// Start the agent
-	err = a.Run()
-	if err != nil {
-		if *verbose {
-			color.Red(err.Error())
-		}
-	}
+	a.Run()
 }
 
 // usage prints command line options
