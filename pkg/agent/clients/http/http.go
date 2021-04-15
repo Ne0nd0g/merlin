@@ -188,8 +188,8 @@ func getClient(protocol string, proxyURL string, ja3 string) (*http.Client, erro
 				// KeepAlive will send a HTTP/2 PING frame to keep the connection alive
 				// If this isn't used, and the agent's sleep is greater than the MaxIdleTimeout, then the connection will timeout
 				KeepAlive: true,
-				// HandshakeTimeout is how long the client will wait to hear back while setting up the initial crypto handshake w/ server
-				HandshakeTimeout: time.Second * 30,
+				// HandshakeIdleTimeout is how long the client will wait to hear back while setting up the initial crypto handshake w/ server
+				HandshakeIdleTimeout: time.Second * 30,
 			},
 			TLSClientConfig: TLSConfig,
 		}

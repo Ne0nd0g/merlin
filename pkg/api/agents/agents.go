@@ -537,6 +537,11 @@ func SetKillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
 // SetMaxRetry configures the amount of times an Agent will try to checkin before it quits
 func SetMaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
+		// Need to set the Sleep time on the server first to calculate JWT lifetime
+		err := agents.SetMaxRetry(agentID, Args[2])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
 		job, err := jobs.Add(agentID, "maxretry", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
@@ -561,6 +566,11 @@ func SetPadding(agentID uuid.UUID, Args []string) messages.UserMessage {
 // SetSleep configures the Agent's sleep time between checkins
 func SetSleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 2 {
+		// Need to set the Sleep time on the server first to calculate JWT lifetime
+		err := agents.SetWaitTime(agentID, Args[2])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
 		job, err := jobs.Add(agentID, "sleep", Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
