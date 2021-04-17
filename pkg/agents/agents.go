@@ -138,6 +138,9 @@ func GetEncryptionKey(agentID uuid.UUID) ([]byte, error) {
 		return nil, fmt.Errorf("agent %s does not exist", agentID)
 	}
 	key := Agents[agentID].Secret
+	if len(key) <= 0 {
+		return nil, fmt.Errorf("the encryption key for %s is empty", agentID)
+	}
 	if core.Debug {
 		message("debug", "Leaving agents.GetEncryptionKey function")
 	}

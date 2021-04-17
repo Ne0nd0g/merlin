@@ -70,6 +70,7 @@ func (client *Client) opaqueRegister() error {
 	cli.Message(cli.NOTE, "Starting OPAQUE Registration")
 
 	msg := messages.Base{
+		ID:   client.AgentID,
 		Type: messages.OPAQUE,
 	}
 
@@ -140,6 +141,7 @@ func (client *Client) opaqueAuthenticate() (messages.Base, error) {
 	cli.Message(cli.NOTE, "Starting OPAQUE Authentication")
 
 	msg := messages.Base{
+		ID:   client.AgentID,
 		Type: messages.OPAQUE,
 	}
 	// Set the Agent's JWT to be self-generated

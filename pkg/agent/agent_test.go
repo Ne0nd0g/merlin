@@ -172,16 +172,16 @@ func TestPSK(t *testing.T) {
 		t.Error(err)
 	}
 	// Get the client
-	var errClient error
-	clientConfig.AgentID = a.ID
-	clientConfig.Protocol = "h2"
-	a.Client, errClient = merlinHTTP.New(clientConfig)
-	if errClient != nil {
-		t.Error(errClient)
+	config := clientConfig
+	config.AgentID = a.ID
+
+	a.Client, err = merlinHTTP.New(config)
+	if err != nil {
+		t.Error(err)
 	}
 
 	a.WaitTime = 5000 * time.Millisecond
-	err = a.Client.Set("psk", "wrongPassword")
+	err = a.Client.Set("secret", "wrongPassword")
 	if err != nil {
 		t.Error(err)
 	}
@@ -212,7 +212,6 @@ func TestPSK(t *testing.T) {
 // TestOPAQUE verifies that agent is able to successfully complete the OPAQUE protocol Registration and Authentication steps
 func TestOPAQUE(t *testing.T) {
 	a, err := New(agentConfig)
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -243,7 +242,6 @@ func TestOPAQUE(t *testing.T) {
 // TestAgentInitialCheckin verifies the Agent's initialCheckin() function returns without error
 func TestAgentInitialCheckIn(t *testing.T) {
 	a, err := New(agentConfig)
-
 	if err != nil {
 		t.Error(err)
 		return
@@ -253,8 +251,8 @@ func TestAgentInitialCheckIn(t *testing.T) {
 	// Get the client
 	config := clientConfig
 	config.AgentID = a.ID
-	config.URL = "https://127.0.0.1:8082/merlin"
-	a.Client, err = merlinHTTP.New(clientConfig)
+	config.URL = "https://127.0.0.1:8083/merlin"
+	a.Client, err = merlinHTTP.New(config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -263,7 +261,7 @@ func TestAgentInitialCheckIn(t *testing.T) {
 	setup := make(chan struct{})
 	ended := make(chan struct{})
 
-	go testserver.TestServer{}.Start("8082", ended, setup, t)
+	go testserver.TestServer{}.Start("8083", ended, setup, t)
 	//wait until set up
 	<-setup
 
@@ -287,9 +285,9 @@ func TestBadAuthentication(t *testing.T) {
 	// Get the client
 	config := clientConfig
 	config.AgentID = a.ID
-	config.URL = "https://127.0.0.1:8083"
+	config.URL = "https://127.0.0.1:8084"
 	config.PSK = "neverGonnaGiveYouUp"
-	a.Client, err = merlinHTTP.New(clientConfig)
+	a.Client, err = merlinHTTP.New(config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -298,7 +296,7 @@ func TestBadAuthentication(t *testing.T) {
 	setup := make(chan struct{})
 	ended := make(chan struct{})
 
-	go testserver.TestServer{}.Start("8083", ended, setup, t)
+	go testserver.TestServer{}.Start("8084", ended, setup, t)
 	//wait until set up
 	<-setup
 
