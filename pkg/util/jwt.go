@@ -134,7 +134,13 @@ func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 			message("debug", fmt.Sprintf("there was an error getting the agent's wait time:\r\n%s", errWait.Error()))
 		}
 	}
+	if core.Debug {
+		message("debug", fmt.Sprintf("Agent wait time: %s", AgentWaitTime))
+	}
 	if AgentWaitTime == "" {
+		if core.Verbose {
+			message("note", "The returned Agent wait time was empty, using default 60s")
+		}
 		AgentWaitTime = "60s"
 	}
 
@@ -150,6 +156,7 @@ func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 	if errValidate != nil {
 		if core.Verbose {
 			message("warn", fmt.Sprintf("The JWT claims were not valid for %s", agentID))
+			message("note", fmt.Sprintf("Agent Wait Time: %s, Time now: %s", AgentWaitTime, time.Now()))
 			message("note", fmt.Sprintf("JWT Claim Expiry: %s", claims.Expiry.Time()))
 			message("note", fmt.Sprintf("JWT Claim Issued: %s", claims.IssuedAt.Time()))
 		}

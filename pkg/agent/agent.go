@@ -172,7 +172,7 @@ func New(config Config) (*Agent, error) {
 }
 
 // Run instructs an agent to establish communications with the passed in server using the passed in protocol
-func (a *Agent) Run() error {
+func (a *Agent) Run() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
 	cli.Message(cli.NOTE, fmt.Sprintf("Agent version: %s", a.Version))

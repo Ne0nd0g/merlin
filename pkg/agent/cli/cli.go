@@ -40,6 +40,8 @@ const (
 
 // Message is used to print text to Standard Out
 func Message(level int, message string) {
+	core.Mutex.Lock()
+	defer core.Mutex.Unlock()
 	switch level {
 	case INFO:
 		if core.Verbose {

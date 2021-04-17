@@ -79,10 +79,7 @@ func run(URL string) {
 		os.Exit(1)
 	}
 
-	errRun := a.Run()
-	if errRun != nil {
-		os.Exit(1)
-	}
+	a.Run()
 }
 
 // EXPORTED FUNCTIONS

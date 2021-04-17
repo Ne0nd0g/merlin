@@ -1,4 +1,4 @@
-// +build darwin
+// +build !linux
 
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
@@ -20,21 +20,19 @@
 package commands
 
 import (
-	"os/exec"
-	"strings"
+	// Standard
+	"fmt"
+	"runtime"
+
+	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
 )
 
-// shell is used to execute a command on a host using the operating system's default shell
-func shell(args []string) (stdout string, stderr string) {
-	cmd := exec.Command("/bin/sh", append([]string{"-c"}, strings.Join(args, " "))...) // #nosec G204
-
-	out, err := cmd.CombinedOutput()
-	stdout = string(out)
-	stderr = ""
-
-	if err != nil {
-		stderr = err.Error()
-	}
-
-	return stdout, stderr
+// Memfd places a linux executable file in-memory, executes it, and returns the results
+// Uses the linux memfd_create API call to create an anonymous file
+// https://man7.org/linux/man-pages/man2/memfd_create.2.html
+// http://manpages.ubuntu.com/manpages/bionic/man2/memfd_create.2.html
+func Memfd(cmd jobs.Command) (result jobs.Results) {
+	result.Stderr = fmt.Sprintf("the memfd command is not implemented for the %s operating system", runtime.GOOS)
+	return
 }

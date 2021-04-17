@@ -66,6 +66,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 	// Make sure the message has a JWT
 	token := r.Header.Get("Authorization")
 	if token == "" {
+		fmt.Println("the request did not contain an Authorization header")
 		w.WriteHeader(404)
 		return
 	}
@@ -97,6 +98,7 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 		key := hashedKey[:]
 		agentID, errValidate = validateJWT(strings.Split(token, " ")[1], key)
 		if errValidate != nil {
+			fmt.Printf("there was an error validating the JWT:\n%s\n", errValidate)
 			w.WriteHeader(404)
 			return
 		}
@@ -104,8 +106,10 @@ func (ts *TestServer) handler(w http.ResponseWriter, r *http.Request) {
 
 	key, errKey := agents.GetEncryptionKey(agentID)
 	if errKey != nil {
-		w.WriteHeader(404)
-		return
+		fmt.Printf("there was an error getting the Agent's decryption key:\n%s\n", errKey)
+		// Use the default key when the agent isn't registered
+		k := sha256.Sum256([]byte("test"))
+		key = k[:]
 	}
 
 	// Decrypt JWE

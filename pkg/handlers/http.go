@@ -197,6 +197,14 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 					message("note", fmt.Sprintf("Received %s message, decrypted JWE with interface PSK", messages.String(k.Type)))
 				}
 
+				// Verify JWT ID matches Merlin message ID
+				if agentID != k.ID || k.ID == uuid.Nil {
+					message("warn", fmt.Sprintf("Recieved a message with JWT Agent ID of %s but a Merlin "+
+						"message ID of %s. Returning 404", agentID, k.ID))
+					w.WriteHeader(404)
+					return
+				}
+
 				messagePayloadBytes := new(bytes.Buffer)
 
 				// Allowed unauthenticated message types w/ PSK signed JWT and PSK encrypted JWT
@@ -312,6 +320,14 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 			if core.Verbose {
 				message("note", "Authenticated JWT w/ Authenticated JWE agent session key")
 				message("info", fmt.Sprintf("Received %s message from %s at %s", messages.String(j.Type), j.ID, time.Now().UTC().Format(time.RFC3339)))
+			}
+
+			// Verify JWT ID matches Merlin message ID
+			if agentID != j.ID || j.ID == uuid.Nil {
+				message("warn", fmt.Sprintf("Recieved a message with JWT Agent ID of %s but a Merlin "+
+					"message ID of %s. Returning 404", agentID, j.ID))
+				w.WriteHeader(404)
+				return
 			}
 
 			// If both an agentID and error were returned, then the claims were likely bad and the agent needs to re-authenticate

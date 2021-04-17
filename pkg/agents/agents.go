@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -137,6 +138,9 @@ func GetEncryptionKey(agentID uuid.UUID) ([]byte, error) {
 		return nil, fmt.Errorf("agent %s does not exist", agentID)
 	}
 	key := Agents[agentID].Secret
+	if len(key) <= 0 {
+		return nil, fmt.Errorf("the encryption key for %s is empty", agentID)
+	}
 	if core.Debug {
 		message("debug", "Leaving agents.GetEncryptionKey function")
 	}
@@ -381,4 +385,30 @@ func GetLifetime(agentID uuid.UUID) (time.Duration, error) {
 
 	return lifetime, nil
 
+}
+
+// SetWaitTime updates an Agent's sleep amount or Wait Time
+func SetWaitTime(agentID uuid.UUID, wait string) error {
+	if isAgent(agentID) {
+		_, err := time.ParseDuration(wait)
+		if err != nil {
+			return fmt.Errorf("there was an error parsing %s to a duration for the Agent's WaitTime:\r\n%s", wait, err)
+		}
+		Agents[agentID].WaitTime = wait
+		return nil
+	}
+	return fmt.Errorf("the %s Agent is unknown", agentID.String())
+}
+
+// SetMaxRetry updates an Agent's MaxRetry limit
+func SetMaxRetry(agentID uuid.UUID, retry string) error {
+	if isAgent(agentID) {
+		r, err := strconv.Atoi(retry)
+		if err != nil {
+			return fmt.Errorf("there was an error converting %s to an integer for Agent %s:\n%s", retry, agentID, err)
+		}
+		Agents[agentID].MaxRetry = r
+		return nil
+	}
+	return fmt.Errorf("the %s Agent is unknown", agentID.String())
 }

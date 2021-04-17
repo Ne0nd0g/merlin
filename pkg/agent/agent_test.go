@@ -164,52 +164,6 @@ func TestNewHTTP3Client(t *testing.T) {
 	}
 }
 
-// TestKillDate validates that Agent will quit running and exit once the kill date has been exceeded
-func TestKillDate(t *testing.T) {
-	a, err := New(agentConfig)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Get the client
-	clientConfig.AgentID = a.ID
-	a.Client, err = merlinHTTP.New(clientConfig)
-	if err != nil {
-		t.Error(err)
-	}
-
-	a.KillDate = 1560616599
-	errRun := a.Run()
-	// TODO the function won't actually return unless there is an error
-	if errRun == nil {
-		t.Errorf("the agent did not quit when the killdate was exceeded")
-	}
-}
-
-// TestFailedCheckin test for the agent to exit after the amount of failed checkins exceeds the agent's MaxRetry setting
-func TestFailedCheckin(t *testing.T) {
-	a, err := New(agentConfig)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Get the client
-	clientConfig.AgentID = a.ID
-	a.Client, err = merlinHTTP.New(clientConfig)
-	if err != nil {
-		t.Error(err)
-	}
-
-	a.FailedCheckin = a.MaxRetry
-
-	errRun := a.Run()
-	if errRun == nil {
-		t.Errorf("the agent did not quit when the maximum number of failed checkin atttempts were reached")
-	}
-}
-
 // TestPSK ensure that the agent can't successfully communicate with the server using the wrong PSK
 func TestPSK(t *testing.T) {
 	a, err := New(agentConfig)
@@ -218,16 +172,16 @@ func TestPSK(t *testing.T) {
 		t.Error(err)
 	}
 	// Get the client
-	var errClient error
-	clientConfig.AgentID = a.ID
-	clientConfig.Protocol = "h2"
-	a.Client, errClient = merlinHTTP.New(clientConfig)
-	if errClient != nil {
-		t.Error(errClient)
+	config := clientConfig
+	config.AgentID = a.ID
+
+	a.Client, err = merlinHTTP.New(config)
+	if err != nil {
+		t.Error(err)
 	}
 
 	a.WaitTime = 5000 * time.Millisecond
-	err = a.Client.Set("psk", "wrongPassword")
+	err = a.Client.Set("secret", "wrongPassword")
 	if err != nil {
 		t.Error(err)
 	}
@@ -258,7 +212,6 @@ func TestPSK(t *testing.T) {
 // TestOPAQUE verifies that agent is able to successfully complete the OPAQUE protocol Registration and Authentication steps
 func TestOPAQUE(t *testing.T) {
 	a, err := New(agentConfig)
-
 	if err != nil {
 		t.Error(err)
 	}
@@ -289,7 +242,6 @@ func TestOPAQUE(t *testing.T) {
 // TestAgentInitialCheckin verifies the Agent's initialCheckin() function returns without error
 func TestAgentInitialCheckIn(t *testing.T) {
 	a, err := New(agentConfig)
-
 	if err != nil {
 		t.Error(err)
 		return
@@ -299,8 +251,8 @@ func TestAgentInitialCheckIn(t *testing.T) {
 	// Get the client
 	config := clientConfig
 	config.AgentID = a.ID
-	config.URL = "https://127.0.0.1:8082/merlin"
-	a.Client, err = merlinHTTP.New(clientConfig)
+	config.URL = "https://127.0.0.1:8083/merlin"
+	a.Client, err = merlinHTTP.New(config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -309,7 +261,7 @@ func TestAgentInitialCheckIn(t *testing.T) {
 	setup := make(chan struct{})
 	ended := make(chan struct{})
 
-	go testserver.TestServer{}.Start("8082", ended, setup, t)
+	go testserver.TestServer{}.Start("8083", ended, setup, t)
 	//wait until set up
 	<-setup
 
@@ -333,9 +285,9 @@ func TestBadAuthentication(t *testing.T) {
 	// Get the client
 	config := clientConfig
 	config.AgentID = a.ID
-	config.URL = "https://127.0.0.1:8083"
+	config.URL = "https://127.0.0.1:8084"
 	config.PSK = "neverGonnaGiveYouUp"
-	a.Client, err = merlinHTTP.New(clientConfig)
+	a.Client, err = merlinHTTP.New(config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -344,7 +296,7 @@ func TestBadAuthentication(t *testing.T) {
 	setup := make(chan struct{})
 	ended := make(chan struct{})
 
-	go testserver.TestServer{}.Start("8083", ended, setup, t)
+	go testserver.TestServer{}.Start("8084", ended, setup, t)
 	//wait until set up
 	<-setup
 
