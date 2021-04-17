@@ -19,11 +19,14 @@
 
 package commands
 
-import "os/exec"
+import (
+	"os/exec"
+	"strings"
+)
 
 // shell is used to execute a command on a host using the operating system's default shell
 func shell(args []string) (stdout string, stderr string) {
-	cmd := exec.Command("/bin/sh", append([]string{"-c"}, args...)...) // #nosec G204
+	cmd := exec.Command("/bin/sh", append([]string{"-c"}, strings.Join(args, " "))...) // #nosec G204
 
 	out, err := cmd.CombinedOutput()
 	stdout = string(out)
