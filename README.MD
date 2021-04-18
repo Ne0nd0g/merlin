@@ -98,6 +98,6 @@ Thanks to [JetBrains](https://www.jetbrains.com/?from=merlin) for kindly sponsor
 Open Source license
 
 <p align="center">
-  <img alt="JetBrains Logo" src="docs/images/jetbrains-variant-4.png" height="30%" width="30%">
-  <img alt="GoLand Logo" src="docs/images/icon-goland.png" height="30%" width="30%">
+  <img alt="JetBrains Logo" src="docs/images/jetbrains-variant-4.png" height="40%" width="40%">
+  <img alt="GoLand Logo" src="docs/images/icon-goland.png" height="20%" width="20%">
 </p>
