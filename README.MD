@@ -8,7 +8,7 @@
 # Merlin
 
 <p align="center">
-  <img alt="Merlin Logo" src="https://i.imgur.com/4iKuvuj.jpg" height="30%" width="30%">
+  <img alt="Merlin Logo" src="docs/images/merlin.png" height="30%" width="30%">
 </p>
 
 Merlin is a cross-platform post-exploitation Command & Control server and agent written in Go.
@@ -99,5 +99,5 @@ Open Source license
 
 <p align="center">
   <img alt="JetBrains Logo" src="docs/images/jetbrains-variant-4.png" height="30%" width="30%">
-  <img alt="GoLand Logo" src="https://github.com/Ne0nd0g/merlin/docs/images/icon-goland.png" height="30%" width="30%">
+  <img alt="GoLand Logo" src="docs/images/icon-goland.png" height="30%" width="30%">
 </p>
