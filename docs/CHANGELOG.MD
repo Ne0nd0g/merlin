@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 1.0.0 - 2021-04-17
+
+### Changed
+
+- Added `main.go` to project root so that the Merlin server is compiled when retrieved with `go get`
+- Change Makefile to only support building and packaging the server
+
+### Removed
+
+- Removed all agent code from `pkg/agent`
+- Removed all programs from `cmd` (e.g., `cmd/merlinagent`) to their own GitHub repository
+- Removed User functions from opaque package to the Agent codebase
+- Removed `Invoke-Melrin` and `merlin.js` from codebase completely
+
 ## 0.11.0 - 2021-04-17
 
 ### Added

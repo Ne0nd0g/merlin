@@ -1,140 +1,42 @@
-# !!!MAKE SURE YOUR GOPATH ENVIRONMENT VARIABLE IS SET FIRST!!!
-
-# Merlin Server & Agent version number
+# Merlin version
 VERSION=$(shell cat pkg/merlin.go |grep "const Version ="|cut -d"\"" -f2)
+BUILD=$(shell git rev-parse HEAD)
 
 MSERVER=merlinServer
-MAGENT=merlinAgent
-PASSWORD=merlin
-BUILD=$(shell git rev-parse HEAD)
-DIR=data/temp/v${VERSION}/${BUILD}
-BIN=data/bin/
-XBUILD=-X main.build=${BUILD} -X github.com/Ne0nd0g/merlin/pkg/agent.build=${BUILD}
-URL ?= https://127.0.0.1:443
-XURL=-X main.url=${URL}
-PSK ?= merlin
-XPSK=-X main.psk=${PSK}
-PROXY ?=
-XPROXY =-X main.proxy=$(PROXY)
-HOST ?=
-XHOST =-X main.host=$(HOST)
-PROTO ?= h2
-XPROTO =-X main.protocol=$(PROTO)
-JA3 ?=
-XJA3 =-X main.ja3=$(JA3)
-KILLDATE ?= 0
-XKILLDATE =-X main.killdate=$(KILLDATE)
-MAXRETRY ?= 7
-XMAXRETRY =-X main.maxretry=$(MAXRETRY)
-PADDING ?= 4096
-XPADDING =-X main.padding=$(PADDING)
-SKEW ?= 0
-XSKEW =-X main.skew=$(SKEW)
-USERAGENT ?= Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36
-XUSERAGENT =-X "main.useragent=$(USERAGENT)"
-SLEEP ?= 30s
-XSLEEP = -X main.sleep=$(SLEEP)
-LDFLAGS=-ldflags '-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} ${XKILLDATE} ${XMAXRETRY} ${XPADDING} ${XSKEW} ${XUSERAGENT} ${XSLEEP} -buildid='
-WINAGENTLDFLAGS=-ldflags '-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} ${XKILLDATE} ${XMAXRETRY} ${XPADDING} ${XSKEW} ${XUSERAGENT} ${XSLEEP} -H=windowsgui -buildid='
-WINAGENTLDFLAGSDEBUG=-ldflags '-s -w ${XBUILD} ${XPROTO} ${XURL} ${XHOST} ${XPSK} ${XPROXY} ${XKILLDATE} ${XMAXRETRY} ${XPADDING} ${XSKEW} ${XUSERAGENT} ${XSLEEP} -buildid='
-# TODO Update when Go1.13 is released https://stackoverflow.com/questions/45279385/remove-file-paths-from-text-directives-in-go-binaries
-GCFLAGS=-gcflags=all=-trimpath=$(GOPATH)
-ASMFLAGS=-asmflags=all=-trimpath=$(GOPATH)# -asmflags=-trimpath=$(GOPATH)
-PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
-F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
-F2=LICENSE
-W=Windows-x64
-L=Linux-x64
-A=Linux-arm
-M=Linux-mips
-D=Darwin-x64
-export GO111MODULE=on
 
-# Make Directory to store executables
+# Output File Location
+DIR=data/temp/v${VERSION}/${BUILD}
 $(shell mkdir -p ${DIR})
 
-# Change default to just make for the host OS and add MAKE ALL to do this
-default: server-windows agent-windows server-linux agent-linux server-darwin agent-darwin agent-dll agent-javascript prism-windows prism-linux prism-darwin
+# Go build flags
+LDFLAGS=-ldflags '-s -w -X main.build=${BUILD} -buildid='
 
-all: default
+# Packaging
+PASSWORD=merlin
+PACKAGE=7za a -p${PASSWORD} -mhe -mx=9
+F=README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/db/ data/log/README.MD data/x509 data/src data/bin data/html
 
-# Compile Windows binaries
-windows: server-windows agent-windows agent-dll
-
-# Compile Linux binaries
-linux: server-linux agent-linux
-
-# Compile Arm binaries
-arm: agent-arm
-
-# Compile mips binaries
-mips: agent-mips
-
-# Compile Darwin binaries
-darwin: server-darwin agent-darwin
+default:
+	go build ${LDFLAGS} -o ${DIR}/${MSERVER} main.go
 
 # Compile Server - Windows x64
-server-windows:
-	export GOOS=windows;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${W}.exe cmd/merlinserver/main.go
-
-# Compile Agent - Windows x64
-agent-windows:
-	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${W}.exe cmd/merlinagent/main.go
-
-# Compile Agent - Windows x64 with DEBUG output
-agent-windows-debug:
-	export GOOS=windows GOARCH=amd64;go build ${WINAGENTLDFLAGSDEBUG} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${W}-DEBUG.exe cmd/merlinagent/main.go
-
-# Compile Agent - Windows x64 DLL - main() - Console
-agent-dll:
-	export GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ CGO_ENABLED=1; \
-	go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -buildmode=c-archive -o ${DIR}/main.a cmd/merlinagentdll/main.go; \
-	cp data/bin/dll/merlin.c ${DIR}; \
-	x86_64-w64-mingw32-gcc -shared -pthread -o ${DIR}/merlin.dll ${DIR}/merlin.c ${DIR}/main.a -lwinmm -lntdll -lws2_32
-
-# Compile PRISM - Windows x64
-prism-windows:
-	export GOOS=windows GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/PRISM-${W}.exe cmd/prism/main.go
+windows:
+	export GOOS=windows;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-Windows-x64.exe main.go
 
 # Compile Server - Linux x64
-server-linux:
-	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${L} cmd/merlinserver/main.go
-
-# Compile Agent - Linux mips
-agent-mips:
-	export GOOS=linux;export GOARCH=mips;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${M} cmd/merlinagent/main.go
-
-# Compile Agent - Linux arm
-agent-arm:
-	export GOOS=linux;export GOARCH=arm;export GOARM=7;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${A} cmd/merlinagent/main.go
-
-# Compile Agent - Linux x64
-agent-linux:
-	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${L} cmd/merlinagent/main.go
-
-# Compile PRISM - Linux x64
-prism-linux:
-	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/PRISM-${L} cmd/prism/main.go
+linux:
+	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-Linux-x64 main.go
 
 # Compile Server - Darwin x64
-server-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-${D} cmd/merlinserver/main.go
+darwin:
+	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/${MSERVER}-Darwin-x64 main.go
 
-# Compile Agent - Darwin x64
-agent-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/${MAGENT}-${D} cmd/merlinagent/main.go
+package: default package-server
 
-# Compile PRISM - Darwin x64
-prism-darwin:
-	export GOOS=darwin;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/PRISM-${D} cmd/prism/main.go
+package-server:
+	${PACKAGE} ${DIR}/${MSERVER}.7z ${F}
+	cd ${DIR};${PACKAGE} ${MSERVER}.7z ${MSERVER}.exe
 
-# Update JavaScript Information
-agent-javascript:
-	sed -i 's/var build = ".*"/var build = "${BUILD}"/' data/html/scripts/merlin.js
-	sed -i 's/var version = ".*"/var version = "${VERSION}"/' data/html/scripts/merlin.js
-	sed -i 's|var url = ".*"|var url = "${URL}"|' data/html/scripts/merlin.js
-
-# Make directory 'data' and then agents, db, log, x509; Copy src folder, README, and requirements
 package-server-windows:
 	${PACKAGE} ${DIR}/${MSERVER}-${W}.7z ${F}
 	cd ${DIR};${PACKAGE} ${MSERVER}-${W}.7z ${MSERVER}-${W}.exe
@@ -147,60 +49,5 @@ package-server-darwin:
 	${PACKAGE} ${DIR}/${MSERVER}-${D}.7z ${F}
 	cd ${DIR};${PACKAGE} ${MSERVER}-${D}.7z ${MSERVER}-${D}
 
-package-agent-windows:
-	${PACKAGE} ${DIR}/${MAGENT}-${W}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${W}.7z ${MAGENT}-${W}.exe
-	mkdir -p ${BIN}windows
-	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
-
-package-agent-linux:
-	${PACKAGE} ${DIR}/${MAGENT}-${L}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${L}.7z ${MAGENT}-${L}
-	mkdir -p ${BIN}linux
-	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
-	
-package-agent-darwin:
-	${PACKAGE} ${DIR}/${MAGENT}-${D}.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-${D}.7z ${MAGENT}-${D}
-	mkdir -p ${BIN}darwin/
-	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/
-
-package-agent-dll:
-	${PACKAGE} ${DIR}/${MAGENT}-DLL.7z ${F2}
-	cd ${DIR};${PACKAGE} ${MAGENT}-DLL.7z merlin.dll
-	cp ${DIR}/merlin.dll ${BIN}dll
-
-package-prism-windows:
-	${PACKAGE} ${DIR}/PRISM-${W}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${W}.7z PRISM-${W}.exe
-	cp ${DIR}/PRISM-${W}.exe ${BIN}windows/
-
-package-prism-linux:
-	${PACKAGE} ${DIR}/PRISM-${L}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${L}.7z PRISM-${L}
-	cp ${DIR}/PRISM-${L} ${BIN}linux/
-
-package-prism-darwin:
-	${PACKAGE} ${DIR}/PRISM-${D}.7z ${F2}
-	cd ${DIR};${PACKAGE} PRISM-${D}.7z PRISM-${D}
-	cp ${DIR}/PRISM-${D} ${BIN}darwin/
-
-# Package agents and PRISM first so that they can be included in the Server distro
-package-all: package-agent-windows package-agent-dll package-agent-linux package-agent-darwin package-prism-windows package-prism-linux package-prism-darwin package-server-linux package-server-windows package-server-darwin
-
 clean:
 	rm -rf ${DIR}*
-
-#Build all files for release distribution
-distro: clean all package-all
-
-#Create all agents and move them to Merlin's data/bin directory; Used with Docker container
-generate-agents: agent-windows agent-dll agent-linux agent-darwin
-	mkdir -p ${BIN}windows/
-	cp ${DIR}/${MAGENT}-${W}.exe ${BIN}windows/
-	mkdir -p ${BIN}dll
-	cp ${DIR}/merlin.dll ${BIN}dll
-	mkdir -p ${BIN}linux/
-	cp ${DIR}/${MAGENT}-${L} ${BIN}linux/
-	mkdir -p ${BIN}darwin/
-	cp ${DIR}/${MAGENT}-${D} ${BIN}darwin/
