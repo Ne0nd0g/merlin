@@ -1,87 +1,93 @@
-[![AppVeyor](https://ci.appveyor.com/api/projects/status/github/Ne0nd0g/merlin?branch=dev&svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin)
+[![AppVeyor](https://ci.appveyor.com/api/projects/status/github/Ne0nd0g/merlin?branch=master&svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin)
 [![GoReportCard](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Release](https://img.shields.io/github/release/Ne0nd0g/merlin.svg)](https://github.com/Ne0nd0g/merlin/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Ne0nd0g/merlin/total.svg)](https://github.com/Ne0nd0g/merlin/releases)
 [![Twitter Follow](https://img.shields.io/twitter/follow/merlin_c2.svg?style=social&label=Follow)](https://twitter.com/merlin_c2)
 
-# Merlin (BETA)
+# Merlin
 
-<p align="center">
-  <img src="https://i.imgur.com/4iKuvuj.jpg" height="30%" width="30%">
+<p style="text-align: center;">
+  <img alt="Merlin Logo" src="https://i.imgur.com/4iKuvuj.jpg" height="30%" width="30%">
 </p>
 
-Merlin is a cross-platform post-exploitation HTTP/2 Command & Control 
-server and agent written in golang.
+Merlin is a cross-platform post-exploitation Command & Control server and agent written in Go.
 
-An introductory blog post can be found here:
-https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a
+Highlighted features:
 
+- Supported C2 Protocols: http/1.1 clear-text, http/1.1 over TLS, HTTP/2, HTTP/2 clear-text (h2c), http/3 (http/2 over QUIC)
+- Server and Agent: Windows, Linux, macOS (Darwin), MIPS, ARM or anything Go can [natively build](https://golang.org/doc/install/source#environment)
+  - [Windows DLL Agent](https://github.com/Ne0nd0g/merlin-agent-dll)
+- Domain Fronting
+- Execute .NET assemblies in-process with `invoke-assembly` or in a sacrificial process with `execute-assembly`
+- Execute arbitrary Windows executables (PE) in a sacrificial process with `execute-pe` 
+- Various shellcode execution techniques: CreateThread, CreateRemoteThread,  RtlCreateUserThread, QueueUserAPC
+- [OPAQUE](https://tools.ietf.org/html/draft-krawczyk-cfrg-opaque-00) Asymmetric Password Authenticated Key Exchange (PAKE)
+- Encrypted JWT for authentication
+- Agent traffic is an encrypted JWE using PBES2 (RFC 2898) with HMAC SHA-512 as the PRF and AES Key Wrap (RFC 3394) 
+  using 256-bit keys for the encryption scheme. ([PBES2_HS512_A256KW](https://tools.ietf.org/html/rfc7518#section-4.8))
+- Integrated [Donut](https://github.com/Binject/go-donut), [sRDI](https://github.com/monoxgas/sRDI), 
+  and [SharpGen](https://github.com/cobbr/SharpGen) support
+- C2 traffic message [padding](https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html#padding) to combat 
+  beaconing detections based on a fixed message size
+- Dynamically change the Agent's [JA3](https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html#ja3) hash 
+- [Mythic](#mythic) support
+- [Documentation & Wiki](https://merlin-c2.readthedocs.io/en/latest/)
 
-[![asciicast](https://asciinema.org/a/166722.png)](https://asciinema.org/a/166722?speed=2)
+An introductory blog post can be found here: <https://medium.com/@Ne0nd0g/introducing-merlin-645da3c635a>
 
 ## Quick Start
-1. Download the latest compiled version of Merlin Server from the [releases](https://github.com/Ne0nd0g/merlin/releases) section
-2. Extract the files with 7zip using the `x` function. **The password is: `merlin`**
-3. Start Merlin
-4. Deploy an agent. See [Agent Execution Quick Start Guide](https://github.com/Ne0nd0g/merlin/wiki/Agent-Execution-Quick-Start-Guide) for examples
-5. Pwn, Pivot, Profit
 
+1. Download the latest compiled version of Merlin Server from the [releases](https://github.com/Ne0nd0g/merlin/releases) section
+   > The Server package contains a compiled Agent for all the major operating systems in the `bin` directory
+2. Extract the files with 7zip using the `x` function **The password is: `merlin`**
+3. Start Merlin
+4. Configure a [listener]()   
+5. Deploy an agent. See [Agent Execution Quick Start Guide](https://merlin-c2.readthedocs.io/en/latest/quickStart/agent.html) for examples
+6. Pwn, Pivot, Profit
+
+   ```
+   mkdir /opt/merlin;cd /opt/merlin
+   wget https://github.com/Ne0nd0g/merlin/releases/latest/download/merlinServer-Linux-x64.7z
+   7z x merlinServer-Linux-x64.7z
+   sudo ./merlinServer-Linux-x64
+   ```
+
+## Agents
+
+The [Merlin Agent](https://github.com/Ne0nd0g/merlin-agent) is kept in its own repository so that it can easily be 
+retrieved and compiled:
+
+```text
+go get github.com/Ne0nd0g/merlin-agent
 ```
-mkdir /opt/merlin;cd /opt/merlin
-wget https://github.com/Ne0nd0g/merlin/releases/download/v0.1.4/merlinServer-Linux-x64-v0.1.4.7z
-7z x merlinServer-Linux-x64-v0.1.4.7z
-sudo ./merlinServer-Linux-x64
-```
+
+The [Windows DLL Agent](https://github.com/Ne0nd0g/merlin-agent-dll) is also kept in a separate repository.
+See the [DLL Agent](https://merlin-c2.readthedocs.io/en/latest/agent/dll.html) documentation for building instructions.
+
+## Mythic
+
+The Merlin server is a self-contained command line program that requires no installation. You just simply download it 
+and run it.
+The command-line interface only works great if it will be used by a single operator at a time. 
+The Merlin agent can be controlled through [Mythic](https://github.com/its-a-feature/Mythic), which features a web-based
+user interface that enables multiplayer support, and a slew of other features inherent to the project.
+
+Visit the [Merlin](https://github.com/MythicAgents/merlin) repository in the MythicAgents organizaiton to get started.
 
 ## Misc.
+
 * The latest development build of Merlin can be downloaded from [AppVeyor](https://ci.appveyor.com/project/Ne0nd0g/merlin-i9c58/build/artifacts)
-* To compile Merlin from source, view the [Building or Running from Source](https://github.com/Ne0nd0g/merlin/wiki/Building-or-Running-from-Source) wiki page
-* For a full list of available commands view the [Main Menu](https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Main-Menu), [Agent Menu](https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Agent-Menu), and [Module Menu](https://github.com/Ne0nd0g/merlin/wiki/Merlin-Server-Module-Menu) wiki pages
-* View the [FAQ](https://github.com/Ne0nd0g/merlin/wiki/FAQ) wiki page for Frequently Asked Questions
-* View the [Blog Posts](https://github.com/Ne0nd0g/merlin/wiki/Blog-Posts) page for additional information
-
-## Merlin Server Command Line Flags
-`./merlinServer-Linux-x64 -h`
-```
-Version: 0.8.0.BETA
-Build: nonRelease
-  -debug
-        Enable debug output
-  -i string
-        The IP address of the interface to bind to (default "127.0.0.1")
-  -p int
-        Merlin Server Port (default 443)
-  -proto string
-        Protocol for the agent to connect with [h2, hq] (default "h2")
-  -psk string
-        Pre-Shared Key used to encrypt initial communications (default "merlin")
-  -v    Enable verbose output
-  -x509cert string
-        The x509 certificate for the HTTPS listener (default "/opt/merlin/data/x509/server.crt")
-  -x509key string
-        The x509 certificate key for the HTTPS listener (default "/opt/merlin/data/x509/server.key")
-```
-
-## Merlin Agent Command Line Flags
-`./merlinAgent-Linux-x64 -h`
-```
-Merlin Agent
-  -debug
-        Enable debug output
-  -proto string
-        Protocol for the agent to connect with [h2, hq] (default "h2")
-  -psk string
-        Pre-Shared Key used to encrypt initial communications (default "merlin")
-  -sleep duration
-        Time for agent to sleep (default 30s)
-  -url string
-        Full URL for agent to connect to (default "https://127.0.0.1:443")
-  -v    Enable verbose output
-  -version
-        Print the agent version and exit
-```
+* To compile Merlin from source, view the [Custom Build](https://merlin-c2.readthedocs.io/en/latest/agent/custom.html) page
+* For a full list of available commands:
+   * [Main Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/main.html)
+   * [Listener Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html)
+   * [Agent Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html)
+   * [Module Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/modules.html)
+* View the [Frequently Asked Questions](https://merlin-c2.readthedocs.io/en/latest/quickStart/faq.html) page
+* View the [Blog Posts](https://merlin-c2.readthedocs.io/en/latest/misc/blogs.html) page for additional information
 
 ## Slack
 
-Join the `#merlin` channel in the [BloodHoundGang](https://bloodhoundgang.herokuapp.com/) Slack to chat about Merlin
+Join the `#merlin` channel in the [BloodHoundGang](https://bloodhoundgang.herokuapp.com/) Slack to ask questions, 
+troubleshoot, or provide feedback.
