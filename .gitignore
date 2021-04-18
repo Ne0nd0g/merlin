@@ -1,10 +1,5 @@
 .DS_STORE
 data/agents
 data/temp
-data/db
 data/log
-data/bin/darwin
-data/bin/dll/merlin.dll
-data/bin/linux
-data/bin/windows
 .idea/
