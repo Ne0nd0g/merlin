@@ -1,4 +1,4 @@
-FROM golang:stretch
+FROM golang:1.16-buster
 
 # Build the Docker image first
 #  > sudo docker build -t merlin .
@@ -9,7 +9,7 @@ FROM golang:stretch
 # Update APT
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN apt-get install -y apt-transport-https
+RUN apt-get install -y apt-transport-https git make vim gcc-mingw-w64
 
 # Install Microsoft package signing key
 RUN wget --quiet -O - https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg
@@ -23,11 +23,21 @@ RUN chown root:root /etc/apt/sources.list.d/microsoft-prod.list
 RUN apt-get update
 RUN apt-get install -y dotnet-sdk-2.1
 
-RUN apt-get install -y git make vim gcc-mingw-w64
-
-# Clone Merlin
+# Clone Merlin Server
 WORKDIR $GOPATH/src/github.com/Ne0nd0g
 RUN git clone --recurse-submodules https://github.com/Ne0nd0g/merlin
+
+# Clone Merlin Agent
+go get github.com/Ne0nd0g/merlin-agent
+WORKDIR $GOPATH/src/github.com/Ne0nd0g/merlin-agent
+RUN go mod download
+RUN make all
+
+# Clone Merlin Agent DLL
+go get github.com/Ne0nd0g/merlin-agent-dll
+WORKDIR $GOPATH/src/github.com/Ne0nd0g/merlin-agent-dll
+RUN go mod download
+RUN make
 
 # Build SharpGen
 WORKDIR $GOPATH/src/github.com/Ne0nd0g/merlin/data/src/cobbr/SharpGen
@@ -35,10 +45,9 @@ RUN dotnet build -c release
 
 WORKDIR $GOPATH/src/github.com/Ne0nd0g/merlin
 RUN go mod download
-RUN make generate-agents
 
 # > sudo docker volume inspect merlinAgents to find data location on host OS
 #VOLUME ["merlinAgents:data/agents", "merlinLog:data/log", "merlinTemp:data/temp"]
 EXPOSE 443
 
-CMD ["go", "run", "cmd/merlinserver/main.go"]
+CMD ["go", "run", "main.go"]
