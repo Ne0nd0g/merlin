@@ -18,9 +18,13 @@ The biggest contributor I see for getting errors while compiling is forgetting t
 Input and output redirection pipes don't work
 ---------------------------------------------
 
-Pipes ``|`` and redirectors ``<`` and ``>`` are functions of a shell. By default, Merlin only executes programs in the host's PATH variable. In order to use pipes and redirection, you must first specify the shell (i.e ``/bin/bash``) so that you can use these.
+Pipes ``|`` and redirectors ``<`` and ``>`` are functions of a shell. By default, Merlin only executes programs in the
+host's PATH variable.
+In order to use pipes and redirection, you must either use the ``shell`` command or specify the shell
+(i.e ``/bin/bash``) when using the ``run`` command so that you can use these.
 
-When running a Merlin agent on a Linux host, use the ``-c`` flag with the shell to effectively change directories and perform some action in that directory. Because Merlin spawns a process for every command, the shell is not persistent or interactive. This request the operator to combine multiple commands together so that they are all in the same context/environment.
+Because Merlin spawns a process for every command, the shell is not persistent or interactive.
+This requires the operator to combine multiple commands together so that they are all in the same context/environment.
 
 Example:
 

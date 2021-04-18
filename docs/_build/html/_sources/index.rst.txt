@@ -31,9 +31,7 @@ Merlin is a post-exploit Command & Control (C2) tool, also known as a Remote Acc
 
    agent/cli
    agent/dll
-   agent/powershell
    agent/custom
-   agent/javascript
 
 .. toctree::
    :maxdepth: 3

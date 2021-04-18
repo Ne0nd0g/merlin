@@ -39,7 +39,7 @@ An introductory blog post can be found here: <https://medium.com/@Ne0nd0g/introd
 ## Quick Start
 
 1. Download the latest compiled version of Merlin Server from the [releases](https://github.com/Ne0nd0g/merlin/releases) section
-   > The Server package contains a compiled Agent for all the major operating systems in the `bin` directory
+   > The Server package contains a compiled Agent for all the major operating systems in the `data/bin` directory
 2. Extract the files with 7zip using the `x` function **The password is: `merlin`**
 3. Start Merlin
 4. Configure a [listener]()   
@@ -91,3 +91,13 @@ Visit the [Merlin](https://github.com/MythicAgents/merlin) repository in the Myt
 
 Join the `#merlin` channel in the [BloodHoundGang](https://bloodhoundgang.herokuapp.com/) Slack to ask questions, 
 troubleshoot, or provide feedback.
+
+## JetBrains
+
+Thanks to [JetBrains](https://www.jetbrains.com/?from=merlin) for kindly sponsoring Merlin by providing a Goland IDE 
+Open Source license
+
+<p style="text-align: center;">
+  <img alt="JetBrains Logo" src="https://github.com/Ne0nd0g/merlin/docs/images/jetbrains-variant-4.png" height="30%" width="30%">
+  <img alt="GoLand Logo" src="https://github.com/Ne0nd0g/merlin/docs/images/icon-goland.png" height="30%" width="30%">
+</p>

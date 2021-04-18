@@ -101,9 +101,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/powershell.html">PowerShell</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../agent/javascript.html">JavaScript Agent</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Merlin Server</span></p>
 <ul>
@@ -200,8 +198,12 @@
 </div>
 <div class="section" id="input-and-output-redirection-pipes-don-t-work">
 <h2>Input and output redirection pipes don’t work<a class="headerlink" href="#input-and-output-redirection-pipes-don-t-work" title="Permalink to this headline">¶</a></h2>
-<p>Pipes <code class="docutils literal notranslate"><span class="pre">|</span></code> and redirectors <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> are functions of a shell. By default, Merlin only executes programs in the host’s PATH variable. In order to use pipes and redirection, you must first specify the shell (i.e <code class="docutils literal notranslate"><span class="pre">/bin/bash</span></code>) so that you can use these.</p>
-<p>When running a Merlin agent on a Linux host, use the <code class="docutils literal notranslate"><span class="pre">-c</span></code> flag with the shell to effectively change directories and perform some action in that directory. Because Merlin spawns a process for every command, the shell is not persistent or interactive. This request the operator to combine multiple commands together so that they are all in the same context/environment.</p>
+<p>Pipes <code class="docutils literal notranslate"><span class="pre">|</span></code> and redirectors <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> are functions of a shell. By default, Merlin only executes programs in the
+host’s PATH variable.
+In order to use pipes and redirection, you must either use the <code class="docutils literal notranslate"><span class="pre">shell</span></code> command or specify the shell
+(i.e <code class="docutils literal notranslate"><span class="pre">/bin/bash</span></code>) when using the <code class="docutils literal notranslate"><span class="pre">run</span></code> command so that you can use these.</p>
+<p>Because Merlin spawns a process for every command, the shell is not persistent or interactive.
+This requires the operator to combine multiple commands together so that they are all in the same context/environment.</p>
 <p>Example:</p>
 <p><code class="docutils literal notranslate"><span class="pre">Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»shell</span> <span class="pre">/bin/sh</span> <span class="pre">-c</span> <span class="pre">&quot;ls</span> <span class="pre">-l</span> <span class="pre">&gt;</span> <span class="pre">/tmp/out.txt&quot;</span></code></p>
 </div>

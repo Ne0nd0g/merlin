@@ -27,6 +27,7 @@ External Posts
 * `Merlin The (C2) Wizard! <https://bestestredteam.com/2019/01/15/merlin-the-c2-wizard/>`_
 * `Command and Control Guide to Merlin <https://www.hackingarticles.in/command-and-control-guide-to-merlin>`_
 * `C2 Agent Comparison <https://threatexpress.com/blogs/2019/c2-agent-comparison/>`_
+* `Kubesploit: A New Offensive Tool for Testing Containerized Environments <https://www.cyberark.com/resources/all-blog-posts/kubesploit-a-new-offensive-tool-for-testing-containerized-environments>`_
 
 Appearances
 -----------
