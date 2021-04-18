@@ -7,7 +7,7 @@
 
 # Merlin
 
-<p style="text-align: center;">
+<p align="center">
   <img alt="Merlin Logo" src="https://i.imgur.com/4iKuvuj.jpg" height="30%" width="30%">
 </p>
 
@@ -97,7 +97,7 @@ troubleshoot, or provide feedback.
 Thanks to [JetBrains](https://www.jetbrains.com/?from=merlin) for kindly sponsoring Merlin by providing a Goland IDE 
 Open Source license
 
-<p style="text-align: center;">
-  <img alt="JetBrains Logo" src="https://github.com/Ne0nd0g/merlin/docs/images/jetbrains-variant-4.png" height="30%" width="30%">
+<p align="center">
+  <img alt="JetBrains Logo" src="docs/images/jetbrains-variant-4.png" height="30%" width="30%">
   <img alt="GoLand Logo" src="https://github.com/Ne0nd0g/merlin/docs/images/icon-goland.png" height="30%" width="30%">
 </p>
