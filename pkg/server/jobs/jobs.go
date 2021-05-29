@@ -114,7 +114,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		job.Payload = p
 	case "invoke-assembly":
 		if len(jobArgs) < 1 {
-			return "", fmt.Errorf("exected 1 argument for the invoke-assembly command, recieved: %+v", jobArgs)
+			return "", fmt.Errorf("exected 1 argument for the invoke-assembly command, received: %+v", jobArgs)
 		}
 		job.Type = merlinJob.MODULE
 		job.Payload = merlinJob.Command{
@@ -135,7 +135,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		}
 	case "load-assembly":
 		if len(jobArgs) < 1 {
-			return "", fmt.Errorf("exected 1 argument for the load-assembly command, recieved: %+v", jobArgs)
+			return "", fmt.Errorf("exected 1 argument for the load-assembly command, received: %+v", jobArgs)
 		}
 		job.Type = merlinJob.MODULE
 		assembly, err := ioutil.ReadFile(jobArgs[0])
@@ -159,7 +159,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		}
 	case "load-clr":
 		if len(jobArgs) < 1 {
-			return "", fmt.Errorf("exected 1 argument for the load-clr command, recieved: %+v", jobArgs)
+			return "", fmt.Errorf("exected 1 argument for the load-clr command, received: %+v", jobArgs)
 		}
 		job.Type = merlinJob.MODULE
 		job.Payload = merlinJob.Command{
@@ -218,7 +218,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		}
 	case "memfd":
 		if len(jobArgs) < 1 {
-			return "", fmt.Errorf("expected 1 argument for the memfd command, recieved %d", len(jobArgs))
+			return "", fmt.Errorf("expected 1 argument for the memfd command, received %d", len(jobArgs))
 		}
 		executable, err := ioutil.ReadFile(jobArgs[0])
 		if err != nil {
@@ -308,7 +308,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	case "upload":
 		job.Type = merlinJob.FILETRANSFER
 		if len(jobArgs) < 2 {
-			return "", fmt.Errorf("expected 2 arguments for upload command, recieved %d", len(jobArgs))
+			return "", fmt.Errorf("expected 2 arguments for upload command, received %d", len(jobArgs))
 		}
 		uploadFile, uploadFileErr := ioutil.ReadFile(jobArgs[0])
 		if uploadFileErr != nil {

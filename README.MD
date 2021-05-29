@@ -1,5 +1,5 @@
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/yadppqp12h445akx/branch/master?svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin/branch/master)
-[![GoReportCard](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)](https://goreportcard.com/badge/github.com/ne0nd0g/merlin)
+[![GoReportCard](https://goreportcard.com/badge/github.com/Ne0nd0g/merlin)](https://goreportcard.com/report/github.com/Ne0nd0g/merlin)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Release](https://img.shields.io/github/release/Ne0nd0g/merlin.svg)](https://github.com/Ne0nd0g/merlin/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Ne0nd0g/merlin/total.svg)](https://github.com/Ne0nd0g/merlin/releases)
