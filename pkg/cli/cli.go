@@ -24,8 +24,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	// 3rd Party
@@ -66,6 +68,7 @@ func Shell() {
 
 	shellCompleter = getCompleter("main")
 
+	osSignalHandler()
 	printUserMessage()
 	registerMessageChannel()
 	getUserMessages()
@@ -102,13 +105,13 @@ func Shell() {
 	for {
 		line, err := prompt.Readline()
 		if err == readline.ErrInterrupt {
-			if len(line) == 0 {
-				break
-			} else {
-				continue
+			if confirm("Are you sure you want to quit the server?") {
+				exit()
 			}
 		} else if err == io.EOF {
-			exit()
+			if confirm("Are you sure you want to quit the server?") {
+				exit()
+			}
 		}
 
 		line = strings.TrimSpace(line)
@@ -1452,6 +1455,18 @@ func agentListCompleter() func(string) []string {
 		}
 		return a
 	}
+}
+
+// osSignalHandler catches SIGINT and SIGTERM signals to prevent accidentally quitting the server when Ctrl-C is pressed
+func osSignalHandler() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-c
+		if confirm("Are you sure you want to exit?") {
+			exit()
+		}
+	}()
 }
 
 type listener struct {

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 1.0.2 - 2021-xx-xx
+
+### Added
+
+- Ctrl-C and DEL key won't exit the server without a confirmation prompt from https://github.com/r00t0v3rr1d3/merlin/commit/d5aafdb97b50e43ae9842d8f91659f65d18f60d4
+
+
 ## 1.0.1 - 2021-05-29
 
 ### Fixed
