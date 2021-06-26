@@ -29,6 +29,8 @@ help
                         |                                | <spawnto args>]
       execute-shellcode | Execute shellcode              | self, remote <pid>,
                         |                                | RtlCreateUserThread <pid>
+      ifconfig          | Displays host network adapter  |
+                        | information                    |
       info              | Display all information about  |
                         | the agent                      |
       invoke-assembly   | Invoke, or execute, a .NET     | <assembly name>, <assembly
@@ -343,6 +345,35 @@ Syntax is ``execute-shellcode userapc <PID> <SHELLCODE>`` where PID is the Proce
     [-]Created job NPQGRntaQX for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job NPQGRntaQX
     [+]Shellcode executed successfully
+
+ifconfig
+--------
+
+The ``ifconfig`` command will enumerate all of the host's network interfaces and return their configuration.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-] Created job SEbZZEzGeH for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job SEbZZEzGeH for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Ethernet0
+      MAC Address   00:0c:29:04:29:9d
+      IP Address    192.168.1.132
+      Subnet Mask   255.255.255.0
+      Gateway       192.168.153.2
+      DHCP          Enabled
+      DHCP Server:  192.168.1.254
+
+    Bluetooth Network Connection
+      MAC Address   f4:02:28:35:ae:b6
+      IP Address    0.0.0.0
+      Subnet Mask   0.0.0.0
+      Gateway       0.0.0.0
+      DHCP          Enabled
+      DHCP Server:
+
 
 info
 ----

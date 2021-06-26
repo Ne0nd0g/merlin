@@ -366,6 +366,8 @@ func Shell() {
 					}
 				case "?", "help":
 					menuHelpAgent()
+				case "ifconfig", "ipconfig":
+					MessageChannel <- agentAPI.IFConfig(shellAgent)
 				case "info":
 					rows, message := agentAPI.GetAgentInfo(shellAgent)
 					if message.Error {
@@ -973,6 +975,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("RtlCreateUserThread"),
 		),
 		readline.PcItem("help"),
+		readline.PcItem("ifconfig"),
 		readline.PcItem("info"),
 		readline.PcItem("invoke-assembly"),
 		readline.PcItem("jobs"),
@@ -1164,6 +1167,7 @@ func menuHelpAgent() {
 		{"execute-assembly", "Execute a .NET 4.0 assembly", "execute-assembly <assembly path> [<assembly args>, <spawnto path>, <spawnto args>]"},
 		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args>, <spawnto path>, <spawnto args>]"},
 		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
+		{"ifconfig", "Displays host network adapter information", ""},
 		{"info", "Display all information about the agent", ""},
 		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name>, <assembly args>"},
 		{"jobs", "Display all active jobs for the agent", ""},

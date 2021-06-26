@@ -381,6 +381,15 @@ func GetJobsForAgent(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 	return jobsRows, messages.UserMessage{}
 }
 
+// IFConfig lists the agent's network adapter information
+func IFConfig(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "ifconfig", nil)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // InvokeAssembly executes an assembly that was previously loaded with the load-assembly command
 func InvokeAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
