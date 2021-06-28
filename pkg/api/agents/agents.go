@@ -333,6 +333,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"UserName", a.UserName},
 		{"User GUID", a.UserGUID},
 		{"Hostname", a.HostName},
+		{"Process Name", a.Process},
 		{"Process ID", strconv.Itoa(a.Pid)},
 		{"IP", fmt.Sprintf("%v", a.Ips)},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},

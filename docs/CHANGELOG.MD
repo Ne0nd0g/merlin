@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Ctrl-C and DEL key won't exit the server without a confirmation prompt from https://github.com/r00t0v3rr1d3/merlin/commit/d5aafdb97b50e43ae9842d8f91659f65d18f60d4
 -  `ifconfig`/`ipconfig`: Prints host network adapter information. Windows hosts use API calls to get extra info (e.g., DHCP) from https://github.com/r00t0v3rr1d3/merlin/commit/42a12af99610e439721cbd095a2d55523e7cbc94
-
+- Agent struct and agent `info` command contain `Process` name from https://github.com/r00t0v3rr1d3/merlin/commit/cbf875427123e6a58a528d0e38a692c2308f09c9 
 
 ## 1.0.1 - 2021-05-29
 
