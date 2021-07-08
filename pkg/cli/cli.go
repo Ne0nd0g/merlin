@@ -1369,7 +1369,14 @@ func exit() {
 
 func executeCommand(name string, arg []string) {
 
-	cmd := exec.Command(name, arg...) // #nosec G204 Users can execute any arbitrary command by design
+	// checking first character for local command indicator
+	fc := name[0:1]  
+	checkedName := name
+	if fc == "!" {
+		checkedName = name[1:]
+	}
+
+	cmd := exec.Command(checkedName, arg...) // #nosec G204 Users can execute any arbitrary command by design
 
 	out, err := cmd.CombinedOutput()
 
