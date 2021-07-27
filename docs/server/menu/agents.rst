@@ -20,6 +20,8 @@ help
                         | (DEPRECIATED)                  |
       back              | Return to the main menu        |
       download          | Download a file from the agent | download <remote_file>
+      exit              | Instruct the agent to exit and |
+                        | quit running                   |
       execute-assembly  | Execute a .NET 4.0 assembly    | execute-assembly <assembly
                         |                                | path> [<assembly args>,
                         |                                | <spawnto path>, <spawnto
@@ -39,8 +41,8 @@ help
                         | process                        |
       jobs              | Display all active jobs for    |
                         | the agent                      |
-      kill              | Instruct the agent to die or   |
-                        | quit                           |
+      kill              | Kill a running process by its  | kill <pid>
+                        | numerical identifier (pid)     |
       load-assembly     | Load a .NET assembly into the  | <assembly path> [<assembly
                         | agent's process                | name>]
       list-assemblies   | List the .NET assemblies that  |
@@ -132,15 +134,12 @@ The ``download`` command is used to download a file from the host where the agen
 exit
 ----
 
-The ``exit`` command is used to quit the Merlin server. The user will be prompted for confirmation to prevent from accidentally quitting the program. The confirmation prompt can be skipped with ``exit -y``.
+The ``exit`` control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -> control -> <agent ID> -> kill. This is the shortest way to quickly kill an agent.
 
 .. code-block:: text
 
-    Merlin» exit
-
-    Are you sure you want to exit? [yes/NO]:
-    yes
-    [!]Quitting...
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» exit
+    Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 
 execute-assembly
 -----------------
@@ -462,12 +461,22 @@ The ``jobs`` command will display a table of all active jobs assigned to the age
 kill
 ----
 
-The ``kill`` control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -> control -> <agent ID> -> kill. This is the shortest way to quickly kill an agent.
+The ``kill`` command is used to force a running process to quit or exit by its numerical identifier. The Process ID (PID) must be provided.
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» kill
-    Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell "ps aux|grep gnome-calculator"
+    [-] Created job mBYVsnbYBS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job mBYVsnbYBS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] john      132905  0.3  0.6 890376 50268 ?        Sl   07:41   0:00 gnome-calculator
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» kill 132905
+    [-] Created job rjXgPGnZYl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job rjXgPGnZYl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Successfully killed pid 132905
+
 
 list-assemblies
 ---------------

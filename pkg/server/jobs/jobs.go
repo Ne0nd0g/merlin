@@ -103,6 +103,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Args:    jobArgs,
 		}
 		job.Payload = p
+	case "exit":
+		job.Type = merlinJob.CONTROL
+		p := merlinJob.Command{
+			Command: jobArgs[0], // TODO, this should be in jobType position
+		}
+		job.Payload = p
 	case "ifconfig":
 		job.Type = merlinJob.NATIVE
 		job.Payload = merlinJob.Command{
@@ -133,12 +139,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
-	case "kill":
-		job.Type = merlinJob.CONTROL
-		p := merlinJob.Command{
-			Command: jobArgs[0], // TODO, this should be in jobType position
-		}
-		job.Payload = p
 	case "killdate":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
@@ -146,6 +146,13 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		}
 		if len(jobArgs) == 2 {
 			p.Args = jobArgs[1:]
+		}
+		job.Payload = p
+	case "killprocess":
+		job.Type = merlinJob.NATIVE
+		p := merlinJob.Command{
+			Command: "killprocess",
+			Args:    jobArgs,
 		}
 		job.Payload = p
 	case "list-assemblies":

@@ -355,15 +355,9 @@ func Shell() {
 					go func() { MessageChannel <- agentAPI.ExecutePE(shellAgent, cmd) }()
 				case "execute-shellcode":
 					MessageChannel <- agentAPI.ExecuteShellcode(shellAgent, cmd)
-				case "exit", "quit":
-					if len(cmd) > 1 {
-						if strings.ToLower(cmd[1]) == "-y" {
-							exit()
-						}
-					}
-					if confirm("Are you sure you want to exit?") {
-						exit()
-					}
+				case "exit":
+					menuSetMain()
+					MessageChannel <- agentAPI.Exit(shellAgent, cmd)
 				case "?", "help":
 					menuHelpAgent()
 				case "ifconfig", "ipconfig":
@@ -388,8 +382,7 @@ func Shell() {
 				case "nslookup":
 					MessageChannel <- agentAPI.NSLOOKUP(shellAgent, cmd)
 				case "kill":
-					menuSetMain()
-					MessageChannel <- agentAPI.Kill(shellAgent, cmd)
+					MessageChannel <- agentAPI.KillProcess(shellAgent, cmd)
 				case "list-assemblies":
 					MessageChannel <- agentAPI.ListAssemblies(shellAgent)
 				case "load-assembly":
@@ -402,6 +395,15 @@ func Shell() {
 					menuSetMain()
 				case "pwd":
 					MessageChannel <- agentAPI.PWD(shellAgent, cmd)
+				case "quit":
+					if len(cmd) > 1 {
+						if strings.ToLower(cmd[1]) == "-y" {
+							exit()
+						}
+					}
+					if confirm("Are you sure you want to quit Merlin?") {
+						exit()
+					}
 				case "run", "shell":
 					MessageChannel <- agentAPI.CMD(shellAgent, cmd)
 				case "set":
@@ -974,6 +976,7 @@ func getCompleter(completer string) *readline.PrefixCompleter {
 			readline.PcItem("remote"),
 			readline.PcItem("RtlCreateUserThread"),
 		),
+		readline.PcItem("exit"),
 		readline.PcItem("help"),
 		readline.PcItem("ifconfig"),
 		readline.PcItem("info"),
@@ -1163,6 +1166,7 @@ func menuHelpAgent() {
 		{"clear", "Clear any UNSENT jobs from the queue", ""},
 		{"cmd", "Execute a command on the agent (DEPRECIATED)", "cmd ping -c 3 8.8.8.8"},
 		{"back", "Return to the main menu", ""},
+		{"exit", "Instruct the agent to exit and quit running", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
 		{"execute-assembly", "Execute a .NET 4.0 assembly", "execute-assembly <assembly path> [<assembly args>, <spawnto path>, <spawnto args>]"},
 		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args>, <spawnto path>, <spawnto args>]"},
@@ -1171,7 +1175,7 @@ func menuHelpAgent() {
 		{"info", "Display all information about the agent", ""},
 		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name>, <assembly args>"},
 		{"jobs", "Display all active jobs for the agent", ""},
-		{"kill", "Instruct the agent to die or quit", ""},
+		{"kill", "Kill a running process by its numerical identifier (pid)", "kill <pid>"},
 		{"load-assembly", "Load a .NET assembly into the agent's process", "<assembly path> [<assembly name>]"},
 		{"list-assemblies", "List the .NET assemblies that are loaded into the agent's process", ""},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},

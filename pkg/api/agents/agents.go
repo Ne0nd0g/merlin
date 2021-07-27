@@ -403,16 +403,33 @@ func InvokeAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
-// Kill instructs the agent to quit running
-func Kill(agentID uuid.UUID, Args []string) messages.UserMessage {
+// Exit instructs the agent to quit running
+func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
-		job, err := jobs.Add(agentID, "kill", Args[0:])
+		job, err := jobs.Add(agentID, "exit", Args[0:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
 		return messages.JobMessage(agentID, job)
 	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Kill call: %s", Args))
+	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"exit\" command: %s", Args))
+}
+
+// KillProcess tasks an agent to kill a process by its number identifier
+func KillProcess(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) == 2 {
+		pid, err := strconv.Atoi(Args[1])
+		if err != nil || pid < 0 {
+			return messages.ErrorMessage(fmt.Sprintf("Invalid PID provided: %s\n%s", Args[1], err))
+		}
+		args := []string{Args[1]}
+		job, err := jobs.Add(agentID, "killprocess", args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"kill\" command: %s", Args))
 }
 
 // NSLOOKUP instructs the agent to perform a DNS query on the input
