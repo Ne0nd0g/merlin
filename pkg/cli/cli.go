@@ -357,7 +357,7 @@ func Shell() {
 					menuSetMain()
 				case "cd":
 					MessageChannel <- agentAPI.CD(shellAgent, cmd)
-				case "clear":
+				case "clear", "c":
 					MessageChannel <- agentAPI.ClearJobs(shellAgent)
 				case "download":
 					MessageChannel <- agentAPI.Download(shellAgent, cmd)

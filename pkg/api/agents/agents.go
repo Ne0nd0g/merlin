@@ -287,7 +287,7 @@ func GetAgents() (agentList []uuid.UUID) {
 // GetAgentsRows returns a row of data for every agent that includes information about it such as
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
-	header = []string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"}
+	header = []string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status", "Last Checkin"}
 	for _, agent := range agents.Agents {
 		// Convert proto (i.e. h2 or hq) to user friendly string
 		var proto string
@@ -306,8 +306,16 @@ func GetAgentsRows() (header []string, rows [][]string) {
 			proto = fmt.Sprintf("Unknown: %s", agent.Proto)
 		}
 		status, _ := GetAgentStatus(agent.ID)
+
+		// Calculate the last checkin time
+		lastTime := time.Since(agent.StatusCheckIn)
+		lastTimeStr := fmt.Sprintf("%d:%d:%d ago",
+			int(lastTime.Hours()),
+			int(lastTime.Minutes()),
+			int(lastTime.Seconds()))
+
 		rows = append(rows, []string{agent.ID.String(), agent.Platform + "/" + agent.Architecture, agent.UserName,
-			agent.HostName, proto, status})
+			agent.HostName, proto, status, lastTimeStr})
 	}
 	return
 }

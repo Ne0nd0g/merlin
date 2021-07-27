@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 -  `ifconfig`/`ipconfig`: Prints host network adapter information. Windows hosts use API calls to get extra info (e.g., DHCP) from https://github.com/r00t0v3rr1d3/merlin/commit/42a12af99610e439721cbd095a2d55523e7cbc94
 - Agent struct and agent `info` command contain `Process` name from https://github.com/r00t0v3rr1d3/merlin/commit/cbf875427123e6a58a528d0e38a692c2308f09c9 
 - Added the `kill` command to kill a running process by its process ID (PID)
+- Added a calculated "LAST CHECKIN" column to the `sessions` command
+- Added a shortcut `c` command for `clear` on the Agents menu to remove any jobs from the queue
 
 ### Changed
 
