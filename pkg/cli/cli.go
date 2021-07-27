@@ -151,6 +151,18 @@ func Shell() {
 						Time:    time.Now().UTC(),
 						Error:   false,
 					}
+				case "banner2":
+					m := "\n"
+					m += color.WhiteString(banner.MerlinBanner2)
+					m += color.WhiteString("\r\n\t\t   Version: %s", merlin.Version)
+					m += color.WhiteString("\r\n\t\t   Build: %s", merlin.Build)
+					m += color.WhiteString("\r\n\t\t   Codename: Gandalf\n")
+					MessageChannel <- messages.UserMessage{
+						Level:   messages.Plain,
+						Message: m,
+						Time:    time.Now().UTC(),
+						Error:   false,
+					}
 				case "help":
 					menuHelpMain()
 				case "?":
@@ -356,8 +368,17 @@ func Shell() {
 				case "execute-shellcode":
 					MessageChannel <- agentAPI.ExecuteShellcode(shellAgent, cmd)
 				case "exit":
-					menuSetMain()
-					MessageChannel <- agentAPI.Exit(shellAgent, cmd)
+					if len(cmd) > 1 {
+						if strings.ToLower(cmd[1]) == "-y" {
+							MessageChannel <- agentAPI.Exit(shellAgent, cmd)
+							menuSetMain()
+						}
+					} else {
+						if confirm("Are you sure that you want to exit the agent?") {
+							MessageChannel <- agentAPI.Exit(shellAgent, cmd)
+							menuSetMain()
+						}
+					}
 				case "?", "help":
 					menuHelpAgent()
 				case "ifconfig", "ipconfig":

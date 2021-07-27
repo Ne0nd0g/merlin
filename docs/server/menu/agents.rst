@@ -134,12 +134,18 @@ The ``download`` command is used to download a file from the host where the agen
 exit
 ----
 
-The ``exit`` control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -> control -> <agent ID> -> kill. This is the shortest way to quickly kill an agent.
+The ``exit`` control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -> control -> <agent ID> -> exit. This is the shortest way to quickly kill an agent.
+ The command will prompt for confirmation to prevent accidentally exiting the agent. If you are certain use the `-y` flag to skip confirmation.
 
 .. code-block:: text
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» exit
-    Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    are you sure that you want to exit the agent? [yes/NO]:
+    yes
+    Merlin»
+    [-] Created job LHhrzSYuGS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
 
 execute-assembly
 -----------------
