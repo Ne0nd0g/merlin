@@ -287,7 +287,7 @@ func GetAgents() (agentList []uuid.UUID) {
 // GetAgentsRows returns a row of data for every agent that includes information about it such as
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
-	header = []string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status", "Last Checkin"}
+	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin"}
 	for _, agent := range agents.Agents {
 		// Convert proto (i.e. h2 or hq) to user friendly string
 		var proto string
@@ -307,15 +307,27 @@ func GetAgentsRows() (header []string, rows [][]string) {
 		}
 		status, _ := GetAgentStatus(agent.ID)
 
-		// Calculate the last checkin time
-		lastTime := time.Since(agent.StatusCheckIn)
-		lastTimeStr := fmt.Sprintf("%d:%d:%d ago",
-			int(lastTime.Hours()),
-			int(lastTime.Minutes()),
-			int(lastTime.Seconds()))
+		lastTime := lastCheckin(agent.StatusCheckIn)
 
-		rows = append(rows, []string{agent.ID.String(), agent.Platform + "/" + agent.Architecture, agent.UserName,
-			agent.HostName, proto, status, lastTimeStr})
+		// Get the process name, sans full path
+		var proc string
+		if agent.Platform == "windows" {
+			proc = agent.Process[strings.LastIndex(agent.Process, "\\")+1:]
+		} else {
+			proc = agent.Process[strings.LastIndex(agent.Process, "/")+1:]
+		}
+		p := fmt.Sprintf("%s(%d)", proc, agent.Pid)
+
+		rows = append(rows, []string{
+			agent.ID.String(),
+			proto,
+			agent.Platform + "/" + agent.Architecture,
+			agent.HostName,
+			agent.UserName,
+			p,
+			status,
+			lastTime,
+		})
 	}
 	return
 }
@@ -343,9 +355,10 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"Hostname", a.HostName},
 		{"Process Name", a.Process},
 		{"Process ID", strconv.Itoa(a.Pid)},
-		{"IP", fmt.Sprintf("%v", a.Ips)},
+		{"IP", fmt.Sprintf("%s", strings.Join(a.Ips, "\n"))},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
-		{"Last Check In", a.StatusCheckIn.Format(time.RFC3339)},
+		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
+		{"", ""},
 		{"Agent Version", a.Version},
 		{"Agent Build", a.Build},
 		{"Agent Wait Time", a.WaitTime},
@@ -705,4 +718,14 @@ func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Upload call: %s", Args))
+}
+
+// lastCheckin returns a nicely formatted string for time since the last checkin (HH:MM:SS)
+func lastCheckin(t time.Time) string {
+	lastTime := time.Since(t)
+	lastTimeStr := fmt.Sprintf("%d:%02d:%02d ago",
+		int(lastTime.Hours()),
+		int(lastTime.Minutes())%60,
+		int(lastTime.Seconds())%60)
+	return lastTimeStr
 }
