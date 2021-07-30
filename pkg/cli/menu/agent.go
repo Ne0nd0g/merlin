@@ -166,6 +166,8 @@ func handlerAgent(cmd []string) {
 		core.DisplayTable(header, rows)
 	case "sharpgen":
 		go func() { core.MessageChannel <- agentAPI.SharpGen(agent, cmd) }()
+	case "sdelete":
+		core.MessageChannel <- agentAPI.SecureDelete(agent, cmd)
 	case "skew":
 		core.MessageChannel <- agentAPI.Skew(agent, cmd)
 	case "sleep":
@@ -245,6 +247,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("pwd"),
 		readline.PcItem("run"),
 		readline.PcItem("main"),
+		readline.PcItem("sdelete"),
 		readline.PcItem("shell"),
 		readline.PcItem("skew"),
 		readline.PcItem("sleep"),
@@ -312,6 +315,7 @@ func helpAgent() {
 		{"padding", "Set the maximum amount of random data appended to every message", "padding <number>"},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},
+		{"sdelete", "Securely delete a file", "sdelete <file path>"},
 		{"shell", "Execute a command on the agent using the host's default shell", "shell ping -c 3 8.8.8.8"},
 		{"skew", "Set the amount of skew, or jitter, that an agent will use to checkin", "skew <number>"},
 		{"sleep", "Set the agent's sleep interval using Go time format", "sleep 30s"},
