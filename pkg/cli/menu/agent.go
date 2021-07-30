@@ -75,6 +75,26 @@ func handlerAgent(cmd []string) {
 				Set(MAIN)
 			}
 		}
+	case "group":
+		if len(cmd) != 3 {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("Invalid arguments: 'group <add | remove> <groupname>"),
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
+		} else if cmd[1] == "add" {
+			core.MessageChannel <- agentAPI.GroupAdd(agent, cmd[2])
+		} else if cmd[1] == "remove" {
+			core.MessageChannel <- agentAPI.GroupRemove(agent, cmd[2])
+		} else {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("Invalid arguments: 'group <add | remove> <groupname>"),
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
+		}
 	case "?", "help":
 		helpAgent()
 	case "ifconfig", "ipconfig":
@@ -204,6 +224,10 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("clear"),
 		readline.PcItem("download"),
 		readline.PcItem("exit"),
+		readline.PcItem("group",
+			readline.PcItem("add"),
+			readline.PcItem("remove"),
+		),
 		readline.PcItem("help"),
 		readline.PcItem("ifconfig"),
 		readline.PcItem("info"),

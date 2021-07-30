@@ -372,6 +372,13 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		return rows, message
 	}
 
+	var groups []string
+	for _, row := range agents.GroupListAll() {
+		if row[1] == a.ID.String() {
+			groups = append(groups, row[0])
+		}
+	}
+
 	rows = [][]string{
 		{"Status", status},
 		{"ID", a.ID.String()},
@@ -384,6 +391,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"IP", fmt.Sprintf("%s", strings.Join(a.Ips, "\n"))},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
 		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
+		{"groups", fmt.Sprintf("%s", strings.Join(groups, ", "))},
 		{"Note", a.Note},
 		{"", ""},
 		{"Agent Version", a.Version},
@@ -433,6 +441,68 @@ func GetJobsForAgent(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		return nil, messages.ErrorMessage(err.Error())
 	}
 	return jobsRows, messages.UserMessage{}
+}
+
+// GroupAdd adds an agent to a server-side grouping
+func GroupAdd(agentID uuid.UUID, groupName string) messages.UserMessage {
+	if groupName == "all" {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Global group 'all' is immutable."),
+		}
+	}
+
+	err := agents.GroupAddAgent(agentID, groupName)
+	if err == nil {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Agent %s added to group %s", agentID.String(), groupName),
+		}
+	}
+	return messages.ErrorMessage(err.Error())
+}
+
+// GroupList lists agents that are part of a specific group
+func GroupList(groupName string) []string {
+	var out []string
+	for _, row := range agents.GroupListAll() {
+		if row[0] == groupName {
+			out = append(out, row[1])
+		}
+	}
+	return out
+}
+
+// GroupListAll returns a table of {groupName, agentID}
+func GroupListAll() [][]string {
+	return agents.GroupListAll()
+}
+
+// GroupListNames returns array of active group names
+func GroupListNames() []string {
+	return agents.GroupListNames()
+}
+
+// GroupRemove removes an agent from a group
+func GroupRemove(agentID uuid.UUID, groupName string) messages.UserMessage {
+	if groupName == "all" {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Global group 'all' is immutable."),
+		}
+	}
+	err := agents.GroupRemoveAgent(agentID, groupName)
+	if err == nil {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Agent %s removed from group %s", agentID.String(), groupName),
+		}
+	}
+	return messages.ErrorMessage(err.Error())
 }
 
 // IFConfig lists the agent's network adapter information

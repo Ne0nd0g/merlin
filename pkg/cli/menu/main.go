@@ -78,6 +78,17 @@ func handlerMain(cmd []string) {
 		if core.Confirm("Are you sure you want to quit the server?") {
 			core.Exit()
 		}
+	case "group":
+		if len(cmd) < 2 {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: "Not enough arguments provided",
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
+		} else {
+			handlerGroup(cmd)
+		}
 	case "interact":
 		if len(cmd) > 1 {
 			interactAgent(cmd[1])
@@ -88,25 +99,40 @@ func handlerMain(cmd []string) {
 		Set(LISTENERS)
 	case "queue":
 		if len(cmd) > 2 {
-			if cmd[1] == "all" {
-				cmd[1] = "ffffffff-ffff-ffff-ffff-ffffffffffff"
-			}
+			// Check for uuid match
 			id, err := uuid.FromString(cmd[1])
-			if err != nil {
-				core.MessageChannel <- messages.UserMessage{
-					Level:   messages.Warn,
-					Message: "Invalid uuid",
-					Time:    time.Now().UTC(),
-					Error:   true,
-				}
-			} else {
+			if err == nil {
 				agent = id
 				handlerAgent(cmd[2:])
+			} else {
+				found := false
+				// Check for a group name match
+				for _, groupName := range agentAPI.GroupListNames() {
+					if groupName == cmd[1] {
+						found = true
+						for _, agentIDstr := range agentAPI.GroupList(groupName) {
+							// We know it's a valid UUID because it's already in a group
+							newID, _ := uuid.FromString(agentIDstr)
+							agent = newID
+							handlerAgent(cmd[2:])
+						}
+					}
+				}
+
+				// Nothing found
+				if !found {
+					core.MessageChannel <- messages.UserMessage{
+						Level:   messages.Warn,
+						Message: "Couldn't find a user or group by that name",
+						Time:    time.Now().UTC(),
+						Error:   true,
+					}
+				}
 			}
 		} else {
 			core.MessageChannel <- messages.UserMessage{
 				Level:   messages.Warn,
-				Message: "Not enough arguments provided",
+				Message: "Not enough arguments provided\n queue <agent|group> <command>",
 				Time:    time.Now().UTC(),
 				Error:   true,
 			}
@@ -190,6 +216,21 @@ func completerMain() *readline.PrefixCompleter {
 		),
 		readline.PcItem("banner"),
 		readline.PcItem("clear"),
+		readline.PcItem("group",
+			readline.PcItem("list",
+				readline.PcItemDynamic(completerGroup()),
+			),
+			readline.PcItem("add",
+				readline.PcItemDynamic(agentListCompleter(),
+					readline.PcItemDynamic(completerGroup()),
+				),
+			),
+			readline.PcItem("remove",
+				readline.PcItemDynamic(agentListCompleter(),
+					readline.PcItemDynamic(completerGroup()),
+				),
+			),
+		),
 		readline.PcItem("help"),
 		readline.PcItem("interact",
 			readline.PcItemDynamic(agentListCompleter()),
@@ -197,8 +238,8 @@ func completerMain() *readline.PrefixCompleter {
 		readline.PcItem("jobs"),
 		readline.PcItem("listeners"),
 		readline.PcItem("queue",
-			readline.PcItem("all"),
 			readline.PcItemDynamic(agentListCompleter()),
+			readline.PcItemDynamic(completerGroup()),
 		),
 		readline.PcItem("quit"),
 		readline.PcItem("remove",
@@ -266,10 +307,11 @@ func helpMain() {
 		{"agent", "Interact with agents or list agents", "interact, list"},
 		{"banner", "Print the Merlin banner", ""},
 		{"clear", "clears all unset jobs", ""},
+		{"group", "Add, remove or list groups", "group [add,remove,list] <group>"},
 		{"interact", "Interact with an agent", ""},
 		{"jobs", "Display all unfinished jobs", ""},
 		{"listeners", "Move to the listeners menu", ""},
-		{"queue", "queue up commands for one, all, or unknown agents", "queue <agentID> <command>"},
+		{"queue", "queue up commands for one, a group, or unknown agents", "queue <agentID> <command>"},
 		{"quit", "Exit and close the Merlin server", ""},
 		{"remove", "Remove or delete a DEAD agent from the server"},
 		{"sessions", "List all agents session information", ""},
@@ -301,4 +343,84 @@ func displayAllJobTable(rows [][]string) {
 	fmt.Println()
 	table.Render()
 	fmt.Println()
+}
+
+// handlerGroup handles group commands from the main menu (add, remove list)
+func handlerGroup(cmd []string) {
+	switch cmd[1] {
+	case "add":
+		if len(cmd) != 4 {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: "Invalid number of arguments\ngroup add <agent> <group>",
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
+		} else {
+			i, errUUID := uuid.FromString(cmd[2])
+			if errUUID != nil {
+				core.MessageChannel <- messages.UserMessage{
+					Level:   messages.Warn,
+					Message: fmt.Sprintf("Invalid UUID: %s", cmd[1]),
+					Time:    time.Now().UTC(),
+					Error:   true,
+				}
+			} else {
+				core.MessageChannel <- agentAPI.GroupAdd(i, cmd[3])
+			}
+		}
+	case "list":
+		var data [][]string
+		if len(cmd) == 3 { // List a specific group
+			agents := agentAPI.GroupList(cmd[2])
+			for _, a := range agents {
+				data = append(data, []string{cmd[2], a})
+			}
+		} else {
+			data = agentAPI.GroupListAll()
+		}
+
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetHeader([]string{"Group", "Agent ID"})
+		table.SetAlignment(tablewriter.ALIGN_LEFT)
+		table.SetRowLine(false)
+		table.SetBorder(true)
+		table.AppendBulk(data)
+		table.Render()
+	case "remove":
+		if len(cmd) != 4 {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: "Invalid number of arguments\n group remove <agent> <group>",
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
+		} else {
+			i, errUUID := uuid.FromString(cmd[2])
+			if errUUID != nil {
+				core.MessageChannel <- messages.UserMessage{
+					Level:   messages.Warn,
+					Message: fmt.Sprintf("Invalid UUID: %s", cmd[1]),
+					Time:    time.Now().UTC(),
+					Error:   true,
+				}
+			} else {
+				core.MessageChannel <- agentAPI.GroupRemove(i, cmd[3])
+			}
+		}
+	default:
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Warn,
+			Message: "Invalid arguments\ngroup add <agent> <group>\ngroup list\ngroup remove <agent> <group>",
+			Time:    time.Now().UTC(),
+			Error:   true,
+		}
+	}
+}
+
+// completerGroup returns a list of group names for command line tab completion
+func completerGroup() func(string) []string {
+	return func(line string) []string {
+		return agentAPI.GroupListNames()
+	}
 }

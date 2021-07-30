@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `queue` command to main menu to queue up jobs for one agent, all agents, or an agent that hasn't registered yet
 - Added a `note` command to the agent menu
 - Added a `clear` command to the main menu to remove jobs for ALL agents that haven't been sent
+- Added a `group` command that adds agents to groups for bulk command processing
+  * Usage: `group add <agentID> <groupName>`
+  * Usage: `group remove <agentID> <groupName>`
+  * Usage: `group list`
+  * Usage (from an agent's menu): `group add <groupName>`
 
 ### Changed
 
