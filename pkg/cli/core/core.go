@@ -98,19 +98,6 @@ func DisplayTable(header []string, rows [][]string) {
 	fmt.Println()
 }
 
-// DisplayJobTable displays a table of agent jobs along with their status
-func DisplayJobTable(rows [][]string) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetBorder(false)
-	table.SetHeader([]string{"ID", "Status", "Type", "Created", "Sent"})
-
-	table.AppendBulk(rows)
-	fmt.Println()
-	table.Render()
-	fmt.Println()
-}
-
 // ExecuteCommand runs commands on the host operating system where the CLI is being used
 func ExecuteCommand(name string, arg []string) {
 

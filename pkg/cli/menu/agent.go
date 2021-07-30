@@ -99,7 +99,7 @@ func handlerAgent(cmd []string) {
 		if message.Message != "" {
 			core.MessageChannel <- message
 		}
-		core.DisplayJobTable(jobs)
+		displayJobTable(jobs)
 	case "kill":
 		core.MessageChannel <- agentAPI.KillProcess(agent, cmd)
 	case "killdate":
@@ -394,4 +394,17 @@ func agentListCompleter() func(string) []string {
 		}
 		return a
 	}
+}
+
+// displayJobTable displays a table of agent jobs along with their status
+func displayJobTable(rows [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetBorder(false)
+	table.SetHeader([]string{"ID", "Command", "Status", "Created", "Sent"})
+
+	table.AppendBulk(rows)
+	fmt.Println()
+	table.Render()
+	fmt.Println()
 }

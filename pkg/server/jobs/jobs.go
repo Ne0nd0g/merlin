@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	// 3rd Party
@@ -57,6 +58,7 @@ type info struct {
 	Created   time.Time // Time the job was created
 	Sent      time.Time // Time the job was sent to the agent
 	Completed time.Time // Time the job finished
+	Command   string    // The actual command
 }
 
 // Add creates a job and adds it to the specified agent's job channel
@@ -348,6 +350,13 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		return "", fmt.Errorf("invalid job type: %d", job.Type)
 	}
 
+	var cmd string
+	if job.Type == merlinJob.CMD || job.Type == merlinJob.CONTROL {
+		cmd = strings.Join(jobArgs, " ")
+	} else {
+		cmd = jobType + " " + strings.Join(jobArgs, " ")
+	}
+
 	// If the Agent is set to broadcast identifier for ALL agents
 	if ok || agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
 		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
@@ -374,6 +383,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 					Type:    merlinJob.String(job.Type),
 					Status:  merlinJob.CREATED,
 					Created: time.Now().UTC(),
+					Command: cmd,
 				}
 				// Log the job
 				agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
@@ -403,6 +413,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Type:    merlinJob.String(job.Type),
 			Status:  merlinJob.CREATED,
 			Created: time.Now().UTC(),
+			Command: cmd,
 		}
 		// Log the job
 		agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
@@ -674,11 +685,11 @@ func GetTableActive(agentID uuid.UUID) ([][]string, error) {
 				if job.Sent != zeroTime {
 					sent = job.Sent.Format(time.RFC3339)
 				}
-				// <JobID>, <JobStatus>, <JobType>, <Created>, <Sent>
+				// <JobID>, <Command>, <JobStatus>, <Created>, <Sent>
 				jobs = append(jobs, []string{
 					id,
+					job.Command,
 					status,
-					job.Type,
 					job.Created.Format(time.RFC3339),
 					sent,
 				})

@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Removed the `set` command from the Agent menu in favor of just calling the command directly (e.g., `set killdate` -> `killdate`)
 - Renamed API functions to remove any that started with "SET"
 - Moved core functions to a child in the `cli` directory
+- Removed `Type` and added `Command` to jobs table
 
 ## 1.0.1 - 2021-05-29
 
