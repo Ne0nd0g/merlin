@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   * Usage: `group remove <agentID> <groupName>`
   * Usage: `group list`
   * Usage (from an agent's menu): `group add <groupName>`
+- Added PwnBoard integration from [hulto](https://github.com/hulto)
 
 ### Changed
 
