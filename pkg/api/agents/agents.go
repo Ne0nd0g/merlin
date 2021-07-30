@@ -299,7 +299,7 @@ func GetAgents() (agentList []uuid.UUID) {
 // GetAgentsRows returns a row of data for every agent that includes information about it such as
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
-	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin"}
+	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin", "Note"}
 	for _, agent := range agents.Agents {
 		// Convert proto (i.e. h2 or hq) to user friendly string
 		var proto string
@@ -339,6 +339,7 @@ func GetAgentsRows() (header []string, rows [][]string) {
 			p,
 			status,
 			lastTime,
+			agent.Note,
 		})
 	}
 	return
@@ -360,8 +361,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 	rows = [][]string{
 		{"Status", status},
 		{"ID", a.ID.String()},
-		{"Platform", a.Platform},
-		{"Architecture", a.Architecture},
+		{"Platform", fmt.Sprintf("%s/%s", a.Platform, a.Architecture)},
 		{"User Name", a.UserName},
 		{"User GUID", a.UserGUID},
 		{"Hostname", a.HostName},
@@ -370,6 +370,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"IP", fmt.Sprintf("%s", strings.Join(a.Ips, "\n"))},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
 		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
+		{"Note", a.Note},
 		{"", ""},
 		{"Agent Version", a.Version},
 		{"Agent Build", a.Build},
@@ -568,6 +569,20 @@ func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(err.Error())
 	}
 	return messages.JobMessage(agentID, job)
+}
+
+// Note sets a note on the Agent's Note field
+func Note(agentID uuid.UUID, Args []string) messages.UserMessage {
+	note := strings.Join(Args, " ")
+	err := agents.SetAgentNote(agentID, note)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.UserMessage{
+		Level:   messages.Info,
+		Time:    time.Now().UTC(),
+		Message: fmt.Sprintf("Agent %s's note set to: %s", agentID, note),
+	}
 }
 
 // NSLOOKUP instructs the agent to perform a DNS query on the input

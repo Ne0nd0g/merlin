@@ -118,6 +118,12 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.MaxRetry(agent, cmd)
 	case "memfd":
 		core.MessageChannel <- agentAPI.MEMFD(agent, cmd)
+	case "note":
+		if len(cmd) > 1 {
+			core.MessageChannel <- agentAPI.Note(agent, cmd[1:])
+		} else {
+			core.MessageChannel <- agentAPI.Note(agent, []string{})
+		}
 	case "nslookup":
 		core.MessageChannel <- agentAPI.NSLOOKUP(agent, cmd)
 	case "padding":
@@ -210,6 +216,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("killdate"),
 		readline.PcItem("ls"),
 		readline.PcItem("maxretry"),
+		readline.PcItem("note"),
 		readline.PcItem("padding"),
 		readline.PcItem("pwd"),
 		readline.PcItem("run"),
@@ -276,6 +283,7 @@ func helpAgent() {
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
 		{"maxretry", "Set the maximum amount of times the agent can fail to check in before it dies", "maxretery <number>"},
+		{"note", "Add a server-side note to the agent", ""},
 		{"nslookup", "DNS query on host or ip", "nslookup 8.8.8.8"},
 		{"padding", "Set the maximum amount of random data appended to every message", "padding <number>"},
 		{"pwd", "Display the current working directory", "pwd"},

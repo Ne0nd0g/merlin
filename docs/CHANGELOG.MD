@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - `exec` for `run`
 - Added `jobs` command to main menu to show jobs for all agents
 - Added `queue` command to main menu to queue up jobs for one agent, all agents, or an agent that hasn't registered yet
+- Added a `note` command to the agent menu
 
 ### Changed
 

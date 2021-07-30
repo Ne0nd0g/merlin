@@ -72,6 +72,7 @@ type Agent struct {
 	Secret         []byte          // secret is used to perform symmetric encryption operations
 	OPAQUE         *opaque.Server  // Holds information about OPAQUE Registration and Authentication
 	JA3            string          // The JA3 signature applied to the agent's TLS client
+	Note           string          // Operator notes for an agent
 }
 
 // KeyExchange is used to exchange public keys between the server and agent
@@ -413,4 +414,13 @@ func SetMaxRetry(agentID uuid.UUID, retry string) error {
 		return nil
 	}
 	return fmt.Errorf("the %s Agent is unknown", agentID.String())
+}
+
+// SetAgentNote updates the agent's note field
+func SetAgentNote(agentID uuid.UUID, note string) error {
+	if !isAgent(agentID) {
+		return fmt.Errorf("%s is not a known agent", agentID)
+	}
+	Agents[agentID].Note = note
+	return nil
 }
