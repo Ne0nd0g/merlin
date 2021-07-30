@@ -264,6 +264,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "ps":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: "ps",
+		}
+		job.Payload = p
 	case "pwd":
 		job.Type = merlinJob.NATIVE
 		p := merlinJob.Command{
