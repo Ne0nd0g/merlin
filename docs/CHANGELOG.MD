@@ -9,16 +9,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - Ctrl-C and DEL key won't exit the server without a confirmation prompt from https://github.com/r00t0v3rr1d3/merlin/commit/d5aafdb97b50e43ae9842d8f91659f65d18f60d4
--  `ifconfig`/`ipconfig`: Prints host network adapter information. Windows hosts use API calls to get extra info (e.g., DHCP) from https://github.com/r00t0v3rr1d3/merlin/commit/42a12af99610e439721cbd095a2d55523e7cbc94
+- `ifconfig`/`ipconfig`: Prints host network adapter information. Windows hosts use API calls to get extra info (e.g., DHCP) from https://github.com/r00t0v3rr1d3/merlin/commit/42a12af99610e439721cbd095a2d55523e7cbc94
 - Agent struct and agent `info` command contain `Process` name from https://github.com/r00t0v3rr1d3/merlin/commit/cbf875427123e6a58a528d0e38a692c2308f09c9 
 - Added the `kill` command to kill a running process by its process ID (PID)
 - Added a calculated "LAST CHECKIN" column to the `sessions` command and the Agent menu `info` command
 - Added the "PROCESS" column to the `sessions` command
 - Added a shortcut `c` command for `clear` on the Agents menu to remove any jobs from the queue
+- Replaced the `exit` command with `quit` to instruct the Merlin server to quit running
+- The `sessions` and `interact` commands are available from every menu
+- Filter the help and tab-completable list of commands to only show those available for the Agent's operating system
+- Added additional aliases for command in the Agent's menu
+  - `c` for `clear`
+  - `assembly` for `execute-assembly`
+  - `pe` for `execute-pe`
+  - `shinject` for `execute-shellcode`
+  - `ipconfig` for `ifconfig`
+  - `exec` for `run`
 
 ### Changed
 
 - The command to instruct a running agent to quit was changed from `kill` and is now `exit`
+- Restructured the menu system into its own directory at `pkg/cli/menu`
+- Changed the `interact` command to `configure` for the listener menu
+- Removed the `set` command from the Agent menu in favor of just calling the command directly (e.g., `set killdate` -> `killdate`)
+- Renamed API functions to remove any that started with "SET"
+- Moved core functions to a child in the `cli` directory
 
 ## 1.0.1 - 2021-05-29
 

@@ -264,7 +264,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Command: jobArgs[0], // TODO This should be in the jobType position
 		}
 		job.Payload = p
-	case "run":
+	case "run", "exec":
 		job.Type = merlinJob.CMD
 		payload := merlinJob.Command{
 			Command: jobArgs[0],

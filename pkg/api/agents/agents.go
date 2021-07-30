@@ -276,6 +276,18 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
 }
 
+// Exit instructs the agent to quit running
+func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 0 {
+		job, err := jobs.Add(agentID, "exit", Args[0:])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"exit\" command: %s", Args))
+}
+
 // GetAgents returns a list of existing Agent UUID values
 func GetAgents() (agentList []uuid.UUID) {
 	for id := range agents.Agents {
@@ -350,7 +362,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"ID", a.ID.String()},
 		{"Platform", a.Platform},
 		{"Architecture", a.Architecture},
-		{"UserName", a.UserName},
+		{"User Name", a.UserName},
 		{"User GUID", a.UserGUID},
 		{"Hostname", a.HostName},
 		{"Process Name", a.Process},
@@ -424,16 +436,34 @@ func InvokeAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
-// Exit instructs the agent to quit running
-func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 0 {
-		job, err := jobs.Add(agentID, "exit", Args[0:])
+// JA3 is used to change the Agent's JA3 signature
+func JA3(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobs.Add(agentID, "ja3", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
 		return messages.JobMessage(agentID, job)
 	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"exit\" command: %s", Args))
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetJA3 call: %s", Args))
+}
+
+// KillDate configures the date and time that the agent will stop running
+func KillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		_, errU := strconv.ParseInt(Args[2], 10, 64)
+		if errU != nil {
+			m := fmt.Sprintf("There was an error converting %s to an int64", Args[1])
+			m = m + "\r\nKill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995"
+			return messages.ErrorMessage(m)
+		}
+		job, err := jobs.Add(agentID, "killdate", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetKillDate call: %s", Args))
 }
 
 // KillProcess tasks an agent to kill a process by its number identifier
@@ -451,18 +481,6 @@ func KillProcess(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"kill\" command: %s", Args))
-}
-
-// NSLOOKUP instructs the agent to perform a DNS query on the input
-func NSLOOKUP(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) < 1 {
-		return messages.ErrorMessage("not enough arguments. A query was not provided")
-	}
-	job, err := jobs.Add(agentID, "nslookup", Args[1:])
-	if err != nil {
-		return messages.ErrorMessage(err.Error())
-	}
-	return messages.JobMessage(agentID, job)
 }
 
 // ListAssemblies instructs the agent to list all of the .NET assemblies that are currently loaded into the agent's process
@@ -518,6 +536,23 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
+// MaxRetry configures the amount of times an Agent will try to checkin before it quits
+func MaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		// Need to set the Sleep time on the server first to calculate JWT lifetime
+		err := agents.SetMaxRetry(agentID, Args[1])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		job, err := jobs.Add(agentID, "maxretry", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetMaxRetry call: %s", Args))
+}
+
 // MEMFD run a linux executable from memory
 func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
@@ -528,6 +563,30 @@ func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(err.Error())
 	}
 	return messages.JobMessage(agentID, job)
+}
+
+// NSLOOKUP instructs the agent to perform a DNS query on the input
+func NSLOOKUP(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 1 {
+		return messages.ErrorMessage("not enough arguments. A query was not provided")
+	}
+	job, err := jobs.Add(agentID, "nslookup", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// Padding configures the maxium size for the random amount of padding added to each message
+func Padding(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobs.Add(agentID, "padding", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetPadding call: %s", Args))
 }
 
 // PWD is used to print the Agent's current working directory
@@ -550,94 +609,6 @@ func Remove(agentID uuid.UUID) messages.UserMessage {
 		}
 	}
 	return messages.ErrorMessage(err.Error())
-}
-
-// SetJA3 is used to change the Agent's JA3 signature
-func SetJA3(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		job, err := jobs.Add(agentID, "ja3", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetJA3 call: %s", Args))
-}
-
-// SetKillDate configures the date and time that the agent will stop running
-func SetKillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		_, errU := strconv.ParseInt(Args[2], 10, 64)
-		if errU != nil {
-			m := fmt.Sprintf("There was an error converting %s to an int64", Args[2])
-			m = m + "\r\nKill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995"
-			return messages.ErrorMessage(m)
-		}
-		job, err := jobs.Add(agentID, "killdate", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetKillDate call: %s", Args))
-}
-
-// SetMaxRetry configures the amount of times an Agent will try to checkin before it quits
-func SetMaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		// Need to set the Sleep time on the server first to calculate JWT lifetime
-		err := agents.SetMaxRetry(agentID, Args[2])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		job, err := jobs.Add(agentID, "maxretry", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetMaxRetry call: %s", Args))
-}
-
-// SetPadding configures the maxium size for the random amount of padding added to each message
-func SetPadding(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		job, err := jobs.Add(agentID, "padding", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetPadding call: %s", Args))
-}
-
-// SetSleep configures the Agent's sleep time between checkins
-func SetSleep(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		// Need to set the Sleep time on the server first to calculate JWT lifetime
-		err := agents.SetWaitTime(agentID, Args[2])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		job, err := jobs.Add(agentID, "sleep", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetSleep call: %s", Args))
-}
-
-// SetSkew configures the amount of skew an Agent uses to randomize checkin times
-func SetSkew(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		job, err := jobs.Add(agentID, "skew", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetSkew call: %s", Args))
 }
 
 // SharpGen generates a .NET core assembly, converts it to shellcode with go-donut, and executes it in the spawnto process
@@ -697,6 +668,35 @@ func SharpGen(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(err.Error())
 	}
 	return messages.JobMessage(agentID, job)
+}
+
+// Skew configures the amount of skew an Agent uses to randomize checkin times
+func Skew(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobs.Add(agentID, "skew", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSkew call: %s", Args))
+}
+
+// Sleep configures the Agent's sleep time between checkins
+func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		// Need to set the Sleep time on the server first to calculate JWT lifetime
+		err := agents.SetWaitTime(agentID, Args[1])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		job, err := jobs.Add(agentID, "sleep", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSleep call: %s", Args))
 }
 
 // Upload transfers a file from the Merlin Server to the Agent
