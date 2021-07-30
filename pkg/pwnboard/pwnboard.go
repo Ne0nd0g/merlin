@@ -92,7 +92,7 @@ func Updateserver(pwnboardURL string) {
 					for _, data := range info {
 						if data[0] == "IP" {
 							// Perform string parsing on info [127.0.0.1/8 10.1.30.2/24 172.16.2.9/24] -> "127.0.0.1/8", "10.1.30.2/24", "172.16.2.9/24"
-							for _, ip := range strings.Split(data[1][1:len(data[1])-1], " ") {
+							for _, ip := range strings.Split(data[1], "\n") {
 								// Remove subnet substring
 								uniqueIP := strings.Split(ip, "/")[0]
 								// If the IP is not localhost send it to pwnboard
