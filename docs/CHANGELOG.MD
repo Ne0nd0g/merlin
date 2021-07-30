@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `jobs` command to main menu to show jobs for all agents
 - Added `queue` command to main menu to queue up jobs for one agent, all agents, or an agent that hasn't registered yet
 - Added a `note` command to the agent menu
+- Added a `clear` command to the main menu to remove jobs for ALL agents that haven't been sent
 
 ### Changed
 

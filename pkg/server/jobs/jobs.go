@@ -464,6 +464,20 @@ func Clear(agentID uuid.UUID) error {
 	return nil
 }
 
+// ClearCreated removes all unsent jobs across all agents
+func ClearCreated() error {
+	if core.Debug {
+		message("debug", "Entering into jobs.Clear() function...")
+	}
+	for aid, _ := range agents.Agents {
+		err := Clear(aid)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Get returns a list of jobs that need to be sent to the agent
 func Get(agentID uuid.UUID) ([]merlinJob.Job, error) {
 	if core.Debug {

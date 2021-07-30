@@ -65,6 +65,8 @@ func handlerMain(cmd []string) {
 			Time:    time.Now().UTC(),
 			Error:   false,
 		}
+	case "clear", "c":
+		core.MessageChannel <- agentAPI.ClearJobsCreated()
 	case "help", "?":
 		helpMain()
 	case "exit", "quit":
@@ -187,6 +189,7 @@ func completerMain() *readline.PrefixCompleter {
 			),
 		),
 		readline.PcItem("banner"),
+		readline.PcItem("clear"),
 		readline.PcItem("help"),
 		readline.PcItem("interact",
 			readline.PcItemDynamic(agentListCompleter()),
@@ -262,6 +265,7 @@ func helpMain() {
 	data := [][]string{
 		{"agent", "Interact with agents or list agents", "interact, list"},
 		{"banner", "Print the Merlin banner", ""},
+		{"clear", "clears all unset jobs", ""},
 		{"interact", "Interact with an agent", ""},
 		{"jobs", "Display all unfinished jobs", ""},
 		{"listeners", "Move to the listeners menu", ""},

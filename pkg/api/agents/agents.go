@@ -70,6 +70,20 @@ func ClearJobs(agentID uuid.UUID) messages.UserMessage {
 	}
 }
 
+// ClearJobsCreated clears all created (but unsent) jobs for all agents
+func ClearJobsCreated() messages.UserMessage {
+	err := jobs.ClearCreated()
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.UserMessage{
+		Level:   messages.Success,
+		Message: fmt.Sprintf("All unsent jobs cleared at %s", time.Now().UTC().Format(time.RFC3339)),
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
+}
+
 // CMD is used to send a command to the agent to run a command or execute a program
 // Args[0] = "cmd"
 // Args[1:] = program and arguments to be executed on the host OS of the running agent
