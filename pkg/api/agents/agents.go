@@ -717,7 +717,7 @@ func Remove(agentID uuid.UUID) messages.UserMessage {
 
 // SecureDelete securely deletes supplied file
 func SecureDelete(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) < 1 {
+	if len(Args) < 2 {
 		return messages.ErrorMessage("Not enough arguments. A file path was not provided.")
 	}
 	job, err := jobs.Add(agentID, "sdelete", Args)
@@ -813,6 +813,18 @@ func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSleep call: %s", Args))
+}
+
+// Touch matches the destination file's timestamps with source file
+func Touch(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 3 {
+		return messages.ErrorMessage("Not enough arguments.")
+	}
+	job, err := jobs.Add(agentID, "touch", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // Upload transfers a file from the Merlin Server to the Agent

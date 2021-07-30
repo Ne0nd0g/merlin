@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   * Usage (from an agent's menu): `group add <groupName>`
 - Added PwnBoard integration from [hulto](https://github.com/hulto)
 - Added `sdelete` command to securely delete a file
+- Added `touch`, alias is `timestomp`, command that matches the destination file's timestamps with source file
 
 ### Changed
 

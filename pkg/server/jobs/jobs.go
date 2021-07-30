@@ -329,6 +329,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "touch":
+		job.Type = merlinJob.NATIVE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
 	case "upload":
 		job.Type = merlinJob.FILETRANSFER
 		if len(jobArgs) < 2 {

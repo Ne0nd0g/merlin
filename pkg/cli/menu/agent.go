@@ -206,6 +206,8 @@ func handlerAgent(cmd []string) {
 				Error:   false,
 			}
 		}
+	case "touch", "timestomp":
+		core.MessageChannel <- agentAPI.Touch(agent, cmd)
 	case "upload":
 		core.MessageChannel <- agentAPI.Upload(agent, cmd)
 	default:
@@ -252,6 +254,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("skew"),
 		readline.PcItem("sleep"),
 		readline.PcItem("status"),
+		readline.PcItem("touch"),
 		readline.PcItem("upload"),
 	}
 
@@ -320,6 +323,7 @@ func helpAgent() {
 		{"skew", "Set the amount of skew, or jitter, that an agent will use to checkin", "skew <number>"},
 		{"sleep", "Set the agent's sleep interval using Go time format", "sleep 30s"},
 		{"status", "Print the current status of the agent", ""},
+		{"touch", "Match destination file's timestamps with source file (alias timestomp)", "touch <source> <destination>"},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
 		{"*", "Anything else will be execute on the host operating system", ""},
 	}
