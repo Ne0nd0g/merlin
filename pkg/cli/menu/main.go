@@ -20,6 +20,7 @@ package menu
 import (
 	// Standard
 	"fmt"
+	uuid "github.com/satori/go.uuid"
 	"os"
 	"strings"
 	"time"
@@ -79,8 +80,35 @@ func handlerMain(cmd []string) {
 		if len(cmd) > 1 {
 			interactAgent(cmd[1])
 		}
+	case "jobs":
+		displayAllJobTable(agentAPI.GetJobs())
 	case "listeners":
 		Set(LISTENERS)
+	case "queue":
+		if len(cmd) > 2 {
+			if cmd[1] == "all" {
+				cmd[1] = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+			}
+			id, err := uuid.FromString(cmd[1])
+			if err != nil {
+				core.MessageChannel <- messages.UserMessage{
+					Level:   messages.Warn,
+					Message: "Invalid uuid",
+					Time:    time.Now().UTC(),
+					Error:   true,
+				}
+			} else {
+				agent = id
+				handlerAgent(cmd[2:])
+			}
+		} else {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: "Not enough arguments provided",
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
+		}
 	case "remove":
 		if len(cmd) > 1 {
 			removeAgent(cmd[1])
@@ -163,7 +191,12 @@ func completerMain() *readline.PrefixCompleter {
 		readline.PcItem("interact",
 			readline.PcItemDynamic(agentListCompleter()),
 		),
+		readline.PcItem("jobs"),
 		readline.PcItem("listeners"),
+		readline.PcItem("queue",
+			readline.PcItem("all"),
+			readline.PcItemDynamic(agentListCompleter()),
+		),
 		readline.PcItem("quit"),
 		readline.PcItem("remove",
 			readline.PcItemDynamic(agentListCompleter()),
@@ -229,8 +262,10 @@ func helpMain() {
 	data := [][]string{
 		{"agent", "Interact with agents or list agents", "interact, list"},
 		{"banner", "Print the Merlin banner", ""},
-		{"listeners", "Move to the listeners menu", ""},
 		{"interact", "Interact with an agent", ""},
+		{"jobs", "Display all unfinished jobs", ""},
+		{"listeners", "Move to the listeners menu", ""},
+		{"queue", "queue up commands for one, all, or unknown agents", "queue <agentID> <command>"},
 		{"quit", "Exit and close the Merlin server", ""},
 		{"remove", "Remove or delete a DEAD agent from the server"},
 		{"sessions", "List all agents session information", ""},
@@ -249,4 +284,17 @@ func helpMain() {
 		Time:    time.Now().UTC(),
 		Error:   false,
 	}
+}
+
+// displayAllJobTable displays a table of agent jobs along with their status
+func displayAllJobTable(rows [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetBorder(false)
+	table.SetHeader([]string{"Agent", "ID", "Command", "Status", "Created", "Sent"})
+
+	table.AppendBulk(rows)
+	fmt.Println()
+	table.Render()
+	fmt.Println()
 }

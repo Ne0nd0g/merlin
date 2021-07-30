@@ -70,9 +70,9 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	}
 
 	agent, ok := agents.Agents[agentID]
-	if !ok {
-		return "", fmt.Errorf("%s is not a valid agent", agentID)
-	}
+	//if !ok {
+	//	return "", fmt.Errorf("%s is not a valid agent", agentID)
+	//}
 
 	var job merlinJob.Job
 
@@ -84,7 +84,9 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		}
 	case "download":
 		job.Type = merlinJob.FILETRANSFER
-		agent.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
+		if ok {
+			agent.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
+		}
 
 		p := merlinJob.FileTransfer{
 			FileLocation: jobArgs[0],
@@ -177,7 +179,9 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		if err != nil {
 			message("warn", fmt.Sprintf("there was an error generating a file hash:\n%s", err))
 		}
-		agent.Log(fmt.Sprintf("loading assembly from %s with a SHA256: %s to agent", jobArgs[0], fileHash.Sum(nil)))
+		if ok {
+			agent.Log(fmt.Sprintf("loading assembly from %s with a SHA256: %s to agent", jobArgs[0], fileHash.Sum(nil)))
+		}
 
 		name := filepath.Base(jobArgs[0])
 		if len(jobArgs) > 1 {
@@ -334,11 +338,13 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		if err != nil {
 			message("warn", fmt.Sprintf("There was an error generating file hash:\r\n%s", err.Error()))
 		}
-		agent.Log(fmt.Sprintf("Uploading file from server at %s of size %d bytes and SHA-256: %x to agent at %s",
-			jobArgs[0],
-			len(uploadFile),
-			fileHash.Sum(nil),
-			jobArgs[1]))
+		if ok {
+			agent.Log(fmt.Sprintf("Uploading file from server at %s of size %d bytes and SHA-256: %x to agent at %s",
+				jobArgs[0],
+				len(uploadFile),
+				fileHash.Sum(nil),
+				jobArgs[1]))
+		}
 
 		p := merlinJob.FileTransfer{
 			FileLocation: jobArgs[1],
@@ -350,57 +356,49 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		return "", fmt.Errorf("invalid job type: %d", job.Type)
 	}
 
-	var cmd string
-	if job.Type == merlinJob.CMD || job.Type == merlinJob.CONTROL {
-		cmd = strings.Join(jobArgs, " ")
-	} else {
-		cmd = jobType + " " + strings.Join(jobArgs, " ")
-	}
-
 	// If the Agent is set to broadcast identifier for ALL agents
-	if ok || agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-			if len(agents.Agents) <= 0 {
-				return "", fmt.Errorf("there are 0 available agents, no jobs were created")
+	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		if len(agents.Agents) <= 0 {
+			return "", fmt.Errorf("there are 0 available agents, no jobs were created")
+		}
+		for a := range agents.Agents {
+			// Fill out remaining job fields
+			token := uuid.NewV4()
+			job.ID = core.RandStringBytesMaskImprSrc(10)
+			job.Token = token
+			job.AgentID = a
+			// Add job to the channel
+			_, k := JobsChannel[agentID]
+			if !k {
+				JobsChannel[agentID] = make(chan merlinJob.Job, 100)
 			}
-			for a := range agents.Agents {
-				// Fill out remaining job fields
-				token := uuid.NewV4()
-				job.ID = core.RandStringBytesMaskImprSrc(10)
-				job.Token = token
-				job.AgentID = a
-				// Add job to the channel
-				_, k := JobsChannel[agentID]
-				if !k {
-					JobsChannel[agentID] = make(chan merlinJob.Job, 100)
-				}
-				JobsChannel[agentID] <- job
-				//agents.Agents[a].JobChannel <- job
-				// Add job to the list
-				Jobs[job.ID] = info{
-					AgentID: a,
-					Token:   token,
-					Type:    merlinJob.String(job.Type),
-					Status:  merlinJob.CREATED,
-					Created: time.Now().UTC(),
-					Command: cmd,
-				}
-				// Log the job
+			JobsChannel[agentID] <- job
+			//agents.Agents[a].JobChannel <- job
+			// Add job to the list
+			Jobs[job.ID] = info{
+				AgentID: a,
+				Token:   token,
+				Type:    merlinJob.String(job.Type),
+				Status:  merlinJob.CREATED,
+				Created: time.Now().UTC(),
+				Command: jobType + " " + strings.Join(jobArgs, " "),
+			}
+			// Log the job
+			if ok {
 				agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
 					messages.String(job.Type),
 					job.ID,
 					"Created",
 					jobArgs))
 			}
-			return job.ID, nil
 		}
+	} else {
 		// A single Agent
 		token := uuid.NewV4()
 		job.Token = token
 		job.ID = core.RandStringBytesMaskImprSrc(10)
 		job.AgentID = agentID
 		// Add job to the channel
-		//agents.Agents[agentID].JobChannel <- job
 		_, k := JobsChannel[agentID]
 		if !k {
 			JobsChannel[agentID] = make(chan merlinJob.Job, 100)
@@ -413,14 +411,17 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Type:    merlinJob.String(job.Type),
 			Status:  merlinJob.CREATED,
 			Created: time.Now().UTC(),
-			Command: cmd,
+			Command: jobType + " " + strings.Join(jobArgs, " "),
 		}
 		// Log the job
-		agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
-			messages.String(job.Type),
-			job.ID,
-			"Created",
-			jobArgs))
+		if ok {
+			agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
+				messages.String(job.Type),
+				job.ID,
+				"Created",
+				jobArgs))
+		}
+
 	}
 	return job.ID, nil
 }
@@ -697,6 +698,41 @@ func GetTableActive(agentID uuid.UUID) ([][]string, error) {
 		}
 	}
 	return jobs, nil
+}
+
+// GetTableAll returns all unsent jobs to be displayed as a table
+func GetTableAll() [][]string {
+	var jobs [][]string
+	for id, job := range Jobs {
+		var status string
+		switch job.Status {
+		case merlinJob.CREATED:
+			status = "Created"
+		case merlinJob.SENT:
+			status = "Sent"
+		case merlinJob.RETURNED:
+			status = "Returned"
+		default:
+			status = fmt.Sprintf("Unknown job status: %d", job.Status)
+		}
+		if job.Status != merlinJob.COMPLETE && job.Status != merlinJob.CANCELED {
+			var zeroTime time.Time
+			var sent string
+			if job.Sent != zeroTime {
+				sent = job.Sent.Format(time.RFC3339)
+			}
+
+			jobs = append(jobs, []string{
+				job.AgentID.String(),
+				id,
+				job.Command,
+				status,
+				job.Created.Format(time.RFC3339),
+				sent,
+			})
+		}
+	}
+	return jobs
 }
 
 // checkJob verifies that the input job message contains the expected token and was not already completed
