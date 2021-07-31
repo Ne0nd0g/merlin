@@ -655,6 +655,31 @@ func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
+// Netstat is used to print network connections on the target system
+// Supports a "-p tcp" or "-p udp"
+func Netstat(agentID uuid.UUID, Args []string) messages.UserMessage {
+	// Ensure the provided args are valid
+	// Args[0] = "netstat"
+	// Args[1] = (optional) "-p"
+	// Args[2] = (optional) "tcp" or "udp"
+	if len(Args) > 3 {
+		return messages.ErrorMessage("Too many arguments provided to the netstat command")
+	} else if len(Args) == 2 {
+		return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
+	} else if len(Args) == 3 {
+		if Args[1] != "-p" {
+			return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
+		} else if !(Args[2] == "tcp" || Args[2] == "udp") {
+			return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
+		}
+	}
+	job, err := jobs.Add(agentID, "netstat", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // Note sets a note on the Agent's Note field
 func Note(agentID uuid.UUID, Args []string) messages.UserMessage {
 	note := strings.Join(Args, " ")

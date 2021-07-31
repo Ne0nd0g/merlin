@@ -248,6 +248,13 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Args:    jobArgs,
 		}
 		job.Payload = p
+	case "netstat":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
+		job.Payload = p
 	case "nslookup":
 		job.Type = merlinJob.NATIVE
 		job.Payload = merlinJob.Command{

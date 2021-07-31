@@ -138,6 +138,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.MaxRetry(agent, cmd)
 	case "memfd":
 		core.MessageChannel <- agentAPI.MEMFD(agent, cmd)
+	case "netstat":
+		core.MessageChannel <- agentAPI.Netstat(agent, cmd)
 	case "note":
 		if len(cmd) > 1 {
 			core.MessageChannel <- agentAPI.Note(agent, cmd[1:])
@@ -224,7 +226,7 @@ func handlerAgent(cmd []string) {
 // completerAgent returns a list of tab completable commands available in the "agent" menu based on the Agent's platform
 func completerAgent() *readline.PrefixCompleter {
 	// core commands are available to every agent and typically use native Go code
-	core := []readline.PrefixCompleterInterface{
+	base := []readline.PrefixCompleterInterface{
 		readline.PcItem("back"),
 		readline.PcItem("cd"),
 		readline.PcItem("clear"),
@@ -272,6 +274,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("invoke-assembly"),
 		readline.PcItem("list-assemblies"),
 		readline.PcItem("load-assembly"),
+		readline.PcItem("netstat"),
 		readline.PcItem("ps"),
 		readline.PcItem("sharpgen"),
 	}
@@ -282,13 +285,12 @@ func completerAgent() *readline.PrefixCompleter {
 	}
 
 	// TODO Sort the combined slice
-	switch strings.ToLower(platform) {
-	case "linux":
-		return readline.NewPrefixCompleter(append(core, linux...)...)
-	case "windows":
-		return readline.NewPrefixCompleter(append(core, windows...)...)
-	default:
-		return readline.NewPrefixCompleter(core...)
+	if strings.HasPrefix(strings.ToLower(platform), "linux/") {
+		return readline.NewPrefixCompleter(append(base, linux...)...)
+	} else if strings.HasPrefix(strings.ToLower(platform), "windows/") {
+		return readline.NewPrefixCompleter(append(base, windows...)...)
+	} else {
+		return readline.NewPrefixCompleter(base...)
 	}
 }
 
@@ -338,6 +340,7 @@ func helpAgent() {
 		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name>, <assembly args>"},
 		{"load-assembly", "Load a .NET assembly into the agent's process", "<assembly path> [<assembly name>]"},
 		{"list-assemblies", "List the .NET assemblies that are loaded into the agent's process", ""},
+		{"netstat", "display network connections", "netstat [-p tcp|udp]"},
 		{"ps", "Get a list of running processes", ""},
 		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
 	}
@@ -347,9 +350,9 @@ func helpAgent() {
 	}
 
 	table.AppendBulk(base)
-	if platform == "windows" {
+	if strings.HasPrefix(strings.ToLower(platform), "windows/") {
 		table.AppendBulk(windows)
-	} else if platform == "linux" {
+	} else if strings.HasPrefix(strings.ToLower(platform), "linux/") {
 		table.AppendBulk(linux)
 	}
 
