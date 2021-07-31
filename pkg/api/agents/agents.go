@@ -718,6 +718,15 @@ func Padding(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetPadding call: %s", Args))
 }
 
+// Pipes enumerates and displays named pipes on Windows hosts only
+func Pipes(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "pipes", nil)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // PS displays running processes
 func PS(agentID uuid.UUID) messages.UserMessage {
 	job, err := jobs.Add(agentID, "ps", nil)

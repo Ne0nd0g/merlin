@@ -150,6 +150,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.NSLOOKUP(agent, cmd)
 	case "padding":
 		core.MessageChannel <- agentAPI.Padding(agent, cmd)
+	case "pipes":
+		core.MessageChannel <- agentAPI.Pipes(agent)
 	case "ps":
 		core.MessageChannel <- agentAPI.PS(agent)
 	case "pwd":
@@ -253,6 +255,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("pwd"),
 		readline.PcItem("run"),
 		readline.PcItem("main"),
+		readline.PcItem("sessions"),
 		readline.PcItem("sdelete"),
 		readline.PcItem("shell"),
 		readline.PcItem("skew"),
@@ -275,6 +278,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("list-assemblies"),
 		readline.PcItem("load-assembly"),
 		readline.PcItem("netstat"),
+		readline.PcItem("pipes"),
 		readline.PcItem("ps"),
 		readline.PcItem("sharpgen"),
 	}
@@ -341,6 +345,7 @@ func helpAgent() {
 		{"load-assembly", "Load a .NET assembly into the agent's process", "<assembly path> [<assembly name>]"},
 		{"list-assemblies", "List the .NET assemblies that are loaded into the agent's process", ""},
 		{"netstat", "display network connections", "netstat [-p tcp|udp]"},
+		{"pipes", "Enumerate all named pipes", ""},
 		{"ps", "Get a list of running processes", ""},
 		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
 	}
