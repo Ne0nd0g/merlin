@@ -891,6 +891,15 @@ func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Upload call: %s", Args))
 }
 
+// Uptime retrieves the target host's uptime. Windows only
+func Uptime(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "uptime", nil)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // lastCheckin returns a nicely formatted string for time since the last checkin (HH:MM:SS)
 func lastCheckin(t time.Time) string {
 	lastTime := time.Since(t)

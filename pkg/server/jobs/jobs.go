@@ -383,6 +383,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			IsDownload:   true,
 		}
 		job.Payload = p
+	case "uptime":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: "uptime",
+		}
+		job.Payload = p
 	default:
 		return "", fmt.Errorf("invalid job type: %d", job.Type)
 	}

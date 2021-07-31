@@ -216,6 +216,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.Touch(agent, cmd)
 	case "upload":
 		core.MessageChannel <- agentAPI.Upload(agent, cmd)
+	case "uptime":
+		core.MessageChannel <- agentAPI.Uptime(agent)
 	default:
 		if len(cmd) > 1 {
 			core.ExecuteCommand(cmd[0], cmd[1:])
@@ -281,6 +283,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("pipes"),
 		readline.PcItem("ps"),
 		readline.PcItem("sharpgen"),
+		readline.PcItem("uptime"),
 	}
 
 	// Commands only available to Linux agents
@@ -348,6 +351,7 @@ func helpAgent() {
 		{"pipes", "Enumerate all named pipes", ""},
 		{"ps", "Get a list of running processes", ""},
 		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
+		{"uptime", "Retrieve the host's uptime"},
 	}
 
 	linux := [][]string{
