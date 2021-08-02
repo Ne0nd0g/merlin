@@ -341,16 +341,16 @@ func helpAgent() {
 	}
 
 	windows := [][]string{
-		{"execute-assembly", "Execute a .NET 4.0 assembly", "execute-assembly <assembly path> [<assembly args>, <spawnto path>, <spawnto args>]"},
-		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args>, <spawnto path>, <spawnto args>]"},
+		{"execute-assembly", "Execute a .NET 4.0 assembly", "execute-assembly <assembly path> [<assembly args> <spawnto path> <spawnto args>]"},
+		{"execute-pe", "Execute a Windows PE (EXE)", "execute-pe <pe path> [<pe args> <spawnto path> <spawnto args>]"},
 		{"execute-shellcode", "Execute shellcode", "self, remote <pid>, RtlCreateUserThread <pid>"},
-		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name>, <assembly args>"},
+		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name> <assembly args>"},
 		{"load-assembly", "Load a .NET assembly into the agent's process", "<assembly path> [<assembly name>]"},
 		{"list-assemblies", "List the .NET assemblies that are loaded into the agent's process", ""},
 		{"netstat", "display network connections", "netstat [-p tcp|udp]"},
 		{"pipes", "Enumerate all named pipes", ""},
 		{"ps", "Get a list of running processes", ""},
-		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path>, <spawnto args>]"},
+		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path> <spawnto args>]"},
 		{"uptime", "Retrieve the host's uptime"},
 	}
 
