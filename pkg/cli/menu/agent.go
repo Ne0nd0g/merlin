@@ -57,6 +57,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.ClearJobs(agent)
 	case "download":
 		core.MessageChannel <- agentAPI.Download(agent, cmd)
+	case "env":
+		core.MessageChannel <- agentAPI.ENV(agent, cmd)
 	case "execute-assembly", "assembly":
 		go func() { core.MessageChannel <- agentAPI.ExecuteAssembly(agent, cmd) }()
 	case "execute-pe", "pe":
@@ -152,6 +154,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.Padding(agent, cmd)
 	case "pipes":
 		core.MessageChannel <- agentAPI.Pipes(agent)
+	case "printenv":
+		core.MessageChannel <- agentAPI.ENV(agent, []string{"env", "showall"})
 	case "ps":
 		core.MessageChannel <- agentAPI.PS(agent)
 	case "pwd":
@@ -235,6 +239,12 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("cd"),
 		readline.PcItem("clear"),
 		readline.PcItem("download"),
+		readline.PcItem("env",
+			readline.PcItem("get"),
+			readline.PcItem("set"),
+			readline.PcItem("showall"),
+			readline.PcItem("unset"),
+		),
 		readline.PcItem("exit"),
 		readline.PcItem("group",
 			readline.PcItem("add"),
@@ -251,12 +261,13 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("kill"),
 		readline.PcItem("killdate"),
 		readline.PcItem("ls"),
+		readline.PcItem("main"),
 		readline.PcItem("maxretry"),
 		readline.PcItem("note"),
 		readline.PcItem("padding"),
+		readline.PcItem("printenv"),
 		readline.PcItem("pwd"),
 		readline.PcItem("run"),
-		readline.PcItem("main"),
 		readline.PcItem("sessions"),
 		readline.PcItem("sdelete"),
 		readline.PcItem("shell"),
@@ -314,6 +325,7 @@ func helpAgent() {
 		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
 		{"clear", "Clear any UNSENT jobs from the queue", ""},
 		{"back", "Return to the main menu", ""},
+		{"env", "View and modify environment variables", "env <get | set | unset | showall> [variable] [value]"},
 		{"exit", "Instruct the agent to exit and quit running", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
 		{"ifconfig", "Displays host network adapter information", ""},
@@ -328,6 +340,7 @@ func helpAgent() {
 		{"note", "Add a server-side note to the agent", ""},
 		{"nslookup", "DNS query on host or ip", "nslookup 8.8.8.8"},
 		{"padding", "Set the maximum amount of random data appended to every message", "padding <number>"},
+		{"printenv", "Print all environment variables. Alias for \"env showall\"", "printenv"},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},
 		{"sdelete", "Securely delete a file", "sdelete <file path>"},

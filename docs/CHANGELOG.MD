@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Added `netstat` that displays network connection for Windows agents (tcp, tcp6, udp, udp6)
 - Added Windows only `pipes` command to list named pipes
 - Added Windows only `uptime` command to print the target system's uptime
+- Added `env` command: View and modify environment variables. "set" will create a new variable if it didn't exist
+  * Usage: `env showall`
+  * Usage: `env get PATH`
+  * Usage: `env set CUSTOM "my desired value"`
+  * Usage: `env unset HISTFILE`
 
 ### Changed
 

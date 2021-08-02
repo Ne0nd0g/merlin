@@ -113,6 +113,29 @@ func Download(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Download call: %s", Args))
 }
 
+// ENV is used to view or modify a host's environment variables
+func ENV(agentID uuid.UUID, Args []string) messages.UserMessage {
+	var job string
+	var err error
+	if len(Args) > 1 {
+		switch strings.ToLower(Args[1]) {
+		case "get", "set", "unset":
+			if len(Args) < 2 {
+				return messages.ErrorMessage(fmt.Sprintf("Not enough arguments for the env %s command.\nenv %s <environment variable>", Args[0], Args[1]))
+			}
+			job, err = jobs.Add(agentID, "env", Args[1:])
+		case "showall":
+			job, err = jobs.Add(agentID, "env", Args[1:2])
+		}
+	} else {
+		return messages.ErrorMessage("Not enough arguments for the env command.")
+	}
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // ExecuteAssembly calls the donut module to create shellcode from a .NET 4.0 assembly and then uses the CreateProcess
 // module to create a job that executes the shellcode in a remote process
 func ExecuteAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
