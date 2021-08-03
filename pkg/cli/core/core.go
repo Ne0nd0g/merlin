@@ -121,7 +121,7 @@ func ExecuteCommand(name string, arg []string) {
 	} else {
 		MessageChannel <- messages.UserMessage{
 			Level:   messages.Success,
-			Message: fmt.Sprintf("%s", out),
+			Message: string(out),
 			Time:    time.Time{},
 			Error:   false,
 		}

@@ -512,7 +512,7 @@ func ClearCreated() error {
 	if core.Debug {
 		message("debug", "Entering into jobs.Clear() function...")
 	}
-	for id, _ := range JobsChannel {
+	for id := range JobsChannel {
 		err := Clear(id)
 		if err != nil {
 			return err

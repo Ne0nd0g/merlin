@@ -81,7 +81,7 @@ func handlerAgent(cmd []string) {
 		if len(cmd) != 3 {
 			core.MessageChannel <- messages.UserMessage{
 				Level:   messages.Warn,
-				Message: fmt.Sprintf("Invalid arguments: 'group <add | remove> <groupname>"),
+				Message: "Invalid arguments: 'group <add | remove> <groupname>",
 				Time:    time.Now().UTC(),
 				Error:   true,
 			}
@@ -92,7 +92,7 @@ func handlerAgent(cmd []string) {
 		} else {
 			core.MessageChannel <- messages.UserMessage{
 				Level:   messages.Warn,
-				Message: fmt.Sprintf("Invalid arguments: group <add | remove> <groupname>"),
+				Message: "Invalid arguments: group <add | remove> <groupname>",
 				Time:    time.Now().UTC(),
 				Error:   true,
 			}

@@ -439,21 +439,20 @@ func SetAgentNote(agentID uuid.UUID, note string) error {
 func GroupAddAgent(agentID uuid.UUID, groupName string) error {
 	if !isAgent(agentID) {
 		return fmt.Errorf("%s is not a known agent", agentID)
-	} else {
-		grp, ok := groups[groupName]
-		if !ok {
-			groups[groupName] = []uuid.UUID{agentID}
-		} else {
-			// Don't add it to the group if it's already there
-			for _, a := range groups[groupName] {
-				if uuid.Equal(a, agentID) {
-					return nil
-				}
-			}
-			groups[groupName] = append(grp, agentID)
-		}
-		return nil
 	}
+	grp, ok := groups[groupName]
+	if !ok {
+		groups[groupName] = []uuid.UUID{agentID}
+	} else {
+		// Don't add it to the group if it's already there
+		for _, a := range groups[groupName] {
+			if uuid.Equal(a, agentID) {
+				return nil
+			}
+		}
+		groups[groupName] = append(grp, agentID)
+	}
+	return nil
 }
 
 // GroupListAll lists groups as a table of {groupName,agentID}
@@ -470,7 +469,7 @@ func GroupListAll() [][]string {
 // GroupListNames list out just the names of existing groups
 func GroupListNames() []string {
 	keys := make([]string, 0, len(groups))
-	for k, _ := range groups {
+	for k := range groups {
 		keys = append(keys, k)
 	}
 	return keys

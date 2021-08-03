@@ -411,10 +411,10 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"Hostname", a.HostName},
 		{"Process Name", a.Process},
 		{"Process ID", strconv.Itoa(a.Pid)},
-		{"IP", fmt.Sprintf("%s", strings.Join(a.Ips, "\n"))},
+		{"IP", strings.Join(a.Ips, "\n")},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
 		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
-		{"Groups", fmt.Sprintf("%s", strings.Join(groups, ", "))},
+		{"Groups", strings.Join(groups, ", ")},
 		{"Note", a.Note},
 		{"", ""},
 		{"Agent Version", a.Version},
@@ -472,7 +472,7 @@ func GroupAdd(agentID uuid.UUID, groupName string) messages.UserMessage {
 		return messages.UserMessage{
 			Level:   messages.Info,
 			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("Global group 'all' is immutable."),
+			Message: "Global group 'all' is immutable.",
 		}
 	}
 
@@ -514,7 +514,7 @@ func GroupRemove(agentID uuid.UUID, groupName string) messages.UserMessage {
 		return messages.UserMessage{
 			Level:   messages.Info,
 			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("Global group 'all' is immutable."),
+			Message: "Global group 'all' is immutable.",
 		}
 	}
 	err := agents.GroupRemoveAgent(agentID, groupName)

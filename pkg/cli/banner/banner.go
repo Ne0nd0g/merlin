@@ -49,6 +49,7 @@ const MerlinBanner1 string = `
        &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
            &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&`
 
+// MerlinBanner2 is a tribute to the team working on the Gandalf fork of Merlin
 const MerlinBanner2 string = `
                                   ....
                                 .'' .'''

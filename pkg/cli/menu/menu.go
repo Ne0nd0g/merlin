@@ -24,11 +24,17 @@ import (
 var handler func([]string)
 
 const (
+	// MAIN is for the main menu
 	MAIN = iota
+	// AGENT is for the agent menu
 	AGENT
+	// MODULE is for the module menu
 	MODULE
+	// LISTENER is for a specific, already instantiated, listener menu
 	LISTENER
+	// LISTENERS is for the top-level listeners menu
 	LISTENERS
+	// LISTENERSETUP is the menu used to configure listener options before creation
 	LISTENERSETUP
 )
 
