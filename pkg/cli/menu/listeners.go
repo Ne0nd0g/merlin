@@ -242,7 +242,7 @@ func helpListenersMain() {
 
 	data := [][]string{
 		{"back", "Return to the main menu", ""},
-		{"configure", "Interact with and configure a named listener to modify it", "configure <listener_name"},
+		{"configure", "Interact with and configure a named listener to modify it", "configure <listener_name>"},
 		{"delete", "Delete a named listener", "delete <listener_name>"},
 		{"info", "Display all information about a listener", "info <listener_name>"},
 		{"interact", "Interact with an agent", "interact <agent_id>"},

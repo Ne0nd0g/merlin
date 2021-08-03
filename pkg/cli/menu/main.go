@@ -42,6 +42,20 @@ import (
 // handlerMain contains the logic to handle the "main" menu commands
 func handlerMain(cmd []string) {
 	switch cmd[0] {
+	case "agent":
+		if len(cmd) > 1 {
+			switch strings.ToLower(cmd[1]) {
+			case "interact":
+				if len(cmd) > 2 {
+					interactAgent(cmd[2])
+				}
+			case "list":
+				header, rows := agentAPI.GetAgentsRows()
+				core.DisplayTable(header, rows)
+			default:
+				core.MessageChannel <- messages.ErrorMessage(fmt.Sprintf("invalid agent command: %s", cmd[1]))
+			}
+		}
 	case "banner":
 		m := "\n"
 		m += color.BlueString(banner.MerlinBanner1)
@@ -307,15 +321,15 @@ func helpMain() {
 		{"agent", "Interact with agents or list agents", "interact, list"},
 		{"banner", "Print the Merlin banner", ""},
 		{"clear", "clears all unset jobs", ""},
-		{"group", "Add, remove or list groups", "group [add,remove,list] <group>"},
+		{"group", "Add, remove, or list groups", "group <add | remove | list] <group>"},
 		{"interact", "Interact with an agent", ""},
 		{"jobs", "Display all unfinished jobs", ""},
 		{"listeners", "Move to the listeners menu", ""},
 		{"queue", "queue up commands for one, a group, or unknown agents", "queue <agentID> <command>"},
-		{"quit", "Exit and close the Merlin server", ""},
+		{"quit", "Exit and close the Merlin server", "-y"},
 		{"remove", "Remove or delete a DEAD agent from the server"},
-		{"sessions", "List all agents session information", ""},
-		{"use", "Use a function of Merlin", "module"},
+		{"sessions", "Display a table of information about all checked-in agent sessions", ""},
+		{"use", "Use a Merlin module", "module <module path>"},
 		{"version", "Print the Merlin server version", ""},
 		{"*", "Anything else will be execute on the host operating system", ""},
 	}

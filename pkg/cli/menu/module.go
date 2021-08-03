@@ -48,7 +48,15 @@ func handlerModule(cmd []string) {
 	switch cmd[0] {
 	case "back", "main":
 		Set(MAIN)
-	case "exit", "quit":
+	case "help", "?":
+		helpModule()
+	case "info":
+		module.ShowInfo()
+	case "interact":
+		if len(cmd) > 1 {
+			interactAgent(cmd[1])
+		}
+	case "quit":
 		if len(cmd) > 1 {
 			if strings.ToLower(cmd[1]) == "-y" {
 				core.Exit()
@@ -57,10 +65,6 @@ func handlerModule(cmd []string) {
 		if core.Confirm("Are you sure you want to quit the server?") {
 			core.Exit()
 		}
-	case "help", "?":
-		helpModule()
-	case "info":
-		module.ShowInfo()
 	case "reload":
 		setModule(strings.TrimSuffix(strings.Join(module.Path, "/"), ".json"))
 	case "run":
@@ -153,9 +157,13 @@ func completerModule() *readline.PrefixCompleter {
 		readline.PcItem("back"),
 		readline.PcItem("help"),
 		readline.PcItem("info"),
+		readline.PcItem("interact",
+			readline.PcItemDynamic(agentListCompleter()),
+		),
 		readline.PcItem("main"),
 		readline.PcItem("reload"),
 		readline.PcItem("run"),
+		readline.PcItem("sessions"),
 		readline.PcItem("show",
 			readline.PcItem("options"),
 			readline.PcItem("info"),
@@ -184,9 +192,11 @@ func helpModule() {
 	data := [][]string{
 		{"back", "Return to the main menu", ""},
 		{"info", "Show information about a module"},
+		{"interact", "Interact with an agent", "interact <agent_id>"},
 		{"main", "Return to the main menu", ""},
 		{"reload", "Reloads the module to a fresh clean state"},
 		{"run", "Run or execute the module", ""},
+		{"sessions", "List all agents session information. Alias for MSF users", ""},
 		{"set", "Set the value for one of the module's options", "<option name> <option value>"},
 		{"show", "Show information about a module or its options", "info, options"},
 		{"unset", "Clear a module option to empty", "<option name>"},

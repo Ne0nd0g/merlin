@@ -414,7 +414,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"IP", fmt.Sprintf("%s", strings.Join(a.Ips, "\n"))},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
 		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
-		{"groups", fmt.Sprintf("%s", strings.Join(groups, ", "))},
+		{"Groups", fmt.Sprintf("%s", strings.Join(groups, ", "))},
 		{"Note", a.Note},
 		{"", ""},
 		{"Agent Version", a.Version},

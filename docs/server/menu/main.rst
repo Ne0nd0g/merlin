@@ -12,24 +12,27 @@ After executing the Merlin server binary, interaction continues from the Merlin 
 
     Merlin» help
 
-       COMMAND  |          DESCRIPTION           |    OPTIONS
-    +-----------+--------------------------------+----------------+
+       COMMAND  |          DESCRIPTION           |            OPTIONS
+    +-----------+--------------------------------+--------------------------------+
       agent     | Interact with agents or list   | interact, list
                 | agents                         |
       banner    | Print the Merlin banner        |
-      exit      | Exit and close the Merlin      |
-                | server                         |
+      clear     | clears all unset jobs          |
+      group     | Add, remove, or list groups    | group <add | remove | list>
+                |                                | <group>
+      interact  | Interact with an agent         |
+      jobs      | Display all unfinished jobs    |
       listeners | Move to the listeners menu     |
-      interact  | Interact with an agent. Alias  |
-                | for Empire users               |
-      quit      | Exit and close the Merlin      |
+      queue     | queue up commands for one, a   | queue <agentID> <command>
+                | group, or unknown agents       |
+      quit      | Exit and close the Merlin      | -y
                 | server                         |
       remove    | Remove or delete a DEAD agent
                 | from the server
-      sessions  | List all agents session        |
-                | information. Alias for MSF     |
-                | users                          |
-      use       | Use a function of Merlin       | module
+      sessions  | Display a table of information |
+                | about all checked-in agent     |
+                | sessions                       |
+      use       | Use a Merlin module            | module <module path>
       version   | Print the Merlin server        |
                 | version                        |
       *         | Anything else will be execute  |
@@ -64,7 +67,7 @@ The ``list`` option for the agent command is used to provide a list of all the a
 
 
 interact
---------
+^^^^^^^^
 
 The ``interact`` option for the agent command is used to switch an agent context menu to interact with a single agent. This will cause the prompt to change indicating the agent you are interacting with and provide a new menu of commands.
 
@@ -116,23 +119,82 @@ The ``banner`` command is used too print the super cool ascii art banner along w
                        Version: 0.8.0.BETA
                        Build: nonRelease
 
-exit
-----
+clear
+-----
 
-The ``exit`` command is used to quit the Merlin server. The user will be prompted for confirmation to prevent from accidentally quitting the program. The confirmation prompt can be skipped with ``exit -y``.
+The ``clear`` command will cancel all jobs in the queue that have not been sent to the agent yet.
+This command will only clear jobs for ALL agents.
 
 .. code-block:: text
 
-    Merlin» exit
+    Merlin» clear
+    Merlin»
+    [+] All unsent jobs cleared at 2021-08-03T01:10:09Z
 
-    Are you sure you want to exit? [yes/NO]:
-    yes
-    [!]Quitting...
+group
+-----
 
-listeners
----------
+The ``group`` command interacts with server-side groups that agents can be added to and removed from.
+Arbitrary agent commands and modules can be executed against an entire group at one time.
 
-The ``listeners`` command will move into the Listeners menu.
+* :ref:`group add`
+* :ref:`group list`
+* :ref:`group remove`
+
+.. _group add:
+
+add
+^^^
+
+The ``group add`` command adds an agent to a named group. If the group name does not exist, it will be created.
+The list of available agents can be tab completed.
+
+``group add <agentID> <GroupName>``
+
+.. code-block:: text
+
+    Merlin» group add 99dbe632-984c-4c98-8f38-11535cb5d937 EvilCorp
+
+    [i] Agent 99dbe632-984c-4c98-8f38-11535cb5d937 added to group EvilCorp
+
+    Merlin» group add d07edfda-e119-4be2-a20f-918ab701fa3c EvilCorp
+
+    [i] Agent d07edfda-e119-4be2-a20f-918ab701fa3c added to group EvilCorp
+
+.. _group list:
+
+list
+^^^^
+
+The ``group list`` command displays all existing group names to include agents that are members of a group.
+The ``all`` group always exists and is used to task every known agent.
+
+.. code-block:: text
+
+    Merlin» group list
+    +----------+--------------------------------------+
+    |  GROUP   |               AGENT ID               |
+    +----------+--------------------------------------+
+    | all      | ffffffff-ffff-ffff-ffff-ffffffffffff |
+    | EvilCorp | 99dbe632-984c-4c98-8f38-11535cb5d937 |
+    | EvilCorp | d07edfda-e119-4be2-a20f-918ab701fa3c |
+    +----------+--------------------------------------+
+
+.. _group remove:
+
+remove
+^^^^^^
+
+The ``group remove`` command is used to remove an agent from a named group. The list of ALL agents is tab completable
+but does not mean the agent is in the group. The list of existing groups can also be tab completed.
+
+``group remove <agentID> <GroupName>``
+
+.. code-block:: text
+
+    Merlin» group remove 99dbe632-984c-4c98-8f38-11535cb5d937 EvilCorp
+    Merlin»
+    [i] Agent 99dbe632-984c-4c98-8f38-11535cb5d937 removed from group EvilCorp
 
 interact
 --------
@@ -144,10 +206,91 @@ The ``interact`` command takes one argument, the agent ID, and is used to intera
     Merlin» interact c22c435f-f7c4-445b-bcd4-0d4e020645af
     Merlin[agent][c22c435f-f7c4-445b-bcd4-0d4e020645af]»
 
+jobs
+----
+
+The ``jobs`` command displays unfinished jobs for ALL agents.
+
+.. code-block:: text
+
+    Merlin» jobs
+
+                     AGENT                 |     ID     |  COMMAND   | STATUS  |       CREATED        |         SENT
+    +--------------------------------------+------------+------------+---------+----------------------+----------------------+
+      d07edfda-e119-4be2-a20f-918ab701fa3c | UjNoTALgcn | pwd        | Created | 2021-08-03T01:39:57Z |
+      99dbe632-984c-4c98-8f38-11535cb5d937 | UHOddpFQTm | run whoami | Sent    | 2021-08-03T01:40:11Z | 2021-08-03T01:40:17Z
+
+queue
+-----
+
+The ``queue`` command can be used to pre-load, or queue, arbitrary commands/jobs against an agent or a group.
+Additionally, the agent does not have to exist for this command to be used.
+When an agent with that ID checks in, it will receive the job.
+
+Queue a command for one agent:
+
+.. code-block:: text
+
+    Merlin» queue 99dbe632-984c-4c98-8f38-11535cb5d937 run ping 8.8.8.8
+    [-] Created job LumWveIkKe for agent 99dbe632-984c-4c98-8f38-11535cb5d937
+    [-] Results job LumWveIkKe for agent 99dbe632-984c-4c98-8f38-11535cb5d937
+
+    [+]
+    Pinging 8.8.8.8 with 32 bytes of data:
+    Reply from 8.8.8.8: bytes=32 time=42ms TTL=128
+    Reply from 8.8.8.8: bytes=32 time=63ms TTL=128
+    Reply from 8.8.8.8: bytes=32 time=35ms TTL=128
+    Reply from 8.8.8.8: bytes=32 time=48ms TTL=128
+
+    Ping statistics for 8.8.8.8:
+        Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
+    Approximate round trip times in milli-seconds:
+        Minimum = 35ms, Maximum = 63ms, Average = 47ms
+
+Queue a command for a group:
+
+.. code-block:: text
+
+    Merlin» queue EvilCorp run whoami
+
+    [-] Created job lkvozuKJLW for agent d07edfda-e119-4be2-a20f-918ab701fa3c
+
+    [-] Created job xKAgunnKTF for agent 99dbe632-984c-4c98-8f38-11535cb5d937
+    Merlin»
+    [-] Results job xKAgunnKTF for agent 99dbe632-984c-4c98-8f38-11535cb5d937
+
+    [+] DESKTOP-H39FR21\bob
+
+
+    [-] Results job lkvozuKJLW for agent d07edfda-e119-4be2-a20f-918ab701fa3c
+
+    [+] rastley
+
+Queue a command for an agent that has never checked in before and is currently unknown to the server:
+
+.. code-block:: text
+
+    Merlin» queue c1090dbc-f2f7-4d90-a241-86e0c0217786 run whoami
+    [-] Created job rJVyZTuHkm for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+.. warning::
+    Some agent control commands such as ``sleep`` can not be queued because the agent structure must exist on the server to calculate the JWT
+
+listeners
+---------
+
+The ``listeners`` command will move into the Listeners menu.
+
+.. code-block:: text
+
+    Merlin» listeners
+    Merlin[listeners]»
+
 quit
 ----
 
-The ``quit`` command is an alias for the ``exit`` command and is used to quit the Merlin server. The user will be prompted for confirmation to prevent from accidentally quitting the program. The confirmation prompt can be skipped with ``quit -y``.
+The ``quit`` command is used to stop and exit the Merlin server. The user will be prompted for confirmation to prevent
+from accidentally quitting the program. The confirmation prompt can be skipped with ``quit -y``.
 
 .. code-block:: text
 
@@ -160,7 +303,10 @@ The ``quit`` command is an alias for the ``exit`` command and is used to quit th
 remove
 ------
 
-The ``remove`` command is used to remove or delete an agent from the server so that it will not show up in the list of available agents. **NOTE:** Removing an active agent will cause that agent to fail to check in and it will eventually exit.
+The ``remove`` command is used to remove or delete an agent from the server so that it will not show up in the list of available agents.
+
+.. note::
+    Removing an active agent will cause that agent to fail to check in and it will eventually exit.
 
 .. code-block:: text
 
@@ -174,7 +320,7 @@ The ``remove`` command is used to remove or delete an agent from the server so t
 
     Merlin» remove c62ac059-e54d-4204-82a4-d5c054b63ac3
     Merlin»
-    [i] Agent c62ac059-e54d-4204-82a4-d5c054b63ac3 was removed from the server at 2020-08-18T14:19:54Z
+    [i] Agent c62ac059-e54d-4204-82a4-d5c054b63ac3 was removed from the server
     Merlin» sessions
 
     +------------+----------+------+------+-----------+--------+
@@ -188,20 +334,25 @@ sessions
 --------
 
 The ``sessions`` command is used to quickly list information about established agents from the main menu to include their status.
+The sessions command is available from any menu in the CLI.
+
+* **AGENT GUID**: A unique identifier for every running instance
+* **TRANSPORT**: The protocol the agent is communicating over
+* **PLATFORM**: The operating system and architecture the agent is running on
+* **HOST**: The hostname where the agent is running
+* **USER**: The username that hte agent is running as
+* **PROCESS**: The Agent's process name followed by its Process ID (PID) in parenthesis
+* **STATUS**: The Agent's communiction status of either active, delayed, or dead
+* **LAST CHECKIN**: The amount of time that has passed since the agent last checked in
+* **NOTE**: A free-form text area for operators to record notes about a specific agent; tracked server-side only
 
 .. code-block:: text
 
     Merlin» sessions
 
-    +--------------------------------------+-------------+------+--------+---------------------------+---------+
-    |              AGENT GUID              |  PLATFORM   | USER |  HOST  |         TRANSPORT         | STATUS  |
-    +--------------------------------------+-------------+------+--------+---------------------------+---------+
-    | 6998f86a-f54b-4c90-a935-4620db5d2c4a | linux/amd64 | joe  | DEV001 |      HTTP/2 over TLS      | Active  |
-    | 3b1fbded-1292-413f-81f6-edd8be260c25 | linux/amd64 | joe  | DEV001 | HTTP/3 (HTTP/2 over QUIC) | Active  |
-    | 25c61141-6600-4c9a-abeb-f591494bf4c0 | linux/amd64 | joe  | DEV001 |     HTTP/2 clear-text     | Delayed |
-    +--------------------------------------+-------------+------+--------+---------------------------+---------+
-
-    Merlin»
+                   AGENT GUID              |    TRANSPORT    |   PLATFORM    |      HOST       |        USER         |                 PROCESS                  | STATUS | LAST CHECKIN |      NOTE
+    +--------------------------------------+-----------------+---------------+-----------------+---------------------+------------------------------------------+--------+--------------+-----------------+
+      d07edfda-e119-4be2-a20f-918ab701fa3c | HTTP/2 over TLS | linux/amd64   | ubuntu          | rastley             | main(200769)                             | Active | 0:00:08 ago  | Demo Agent Here
 
 use
 ---
