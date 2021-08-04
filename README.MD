@@ -1,4 +1,4 @@
-[![AppVeyor](https://ci.appveyor.com/api/projects/status/github/Ne0nd0g/merlin?branch=master&svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/yadppqp12h445akx/branch/master?svg=true)](https://ci.appveyor.com/project/Ne0nd0g/merlin/branch/master)
 [![GoReportCard](https://goreportcard.com/badge/github.com/Ne0nd0g/merlin)](https://goreportcard.com/report/github.com/Ne0nd0g/merlin)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Release](https://img.shields.io/github/release/Ne0nd0g/merlin.svg)](https://github.com/Ne0nd0g/merlin/releases/latest)
@@ -101,3 +101,4 @@ Open Source license
   <img alt="JetBrains Logo" src="docs/images/jetbrains-variant-4.png" height="40%" width="40%">
   <img alt="GoLand Logo" src="docs/images/icon-goland.png" height="20%" width="20%">
 </p>
+ 
