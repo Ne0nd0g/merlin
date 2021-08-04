@@ -27,9 +27,10 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli"
+	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/pkg/pwnboard"
 )
 
 // Global Variables
@@ -49,11 +50,18 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
+
+	ip := flag.String("pwn", "", "The IP address / hostname of pwnboard server")
+
 	flag.Parse()
 
 	color.Blue(banner.MerlinBanner1)
 	color.Blue("\t\t   Version: %s", merlin.Version)
 	color.Blue("\t\t   Build: %s", build)
+
+	if *ip != "" {
+		go pwnboard.Updateserver(*ip)
+	}
 
 	// Start Merlin Command Line Interface
 	cli.Shell()

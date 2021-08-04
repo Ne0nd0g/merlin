@@ -75,6 +75,7 @@ type SysInfo struct {
 	UserName     string   `json:"username,omitempty"`
 	UserGUID     string   `json:"userguid,omitempty"`
 	HostName     string   `json:"hostname,omitempty"`
+	Process      string   `json:"process,omitempty"`
 	Pid          int      `json:"pid,omitempty"`
 	Ips          []string `json:"ips,omitempty"`
 	Domain       string   `json:"domain,omitempty"`
