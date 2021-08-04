@@ -70,6 +70,20 @@ func ClearJobs(agentID uuid.UUID) messages.UserMessage {
 	}
 }
 
+// ClearJobsCreated clears all created (but unsent) jobs for all agents
+func ClearJobsCreated() messages.UserMessage {
+	err := jobs.ClearCreated()
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.UserMessage{
+		Level:   messages.Success,
+		Message: fmt.Sprintf("All unsent jobs cleared at %s", time.Now().UTC().Format(time.RFC3339)),
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
+}
+
 // CMD is used to send a command to the agent to run a command or execute a program
 // Args[0] = "cmd"
 // Args[1:] = program and arguments to be executed on the host OS of the running agent
@@ -97,6 +111,29 @@ func Download(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Download call: %s", Args))
+}
+
+// ENV is used to view or modify a host's environment variables
+func ENV(agentID uuid.UUID, Args []string) messages.UserMessage {
+	var job string
+	var err error
+	if len(Args) > 1 {
+		switch strings.ToLower(Args[1]) {
+		case "get", "set", "unset":
+			if len(Args) < 2 {
+				return messages.ErrorMessage(fmt.Sprintf("Not enough arguments for the env %s command.\nenv %s <environment variable>", Args[0], Args[1]))
+			}
+			job, err = jobs.Add(agentID, "env", Args[1:])
+		case "showall":
+			job, err = jobs.Add(agentID, "env", Args[1:2])
+		}
+	} else {
+		return messages.ErrorMessage("Not enough arguments for the env command.")
+	}
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // ExecuteAssembly calls the donut module to create shellcode from a .NET 4.0 assembly and then uses the CreateProcess
@@ -276,6 +313,18 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
 }
 
+// Exit instructs the agent to quit running
+func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 0 {
+		job, err := jobs.Add(agentID, "exit", Args[0:])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"exit\" command: %s", Args))
+}
+
 // GetAgents returns a list of existing Agent UUID values
 func GetAgents() (agentList []uuid.UUID) {
 	for id := range agents.Agents {
@@ -287,7 +336,7 @@ func GetAgents() (agentList []uuid.UUID) {
 // GetAgentsRows returns a row of data for every agent that includes information about it such as
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
-	header = []string{"Agent GUID", "Platform", "User", "Host", "Transport", "Status"}
+	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin", "Note"}
 	for _, agent := range agents.Agents {
 		// Convert proto (i.e. h2 or hq) to user friendly string
 		var proto string
@@ -306,8 +355,29 @@ func GetAgentsRows() (header []string, rows [][]string) {
 			proto = fmt.Sprintf("Unknown: %s", agent.Proto)
 		}
 		status, _ := GetAgentStatus(agent.ID)
-		rows = append(rows, []string{agent.ID.String(), agent.Platform + "/" + agent.Architecture, agent.UserName,
-			agent.HostName, proto, status})
+
+		lastTime := lastCheckin(agent.StatusCheckIn)
+
+		// Get the process name, sans full path
+		var proc string
+		if agent.Platform == "windows" {
+			proc = agent.Process[strings.LastIndex(agent.Process, "\\")+1:]
+		} else {
+			proc = agent.Process[strings.LastIndex(agent.Process, "/")+1:]
+		}
+		p := fmt.Sprintf("%s(%d)", proc, agent.Pid)
+
+		rows = append(rows, []string{
+			agent.ID.String(),
+			proto,
+			agent.Platform + "/" + agent.Architecture,
+			agent.HostName,
+			agent.UserName,
+			p,
+			status,
+			lastTime,
+			agent.Note,
+		})
 	}
 	return
 }
@@ -325,18 +395,28 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		return rows, message
 	}
 
+	var groups []string
+	for _, row := range agents.GroupListAll() {
+		if row[1] == a.ID.String() {
+			groups = append(groups, row[0])
+		}
+	}
+
 	rows = [][]string{
 		{"Status", status},
 		{"ID", a.ID.String()},
-		{"Platform", a.Platform},
-		{"Architecture", a.Architecture},
-		{"UserName", a.UserName},
+		{"Platform", fmt.Sprintf("%s/%s", a.Platform, a.Architecture)},
+		{"User Name", a.UserName},
 		{"User GUID", a.UserGUID},
 		{"Hostname", a.HostName},
+		{"Process Name", a.Process},
 		{"Process ID", strconv.Itoa(a.Pid)},
-		{"IP", fmt.Sprintf("%v", a.Ips)},
+		{"IP", strings.Join(a.Ips, "\n")},
 		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
-		{"Last Check In", a.StatusCheckIn.Format(time.RFC3339)},
+		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
+		{"Groups", strings.Join(groups, ", ")},
+		{"Note", a.Note},
+		{"", ""},
 		{"Agent Version", a.Version},
 		{"Agent Build", a.Build},
 		{"Agent Wait Time", a.WaitTime},
@@ -372,6 +452,11 @@ func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
 	return status, messages.UserMessage{}
 }
 
+// GetJobs enumerates all created (but unsent) jobs across all agents
+func GetJobs() [][]string {
+	return jobs.GetTableAll()
+}
+
 // GetJobsForAgent enumerates all jobs and their status
 func GetJobsForAgent(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 	jobsRows, err := jobs.GetTableActive(agentID)
@@ -379,6 +464,77 @@ func GetJobsForAgent(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		return nil, messages.ErrorMessage(err.Error())
 	}
 	return jobsRows, messages.UserMessage{}
+}
+
+// GroupAdd adds an agent to a server-side grouping
+func GroupAdd(agentID uuid.UUID, groupName string) messages.UserMessage {
+	if groupName == "all" {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: "Global group 'all' is immutable.",
+		}
+	}
+
+	err := agents.GroupAddAgent(agentID, groupName)
+	if err == nil {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Agent %s added to group %s", agentID.String(), groupName),
+		}
+	}
+	return messages.ErrorMessage(err.Error())
+}
+
+// GroupList lists agents that are part of a specific group
+func GroupList(groupName string) []string {
+	var out []string
+	for _, row := range agents.GroupListAll() {
+		if row[0] == groupName {
+			out = append(out, row[1])
+		}
+	}
+	return out
+}
+
+// GroupListAll returns a table of {groupName, agentID}
+func GroupListAll() [][]string {
+	return agents.GroupListAll()
+}
+
+// GroupListNames returns array of active group names
+func GroupListNames() []string {
+	return agents.GroupListNames()
+}
+
+// GroupRemove removes an agent from a group
+func GroupRemove(agentID uuid.UUID, groupName string) messages.UserMessage {
+	if groupName == "all" {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: "Global group 'all' is immutable.",
+		}
+	}
+	err := agents.GroupRemoveAgent(agentID, groupName)
+	if err == nil {
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: fmt.Sprintf("Agent %s removed from group %s", agentID.String(), groupName),
+		}
+	}
+	return messages.ErrorMessage(err.Error())
+}
+
+// IFConfig lists the agent's network adapter information
+func IFConfig(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "ifconfig", nil)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // InvokeAssembly executes an assembly that was previously loaded with the load-assembly command
@@ -393,28 +549,51 @@ func InvokeAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
-// Kill instructs the agent to quit running
-func Kill(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 0 {
-		job, err := jobs.Add(agentID, "kill", Args[0:])
+// JA3 is used to change the Agent's JA3 signature
+func JA3(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobs.Add(agentID, "ja3", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
 		return messages.JobMessage(agentID, job)
 	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Kill call: %s", Args))
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetJA3 call: %s", Args))
 }
 
-// NSLOOKUP instructs the agent to perform a DNS query on the input
-func NSLOOKUP(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) < 1 {
-		return messages.ErrorMessage("not enough arguments. A query was not provided")
+// KillDate configures the date and time that the agent will stop running
+func KillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		_, errU := strconv.ParseInt(Args[2], 10, 64)
+		if errU != nil {
+			m := fmt.Sprintf("There was an error converting %s to an int64", Args[1])
+			m = m + "\r\nKill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995"
+			return messages.ErrorMessage(m)
+		}
+		job, err := jobs.Add(agentID, "killdate", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
 	}
-	job, err := jobs.Add(agentID, "nslookup", Args[1:])
-	if err != nil {
-		return messages.ErrorMessage(err.Error())
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetKillDate call: %s", Args))
+}
+
+// KillProcess tasks an agent to kill a process by its number identifier
+func KillProcess(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) == 2 {
+		pid, err := strconv.Atoi(Args[1])
+		if err != nil || pid < 0 {
+			return messages.ErrorMessage(fmt.Sprintf("Invalid PID provided: %s\n%s", Args[1], err))
+		}
+		args := []string{Args[1]}
+		job, err := jobs.Add(agentID, "killprocess", args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"kill\" command: %s", Args))
 }
 
 // ListAssemblies instructs the agent to list all of the .NET assemblies that are currently loaded into the agent's process
@@ -470,12 +649,110 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
+// MaxRetry configures the amount of times an Agent will try to checkin before it quits
+func MaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		// Need to set the Sleep time on the server first to calculate JWT lifetime
+		err := agents.SetMaxRetry(agentID, Args[1])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		job, err := jobs.Add(agentID, "maxretry", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetMaxRetry call: %s", Args))
+}
+
 // MEMFD run a linux executable from memory
 func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
 		return messages.ErrorMessage("not enough arguments. An executable was not provided")
 	}
 	job, err := jobs.Add(agentID, "memfd", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// Netstat is used to print network connections on the target system
+// Supports a "-p tcp" or "-p udp"
+func Netstat(agentID uuid.UUID, Args []string) messages.UserMessage {
+	// Ensure the provided args are valid
+	// Args[0] = "netstat"
+	// Args[1] = (optional) "-p"
+	// Args[2] = (optional) "tcp" or "udp"
+	if len(Args) > 3 {
+		return messages.ErrorMessage("Too many arguments provided to the netstat command")
+	} else if len(Args) == 2 {
+		return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
+	} else if len(Args) == 3 {
+		if Args[1] != "-p" {
+			return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
+		} else if !(Args[2] == "tcp" || Args[2] == "udp") {
+			return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
+		}
+	}
+	job, err := jobs.Add(agentID, "netstat", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// Note sets a note on the Agent's Note field
+func Note(agentID uuid.UUID, Args []string) messages.UserMessage {
+	note := strings.Join(Args, " ")
+	err := agents.SetAgentNote(agentID, note)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.UserMessage{
+		Level:   messages.Info,
+		Time:    time.Now().UTC(),
+		Message: fmt.Sprintf("Agent %s's note set to: %s", agentID, note),
+	}
+}
+
+// NSLOOKUP instructs the agent to perform a DNS query on the input
+func NSLOOKUP(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 1 {
+		return messages.ErrorMessage("not enough arguments. A query was not provided")
+	}
+	job, err := jobs.Add(agentID, "nslookup", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// Padding configures the maxium size for the random amount of padding added to each message
+func Padding(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobs.Add(agentID, "padding", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetPadding call: %s", Args))
+}
+
+// Pipes enumerates and displays named pipes on Windows hosts only
+func Pipes(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "pipes", nil)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// PS displays running processes
+func PS(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "ps", nil)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -504,92 +781,16 @@ func Remove(agentID uuid.UUID) messages.UserMessage {
 	return messages.ErrorMessage(err.Error())
 }
 
-// SetJA3 is used to change the Agent's JA3 signature
-func SetJA3(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		job, err := jobs.Add(agentID, "ja3", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
+// SecureDelete securely deletes supplied file
+func SecureDelete(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 2 {
+		return messages.ErrorMessage("Not enough arguments. A file path was not provided.")
 	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetJA3 call: %s", Args))
-}
-
-// SetKillDate configures the date and time that the agent will stop running
-func SetKillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		_, errU := strconv.ParseInt(Args[2], 10, 64)
-		if errU != nil {
-			m := fmt.Sprintf("There was an error converting %s to an int64", Args[2])
-			m = m + "\r\nKill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995"
-			return messages.ErrorMessage(m)
-		}
-		job, err := jobs.Add(agentID, "killdate", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
+	job, err := jobs.Add(agentID, "sdelete", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
 	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetKillDate call: %s", Args))
-}
-
-// SetMaxRetry configures the amount of times an Agent will try to checkin before it quits
-func SetMaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		// Need to set the Sleep time on the server first to calculate JWT lifetime
-		err := agents.SetMaxRetry(agentID, Args[2])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		job, err := jobs.Add(agentID, "maxretry", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetMaxRetry call: %s", Args))
-}
-
-// SetPadding configures the maxium size for the random amount of padding added to each message
-func SetPadding(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		job, err := jobs.Add(agentID, "padding", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetPadding call: %s", Args))
-}
-
-// SetSleep configures the Agent's sleep time between checkins
-func SetSleep(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		// Need to set the Sleep time on the server first to calculate JWT lifetime
-		err := agents.SetWaitTime(agentID, Args[2])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		job, err := jobs.Add(agentID, "sleep", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetSleep call: %s", Args))
-}
-
-// SetSkew configures the amount of skew an Agent uses to randomize checkin times
-func SetSkew(agentID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) > 2 {
-		job, err := jobs.Add(agentID, "skew", Args[1:])
-		if err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		return messages.JobMessage(agentID, job)
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent SetSkew call: %s", Args))
+	return messages.JobMessage(agentID, job)
 }
 
 // SharpGen generates a .NET core assembly, converts it to shellcode with go-donut, and executes it in the spawnto process
@@ -651,6 +852,47 @@ func SharpGen(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
+// Skew configures the amount of skew an Agent uses to randomize checkin times
+func Skew(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobs.Add(agentID, "skew", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSkew call: %s", Args))
+}
+
+// Sleep configures the Agent's sleep time between checkins
+func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		// Need to set the Sleep time on the server first to calculate JWT lifetime
+		err := agents.SetWaitTime(agentID, Args[1])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		job, err := jobs.Add(agentID, "sleep", Args)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSleep call: %s", Args))
+}
+
+// Touch matches the destination file's timestamps with source file
+func Touch(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 3 {
+		return messages.ErrorMessage("Not enough arguments.")
+	}
+	job, err := jobs.Add(agentID, "touch", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // Upload transfers a file from the Merlin Server to the Agent
 func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 	// Make sure there are enough arguments
@@ -670,4 +912,23 @@ func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Upload call: %s", Args))
+}
+
+// Uptime retrieves the target host's uptime. Windows only
+func Uptime(agentID uuid.UUID) messages.UserMessage {
+	job, err := jobs.Add(agentID, "uptime", nil)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// lastCheckin returns a nicely formatted string for time since the last checkin (HH:MM:SS)
+func lastCheckin(t time.Time) string {
+	lastTime := time.Since(t)
+	lastTimeStr := fmt.Sprintf("%d:%02d:%02d ago",
+		int(lastTime.Hours()),
+		int(lastTime.Minutes())%60,
+		int(lastTime.Seconds())%60)
+	return lastTimeStr
 }

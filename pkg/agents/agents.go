@@ -44,6 +44,16 @@ import (
 // Agents contains all of the instantiated agent object that are accessed by other modules
 var Agents = make(map[uuid.UUID]*Agent)
 
+// groups map agent(s) to a string for bulk access
+var groups = make(map[string][]uuid.UUID)
+
+func init() {
+	globalUUID, err := uuid.FromString("ffffffff-ffff-ffff-ffff-ffffffffffff")
+	if err == nil {
+		groups["all"] = []uuid.UUID{globalUUID}
+	}
+}
+
 // Agent is a server side structure that holds information about a Merlin Agent
 type Agent struct {
 	ID             uuid.UUID
@@ -54,6 +64,7 @@ type Agent struct {
 	HostName       string
 	Ips            []string
 	Pid            int
+	Process        string
 	agentLog       *os.File
 	InitialCheckIn time.Time
 	StatusCheckIn  time.Time
@@ -71,6 +82,7 @@ type Agent struct {
 	Secret         []byte          // secret is used to perform symmetric encryption operations
 	OPAQUE         *opaque.Server  // Holds information about OPAQUE Registration and Authentication
 	JA3            string          // The JA3 signature applied to the agent's TLS client
+	Note           string          // Operator notes for an agent
 }
 
 // KeyExchange is used to exchange public keys between the server and agent
@@ -191,6 +203,7 @@ func (a *Agent) UpdateInfo(info messages.AgentInfo) {
 
 	a.Architecture = info.SysInfo.Architecture
 	a.HostName = info.SysInfo.HostName
+	a.Process = info.SysInfo.Process
 	a.Pid = info.SysInfo.Pid
 	a.Ips = info.SysInfo.Ips
 	a.Platform = info.SysInfo.Platform
@@ -411,4 +424,80 @@ func SetMaxRetry(agentID uuid.UUID, retry string) error {
 		return nil
 	}
 	return fmt.Errorf("the %s Agent is unknown", agentID.String())
+}
+
+// SetAgentNote updates the agent's note field
+func SetAgentNote(agentID uuid.UUID, note string) error {
+	if !isAgent(agentID) {
+		return fmt.Errorf("%s is not a known agent", agentID)
+	}
+	Agents[agentID].Note = note
+	return nil
+}
+
+// GroupAddAgent adds an agent to a group
+func GroupAddAgent(agentID uuid.UUID, groupName string) error {
+	if !isAgent(agentID) {
+		return fmt.Errorf("%s is not a known agent", agentID)
+	}
+	grp, ok := groups[groupName]
+	if !ok {
+		groups[groupName] = []uuid.UUID{agentID}
+	} else {
+		// Don't add it to the group if it's already there
+		for _, a := range groups[groupName] {
+			if uuid.Equal(a, agentID) {
+				return nil
+			}
+		}
+		groups[groupName] = append(grp, agentID)
+	}
+	return nil
+}
+
+// GroupListAll lists groups as a table of {groupName,agentID}
+func GroupListAll() [][]string {
+	var out [][]string
+	for groupName, agentIDs := range groups {
+		for _, aID := range agentIDs {
+			out = append(out, []string{groupName, aID.String()})
+		}
+	}
+	return out
+}
+
+// GroupListNames list out just the names of existing groups
+func GroupListNames() []string {
+	keys := make([]string, 0, len(groups))
+	for k := range groups {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// GroupRemoveAgent removes an agent from a group
+func GroupRemoveAgent(agentID uuid.UUID, groupName string) error {
+	if !isAgent(agentID) {
+		return fmt.Errorf("%s is not a known agent", agentID)
+	}
+
+	grp, ok := groups[groupName]
+	if !ok {
+		return fmt.Errorf("%s is not a group", groupName)
+	}
+
+	tmp := grp[:0]
+	for _, a := range grp {
+		if !uuid.Equal(a, agentID) {
+			tmp = append(tmp, a)
+		}
+	}
+	groups[groupName] = tmp
+
+	//Make sure to delete group if empty
+	if len(groups[groupName]) == 0 {
+		delete(groups, groupName)
+	}
+
+	return nil
 }

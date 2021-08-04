@@ -4,6 +4,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 1.1.0 - 2021-08-5
+
+### Added
+
+- Incorporated a lot of changes by [r00t0v3rr1d3](https://github.com/r00t0v3rr1d3) & [deviousbanana](https://github.com/deviousbanana) from their [fork](https://github.com/r00t0v3rr1d3/merlin/tree/dev)
+- Ctrl-C and DEL key won't exit the server without a confirmation prompt from https://github.com/r00t0v3rr1d3/merlin/commit/d5aafdb97b50e43ae9842d8f91659f65d18f60d4
+- `ifconfig`/`ipconfig`: Prints host network adapter information. Windows hosts use API calls to get extra info (e.g., DHCP) from https://github.com/r00t0v3rr1d3/merlin/commit/42a12af99610e439721cbd095a2d55523e7cbc94
+- Agent struct and agent `info` command contain `Process` name from https://github.com/r00t0v3rr1d3/merlin/commit/cbf875427123e6a58a528d0e38a692c2308f09c9 
+- Added the `kill` command to kill a running process by its process ID (PID)
+- Added a calculated "LAST CHECKIN" column to the `sessions` command and the Agent menu `info` command
+- Added the "PROCESS" column to the `sessions` command
+- Added a shortcut `c` command for `clear` on the Agents menu to remove any jobs from the queue
+- Replaced the `exit` command with `quit` to instruct the Merlin server to quit running
+- The `sessions` and `interact` commands are available from every menu
+- Filter the help and tab-completable list of commands to only show those available for the Agent's operating system
+- Added additional aliases for command in the Agent's menu
+  - `c` for `clear`
+  - `assembly` for `execute-assembly`
+  - `pe` for `execute-pe`
+  - `shinject` for `execute-shellcode`
+  - `ipconfig` for `ifconfig`
+  - `exec` for `run`
+- Added `jobs` command to main menu to show jobs for all agents
+- Added `queue` command to main menu to queue up jobs for one agent, all agents, or an agent that hasn't registered yet
+- Added a `note` command to the agent menu
+- Added a `clear` command to the main menu to remove jobs for ALL agents that haven't been sent
+- Added a `group` command that adds agents to groups for bulk command processing
+  * Usage: `group add <agentID> <groupName>`
+  * Usage: `group remove <agentID> <groupName>`
+  * Usage: `group list`
+  * Usage (from an agent's menu): `group add <groupName>`
+- Added PwnBoard integration from [hulto](https://github.com/hulto)
+- Added `sdelete` command to securely delete a file
+- Added `touch`, alias is `timestomp`, command that matches the destination file's timestamps with source file
+- Added `ps` command that returns a process listing for Windows agents only
+- Added `netstat` that displays network connection for Windows agents (tcp, tcp6, udp, udp6)
+- Added Windows only `pipes` command to list named pipes
+- Added Windows only `uptime` command to print the target system's uptime
+- Added `env` command: View and modify environment variables. "set" will create a new variable if it didn't exist
+  * Usage: `env showall`
+  * Usage: `env get PATH`
+  * Usage: `env set CUSTOM "my desired value"`
+  * Usage: `env unset HISTFILE`
+
+### Changed
+
+- The command to instruct a running agent to quit was changed from `kill` and is now `exit`
+- Restructured the menu system into its own directory at `pkg/cli/menu`
+- Changed the `interact` command to `configure` for the listener menu
+- Removed the `set` command from the Agent menu in favor of just calling the command directly (e.g., `set killdate` -> `killdate`)
+- Renamed API functions to remove any that started with "SET"
+- Moved core functions to a child in the `cli` directory
+- Removed `Type` and added `Command` to jobs table
+
 ## 1.0.1 - 2021-05-29
 
 ### Fixed
