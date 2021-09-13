@@ -37,6 +37,7 @@ import (
 	moduleAPI "github.com/Ne0nd0g/merlin/pkg/api/modules"
 	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli/core"
+	serverCore "github.com/Ne0nd0g/merlin/pkg/core"
 )
 
 // handlerMain contains the logic to handle the "main" menu commands
@@ -164,6 +165,7 @@ func handlerMain(cmd []string) {
 			case "verbose":
 				if strings.ToLower(cmd[2]) == "true" {
 					core.Verbose = true
+					serverCore.Verbose = true
 					core.MessageChannel <- messages.UserMessage{
 						Level:   messages.Success,
 						Message: "Verbose output enabled",
@@ -182,6 +184,7 @@ func handlerMain(cmd []string) {
 			case "debug":
 				if strings.ToLower(cmd[2]) == "true" {
 					core.Debug = true
+					serverCore.Debug = true
 					core.MessageChannel <- messages.UserMessage{
 						Level:   messages.Success,
 						Message: "Debug output enabled",
