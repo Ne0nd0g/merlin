@@ -4,7 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 1.1.1 - 
+## 1.1.1 - 2021-12-XX
+
+### Added
+
+- `rm` command to remove, or delete, files using native Go functions
+- `runas` Windows command to create a process as another user with their password
+- `token` Windows command to interact with Windows Access Tokens
+  - `make` Create a new token with a username and password; Unlisted `make_token` alias
+  - `privs` List the current or remote process token privileges
+  - `rev2self` Drop any created or stolen access token and revert to original configuration; Unlisted `rev2self` alias
+  - `steal` Steal a token from another process; Unlisted `steal_token` alias
+  - `whoami` Enumerate process and thread token username, logon ID, privilege count, token type, impersonation level, and integrity level
+- New Agent API calls: `RM`, `RunAs`, `Token`
 
 ### Fixed
 

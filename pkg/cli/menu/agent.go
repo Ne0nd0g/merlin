@@ -136,6 +136,12 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.LS(agent, cmd)
 	case "main":
 		Set(MAIN)
+	case "make_token":
+		c := []string{"token", "make"}
+		if len(cmd) > 1 {
+			c = append(c, cmd[1:]...)
+		}
+		core.MessageChannel <- agentAPI.Token(agent, c)
 	case "maxretry":
 		core.MessageChannel <- agentAPI.MaxRetry(agent, cmd)
 	case "memfd":
@@ -169,8 +175,14 @@ func handlerAgent(cmd []string) {
 		if core.Confirm("Are you sure you want to quit Merlin?") {
 			core.Exit()
 		}
+	case "rev2self":
+		core.MessageChannel <- agentAPI.Token(agent, []string{"token", "rev2self"})
+	case "rm":
+		core.MessageChannel <- agentAPI.RM(agent, cmd)
 	case "run", "shell", "exec":
 		core.MessageChannel <- agentAPI.CMD(agent, cmd)
+	case "runas":
+		core.MessageChannel <- agentAPI.RunAs(agent, cmd)
 	case "sessions":
 		header, rows := agentAPI.GetAgentsRows()
 		core.DisplayTable(header, rows)
@@ -216,6 +228,14 @@ func handlerAgent(cmd []string) {
 				Error:   false,
 			}
 		}
+	case "steal_token":
+		c := []string{"token", "steal"}
+		if len(cmd) > 1 {
+			c = append(c, cmd[1:]...)
+		}
+		core.MessageChannel <- agentAPI.Token(agent, c)
+	case "token":
+		core.MessageChannel <- agentAPI.Token(agent, cmd)
 	case "touch", "timestomp":
 		core.MessageChannel <- agentAPI.Touch(agent, cmd)
 	case "upload":
@@ -272,6 +292,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("printenv"),
 		readline.PcItem("pwd"),
 		readline.PcItem("quit"),
+		readline.PcItem("rm"),
 		readline.PcItem("run"),
 		readline.PcItem("sessions"),
 		readline.PcItem("sdelete"),
@@ -298,7 +319,15 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("netstat"),
 		readline.PcItem("pipes"),
 		readline.PcItem("ps"),
+		readline.PcItem("runas"),
 		readline.PcItem("sharpgen"),
+		readline.PcItem("token",
+			readline.PcItem("make"),
+			readline.PcItem("privs"),
+			readline.PcItem("rev2self"),
+			readline.PcItem("steal"),
+			readline.PcItem("whoami"),
+		),
 		readline.PcItem("uptime"),
 	}
 
@@ -350,6 +379,7 @@ func helpAgent() {
 		{"printenv", "Print all environment variables. Alias for \"env showall\"", "printenv"},
 		{"pwd", "Display the current working directory", "pwd"},
 		{"quit", "Exit and close the Merlin server", "-y"},
+		{"rm", "Remove, or delete, a file", "<file path>"},
 		{"run", "Execute a program directly, without using a shell", "run ping -c 3 8.8.8.8"},
 		{"sessions", "Display a table of information about all checked-in agent sessions", ""},
 		{"sdelete", "Securely delete a file", "sdelete <file path>"},
@@ -372,7 +402,9 @@ func helpAgent() {
 		{"netstat", "display network connections", "netstat [-p tcp|udp]"},
 		{"pipes", "Enumerate all named pipes", ""},
 		{"ps", "Get a list of running processes", ""},
+		{"runas", "Run a program as another user", "<DOMAIN\\USER> <password> <program> [<args>]"},
 		{"sharpgen", "Use SharpGen to compile and execute a .NET assembly", "sharpgen <code> [<spawnto path> <spawnto args>]"},
+		{"token", "Interact with Windows access tokens", "<make | privs | rev2self | steal | whoami >"},
 		{"uptime", "Retrieve the host's uptime"},
 	}
 

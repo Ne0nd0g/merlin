@@ -295,6 +295,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Command: jobArgs[0], // TODO This should be in the jobType position
 		}
 		job.Payload = p
+	case "rm":
+		job.Type = merlinJob.NATIVE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs[0:1],
+		}
 	case "run", "exec":
 		job.Type = merlinJob.CMD
 		payload := merlinJob.Command{
@@ -304,6 +310,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			payload.Args = jobArgs[1:]
 		}
 		job.Payload = payload
+	case "runas":
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
 	case "sdelete":
 		job.Type = merlinJob.NATIVE
 		job.Payload = merlinJob.Command{
@@ -354,6 +366,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "token":
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
 	case "touch":
 		job.Type = merlinJob.NATIVE
 		job.Payload = merlinJob.Command{
