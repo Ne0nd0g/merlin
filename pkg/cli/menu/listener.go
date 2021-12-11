@@ -128,10 +128,19 @@ func handlerListener(cmd []string) {
 	case "stop":
 		core.MessageChannel <- listenerAPI.Stop(listener.name)
 	default:
-		if len(cmd) > 1 {
-			core.ExecuteCommand(cmd[0], cmd[1:])
+		if cmd[0][0:1] == "!" {
+			if len(cmd) > 1 {
+				core.ExecuteCommand(cmd[0][1:], cmd[1:])
+			} else {
+				core.ExecuteCommand(cmd[0][1:], nil)
+			}
 		} else {
-			core.ExecuteCommand(cmd[0], []string{})
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("unrecognized command: %s", cmd[0]),
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
 		}
 	}
 }
@@ -183,7 +192,7 @@ func helpListener() {
 		{"start", "Start this listener", ""},
 		{"status", "Get the server's current status", ""},
 		{"stop", "Stop the listener", ""},
-		{"*", "Anything else will be execute on the host operating system", ""},
+		{"!", "Execute a command on the host operating system", "!<command> <args>"},
 	}
 
 	table.AppendBulk(data)

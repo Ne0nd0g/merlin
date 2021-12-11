@@ -188,6 +188,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#touch">touch</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#upload">upload</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#uptime">uptime</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id29">!</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="listeners.html">Listener Menu</a></li>
@@ -330,6 +331,9 @@
            | showall&quot;                       |
   pwd      | Display the current working    | pwd
            | directory                      |
+  quit     | Exit and close the Merlin      | -y
+           | server                         |
+  rm       | Remove, or delete, a file      | &lt;file path&gt;
   run      | Execute a program directly,    | run ping -c 3 8.8.8.8
            | without using a shell          |
   sessions | Display a table of information |
@@ -350,8 +354,8 @@
            | (alias timestomp)              |
   upload   | Upload a file to the agent     | upload &lt;local_file&gt;
            |                                | &lt;remote_file&gt;
-  *        | Anything else will be execute  |
-           | on the host operating system   |
+ !         | Execute a command on the host  | !&lt;command&gt; &lt;args&gt;
+           | operating system               |
 </pre></div>
 </div>
 </div>
@@ -390,6 +394,10 @@
   pipes             | Enumerate all named pipes      |
   ps                | Get a list of running          |
                     | processes                      |
+  runas             | Run a program as another user  | &lt;DOMAIN\USER&gt; &lt;password&gt;
+                    |                                | &lt;program&gt; [&lt;args&gt;]
+  token             | Interact with Windows access   | &lt;make | privs | rev2self |
+                    | tokens                         | steal | whoami &gt;
   sharpgen          | Use SharpGen to compile and    | sharpgen &lt;code&gt; [&lt;spawnto
                     | execute a .NET assembly        | path&gt; &lt;spawnto args&gt;]
   uptime            | Retrieve the host&#39;s uptime
@@ -1830,6 +1838,24 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» [-]Created job vXJsZdZLPP 
 
 [+]
 System uptime: 853h31m14.921s
+</pre></div>
+</div>
+</div>
+<div class="section" id="id29">
+<h2>!<a class="headerlink" href="#id29" title="Permalink to this headline">¶</a></h2>
+<p>Any command that begins with a <code class="docutils literal notranslate"><span class="pre">!</span></code> (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» !ip a show ens32
+
+[i] Executing system command...
+
+[+] 2: ens32: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 00:0c:29:z3:ff:91 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.211.221/24 brd 192.168.211.255 scope global dynamic noprefixroute ens32
+       valid_lft 1227sec preferred_lft 1227sec
+    inet6 fe80::a71d:1f6a:a0d1:7985/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever
+
+Merlin»
 </pre></div>
 </div>
 </div>

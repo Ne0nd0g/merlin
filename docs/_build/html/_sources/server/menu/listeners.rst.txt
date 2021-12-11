@@ -32,8 +32,8 @@ The ``help`` command is used to view available commands for the Listener menu. T
       stop      | Stop a named listener          | stop <listener_name>
       use       | Create a new listener by       | use
                 | protocol type                  | [http,https,http2,http3,h2c]
-      *         | Anything else will be execute  |
-                | on the host operating system   |
+      !         | Execute a command on the host  | !<command> <args>
+                | operating system               |
 
 back
 ----
@@ -232,14 +232,14 @@ The `use` command is leveraged to create a new listener. The ``use`` command exp
     Merlin[listeners]» use http3
     Merlin[listeners][http3]»
 
-wildcard
---------
+!
+-
 
-Any command that is not a Merlin command will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
+Any command that begins with a ``!`` (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
 
 .. code-block:: text
 
-    Merlin[listeners]» ip a show ens32
+    Merlin» !ip a show ens32
 
     [i] Executing system command...
 
@@ -250,7 +250,7 @@ Any command that is not a Merlin command will be executed on host itself where t
         inet6 fe80::a71d:1f6a:a0d1:7985/64 scope link noprefixroute
            valid_lft forever preferred_lft forever
 
-    Merlin[listeners]»
+    Merlin»
 
 
 Instantiated
@@ -498,14 +498,14 @@ The ``stop`` command is used to stop the current Listener you are interacting wi
     [+] Default listener was stopped
     Merlin[listeners][Default]»
 
-wildcard
---------
+!
+-
 
-Any command that is not a Merlin command will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
+Any command that begins with a ``!`` (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
 
 .. code-block:: text
 
-    Merlin[listeners][Default]» ip a show ens32
+    Merlin» !ip a show ens32
 
     [i] Executing system command...
 
@@ -516,7 +516,7 @@ Any command that is not a Merlin command will be executed on host itself where t
         inet6 fe80::a71d:1f6a:a0d1:7985/64 scope link noprefixroute
            valid_lft forever preferred_lft forever
 
-    Merlin[listeners][Default]»
+    Merlin»
 
 Template
 ========
@@ -711,14 +711,14 @@ The ``start`` command is used to create and start the Listener from the configur
     Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates
     Merlin[listeners][Default]»
 
-wildcard
---------
+!
+-
 
-Any command that is not a Merlin command will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
+Any command that begins with a ``!`` (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
 
 .. code-block:: text
 
-    Merlin[listeners][https]» ip a show ens32
+    Merlin» !ip a show ens32
 
     [i] Executing system command...
 
@@ -729,4 +729,4 @@ Any command that is not a Merlin command will be executed on host itself where t
         inet6 fe80::a71d:1f6a:a0d1:7985/64 scope link noprefixroute
            valid_lft forever preferred_lft forever
 
-    Merlin[listeners][https]»
+    Merlin»

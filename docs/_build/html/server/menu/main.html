@@ -124,7 +124,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#sessions">sessions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#use">use</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version">version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#wildcard">wildcard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">!</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agent Menu</a></li>
@@ -239,8 +239,8 @@
   use       | Use a Merlin module            | module &lt;module path&gt;
   version   | Print the Merlin server        |
             | version                        |
-  *         | Anything else will be execute  |
-            | on the host operating system   |
+  !         | Execute a command on the host  | !&lt;command&gt; &lt;args&gt;
+            | operating system               |
 Main Menu Help
 </pre></div>
 </div>
@@ -534,10 +534,10 @@ Merlin»
 </pre></div>
 </div>
 </div>
-<div class="section" id="wildcard">
-<h2>wildcard<a class="headerlink" href="#wildcard" title="Permalink to this headline">¶</a></h2>
-<p>Any command that is not a Merlin command will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» ip a show ens32
+<div class="section" id="id4">
+<h2>!<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<p>Any command that begins with a <code class="docutils literal notranslate"><span class="pre">!</span></code> (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» !ip a show ens32
 
 [i] Executing system command...
 
