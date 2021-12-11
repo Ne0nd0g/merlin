@@ -10,7 +10,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
-	github.com/lucas-clemente/quic-go v0.20.1
+	github.com/lucas-clemente/quic-go v0.24.0
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-shellwords v1.0.5
@@ -22,7 +22,6 @@ require (
 	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1
 )
