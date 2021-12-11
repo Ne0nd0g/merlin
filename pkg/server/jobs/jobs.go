@@ -433,7 +433,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			if !k {
 				JobsChannel[agentID] = make(chan merlinJob.Job, 100)
 			}
-			JobsChannel[agentID] <- job
+			JobsChannel[a] <- job
 			//agents.Agents[a].JobChannel <- job
 			// Add job to the list
 			Jobs[job.ID] = info{

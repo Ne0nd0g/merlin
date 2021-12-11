@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 * [issue 116](https://github.com/Ne0nd0g/merlin/issues/116) - Fixed missing statement to enable verbose & debug output for the server component
+* [issue 119](https://github.com/Ne0nd0g/merlin/issues/116) - Add specific agent ID instead of broadcast "F" agent ID
 
 ## 1.1.0 - 2021-08-5
 
