@@ -142,10 +142,19 @@ func handlerModule(cmd []string) {
 			}
 		}
 	default:
-		if len(cmd) > 1 {
-			core.ExecuteCommand(cmd[0], cmd[1:])
+		if cmd[0][0:1] == "!" {
+			if len(cmd) > 1 {
+				core.ExecuteCommand(cmd[0][1:], cmd[1:])
+			} else {
+				core.ExecuteCommand(cmd[0][1:], nil)
+			}
 		} else {
-			core.ExecuteCommand(cmd[0], []string{})
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("unrecognized command: %s", cmd[0]),
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
 		}
 	}
 }
@@ -200,7 +209,7 @@ func helpModule() {
 		{"set", "Set the value for one of the module's options", "<option name> <option value>"},
 		{"show", "Show information about a module or its options", "info, options"},
 		{"unset", "Clear a module option to empty", "<option name>"},
-		{"*", "Anything else will be execute on the host operating system", ""},
+		{"!", "Execute a command on the host operating system", "!<command> <args>"},
 	}
 
 	table.AppendBulk(data)

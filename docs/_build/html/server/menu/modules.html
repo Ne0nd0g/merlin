@@ -120,6 +120,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#options">options</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">!</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../x509.html">TLS Certificates</a></li>
@@ -221,6 +222,8 @@ Merlin[module][Invoke-Mimikatz]» help
           | module&#39;s options               |
   show    | Show information about a       | info, options
           | module or its options          |
+!         | Execute a command on the host  | !&lt;command&gt; &lt;args&gt;
+          | operating system               |
 </pre></div>
 </div>
 <div class="section" id="back">
@@ -442,6 +445,24 @@ Module options(Invoke-Mimikatz)
                |                                      |          | script on.
 </pre></div>
 </div>
+</div>
+</div>
+<div class="section" id="id5">
+<h2>!<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<p>Any command that begins with a <code class="docutils literal notranslate"><span class="pre">!</span></code> (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» !ip a show ens32
+
+[i] Executing system command...
+
+[+] 2: ens32: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 00:0c:29:z3:ff:91 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.211.221/24 brd 192.168.211.255 scope global dynamic noprefixroute ens32
+       valid_lft 1227sec preferred_lft 1227sec
+    inet6 fe80::a71d:1f6a:a0d1:7985/64 scope link noprefixroute
+       valid_lft forever preferred_lft forever
+
+Merlin»
+</pre></div>
 </div>
 </div>
 </div>

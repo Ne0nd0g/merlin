@@ -243,10 +243,19 @@ func handlerAgent(cmd []string) {
 	case "uptime":
 		core.MessageChannel <- agentAPI.Uptime(agent)
 	default:
-		if len(cmd) > 1 {
-			core.ExecuteCommand(cmd[0], cmd[1:])
+		if cmd[0][0:1] == "!" {
+			if len(cmd) > 1 {
+				core.ExecuteCommand(cmd[0][1:], cmd[1:])
+			} else {
+				core.ExecuteCommand(cmd[0][1:], nil)
+			}
 		} else {
-			core.ExecuteCommand(cmd[0], []string{})
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("unrecognized command: %s", cmd[0]),
+				Time:    time.Now().UTC(),
+				Error:   true,
+			}
 		}
 	}
 }
@@ -389,7 +398,7 @@ func helpAgent() {
 		{"status", "Print the current status of the agent", ""},
 		{"touch", "Match destination file's timestamps with source file (alias timestomp)", "touch <source> <destination>"},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},
-		{"*", "Anything else will be execute on the host operating system", ""},
+		{"!", "Execute a command on the host operating system", "!<command> <args>"},
 	}
 
 	windows := [][]string{

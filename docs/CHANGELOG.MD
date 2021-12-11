@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - `whoami` Enumerate process and thread token username, logon ID, privilege count, token type, impersonation level, and integrity level
 - New Agent API calls: `RM`, `RunAs`, `Token`
 
+### Changed
+
+- Previously all unknown commands were executed on the host operating system; We must now prefix commands with `!`  (e.g., `!whoami`)
+
 ### Fixed
 
 * [issue 116](https://github.com/Ne0nd0g/merlin/issues/116) - Fixed missing statement to enable verbose & debug output for the server component

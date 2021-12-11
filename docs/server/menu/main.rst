@@ -35,8 +35,8 @@ After executing the Merlin server binary, interaction continues from the Merlin 
       use       | Use a Merlin module            | module <module path>
       version   | Print the Merlin server        |
                 | version                        |
-      *         | Anything else will be execute  |
-                | on the host operating system   |
+      !         | Execute a command on the host  | !<command> <args>
+                | operating system               |
     Main Menu Help
 
 agent
@@ -372,14 +372,14 @@ The ``version`` command is used to simply print the version numbers of the runni
 
     Merlin»
 
-wildcard
---------
+!
+-
 
-Any command that is not a Merlin command will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
+Any command that begins with a ``!`` (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
 
 .. code-block:: text
 
-    Merlin» ip a show ens32
+    Merlin» !ip a show ens32
 
     [i] Executing system command...
 

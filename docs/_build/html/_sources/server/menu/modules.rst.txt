@@ -26,6 +26,8 @@ The module menu context is used to interact with, and configure, a module. The M
               | module's options               |
       show    | Show information about a       | info, options
               | module or its options          |
+    !         | Execute a command on the host  | !<command> <args>
+              | operating system               |
 
 .. _back:
 
@@ -279,3 +281,23 @@ The ``options`` sub-command for the `show` command is used to print *only* the c
       ComputerName |                                      | false    | Optional, an array of
                    |                                      |          | computernames to run the
                    |                                      |          | script on.
+
+!
+-
+
+Any command that begins with a ``!`` (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.
+
+.. code-block:: text
+
+    Merlin» !ip a show ens32
+
+    [i] Executing system command...
+
+    [+] 2: ens32: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+        link/ether 00:0c:29:z3:ff:91 brd ff:ff:ff:ff:ff:ff
+        inet 192.168.211.221/24 brd 192.168.211.255 scope global dynamic noprefixroute ens32
+           valid_lft 1227sec preferred_lft 1227sec
+        inet6 fe80::a71d:1f6a:a0d1:7985/64 scope link noprefixroute
+           valid_lft forever preferred_lft forever
+
+    Merlin»
