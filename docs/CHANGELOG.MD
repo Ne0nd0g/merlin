@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Previously all unknown commands were executed on the host operating system; We must now prefix commands with `!`  (e.g., `!whoami`)
+- Updated [go-quic](https://github.com/lucas-clemente/quic-go/) library to v0.24.0
 
 ### Fixed
 
