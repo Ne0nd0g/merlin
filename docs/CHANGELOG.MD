@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - `rm` command to remove, or delete, files using native Go functions
 - `runas` Windows command to create a process as another user with their password
+- `ssh` Connect to a remote host over SSH and execute a command (non-interactive)
 - `token` Windows command to interact with Windows Access Tokens
   - `make` Create a new token with a username and password; Unlisted `make_token` alias
   - `privs` List the current or remote process token privileges

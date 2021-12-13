@@ -84,6 +84,8 @@ The ``core`` commands are available to every agent regardless of which operating
                | to checkin                     |
       sleep    | Set the agent's sleep interval | sleep 30s
                | using Go time format           |
+      ssh      | Execute command on remote host | ssh <user> <pass> <host:port>
+               | over SSH (non-interactive      | <program> [<args>]
       status   | Print the current status of    |
                | the agent                      |
       touch    | Match destination file's       | touch <source> <destination>
@@ -1528,6 +1530,28 @@ The ``sleep`` control type is used to change the amount of time that an agent wi
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sleep 15s
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
     [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+ssh
+---
+
+The ``ssh`` command connects to target host over the SSH protocol, executes the provided command, and returns the results.
+
+.. warning::
+    This command is insecure by design because it does not validate the remote host's public key
+
+``ssh <username> <password> <host:port> <program> [<args>]``
+
+.. code-block:: text
+
+    Merlin[agent][fbef5b71-50bb-4d36-8a1b-2edf233eb578]» ssh rastley S3cretPassw0rd 192.168.100.123:22 /bin/sh -c \"ip address show eth0\"
+    [-] Created job pinIDJXDTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+    [-] Results job pinIDJXDTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Connected to 192.168.100.123:22 at 192.168.100.123:22 with public key ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJytZseMSAsUU6OE2X4TC518fcF3yxgFYIgYp4+xT9pa9n5449gcsKT/eO3hx9NXAtyOHImg/Ff8kdWs52bU3SA=
+    0: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+        link/ether 00:0c:29:z3:ff:91 brd ff:ff:ff:ff:ff:ff
+        inet 192.168.100.70/24 brd 192.168.100.255 scope global dynamic noprefixroute eth0
+           valid_lft 1781sec preferred_lft 1781sec
 
 status
 ------

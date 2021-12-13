@@ -905,6 +905,18 @@ func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSleep call: %s", Args))
 }
 
+// SSH executes a command on a remote host through the SSH protocol and returns the output
+func SSH(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 5 {
+		return messages.ErrorMessage("not enough arguments: ssh <username> <password> <host:port> <application> [<args>]")
+	}
+	job, err := jobs.Add(agentID, Args[0], Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // Token is used to interact with Windows Access Tokens on the agent
 func Token(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 0 {

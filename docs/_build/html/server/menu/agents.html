@@ -176,6 +176,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#skew">skew</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sleep">sleep</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ssh">ssh</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#status">status</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#token">token</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#make">make</a></li>
@@ -347,6 +348,8 @@
            | to checkin                     |
   sleep    | Set the agent&#39;s sleep interval | sleep 30s
            | using Go time format           |
+  ssh      | Execute command on remote host | ssh &lt;user&gt; &lt;pass&gt; &lt;host:port&gt;
+           | over SSH (non-interactive      | &lt;program&gt; [&lt;args&gt;]
   status   | Print the current status of    |
            | the agent                      |
   touch    | Match destination file&#39;s       | touch &lt;source&gt; &lt;destination&gt;
@@ -1602,6 +1605,26 @@ Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sleep 15s
 Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
 [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+</pre></div>
+</div>
+</div>
+<div class="section" id="ssh">
+<h2>ssh<a class="headerlink" href="#ssh" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">ssh</span></code> command connects to target host over the SSH protocol, executes the provided command, and returns the results.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This command is insecure by design because it does not validate the remote host’s public key</p>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">&lt;username&gt;</span> <span class="pre">&lt;password&gt;</span> <span class="pre">&lt;host:port&gt;</span> <span class="pre">&lt;program&gt;</span> <span class="pre">[&lt;args&gt;]</span></code></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin[agent][fbef5b71-50bb-4d36-8a1b-2edf233eb578]» ssh rastley S3cretPassw0rd 192.168.100.123:22 /bin/sh -c \&quot;ip address show eth0\&quot;
+[-] Created job pinIDJXDTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+[-] Results job pinIDJXDTv for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+[+] Connected to 192.168.100.123:22 at 192.168.100.123:22 with public key ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBJytZseMSAsUU6OE2X4TC518fcF3yxgFYIgYp4+xT9pa9n5449gcsKT/eO3hx9NXAtyOHImg/Ff8kdWs52bU3SA=
+0: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 00:0c:29:z3:ff:91 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.100.70/24 brd 192.168.100.255 scope global dynamic noprefixroute eth0
+       valid_lft 1781sec preferred_lft 1781sec
 </pre></div>
 </div>
 </div>

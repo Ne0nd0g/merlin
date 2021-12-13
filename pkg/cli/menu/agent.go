@@ -234,6 +234,8 @@ func handlerAgent(cmd []string) {
 			c = append(c, cmd[1:]...)
 		}
 		core.MessageChannel <- agentAPI.Token(agent, c)
+	case "ssh":
+		core.MessageChannel <- agentAPI.SSH(agent, cmd)
 	case "token":
 		core.MessageChannel <- agentAPI.Token(agent, cmd)
 	case "touch", "timestomp":
@@ -308,6 +310,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("shell"),
 		readline.PcItem("skew"),
 		readline.PcItem("sleep"),
+		readline.PcItem("ssh"),
 		readline.PcItem("status"),
 		readline.PcItem("touch"),
 		readline.PcItem("upload"),
@@ -395,6 +398,7 @@ func helpAgent() {
 		{"shell", "Execute a command on the agent using the host's default shell", "shell ping -c 3 8.8.8.8"},
 		{"skew", "Set the amount of skew, or jitter, that an agent will use to checkin", "skew <number>"},
 		{"sleep", "Set the agent's sleep interval using Go time format", "sleep 30s"},
+		{"ssh", "Execute command on remote host over SSH (non-interactive", "ssh <user> <pass> <host:port> <program> [<args>]"},
 		{"status", "Print the current status of the agent", ""},
 		{"touch", "Match destination file's timestamps with source file (alias timestomp)", "touch <source> <destination>"},
 		{"upload", "Upload a file to the agent", "upload <local_file> <remote_file>"},

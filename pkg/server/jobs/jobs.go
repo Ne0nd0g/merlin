@@ -366,6 +366,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "ssh":
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
 	case "token":
 		job.Type = merlinJob.MODULE
 		job.Payload = merlinJob.Command{
