@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -611,7 +612,9 @@ func Handler(m messages.Base) (messages.Base, error) {
 	}
 
 	a.StatusCheckIn = time.Now().UTC()
-	returnMessage.Padding = core.RandStringBytesMaskImprSrc(a.PaddingMax)
+	if a.PaddingMax > 0 {
+		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(a.PaddingMax))
+	}
 
 	var returnJobs []merlinJob.Job
 
@@ -720,7 +723,9 @@ func Idle(agentID uuid.UUID) (messages.Base, error) {
 	}
 
 	agent.StatusCheckIn = time.Now().UTC()
-	returnMessage.Padding = core.RandStringBytesMaskImprSrc(agent.PaddingMax)
+	if agent.PaddingMax > 0 {
+		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(agent.PaddingMax))
+	}
 	// See if there are any new jobs to send back
 	jobs, err := Get(agentID)
 	if err != nil {

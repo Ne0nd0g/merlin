@@ -18,9 +18,12 @@
 package handlers
 
 import (
+	// Standard
 	"fmt"
+	"math/rand"
 	"time"
 
+	// 3rd Party
 	uuid "github.com/satori/go.uuid"
 	"go.dedis.ch/kyber/v3"
 
@@ -45,7 +48,7 @@ func OPAQUEHandler(agentID uuid.UUID, o opaque.Opaque) (messages.Base, error) {
 		ID:      agentID,
 		Version: 1.0,
 		Type:    messages.OPAQUE,
-		Padding: core.RandStringBytesMaskImprSrc(4096),
+		Padding: core.RandStringBytesMaskImprSrc(rand.Intn(4096)),
 	}
 	switch o.Type {
 	case opaque.AuthComplete:
@@ -95,7 +98,7 @@ func OPAQUEUnAuthHandler(agentID uuid.UUID, o opaque.Opaque, key kyber.Scalar) (
 		ID:      agentID,
 		Version: 1.0,
 		Type:    messages.OPAQUE,
-		Padding: core.RandStringBytesMaskImprSrc(4096),
+		Padding: core.RandStringBytesMaskImprSrc(rand.Intn(4096)),
 	}
 	switch o.Type {
 	case opaque.RegInit:
