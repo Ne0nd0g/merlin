@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -50,6 +51,12 @@ type HTTPContext struct {
 	PSK       string       // The pre-shared key password used prior to Password Authenticated Key Exchange (PAKE)
 	JWTKey    []byte       // The password used by the server to create JWTs
 	OpaqueKey kyber.Scalar // OPAQUE server's keys
+}
+
+// init executes whenever the package is initialized
+func init() {
+	// Needed to ensure other "rand" functions are not static
+	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 // AgentHTTP function is responsible for all Merlin agent traffic
