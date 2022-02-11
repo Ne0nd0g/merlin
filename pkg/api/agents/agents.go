@@ -408,6 +408,7 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 		{"Platform", fmt.Sprintf("%s/%s", a.Platform, a.Architecture)},
 		{"User Name", a.UserName},
 		{"User GUID", a.UserGUID},
+		{"Integrity Level", fmt.Sprintf("%d", a.Integrity)},
 		{"Hostname", a.HostName},
 		{"Process Name", a.Process},
 		{"Process ID", strconv.Itoa(a.Pid)},
@@ -439,7 +440,7 @@ func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
 		return status, messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
 	}
 	dur, errDur := time.ParseDuration(agent.WaitTime)
-	if errDur != nil {
+	if errDur != nil && agent.WaitTime != "" {
 		return status, messages.ErrorMessage(fmt.Sprintf("Error converting %s to a time duration: %s", agent.WaitTime, errDur))
 	}
 	if agent.StatusCheckIn.Add(dur).After(time.Now()) {

@@ -74,6 +74,7 @@ type SysInfo struct {
 	Architecture string   `json:"architecture,omitempty"`
 	UserName     string   `json:"username,omitempty"`
 	UserGUID     string   `json:"userguid,omitempty"`
+	Integrity    int      `json:"integrity,omitempty"`
 	HostName     string   `json:"hostname,omitempty"`
 	Process      string   `json:"process,omitempty"`
 	Pid          int      `json:"pid,omitempty"`

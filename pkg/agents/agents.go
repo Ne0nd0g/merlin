@@ -62,6 +62,7 @@ type Agent struct {
 	UserName       string
 	UserGUID       string
 	HostName       string
+	Integrity      int
 	Ips            []string
 	Pid            int
 	Process        string
@@ -166,18 +167,9 @@ func (a *Agent) UpdateInfo(info messages.AgentInfo) {
 	}
 
 	if core.Debug {
-		message("debug", "Processing new agent info")
-		message("debug", fmt.Sprintf("Agent Version: %s", info.Version))
-		message("debug", fmt.Sprintf("Agent Build: %s", info.Build))
-		message("debug", fmt.Sprintf("Agent waitTime: %s", info.WaitTime))
-		message("debug", fmt.Sprintf("Agent skew: %d", info.Skew))
-		message("debug", fmt.Sprintf("Agent paddingMax: %d", info.PaddingMax))
-		message("debug", fmt.Sprintf("Agent maxRetry: %d", info.MaxRetry))
-		message("debug", fmt.Sprintf("Agent failedCheckin: %d", info.FailedCheckin))
-		message("debug", fmt.Sprintf("Agent proto: %s", info.Proto))
-		message("debug", fmt.Sprintf("Agent killdate: %s", time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)))
-		message("debug", fmt.Sprintf("Agent JA3 signature: %s", info.JA3))
+		message("debug", fmt.Sprintf("Processing new agent info:\n%+v", info))
 	}
+
 	a.Log("Processing AgentInfo message:")
 	a.Log(fmt.Sprintf("\tAgent Version: %s ", info.Version))
 	a.Log(fmt.Sprintf("\tAgent Build: %s ", info.Build))
@@ -209,6 +201,7 @@ func (a *Agent) UpdateInfo(info messages.AgentInfo) {
 	a.Platform = info.SysInfo.Platform
 	a.UserName = info.SysInfo.UserName
 	a.UserGUID = info.SysInfo.UserGUID
+	a.Integrity = info.SysInfo.Integrity
 
 	if core.Debug {
 		message("debug", "Leaving agents.UpdateInfo function")
