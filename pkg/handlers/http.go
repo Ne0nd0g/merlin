@@ -413,7 +413,7 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 		if returnMessage.Type == messages.JOBS {
 			for _, job := range returnMessage.Payload.([]merlinJob.Job) {
 				if job.Type == merlinJob.CONTROL {
-					if strings.ToLower(job.Payload.(merlinJob.Command).Command) == "kill" {
+					if strings.ToLower(job.Payload.(merlinJob.Command).Command) == "exit" {
 						err := agents.RemoveAgent(job.AgentID)
 						if err != nil {
 							message("warn", err.Error())
