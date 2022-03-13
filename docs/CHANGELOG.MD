@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 # 1.3.1 - 2022-XX-XX
 
+### Added
+
+- Added [Garble](https://github.com/burrowers/garble) builds to the Make file
+  - `windows-garble`, `linux-garble`, & `darwin-garble`
+  - **THE AGENT MUST BE GARBLED WITH THE EXACT SAME SEED**
+  - Specify the seed at build with `make linux-garble SEED=<your seed valuee>`
+
 ### Fixed
 
 - Instructing an agent to exit removes it from the server and CLI
