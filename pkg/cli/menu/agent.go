@@ -144,6 +144,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.Token(agent, c)
 	case "maxretry":
 		core.MessageChannel <- agentAPI.MaxRetry(agent, cmd)
+	case "memory":
+		core.MessageChannel <- agentAPI.Memory(agent, cmd)
 	case "memfd":
 		core.MessageChannel <- agentAPI.MEMFD(agent, cmd)
 	case "netstat":
@@ -328,6 +330,11 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("invoke-assembly"),
 		readline.PcItem("list-assemblies"),
 		readline.PcItem("load-assembly"),
+		readline.PcItem("memory",
+			readline.PcItem("read"),
+			readline.PcItem("patch"),
+			readline.PcItem("write"),
+		),
 		readline.PcItem("netstat"),
 		readline.PcItem("pipes"),
 		readline.PcItem("ps"),
@@ -412,6 +419,7 @@ func helpAgent() {
 		{"invoke-assembly", "Invoke, or execute, a .NET assembly that was previously loaded into the agent's process", "<assembly name> <assembly args>"},
 		{"load-assembly", "Load a .NET assembly into the agent's process", "<assembly path> [<assembly name>]"},
 		{"list-assemblies", "List the .NET assemblies that are loaded into the agent's process", ""},
+		{"memory", "Read or write memory for a provided module and function", "memory <patch,read,write> <module> <procedure> [length, bytes]"},
 		{"netstat", "display network connections", "netstat [-p tcp|udp]"},
 		{"pipes", "Enumerate all named pipes", ""},
 		{"ps", "Get a list of running processes", ""},

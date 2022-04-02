@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+# 1.4.0 - 2022-04-02
+
+### Added
+
+- Added new `memory` command w/ associated API & documentation to read/write virtual memory for Windows agents
+  - The `read` command will just read the specified number of bytes and return the results
+  - The `write` command will just write the specified bytes without reading them first
+  - The `patch` command will find a specified function, read the existing bytes, and then overwrite it with the provided bytes
+
 # 1.3.1 - 2022-03-22
 
 ### Added
