@@ -137,6 +137,9 @@ These commands are only available to agents running on a ``Windows`` operating s
       list-assemblies   | List the .NET assemblies that  |
                         | are loaded into the agent's    |
                         | process                        |
+      memory            | Read or write memory for a     | memory <patch,read,write>
+                        | provided module and function   | <module> <procedure> [length,
+                        |                                | bytes]
       netstat           | display network connections    | netstat [-p tcp|udp]
       pipes             | Enumerate all named pipes      |
       ps                | Get a list of running          |
@@ -952,6 +955,76 @@ for detection guidance.
     [-] Results job ZyeWhgfThk for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
 
     [+] Hello from a Python script
+
+memory
+------
+
+.. note::
+    This command is only available to agent running on a ``Windows`` operating system!
+
+The ``memory`` command is used to interact with the agent's virtual memory through the following methods:
+
+    * patch_
+    * read_
+    * write_
+
+Uses direct syscalls for ``NtReadVirtualMemory``, ``NtProtectVirtualMemory``, & ``ZwWriteVirtualMemory`` implemented
+using `BananaPhone <https://github.com/C-Sto/BananaPhone>`__
+
+.. _patch:
+
+patch
+^^^^^
+
+The ``patch`` command locates the address of the provided procedure/function, reads the existing bytes, and the
+overwrites them with the provided bytes. A second read is performed to validate the write event. The command would be
+the same as calling the ``read`` and ``write`` commands individually.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» memory patch ntdll.dll EtwEventWrite 9090C3
+    [-] Created job quRORyMMxS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job quRORyMMxS for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Read  3 bytes from ntdll.dll!EtwEventWrite: 4C8BDC
+    Wrote 3 bytes to   ntdll.dll!EtwEventWrite: 9090C3
+    Read  3 bytes from ntdll.dll!EtwEventWrite: 9090C3
+
+.. _read:
+
+read
+^^^^
+
+The ``read`` command locates the address of the provided procedure/function and reads the specified number of bytes.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» memory read ntdll.dll EtwEventWrite 3
+    [-] Created job YlqClnqRdK for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job YlqClnqRdK for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+] Read 3 bytes from ntdll.dll!EtwEventWrite: 4C8BDC
+
+.. _write:
+
+write
+^^^^^
+
+The ``write`` command locates teh address of the provided procedure/function and writes the specified bytes.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» memory write ntdll.dll EtwEventWrite 9090C3
+    [-] Created job XTXJBLoZuO for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [-] Results job XTXJBLoZuO for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+    [+]
+    Wrote 3 bytes to ntdll.dll!EtwEventWrite: 9090C3
+
 
 netstat
 -------

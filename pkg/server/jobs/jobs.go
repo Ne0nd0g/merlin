@@ -229,6 +229,12 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "memory":
+		job.Type = merlinJob.MODULE
+		job.Payload = merlinJob.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
 	case "memfd":
 		if len(jobArgs) < 1 {
 			return "", fmt.Errorf("expected 1 argument for the memfd command, received %d", len(jobArgs))

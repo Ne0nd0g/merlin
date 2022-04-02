@@ -667,6 +667,22 @@ func MaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetMaxRetry call: %s", Args))
 }
 
+// Memory interacts with virtual memory on the operating system where the agent is running
+func Memory(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 5 {
+		return messages.ErrorMessage(fmt.Sprintf("expected 4 arguments but recieved %d: %+v", len(Args), Args))
+	}
+	// Valid commands are read, patch, write
+	if Args[1] != "read" && Args[1] != "patch" && Args[1] != "write" {
+		return messages.ErrorMessage(fmt.Sprintf("Invalid memory module command: \"%s\"", Args[1]))
+	}
+	job, err := jobs.Add(agentID, "memory", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
 // MEMFD run a linux executable from memory
 func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
