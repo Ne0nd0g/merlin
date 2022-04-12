@@ -1,5 +1,7 @@
 module github.com/Ne0nd0g/merlin
 
+go 1.16
+
 require (
 	github.com/Binject/debug v0.0.0-20201228082058-60012895f187 // indirect
 	github.com/Binject/go-donut v0.0.0-20201215224200-d947cf4d090d
@@ -10,7 +12,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/google/uuid v1.2.0 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
-	github.com/lucas-clemente/quic-go v0.24.0
+	github.com/lucas-clemente/quic-go v0.27.0
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/mattn/go-shellwords v1.0.5
@@ -25,5 +27,3 @@ require (
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/square/go-jose.v2 v2.3.1
 )
-
-go 1.16
