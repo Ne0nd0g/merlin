@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+# 1.4.2 - 2022-04-14
+
+### Added
+
+- Server shows error when BOTH the agent and the server were not obfuscated with the SAME seed
+  - [merlin-agent/15](https://github.com/Ne0nd0g/merlin-agent/issues/15)
+
 # 1.4.1 - 2022-04-12
 
 ### Fixed

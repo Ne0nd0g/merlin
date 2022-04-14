@@ -192,13 +192,13 @@ func DecryptJWE(jweString string, key []byte) (messages.Base, error) {
 	// Decrypt the JWE
 	jweMessage, errDecrypt := jwe.Decrypt(key)
 	if errDecrypt != nil {
-		return m, fmt.Errorf("there was an error decrypting the JWE:\r\n%s", errDecrypt.Error())
+		return m, fmt.Errorf("there was an error decrypting the JWE:\r\n%s", errDecrypt)
 	}
 
 	// Decode the JWE payload into a messages.Base struct
 	errDecode := gob.NewDecoder(bytes.NewReader(jweMessage)).Decode(&m)
 	if errDecode != nil {
-		return m, fmt.Errorf("there was an error decoding JWE payload message sent by an agent:\r\n%s", errDecode.Error())
+		return m, fmt.Errorf("there was an error decoding JWE payload message sent by an agent:\r\n%s", errDecode)
 	}
 
 	if core.Debug {
