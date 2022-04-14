@@ -264,6 +264,17 @@ func (ctx *HTTPContext) AgentHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				return
+			} else {
+				// Land here when agent was obfuscated with Garble and obfuscated structures don't match
+				// Fix is to Garble BOTH the server AND the agent with the same seed
+				// gob: type mismatch: no fields matched compiling decoder for Base
+				if strings.Contains(errDecryptPSK.Error(), "gob: type mismatch:") {
+					message("warn", errDecryptPSK.Error())
+					message("info", "BOTH the Merlin server AND agent must both be obfuscated with the SAME seed")
+					w.WriteHeader(404)
+					return
+				}
+
 			}
 			if core.Verbose {
 				message("note", "Unauthenticated JWT w/ Authenticated JWE agent session key")
