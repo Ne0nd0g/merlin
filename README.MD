@@ -42,7 +42,7 @@ An introductory blog post can be found here: <https://medium.com/@Ne0nd0g/introd
    > The Server package contains a compiled Agent for all the major operating systems in the `data/bin` directory
 2. Extract the files with 7zip using the `x` function **The password is: `merlin`**
 3. Start Merlin
-4. Configure a [listener]()   
+4. Configure a [listener](https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html)   
 5. Deploy an agent. See [Agent Execution Quick Start Guide](https://merlin-c2.readthedocs.io/en/latest/quickStart/agent.html) for examples
 6. Pwn, Pivot, Profit
 
