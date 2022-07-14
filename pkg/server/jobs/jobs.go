@@ -38,9 +38,11 @@ import (
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
+	cli "github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	merlinJob "github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
 )
 
 // JobsChannel contains a map of all instantiated jobs created on the server by each Agent's ID
@@ -62,6 +64,11 @@ type info struct {
 	Command   string    // The actual command
 }
 
+func init() {
+	// Start the go routine to listen for jobs coming from a SOCKS client
+	go socksJobs()
+}
+
 // Add creates a job and adds it to the specified agent's job channel
 func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	// TODO turn this into a method of the agent struct
@@ -69,11 +76,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		message("debug", fmt.Sprintf("In jobs.Job function for agent: %s", agentID.String()))
 		message("debug", fmt.Sprintf("In jobs.Add function for type: %s, arguments: %v", jobType, jobType))
 	}
-
-	agent, ok := agents.Agents[agentID]
-	//if !ok {
-	//	return "", fmt.Errorf("%s is not a valid agent", agentID)
-	//}
 
 	var job merlinJob.Job
 
@@ -85,10 +87,6 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		}
 	case "download":
 		job.Type = merlinJob.FILETRANSFER
-		if ok {
-			agent.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
-		}
-
 		p := merlinJob.FileTransfer{
 			FileLocation: jobArgs[0],
 			IsDownload:   false,
@@ -173,6 +171,9 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Args:    []string{"list-assemblies"},
 		}
 	case "load-assembly":
+		// jobArgs[0] - server-side source file location
+		// jobArgs[1] - Assembly name
+		// jobArgs[2] - calculated SHA256 hash
 		if len(jobArgs) < 1 {
 			return "", fmt.Errorf("exected 1 argument for the load-assembly command, received: %+v", jobArgs)
 		}
@@ -186,9 +187,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		if err != nil {
 			message("warn", fmt.Sprintf("there was an error generating a file hash:\n%s", err))
 		}
-		if ok {
-			agent.Log(fmt.Sprintf("loading assembly from %s with a SHA256: %s to agent", jobArgs[0], fileHash.Sum(nil)))
-		}
+		jobArgs[2] = fmt.Sprintf("%s", fileHash.Sum(nil))
 
 		name := filepath.Base(jobArgs[0])
 		if len(jobArgs) > 1 {
@@ -392,6 +391,10 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 			Args:    jobArgs,
 		}
 	case "upload":
+		// jobArgs[0] - server-side source file location
+		// jobArgs[1] - agent-side file write location
+		// jobArgs[2] - calculated SHA256 hash
+		// jobArgs[3] - file size
 		job.Type = merlinJob.FILETRANSFER
 		if len(jobArgs) < 2 {
 			return "", fmt.Errorf("expected 2 arguments for upload command, received %d", len(jobArgs))
@@ -406,12 +409,16 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		if err != nil {
 			message("warn", fmt.Sprintf("There was an error generating file hash:\r\n%s", err.Error()))
 		}
-		if ok {
-			agent.Log(fmt.Sprintf("Uploading file from server at %s of size %d bytes and SHA-256: %x to agent at %s",
-				jobArgs[0],
-				len(uploadFile),
-				fileHash.Sum(nil),
-				jobArgs[1]))
+		if len(jobArgs) > 2 {
+			jobArgs[2] = fmt.Sprintf("%s", fileHash.Sum(nil))
+		} else {
+			jobArgs = append(jobArgs, fmt.Sprintf("%s", fileHash.Sum(nil)))
+		}
+
+		if len(jobArgs) > 3 {
+			jobArgs[3] = fmt.Sprintf("%d", len(uploadFile))
+		} else {
+			jobArgs = append(jobArgs, fmt.Sprintf("%d", len(uploadFile)))
 		}
 
 		p := merlinJob.FileTransfer{
@@ -429,75 +436,34 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	default:
 		return "", fmt.Errorf("invalid job type: %d", job.Type)
 	}
+	return AddJobChannel(agentID, &job, jobArgs)
+}
 
+// AddJobChannel adds an already built Agent Job to the agent's job channel to be sent to the agent when it checks in.
+// A server-side job tracking structure is also added to track job status
+func AddJobChannel(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) (results string, err error) {
 	// If the Agent is set to broadcast identifier for ALL agents
 	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
 		if len(agents.Agents) <= 0 {
-			return "", fmt.Errorf("there are 0 available agents, no jobs were created")
+			return results, fmt.Errorf("there are 0 available agents, no jobs were created")
 		}
+		results = "Creating jobs for all agents through broadcast identifier ffffffff-ffff-ffff-ffff-ffffffffffff"
 		for a := range agents.Agents {
-			// Fill out remaining job fields
-			token := uuid.NewV4()
-			job.ID = core.RandStringBytesMaskImprSrc(10)
-			job.Token = token
-			job.AgentID = a
-			// Add job to the channel
-			_, k := JobsChannel[agentID]
-			if !k {
-				JobsChannel[agentID] = make(chan merlinJob.Job, 100)
+			err = buildJob(a, job, jobArgs)
+			if err != nil {
+				return results, err
 			}
-			JobsChannel[a] <- job
-			//agents.Agents[a].JobChannel <- job
-			// Add job to the list
-			Jobs[job.ID] = info{
-				AgentID: a,
-				Token:   token,
-				Type:    merlinJob.String(job.Type),
-				Status:  merlinJob.CREATED,
-				Created: time.Now().UTC(),
-				Command: jobType + " " + strings.Join(jobArgs, " "),
-			}
-			// Log the job
-			if ok {
-				agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
-					messages.String(job.Type),
-					job.ID,
-					"Created",
-					jobArgs))
-			}
+			results += fmt.Sprintf("\n\tCreated job %s for agent %s at %s", job.ID, a, time.Now().UTC().Format(time.RFC3339))
 		}
 	} else {
 		// A single Agent
-		token := uuid.NewV4()
-		job.Token = token
-		job.ID = core.RandStringBytesMaskImprSrc(10)
-		job.AgentID = agentID
-		// Add job to the channel
-		_, k := JobsChannel[agentID]
-		if !k {
-			JobsChannel[agentID] = make(chan merlinJob.Job, 100)
+		err = buildJob(agentID, job, jobArgs)
+		if err != nil {
+			return results, err
 		}
-		JobsChannel[agentID] <- job
-		// Add job to the list
-		Jobs[job.ID] = info{
-			AgentID: agentID,
-			Token:   token,
-			Type:    merlinJob.String(job.Type),
-			Status:  merlinJob.CREATED,
-			Created: time.Now().UTC(),
-			Command: jobType + " " + strings.Join(jobArgs, " "),
-		}
-		// Log the job
-		if ok {
-			agent.Log(fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Args:%s",
-				messages.String(job.Type),
-				job.ID,
-				"Created",
-				jobArgs))
-		}
-
+		results += fmt.Sprintf("Created job %s for agent %s at %s", job.ID, agentID, time.Now().UTC().Format(time.RFC3339))
 	}
-	return job.ID, nil
+	return results, nil
 }
 
 // Clear removes any jobs the queue that have been created, but NOT sent to the agent
@@ -675,11 +641,22 @@ func Handler(m messages.Base) (messages.Base, error) {
 				if err != nil {
 					return returnMessage, err
 				}
+			case merlinJob.SOCKS:
+				// Send to SOCKS client
+				socks.In(job)
 			}
 			// Update Jobs Info structure
 			j, k := Jobs[job.ID]
 			if k {
-				j.Status = merlinJob.COMPLETE
+				if job.Type == merlinJob.SOCKS {
+					if job.Payload.(merlinJob.Socks).Close {
+						j.Status = merlinJob.COMPLETE
+					} else {
+						j.Status = merlinJob.ACTIVE
+					}
+				} else {
+					j.Status = merlinJob.COMPLETE
+				}
 				j.Completed = time.Now().UTC()
 				Jobs[job.ID] = j
 			}
@@ -762,6 +739,8 @@ func GetTableActive(agentID uuid.UUID) ([][]string, error) {
 			//message("debug", fmt.Sprintf("GetTableActive(%s) ID: %s, Job: %+v", agentID.String(), id, job))
 			var status string
 			switch job.Status {
+			case merlinJob.ACTIVE:
+				status = "Active"
 			case merlinJob.CREATED:
 				status = "Created"
 			case merlinJob.SENT:
@@ -825,6 +804,121 @@ func GetTableAll() [][]string {
 		}
 	}
 	return jobs
+}
+
+// buildJob fills in the server-side derived fields for an Agent's job and then adds it to the Agent's job channel
+// to be sent to the agent when it checks in.
+// A server-side job tracking structure is also added to track job status.
+// The job is also added to the server-side agent log file
+func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
+	agent, ok := agents.Agents[agentID]
+	if !ok {
+		return fmt.Errorf("there was an error adding a job because %s is an unknown agent", agentID)
+	}
+	job.AgentID = agent.ID
+
+	// SOCKS jobs create their own token that is used through the lifetime of the connection
+	if job.Token == uuid.Nil {
+		job.Token = uuid.NewV4()
+	}
+
+	// SOCKS jobs create their own job ID and use the same through to the end of the connection
+	if job.ID == "" {
+		job.ID = core.RandStringBytesMaskImprSrc(10)
+	}
+
+	// Check to see if a job channel for the agent exist
+	_, k := JobsChannel[agent.ID]
+	// Create a job channel for the agent if one does not exist
+	if !k {
+		JobsChannel[agent.ID] = make(chan merlinJob.Job, 100)
+	}
+	// Add job to the agent's job channel
+	JobsChannel[agent.ID] <- *job
+
+	// Create Job info structure
+	jobInfo := info{
+		AgentID: agent.ID,
+		Token:   job.Token,
+		Type:    merlinJob.String(job.Type),
+		Status:  merlinJob.CREATED,
+		Created: time.Now().UTC(),
+	}
+	// Update the Command field of the Job info structure
+	switch job.Type {
+	case merlinJob.CONTROL, merlinJob.MODULE, merlinJob.NATIVE:
+		cmd := job.Payload.(merlinJob.Command)
+		if job.Type == merlinJob.MODULE {
+			if strings.ToLower(cmd.Command) == "clr" && strings.ToLower(cmd.Args[0]) == "load-assembly" {
+				if len(jobArgs) > 2 {
+					msg := fmt.Sprintf("loading assembly from %s with a SHA256: %s to agent", jobArgs[0], jobArgs[2])
+					agent.Log(msg)
+				}
+			}
+		}
+		args := fmt.Sprintf("%s", strings.Join(cmd.Args, " "))
+		// Truncate to 30 characters
+		if len(args) > 30 {
+			args = fmt.Sprintf("%s...", args[:30])
+		}
+		jobInfo.Command = fmt.Sprintf("%s %s", cmd.Command, args)
+	case merlinJob.CMD:
+		cmd := job.Payload.(merlinJob.Command)
+		args := fmt.Sprintf("%s", strings.Join(cmd.Args, " "))
+		// Truncate to 30 characters
+		if len(args) > 30 {
+			args = fmt.Sprintf("%s...", args[:30])
+		}
+		if strings.ToLower(cmd.Command) == "shell" {
+			jobInfo.Command = strings.TrimSpace(fmt.Sprintf("%s %s", cmd.Command, args))
+		} else {
+			jobInfo.Command = strings.TrimSpace(fmt.Sprintf("run %s %s", cmd.Command, args))
+		}
+	case merlinJob.FILETRANSFER:
+		cmd := job.Payload.(merlinJob.FileTransfer)
+		if cmd.IsDownload {
+			// Upload to agent (the server is uploading a file that the agent is downloading the file from the server)
+			if len(jobArgs) > 2 {
+				msg := fmt.Sprintf(
+					"Uploading file from server at %s of size %s bytes and SHA-256: %x to agent at %s",
+					jobArgs[0],
+					jobArgs[3],
+					jobArgs[2],
+					jobArgs[1],
+				)
+				agent.Log(msg)
+				jobInfo.Command = fmt.Sprintf("upload %s %s", jobArgs[0], jobArgs[1])
+			}
+		} else {
+			// Download from agent (the server is download a file to the agent is uploading a file to the server)
+			if len(jobArgs) > 0 {
+				jobInfo.Command = fmt.Sprintf("download %s", jobArgs[0])
+				agent.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
+			}
+		}
+	case merlinJob.SHELLCODE:
+		cmd := job.Payload.(merlinJob.Shellcode)
+		jobInfo.Command = fmt.Sprintf("shellcode %s %d lenght %d", cmd.Method, cmd.PID, len(cmd.Bytes))
+	case merlinJob.SOCKS:
+		conn := job.Payload.(merlinJob.Socks)
+		jobInfo.Command = fmt.Sprintf("SOCKS connection %s packet %d", conn.ID, conn.Index)
+	default:
+		fmt.Printf("DEFAULT\n")
+		jobInfo.Command = fmt.Sprintf("%s %+v", merlinJob.String(job.Type), job.Payload)
+	}
+
+	// Add job to the server side job list
+	Jobs[job.ID] = jobInfo
+
+	// Log the job
+	msg := fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Command:%s",
+		messages.String(job.Type),
+		job.ID,
+		"Created",
+		jobInfo.Command,
+	)
+	agent.Log(msg)
+	return nil
 }
 
 // checkJob verifies that the input job message contains the expected token and was not already completed
@@ -898,6 +992,20 @@ func fileTransfer(agentID uuid.UUID, p merlinJob.FileTransfer) error {
 		message("debug", "Leaving agents.FileTransfer")
 	}
 	return nil
+}
+
+// socksJobs is used as a go routine to listen for data coming from a SOCKS client that needs to be sent to the Merlin agent
+func socksJobs() {
+	for {
+		job := <-socks.JobsOut
+		err := buildJob(job.AgentID, &job, nil)
+
+		if err != nil {
+			msg := messageAPI.ErrorMessage(fmt.Sprintf("there was an error creating a job for SOCKS traffic to the agent: %s", err))
+			cli.MessageChannel <- msg
+		}
+	}
+
 }
 
 // message is used to send send messages to STDOUT where the server is running and not intended to be sent to CLI

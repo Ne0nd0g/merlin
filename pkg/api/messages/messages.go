@@ -102,12 +102,11 @@ func ErrorMessage(message string) UserMessage {
 }
 
 // JobMessage returns a message showing that an agent job was successfully created
-func JobMessage(agentID uuid.UUID, jobID string) UserMessage {
-	m := fmt.Sprintf("Created job %s for agent %s at %s", jobID, agentID, time.Now().UTC().Format(time.RFC3339))
+func JobMessage(agentID uuid.UUID, message string) UserMessage {
 	return UserMessage{
 		Error:   false,
 		Level:   Note,
-		Message: m,
+		Message: message,
 		Time:    time.Now().UTC(),
 	}
 }

@@ -37,6 +37,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
+	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
 	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
 	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 )
@@ -920,6 +921,65 @@ func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSleep call: %s", Args))
+}
+
+// Socks creates a TCP listener on the provided port and forwards SOCKS5 traffic to the provided agent
+func Socks(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) < 2 {
+		return messages.ErrorMessage("a SOCKS module command (e.g., list/start/stop) must be provided")
+	}
+
+	// Set the SOCKS options
+	options := make(map[string]string)
+	options["agent"] = agentID.String()
+	options["interface"] = "127.0.0.1"
+	options["port"] = "9050"
+	options["command"] = Args[1]
+
+	switch strings.ToLower(Args[1]) {
+	case "list":
+		listeners := socks.GetListeners()
+		var data string
+		header := "\n\tAgent\t\t\t\tInterface:Port\n"
+		header += "==========================================================\n"
+		if len(listeners) > 0 {
+			data += header
+			for _, v := range listeners {
+				data += fmt.Sprintf("%s\t%s\n", v[0], v[1])
+			}
+		} else {
+			data = "there are currently 0 SOCKS5 listeners"
+		}
+		return messages.UserMessage{
+			Level:   messages.Info,
+			Time:    time.Now().UTC(),
+			Message: data,
+		}
+	case "start":
+		// Arguments 1. start/stop 2. interface:port
+		if len(Args) > 2 {
+
+			if strings.Contains(Args[2], ":") {
+				i := strings.Split(Args[2], ":")
+				if len(i) > 1 {
+					options["interface"] = i[0]
+					options["port"] = i[1]
+				}
+			} else {
+				options["port"] = Args[2]
+			}
+		}
+	case "stop":
+		options["command"] = "stop"
+	default:
+		return messages.ErrorMessage(fmt.Sprintf("unknown SOCKS command: %s", Args[1]))
+	}
+
+	job, err := socks.Parse(options)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, strings.Join(job, " "))
 }
 
 // SSH executes a command on a remote host through the SSH protocol and returns the output

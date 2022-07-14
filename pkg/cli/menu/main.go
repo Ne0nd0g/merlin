@@ -202,6 +202,27 @@ func handlerMain(cmd []string) {
 				}
 			}
 		}
+	case "socks":
+		id := uuid.Nil
+		var err error
+		if len(cmd) > 3 {
+			id, err = uuid.FromString(cmd[3])
+			if err != nil {
+				core.MessageChannel <- messages.ErrorMessage(fmt.Sprintf("invalid agent ID: %s", cmd[3]))
+				return
+			}
+		} else if len(cmd) < 2 {
+			core.MessageChannel <- messages.ErrorMessage("invalid socks command\nsocks [list,start,stop] <interface> <agentID>")
+			return
+		}
+		if strings.ToLower(cmd[1]) == "start" && len(cmd) < 4 {
+			core.MessageChannel <- messages.ErrorMessage("invalid socks command\nsocks [list,start,stop] <interface> <agentID>")
+			return
+		} else if strings.ToLower(cmd[1]) == "stop" && len(cmd) < 4 {
+			core.MessageChannel <- messages.ErrorMessage("invalid socks command\nsocks [list,start,stop] <interface> <agentID>")
+			return
+		}
+		core.MessageChannel <- agentAPI.Socks(id, cmd)
 	case "use":
 		moduleSubMenu(cmd[1:])
 	case "version":
@@ -271,6 +292,19 @@ func completerMain() *readline.PrefixCompleter {
 			readline.PcItemDynamic(agentListCompleter()),
 		),
 		readline.PcItem("sessions"),
+		readline.PcItem("socks",
+			readline.PcItem("list"),
+			readline.PcItem("start",
+				readline.PcItem("127.0.0.1:9050",
+					readline.PcItemDynamic(agentListCompleter()),
+				),
+			),
+			readline.PcItem("stop",
+				readline.PcItem("127.0.0.1:9050",
+					readline.PcItemDynamic(agentListCompleter()),
+				),
+			),
+		),
 		readline.PcItem("use",
 			readline.PcItem("module",
 				readline.PcItemDynamic(moduleAPI.GetModuleListCompleter()),
@@ -340,6 +374,7 @@ func helpMain() {
 		{"quit", "Exit and close the Merlin server", "-y"},
 		{"remove", "Remove or delete a DEAD agent from the server"},
 		{"sessions", "Display a table of information about all checked-in agent sessions", ""},
+		{"socks", "Start a SOCKS5 listener", "[list, start, stop] <interface:port> <agentID>"},
 		{"use", "Use a Merlin module", "module <module path>"},
 		{"version", "Print the Merlin server version", ""},
 		{"!", "Execute a command on the host operating system", "!<command> <args>"},

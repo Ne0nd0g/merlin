@@ -23,7 +23,6 @@ import (
 	// Standard
 	"encoding/gob"
 	"fmt"
-
 	// 3rd Party
 	uuid "github.com/satori/go.uuid"
 )
@@ -35,6 +34,7 @@ func init() {
 	gob.Register(Shellcode{})
 	gob.Register(FileTransfer{})
 	gob.Register(Results{})
+	gob.Register(Socks{})
 }
 
 const (
@@ -48,6 +48,8 @@ const (
 	COMPLETE = 4
 	// CANCELED is used to denoted jobs that were cancelled with the "clear" command
 	CANCELED = 5
+	// ACTIVE is used with SOCKS connections to show the connection between the SOCKS client and server is active
+	ACTIVE = 6
 
 	// To Agent
 
@@ -65,6 +67,8 @@ const (
 	OK = 15 // ServerOK
 	// MODULE is used to send Module messages
 	MODULE = 16 // Module
+	// SOCKS is used for SOCKS5 traffic between the server and agent
+	SOCKS = 17 // SOCKS
 
 	// From Agent
 
@@ -109,6 +113,13 @@ type Results struct {
 	Stderr string `json:"stderr"`
 }
 
+type Socks struct {
+	ID    uuid.UUID `json:"id"`
+	Index int       `json:"index"`
+	Data  []byte    `json:"data"`
+	Close bool      `json:"close"`
+}
+
 // String returns the text representation of a message constant
 func String(jobType int) string {
 	switch jobType {
@@ -130,6 +141,8 @@ func String(jobType int) string {
 		return "Result"
 	case AGENTINFO:
 		return "AgentInfo"
+	case SOCKS:
+		return "SOCKS5"
 	default:
 		return fmt.Sprintf("Invalid job type: %d", jobType)
 	}
