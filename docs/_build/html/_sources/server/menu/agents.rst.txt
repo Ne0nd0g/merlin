@@ -84,6 +84,8 @@ The ``core`` commands are available to every agent regardless of which operating
                | to checkin                     |
       sleep    | Set the agent's sleep interval | sleep 30s
                | using Go time format           |
+      socks    | Start a SOCKS5 listener        | [list, start, stop]
+               |                                | <interface:port> <agentID>
       ssh      | Execute command on remote host | ssh <user> <pass> <host:port>
                | over SSH (non-interactive      | <program> [<args>]
       status   | Print the current status of    |
@@ -1603,6 +1605,73 @@ The ``sleep`` control type is used to change the amount of time that an agent wi
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» sleep 15s
     Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»
     [-]Created job npMYqwASOD for agent c1090dbc-f2f7-4d90-a241-86e0c0217786
+
+socks
+-----
+
+The ``socks`` command is used to start, stop, or list SOCKS5 listeners. There can only be one SOCKS5 listener per agent.
+
+* :ref:`socks list`
+* :ref:`socks start`
+* :ref:`socks stop`
+
+.. _socks list:
+
+list
+^^^^
+
+The ``list`` command will list active SOCKS5 listeners per agent. If the SOCKS5 listener was configured to listen on
+all interfaces (e.g., 0.0.0.0), then the interface will be listed as ``[::]:``.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» socks list
+    [i]
+            Agent                           Interface:Port
+    ==========================================================
+    c1090dbc-f2f7-4d90-a241-86e0c0217786    127.0.0.1:9050
+    7be9defd-29b8-46ee-8d38-0f3805e9233f    [::]:9051
+    6d8a3a59-e484-40b3-977b-530b351106a6    192.168.1.100:9053
+
+.. _socks start:
+
+start
+^^^^^
+
+.. warning::
+    SOCKS5 listeners do not require authentication. Control access accordingly using firewall rules or SSH tunnels.
+
+.. note::
+    In most cases you should only bind to the loopback adapter, 127.0.0.1, to prevent unintentionally exposing the port.
+
+The ``start`` command will start a SOCKS5 listener for the current agent. This command takes an optional third argument
+of the interface and port, or just the port, that you want to bind the listener to. If a third argument is not provided
+the listener will default to listen on ``127.0.0.1:9050``.
+
+
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» socks start
+    [-] Started SOCKS listener for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 on 127.0.0.1:9050
+
+.. code-block:: text
+
+    Merlin[agent][7be9defd-29b8-46ee-8d38-0f3805e9233f]» socks start 0.0.0.0:9051
+    [-] Started SOCKS listener for agent 7be9defd-29b8-46ee-8d38-0f3805e9233f on 0.0.0.0:9051
+
+.. _socks stop:
+
+stop
+^^^^
+
+The ``stop`` command will stop and remove the SOCKS5 listener for the current agent.
+
+.. code-block:: text
+
+    Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» socks stop
+    [-] Successfully stopped SOCKS listener for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 on 127.0.0.1:9055
+
 
 ssh
 ---
