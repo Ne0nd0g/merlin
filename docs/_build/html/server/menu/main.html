@@ -122,9 +122,15 @@
 <li class="toctree-l2"><a class="reference internal" href="#quit">quit</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id3">remove</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#sessions">sessions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#socks">socks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#socks2-list">list</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#start">start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stop">stop</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#use">use</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#version">version</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id4">!</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">!</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="agents.html">Agent Menu</a></li>
@@ -236,6 +242,8 @@
   sessions  | Display a table of information |
             | about all checked-in agent     |
             | sessions                       |
+  socks     | Start a SOCKS5 listener        | [list, start, stop]
+            |                                | &lt;interface:port&gt; &lt;agentID&gt;
   use       | Use a Merlin module            | module &lt;module path&gt;
   version   | Print the Merlin server        |
             | version                        |
@@ -519,6 +527,58 @@ The sessions command is available from any menu in the CLI.</p>
 </pre></div>
 </div>
 </div>
+<div class="section" id="socks">
+<h2>socks<a class="headerlink" href="#socks" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">socks</span></code> command is used to start, stop, or list SOCKS5 listeners. There can only be one SOCKS5 listener per agent.</p>
+<ul class="simple">
+<li><a class="reference internal" href="#socks2-list"><span class="std std-ref">list</span></a></li>
+<li><a class="reference internal" href="#socks2-start"><span class="std std-ref">start</span></a></li>
+<li><a class="reference internal" href="#socks2-stop"><span class="std std-ref">stop</span></a></li>
+</ul>
+<div class="section" id="socks2-list">
+<span id="id4"></span><h3>list<a class="headerlink" href="#socks2-list" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">list</span></code> command will list active SOCKS5 listeners per agent. If the SOCKS5 listener was configured to listen on
+all interfaces (e.g., 0.0.0.0), then the interface will be listed as <code class="docutils literal notranslate"><span class="pre">[::]:</span></code>.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» socks list
+[i]
+        Agent                           Interface:Port
+==========================================================
+c1090dbc-f2f7-4d90-a241-86e0c0217786    127.0.0.1:9050
+7be9defd-29b8-46ee-8d38-0f3805e9233f    [::]:9051
+6d8a3a59-e484-40b3-977b-530b351106a6    192.168.1.100:9053
+</pre></div>
+</div>
+</div>
+<div class="section" id="start">
+<span id="socks2-start"></span><h3>start<a class="headerlink" href="#start" title="Permalink to this headline">¶</a></h3>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">SOCKS5 listeners do not require authentication. Control access accordingly using firewall rules or SSH tunnels.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In most cases you should only bind to the loopback adapter, 127.0.0.1, to prevent unintentionally exposing the port.</p>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">start</span></code> command will start a SOCKS5 listener for the current agent. This command <strong>requires four arguments</strong>.
+The third argument is the interface and port, or just the port, that you want to bind the listener to.
+The fourth argument is the agent (tab completable) that you want to start the SOCKS5 listener for.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» socks start 9050 c1090dbc-f2f7-4d90-a241-86e0c0217786
+[-] Started SOCKS listener for agent c1090dbc-f2f7-4d90-a241-86e0c0217786] on 127.0.0.1:9050
+</pre></div>
+</div>
+</div>
+<div class="section" id="stop">
+<span id="socks2-stop"></span><h3>stop<a class="headerlink" href="#stop" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">stop</span></code> command will stop and remove the SOCKS5 listener for the current agent. This command <strong>requires four arguments</strong>.
+The third argument is the interface and port, or just the port, that you want to bind the listener to.
+This value doesn’t really matter, but it is need for consistency to keep the agent ID in the fourth spot.
+The fourth argument is the agent (tab completable) that you want to start the SOCKS5 listener for.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» socks stop 9050 c1090dbc-f2f7-4d90-a241-86e0c0217786
+[-] Successfully stopped SOCKS listener for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 on 127.0.0.1:9055
+</pre></div>
+</div>
+</div>
+</div>
 <div class="section" id="use">
 <h2>use<a class="headerlink" href="#use" title="Permalink to this headline">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">use</span></code> command is leveraged to access a feature such as modules. Currently there is only one option and that is <code class="docutils literal notranslate"><span class="pre">use</span> <span class="pre">modules</span></code> to access Merlin modules. View the modules page for additional details.</p>
@@ -534,8 +594,8 @@ Merlin»
 </pre></div>
 </div>
 </div>
-<div class="section" id="id4">
-<h2>!<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id5">
+<h2>!<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
 <p>Any command that begins with a <code class="docutils literal notranslate"><span class="pre">!</span></code> (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» !ip a show ens32
 

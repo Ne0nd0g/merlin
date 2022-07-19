@@ -110,7 +110,9 @@ func GetJWESymetric(data []byte, key []byte) (string, error) {
 		jose.Recipient{
 			Algorithm: jose.PBES2_HS512_A256KW, // Creates a per message key encrypted with the passed in key
 			//Algorithm: jose.DIRECT, // Doesn't create a per message key
-			PBES2Count: 500000,
+			// https://datatracker.ietf.org/doc/html/rfc7518#section-4.8.1.2
+			// A minimum iteration count of 1000 is RECOMMENDED.
+			PBES2Count: 3000,
 			Key:        key},
 		nil)
 	if encErr != nil {
