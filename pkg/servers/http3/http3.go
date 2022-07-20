@@ -157,25 +157,16 @@ func New(options map[string]string) (*Server, error) {
 		mux.HandleFunc(url, s.ctx.AgentHTTP)
 	}
 
-	/* #nosec G402 */
-	// G402: TLS InsecureSkipVerify set true. (Confidence: HIGH, Severity: HIGH) Allowed for testing
-	// G402 (CWE-295): TLS MinVersion too low. (Confidence: HIGH, Severity: HIGH)
-	// TLS version is not configured to facilitate dynamic JA3 configurations
-	srv := &http.Server{
+	s.Transport = &http3.Server{
 		Addr:           options["Interface"] + ":" + options["Port"],
+		Port:           s.Port,
 		Handler:        mux,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}},
-	}
-
-	s.Transport = &http3.Server{
-		Server: srv,
 		QuicConfig: &quic.Config{
 			// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
-			MaxIdleTimeout: time.Until(time.Now().AddDate(0, 42, 0)),
-			KeepAlive:      false,
+			MaxIdleTimeout:  time.Until(time.Now().AddDate(0, 42, 0)),
+			KeepAlivePeriod: time.Second * 0,
 		},
 	}
 
