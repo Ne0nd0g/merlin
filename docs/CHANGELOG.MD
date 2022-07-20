@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- Go v1.18 is now the minimum supported version
+- Upgraded [quic-go](https://github.com/lucas-clemente/quic-go/) to v0.28.0
+- Upgraded [Go JOSE](https://github.com/square/go-jose) to v2.6.0
 - Reduced the default PBES2 count for payload JWE encryption from 500,000 to 3,000
   - https://datatracker.ietf.org/doc/html/rfc7518#section-4.8.1.2
 
