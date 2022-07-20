@@ -180,11 +180,12 @@ func New(options map[string]string) (*Server, error) {
 	}
 
 	s.Transport = &http.Server{
-		Addr:           options["Interface"] + ":" + options["Port"],
-		Handler:        mux,
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+		Addr:              options["Interface"] + ":" + options["Port"],
+		Handler:           mux,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		ReadHeaderTimeout: 30 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	// Add X.509 certificates if using TLS

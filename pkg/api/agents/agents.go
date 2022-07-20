@@ -671,7 +671,7 @@ func MaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Memory interacts with virtual memory on the operating system where the agent is running
 func Memory(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 5 {
-		return messages.ErrorMessage(fmt.Sprintf("expected 4 arguments but recieved %d: %+v", len(Args), Args))
+		return messages.ErrorMessage(fmt.Sprintf("expected 4 arguments but received %d: %+v", len(Args), Args))
 	}
 	// Valid commands are read, patch, write
 	if Args[1] != "read" && Args[1] != "patch" && Args[1] != "write" {

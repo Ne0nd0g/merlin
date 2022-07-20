@@ -41,7 +41,7 @@ type pwnBoard struct {
 
 func updatepwnBoard(pwnboardURL string, ip string) {
 	//logging.Server("[*] PwnBoard Data starting")
-	url := "http://127.0.0.1/generic"
+	var url string
 	if strings.Contains(pwnboardURL, "http") {
 		url = fmt.Sprintf("%s/generic", pwnboardURL)
 	} else {

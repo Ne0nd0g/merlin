@@ -162,7 +162,7 @@ func New(options map[string]string) (*Server, error) {
 		Port:           s.Port,
 		Handler:        mux,
 		MaxHeaderBytes: 1 << 20,
-		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}},
+		TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}, MinVersion: tls.VersionTLS12},
 		QuicConfig: &quic.Config{
 			// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
 			MaxIdleTimeout:  time.Until(time.Now().AddDate(0, 42, 0)),

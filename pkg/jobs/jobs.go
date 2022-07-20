@@ -113,6 +113,7 @@ type Results struct {
 	Stderr string `json:"stderr"`
 }
 
+// Socks is used to transfer data from a SOCKS client through the server to the agent and back
 type Socks struct {
 	ID    uuid.UUID `json:"id"`
 	Index int       `json:"index"`

@@ -114,11 +114,12 @@ func New(options map[string]string) (*Server, error) {
 
 	h2s := &http2.Server{}
 	s.Transport = &http.Server{
-		Addr:           options["Interface"] + ":" + options["Port"],
-		Handler:        h2c.NewHandler(mux, h2s),
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+		Addr:              options["Interface"] + ":" + options["Port"],
+		Handler:           h2c.NewHandler(mux, h2s),
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		ReadHeaderTimeout: 30 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	s.Interface = options["Interface"]

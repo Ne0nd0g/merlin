@@ -170,7 +170,7 @@ func start(agent uuid.UUID) {
 		if cli.Verbose {
 			msg := messages.UserMessage{
 				Level:   messages.Note,
-				Message: fmt.Sprintf("Recieved connection from %s to %s and assigned connection ID %s", conn.RemoteAddr(), conn.LocalAddr(), id),
+				Message: fmt.Sprintf("Received connection from %s to %s and assigned connection ID %s", conn.RemoteAddr(), conn.LocalAddr(), id),
 				Time:    time.Time{},
 				Error:   false,
 			}
@@ -229,7 +229,7 @@ func readSOCKSClient(id uuid.UUID) {
 			if core.Verbose {
 				msg := messages.UserMessage{
 					Level:   messages.Note,
-					Message: fmt.Sprintf("Recieved EOF from the SOCKS client, closing the %s connection", id),
+					Message: fmt.Sprintf("Received EOF from the SOCKS client, closing the %s connection", id),
 					Time:    time.Time{},
 					Error:   false,
 				}
@@ -294,7 +294,8 @@ func processMessage() {
 		if conn.(*Connection).Index == socks.Index {
 			n, err := conn.(*Connection).Conn.Write(socks.Data)
 			if err != nil {
-				err = fmt.Errorf("there was an error writing to the SOCKS client for agent %s connection ID %s: %s", agent, socks.ID, err)
+				msg := messages.ErrorMessage(fmt.Sprintf("there was an error writing to the SOCKS client for agent %s connection ID %s: %s", agent, socks.ID, err))
+				cli.MessageChannel <- msg
 				return
 			}
 
@@ -313,7 +314,7 @@ func processMessage() {
 			if core.Debug {
 				msg := messages.UserMessage{
 					Level:   messages.Debug,
-					Message: fmt.Sprintf("Recieved job out of order for agent %s connection %s. Expected %d, got %d", agent, socks.ID, conn.(*Connection).Index, socks.Index),
+					Message: fmt.Sprintf("Received job out of order for agent %s connection %s. Expected %d, got %d", agent, socks.ID, conn.(*Connection).Index, socks.Index),
 					Time:    time.Time{},
 					Error:   false,
 				}

@@ -221,7 +221,7 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 	case "maxretry":
 		job.Type = merlinJob.CONTROL
 		p := merlinJob.Command{
-			Command: jobArgs[0], // TODO This should be in the jobType postion
+			Command: jobArgs[0], // TODO This should be in the jobType position
 		}
 
 		if len(jobArgs) == 2 {
@@ -585,6 +585,7 @@ func Handler(m messages.Base) (messages.Base, error) {
 
 	a.StatusCheckIn = time.Now().UTC()
 	if a.PaddingMax > 0 {
+		// #nosec G404 -- Random number does not impact security
 		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(a.PaddingMax))
 	}
 
@@ -707,6 +708,7 @@ func Idle(agentID uuid.UUID) (messages.Base, error) {
 
 	agent.StatusCheckIn = time.Now().UTC()
 	if agent.PaddingMax > 0 {
+		// #nosec G404 -- Random number does not impact security
 		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(agent.PaddingMax))
 	}
 	// See if there are any new jobs to send back
@@ -898,7 +900,7 @@ func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
 		}
 	case merlinJob.SHELLCODE:
 		cmd := job.Payload.(merlinJob.Shellcode)
-		jobInfo.Command = fmt.Sprintf("shellcode %s %d lenght %d", cmd.Method, cmd.PID, len(cmd.Bytes))
+		jobInfo.Command = fmt.Sprintf("shellcode %s %d length %d", cmd.Method, cmd.PID, len(cmd.Bytes))
 	case merlinJob.SOCKS:
 		conn := job.Payload.(merlinJob.Socks)
 		jobInfo.Command = fmt.Sprintf("SOCKS connection %s packet %d", conn.ID, conn.Index)

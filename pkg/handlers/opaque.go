@@ -48,6 +48,7 @@ func OPAQUEHandler(agentID uuid.UUID, o opaque.Opaque) (messages.Base, error) {
 		ID:      agentID,
 		Version: 1.0,
 		Type:    messages.OPAQUE,
+		// #nosec G404 -- Random number does not impact security
 		Padding: core.RandStringBytesMaskImprSrc(rand.Intn(4096)),
 	}
 	switch o.Type {
@@ -98,6 +99,7 @@ func OPAQUEUnAuthHandler(agentID uuid.UUID, o opaque.Opaque, key kyber.Scalar) (
 		ID:      agentID,
 		Version: 1.0,
 		Type:    messages.OPAQUE,
+		// #nosec G404 -- Random number does not impact security
 		Padding: core.RandStringBytesMaskImprSrc(rand.Intn(4096)),
 	}
 	switch o.Type {
