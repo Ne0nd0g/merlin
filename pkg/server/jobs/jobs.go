@@ -182,17 +182,19 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("there was an error reading the assembly at %s:\n%s", jobArgs[0], err)
 		}
-		fileHash := sha256.New()
-		_, err = io.WriteString(fileHash, string(assembly))
-		if err != nil {
-			message("warn", fmt.Sprintf("there was an error generating a file hash:\n%s", err))
-		}
-		jobArgs[2] = fmt.Sprintf("%s", fileHash.Sum(nil))
 
 		name := filepath.Base(jobArgs[0])
 		if len(jobArgs) > 1 {
 			name = jobArgs[1]
 		}
+
+		fileHash := sha256.New()
+		_, err = io.WriteString(fileHash, string(assembly))
+		if err != nil {
+			message("warn", fmt.Sprintf("there was an error generating a file hash:\n%s", err))
+		}
+		jobArgs = append(jobArgs, fmt.Sprintf("%s", fileHash.Sum(nil)))
+
 		job.Payload = merlinJob.Command{
 			Command: "clr",
 			Args:    []string{jobType, base64.StdEncoding.EncodeToString([]byte(assembly)), name},
