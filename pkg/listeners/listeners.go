@@ -30,7 +30,23 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/servers/http"
 	"github.com/Ne0nd0g/merlin/pkg/servers/http2"
 	"github.com/Ne0nd0g/merlin/pkg/servers/http3"
+	"github.com/Ne0nd0g/merlin/pkg/servers/tcp"
 )
+
+type BaseHandler interface {
+	In()
+	Out()
+}
+
+type Encoder interface {
+	Encode()
+	Decode()
+}
+
+type Encrypter interface {
+	Encrypt()
+	Decrpyt()
+}
 
 // Listeners contains all of the instantiated Listener objects
 var Listeners = make(map[uuid.UUID]*Listener)
@@ -68,7 +84,8 @@ func New(options map[string]string) (*Listener, error) {
 		listener.Server, err = http2.New(options)
 	case "http3":
 		listener.Server, err = http3.New(options)
-
+	case "tcp":
+		listener.Server, err = tcp.New(options)
 	default:
 		err = fmt.Errorf("invalid listener server type: %s", options["Protocol"])
 	}
@@ -178,6 +195,8 @@ func GetListenerOptions(protocol string) map[string]string {
 		options = http2.GetOptions()
 	case "http3":
 		options = http3.GetOptions()
+	case "tcp":
+		options = tcp.GetOptions()
 	default:
 		options = make(map[string]string)
 	}
@@ -198,6 +217,8 @@ func GetListenerOptionsCompleter(protocol string) func(string) []string {
 			serverOptions = http2.GetOptions()
 		case "http3":
 			serverOptions = http3.GetOptions()
+		case "tcp":
+			serverOptions = tcp.GetOptions()
 		default:
 			serverOptions = make(map[string]string)
 		}

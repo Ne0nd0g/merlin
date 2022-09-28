@@ -28,7 +28,8 @@ import (
 	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
 	"go.dedis.ch/kyber/v3"
-	// Internal"
+
+	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/core"
 )
 
@@ -74,6 +75,7 @@ func ServerRegisterInit(AgentID uuid.UUID, o Opaque, key kyber.Scalar) (Opaque, 
 	server := Server{
 		reg: gopaque.NewServerRegister(gopaque.CryptoDefault, key),
 	}
+
 	var userRegInit gopaque.UserRegisterInit
 
 	errUserRegInit := userRegInit.FromBytes(gopaque.CryptoDefault, o.Payload)
@@ -191,7 +193,7 @@ func ServerAuthenticateComplete(o Opaque, server *Server) error {
 	return nil
 }
 
-// message is used to send send messages to STDOUT where the server is running and not intended to be sent to CLI
+// message is used to send messages to STDOUT where the server is running and not intended to be sent to CLI
 func message(level string, message string) {
 	switch level {
 	case "info":

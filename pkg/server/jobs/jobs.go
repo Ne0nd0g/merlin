@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -161,6 +160,13 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		job.Type = merlinJob.NATIVE
 		p := merlinJob.Command{
 			Command: "killprocess",
+			Args:    jobArgs,
+		}
+		job.Payload = p
+	case "link":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: "link",
 			Args:    jobArgs,
 		}
 		job.Payload = p
@@ -565,44 +571,27 @@ func Get(agentID uuid.UUID) ([]merlinJob.Job, error) {
 }
 
 // Handler evaluates a message sent in by the agent and the subsequently executes any corresponding tasks
-func Handler(m messages.Base) (messages.Base, error) {
+func Handler(m messages.Base) (err error) {
 	if core.Debug {
 		message("debug", "Entering into jobs.Handle() function...")
 		message("debug", fmt.Sprintf("Input message: %+v", m))
 	}
 
-	returnMessage := messages.Base{
-		ID:      m.ID,
-		Version: 1.0,
-	}
-
 	if m.Type != messages.JOBS {
-		return returnMessage, fmt.Errorf("invalid message type: %s for job handler", messages.String(m.Type))
+		return fmt.Errorf("invalid message type: %s for job handler", messages.String(m.Type))
 	}
 	jobs := m.Payload.([]merlinJob.Job)
-	a, ok := agents.Agents[m.ID]
-	if !ok {
-		return returnMessage, fmt.Errorf("%s is not a valid agent", m.ID)
-	}
-
-	a.StatusCheckIn = time.Now().UTC()
-	if a.PaddingMax > 0 {
-		// #nosec G404 -- Random number does not impact security
-		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(a.PaddingMax))
-	}
-
-	var returnJobs []merlinJob.Job
 
 	for _, job := range jobs {
 		// Check to make sure agent UUID is in dataset
 		agent, ok := agents.Agents[job.AgentID]
 		if ok {
 			// Verify that the job contains the correct token and that it was not already completed
-			err := checkJob(job)
+			err = checkJob(job)
 			if err != nil {
 				// Agent will send back error messages that are not the result of a job
 				if job.Type != merlinJob.RESULT {
-					return returnMessage, err
+					return
 				}
 				if core.Debug {
 					message("debug", fmt.Sprintf("Received %s message without job token.\r\n%s", messages.String(job.Type), err))
@@ -640,9 +629,9 @@ func Handler(m messages.Base) (messages.Base, error) {
 			case merlinJob.AGENTINFO:
 				agent.UpdateInfo(job.Payload.(messages.AgentInfo))
 			case merlinJob.FILETRANSFER:
-				err := fileTransfer(job.AgentID, job.Payload.(merlinJob.FileTransfer))
+				err = fileTransfer(job.AgentID, job.Payload.(merlinJob.FileTransfer))
 				if err != nil {
-					return returnMessage, err
+					return
 				}
 			case merlinJob.SOCKS:
 				// Send to SOCKS client
@@ -672,59 +661,11 @@ func Handler(m messages.Base) (messages.Base, error) {
 			messageAPI.SendBroadcastMessage(userMessage)
 		}
 	}
-	// See if there are any new jobs to send back
-	agentJobs, err := Get(m.ID)
-	if err != nil {
-		return returnMessage, err
-	}
-	returnJobs = append(returnJobs, agentJobs...)
-
-	if len(returnJobs) > 0 {
-		returnMessage.Type = messages.JOBS
-		returnMessage.Payload = returnJobs
-	} else {
-		returnMessage.Type = messages.IDLE
-	}
 
 	if core.Debug {
-		message("debug", fmt.Sprintf("Message that will be returned to the Agent:\r\n%+v", returnMessage))
-		message("debug", "Leaving jobs.Handle() function...")
+		message("debug", "Leaving jobs.Handle() function without error...")
 	}
-	return returnMessage, nil
-}
-
-// Idle handles input idle messages from the agent and checks to see if there are any jobs to return
-func Idle(agentID uuid.UUID) (messages.Base, error) {
-	returnMessage := messages.Base{
-		ID:      agentID,
-		Version: 1.0,
-	}
-	agent, ok := agents.Agents[agentID]
-	if !ok {
-		return returnMessage, fmt.Errorf("%s is not a valid agent", agentID)
-	}
-
-	if core.Verbose || core.Debug {
-		message("success", fmt.Sprintf("Received agent status checkin from %s", agentID))
-	}
-
-	agent.StatusCheckIn = time.Now().UTC()
-	if agent.PaddingMax > 0 {
-		// #nosec G404 -- Random number does not impact security
-		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(agent.PaddingMax))
-	}
-	// See if there are any new jobs to send back
-	jobs, err := Get(agentID)
-	if err != nil {
-		return returnMessage, err
-	}
-	if len(jobs) > 0 {
-		returnMessage.Type = messages.JOBS
-		returnMessage.Payload = jobs
-	} else {
-		returnMessage.Type = messages.IDLE
-	}
-	return returnMessage, nil
+	return
 }
 
 // GetTableActive returns a list of rows that contain information about active jobs
@@ -1012,7 +953,7 @@ func socksJobs() {
 
 }
 
-// message is used to send send messages to STDOUT where the server is running and not intended to be sent to CLI
+// message is used to send messages to STDOUT where the server is running and not intended to be sent to CLI
 func message(level string, message string) {
 	switch level {
 	case "info":

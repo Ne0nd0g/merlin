@@ -29,6 +29,8 @@ import (
 
 // init registers message types with gob that are an interface for Base.Payload
 func init() {
+	gob.Register(Base{})
+	gob.Register(Delegate{})
 	gob.Register(KeyExchange{})
 	gob.Register(AgentInfo{})
 	gob.Register(SysInfo{})
@@ -55,12 +57,19 @@ const (
 
 // Base is the base JSON Object for HTTP POST payloads
 type Base struct {
-	Version float32     `json:"version"`
-	ID      uuid.UUID   `json:"id"`
-	Type    int         `json:"type"`
-	Payload interface{} `json:"payload,omitempty"`
-	Padding string      `json:"padding"`
-	Token   string      `json:"token,omitempty"`
+	Version   float32     `json:"version"`
+	ID        uuid.UUID   `json:"id"`
+	Type      int         `json:"type"`
+	Payload   interface{} `json:"payload,omitempty"`
+	Padding   string      `json:"padding"`
+	Token     string      `json:"token,omitempty"`
+	Delegates []Delegate  `json:"delegate,omitempty"`
+}
+
+type Delegate struct {
+	ID        uuid.UUID  `json:"id"`
+	Payload   []byte     `json:"payload,omitempty"`
+	Delegates []Delegate `json:"delegates,omitempty"`
 }
 
 // KeyExchange is a JSON payload used to exchange public keys for encryption

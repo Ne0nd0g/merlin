@@ -20,7 +20,6 @@ package servers
 import (
 	// 3rd Party
 	uuid "github.com/satori/go.uuid"
-
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/handlers"
 )
@@ -40,6 +39,8 @@ const (
 	HTTP3 int = 5
 	// DNS is Domain Name Service protocol
 	DNS int = 6
+	// TCP is a Transmission Control Protocol bind listener
+	TCP int = 7
 
 	// Server states
 
@@ -103,6 +104,8 @@ func GetProtocol(protocol int) string {
 		return "HTTP3"
 	case DNS:
 		return "DNS"
+	case TCP:
+		return "TCP"
 	default:
 		return "invalid protocol"
 	}

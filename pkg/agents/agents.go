@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	// 3rd Party
@@ -41,7 +42,7 @@ import (
 
 // Global Variables
 
-// Agents contains all of the instantiated agent object that are accessed by other modules
+// Agents contains all the instantiated agent object that are accessed by other modules
 var Agents = make(map[uuid.UUID]*Agent)
 
 // groups map agent(s) to a string for bulk access
@@ -84,6 +85,8 @@ type Agent struct {
 	OPAQUE         *opaque.Server  // Holds information about OPAQUE Registration and Authentication
 	JA3            string          // The JA3 signature applied to the agent's TLS client
 	Note           string          // Operator notes for an agent
+	LinkedAgents   sync.Map        // LinkedAgents contains a list of first-order peer-to-peer connected agents
+	Authenticated  bool
 }
 
 // KeyExchange is used to exchange public keys between the server and agent

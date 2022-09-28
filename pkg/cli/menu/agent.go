@@ -126,6 +126,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.KillProcess(agent, cmd)
 	case "killdate":
 		core.MessageChannel <- agentAPI.KillDate(agent, cmd)
+	case "link":
+		core.MessageChannel <- agentAPI.LinkAgent(agent, cmd)
 	case "list-assemblies":
 		core.MessageChannel <- agentAPI.ListAssemblies(agent)
 	case "load-assembly":
@@ -299,6 +301,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("jobs"),
 		readline.PcItem("kill"),
 		readline.PcItem("killdate"),
+		readline.PcItem("link"),
 		readline.PcItem("ls"),
 		readline.PcItem("main"),
 		readline.PcItem("maxretry"),

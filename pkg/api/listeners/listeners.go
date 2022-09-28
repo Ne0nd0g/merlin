@@ -152,13 +152,21 @@ func Start(name string) messages.UserMessage {
 				messages.DelayedMessage(messages.ErrorMessage(err.Error()))
 			}
 		}()
+		proto := servers.GetProtocol(l.Server.GetProtocol())
+		var msg string
+		switch strings.ToLower(proto) {
+		case "http", "https", "http2", "h2c", "http3":
+			msg = fmt.Sprintf("Started %s listener on %s:%d", proto, l.Server.GetInterface(), l.Server.GetPort())
+		case "tcp":
+			msg = fmt.Sprintf("Started %s listener\nThis listener is for linked agents and does not bind to an interface/port on the server", proto)
+		default:
+			msg = fmt.Sprintf("Started listener for unhandled type: %s", proto)
+		}
 		return messages.UserMessage{
-			Error: false,
-			Level: messages.Success,
-			Time:  time.Now().UTC(),
-			Message: fmt.Sprintf("Started %s listener on %s:%d", servers.GetProtocol(l.Server.GetProtocol()),
-				l.Server.GetInterface(),
-				l.Server.GetPort()),
+			Error:   false,
+			Level:   messages.Success,
+			Time:    time.Now().UTC(),
+			Message: msg,
 		}
 	case servers.Closed:
 		if err := l.Restart(l.GetConfiguredOptions()); err != nil {

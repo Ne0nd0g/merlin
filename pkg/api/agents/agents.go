@@ -339,22 +339,6 @@ func GetAgents() (agentList []uuid.UUID) {
 func GetAgentsRows() (header []string, rows [][]string) {
 	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin", "Note"}
 	for _, agent := range agents.Agents {
-		// Convert proto (i.e. h2 or hq) to user friendly string
-		var proto string
-		switch agent.Proto {
-		case "http":
-			proto = "HTTP/1.1 clear-text"
-		case "https":
-			proto = "HTTP/1.1 over TLS"
-		case "h2c":
-			proto = "HTTP/2 clear-text"
-		case "h2":
-			proto = "HTTP/2 over TLS"
-		case "http3":
-			proto = "HTTP/3 (HTTP/2 over QUIC)"
-		default:
-			proto = fmt.Sprintf("Unknown: %s", agent.Proto)
-		}
 		status, _ := GetAgentStatus(agent.ID)
 
 		lastTime := lastCheckin(agent.StatusCheckIn)
@@ -370,7 +354,7 @@ func GetAgentsRows() (header []string, rows [][]string) {
 
 		rows = append(rows, []string{
 			agent.ID.String(),
-			proto,
+			agent.Proto,
 			agent.Platform + "/" + agent.Architecture,
 			agent.HostName,
 			agent.UserName,
@@ -596,6 +580,19 @@ func KillProcess(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.JobMessage(agentID, job)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"kill\" command: %s", Args))
+}
+
+func LinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
+	// Validate argument count
+	if len(Args) < 2 {
+		return messages.ErrorMessage(fmt.Sprintf("Expected 2 arguments, received %d", len(Args)))
+	}
+
+	job, err := jobs.Add(agentID, "link", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
 }
 
 // ListAssemblies instructs the agent to list all of the .NET assemblies that are currently loaded into the agent's process

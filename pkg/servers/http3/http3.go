@@ -21,6 +21,7 @@ import (
 	// Standard
 	"crypto/tls"
 	"fmt"
+	http2 "github.com/Ne0nd0g/merlin/pkg/handlers/http"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -50,7 +51,7 @@ type Server struct {
 	x509Cert string
 	x509Key  string
 	urls     []string
-	ctx      *handlers.HTTPContext
+	ctx      *http2.HTTPContext
 }
 
 // Template is a structure used to collect the information needed to create an instance with the New() function
@@ -150,7 +151,7 @@ func New(options map[string]string) (*Server, error) {
 	}
 	jwtKey := []byte(core.RandStringBytesMaskImprSrc(32)) // Used to sign and encrypt JWT
 	opaqueKey := gopaque.CryptoDefault.NewKey(nil)
-	s.ctx = &handlers.HTTPContext{PSK: options["PSK"], JWTKey: jwtKey, OpaqueKey: opaqueKey}
+	s.ctx = &http2.HTTPContext{PSK: options["PSK"], JWTKey: jwtKey, OpaqueKey: opaqueKey}
 
 	// Add handler with context
 	for _, url := range s.urls {
@@ -185,10 +186,10 @@ func Renew(ctx handlers.ContextInterface, options map[string]string) (*Server, e
 	}
 
 	// Retain server's original JWT key used to sign and encrypt authorization JWT
-	tempServer.ctx.JWTKey = ctx.(handlers.HTTPContext).JWTKey
+	tempServer.ctx.JWTKey = ctx.(http2.HTTPContext).JWTKey
 
 	// Retain server's original OPAQUE key used with OPAQUE registration/authorization
-	tempServer.ctx.OpaqueKey = ctx.(handlers.HTTPContext).OpaqueKey
+	tempServer.ctx.OpaqueKey = ctx.(http2.HTTPContext).OpaqueKey
 
 	return tempServer, nil
 }

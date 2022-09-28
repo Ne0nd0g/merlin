@@ -39,28 +39,28 @@ func init() {
 	if _, err := os.Stat(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
 		errM := os.MkdirAll(filepath.Join(core.CurrentDir, "data", "log"), 0750)
 		if errM != nil {
-			message("warn", "there was an error creating the log directory")
+			Message("warn", "there was an error creating the log directory")
 		}
 		serverLog, errC := os.Create(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt"))
 		if errC != nil {
-			message("warn", "there was an error creating the merlinServerLog.txt file")
+			Message("warn", "there was an error creating the merlinServerLog.txt file")
 			return
 		}
 		// Change the file's permissions
 		errChmod := os.Chmod(serverLog.Name(), 0600)
 		if errChmod != nil {
-			message("warn", fmt.Sprintf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error()))
+			Message("warn", fmt.Sprintf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error()))
 		}
 		if core.Debug {
-			message("debug", fmt.Sprintf("Created server log file at: %s\\data\\log\\merlinServerLog.txt", core.CurrentDir))
+			Message("debug", fmt.Sprintf("Created server log file at: %s\\data\\log\\merlinServerLog.txt", core.CurrentDir))
 		}
 	}
 
 	var errLog error
 	serverLog, errLog = os.OpenFile(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt"), os.O_APPEND|os.O_WRONLY, 0600)
 	if errLog != nil {
-		message("warn", "there was an error with the Merlin Server log file")
-		message("warn", errLog.Error())
+		Message("warn", "there was an error with the Merlin Server log file")
+		Message("warn", errLog.Error())
 	}
 }
 
@@ -68,13 +68,13 @@ func init() {
 func Server(logMessage string) {
 	_, err := serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
 	if err != nil {
-		message("warn", "there was an error writing to the Merlin Server log file")
-		message("warn", err.Error())
+		Message("warn", "there was an error writing to the Merlin Server log file")
+		Message("warn", err.Error())
 	}
 }
 
 // Message is used to print a message to the command line
-func message(level string, message string) {
+func Message(level string, message string) {
 	switch level {
 	case "info":
 		color.Cyan("[i]" + message)
