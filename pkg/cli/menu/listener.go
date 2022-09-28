@@ -20,6 +20,7 @@ package menu
 import (
 	// Standard
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
 	"os"
 	"strings"
 	"time"
@@ -162,7 +163,7 @@ func completerListener() *readline.PrefixCompleter {
 		readline.PcItem("restart"),
 		readline.PcItem("sessions"),
 		readline.PcItem("set",
-			readline.PcItemDynamic(listenerAPI.GetListenerOptionsCompleter(options["Protocol"])),
+			readline.PcItemDynamic(repo.GetProtocolOptionDefaultsCompletor(options["Protocol"])),
 		),
 		readline.PcItem("show"),
 		readline.PcItem("start"),
