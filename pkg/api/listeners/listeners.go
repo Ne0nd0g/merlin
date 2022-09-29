@@ -20,6 +20,8 @@ package listeners
 import (
 	// Standard
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/lrepo"
+	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
 	"strings"
 	"time"
 
@@ -34,7 +36,7 @@ import (
 
 // Exists determines if the input listener name is an instantiated object
 func Exists(name string) messages.UserMessage {
-	_, err := listeners.GetListenerByName(name)
+	_, err := lrepo.GetListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -46,27 +48,30 @@ func Exists(name string) messages.UserMessage {
 
 // NewListener instantiates a new Listener object on the server
 func NewListener(options map[string]string) (messages.UserMessage, uuid.UUID) {
-	l, err := listeners.New(options)
-	if err != nil {
+	if newServer, err := repo.New(options); err != nil {
 		return messages.ErrorMessage(err.Error()), uuid.Nil
+	} else if newListener, err := listeners.New(newServer, options); err != nil {
+		return messages.ErrorMessage(err.Error()), uuid.Nil
+	} else {
+		m := fmt.Sprintf("%s listener was created with an ID of: %s", newListener.Name, newListener.ID)
+		um := messages.UserMessage{
+			Level:   messages.Success,
+			Time:    time.Now().UTC(),
+			Message: m,
+			Error:   false,
+		}
+
+		return um, newListener.ID
 	}
-	m := fmt.Sprintf("%s listener was created with an ID of: %s", l.Name, l.ID)
-	um := messages.UserMessage{
-		Level:   messages.Success,
-		Time:    time.Now().UTC(),
-		Message: m,
-		Error:   false,
-	}
-	return um, l.ID
 }
 
 // Remove deletes and removes the listener from the server
 func Remove(name string) messages.UserMessage {
-	l, errL := listeners.GetListenerByName(name)
+	l, errL := lrepo.GetListenerByName(name)
 	if errL != nil {
 		return messages.ErrorMessage(errL.Error())
 	}
-	err := listeners.RemoveByID(l.ID)
+	err := lrepo.RemoveByID(l.ID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -81,7 +86,7 @@ func Remove(name string) messages.UserMessage {
 
 // Restart restarts the Listener's server
 func Restart(listenerID uuid.UUID) messages.UserMessage {
-	l, err := listeners.GetListenerByID(listenerID)
+	l, err := lrepo.GetListenerByID(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -107,7 +112,7 @@ func Restart(listenerID uuid.UUID) messages.UserMessage {
 
 // SetOption sets the value of a configurable Listener option
 func SetOption(listenerID uuid.UUID, Args []string) messages.UserMessage {
-	l, err := listeners.GetListenerByID(listenerID)
+	l, err := lrepo.GetListenerByID(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -133,7 +138,7 @@ func SetOption(listenerID uuid.UUID, Args []string) messages.UserMessage {
 
 // Start runs the Listener's server
 func Start(name string) messages.UserMessage {
-	l, err := listeners.GetListenerByName(name)
+	l, err := lrepo.GetListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -198,7 +203,7 @@ func Start(name string) messages.UserMessage {
 
 // Stop terminates the Listener's server
 func Stop(name string) messages.UserMessage {
-	l, err := listeners.GetListenerByName(name)
+	l, err := lrepo.GetListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -224,7 +229,7 @@ func Stop(name string) messages.UserMessage {
 
 // GetListenerStatus returns the Listener's server status
 func GetListenerStatus(listenerID uuid.UUID) messages.UserMessage {
-	l, err := listeners.GetListenerByID(listenerID)
+	l, err := lrepo.GetListenerByID(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -238,7 +243,7 @@ func GetListenerStatus(listenerID uuid.UUID) messages.UserMessage {
 
 // GetListenerByName return the unique identifier for an instantiated Listener by its name
 func GetListenerByName(name string) (messages.UserMessage, uuid.UUID) {
-	l, err := listeners.GetListenerByName(name)
+	l, err := lrepo.GetListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error()), uuid.Nil
 	}
@@ -251,7 +256,7 @@ func GetListenerByName(name string) (messages.UserMessage, uuid.UUID) {
 
 // GetListenerConfiguredOptions enumerates all of a Listener's settings and returns them
 func GetListenerConfiguredOptions(listenerID uuid.UUID) (messages.UserMessage, map[string]string) {
-	l, err := listeners.GetListenerByID(listenerID)
+	l, err := lrepo.GetListenerByID(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error()), nil
 	}
@@ -261,36 +266,4 @@ func GetListenerConfiguredOptions(listenerID uuid.UUID) (messages.UserMessage, m
 		Error:   false,
 	}
 	return um, l.GetConfiguredOptions()
-}
-
-// GetListeners returns a list of an instantiated Listeners
-func GetListeners() []listeners.Listener {
-	return listeners.GetListeners()
-}
-
-// GetListenerTypes returns the supported server protocols that are available to be used with a Listener
-func GetListenerTypes() []string {
-	return listeners.GetListenerTypes()
-}
-
-// GetListenerOptions returns all of the configurable options for an uninstatiated listener based on the provided protocol type
-func GetListenerOptions(protocol string) map[string]string {
-	return listeners.GetListenerOptions(protocol)
-}
-
-// TODO Move the completers to the CLI package
-
-// GetListenerNamesCompleter returns CLI tab completer for available Listeners
-func GetListenerNamesCompleter() func(string) []string {
-	return listeners.GetList()
-}
-
-// GetListenerOptionsCompleter returns CLI tab completer for supported Listener server protocols
-func GetListenerOptionsCompleter(protocol string) func(string) []string {
-	return listeners.GetListenerOptionsCompleter(protocol)
-}
-
-// GetListenerTypesCompleter returns CLI tab completer for available Listener types
-func GetListenerTypesCompleter() func(string) []string {
-	return listeners.GetListenerTypesCompleter()
 }

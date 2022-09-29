@@ -23,7 +23,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/listeners"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/lrepo"
 	"math/rand"
 	"time"
 
@@ -260,7 +260,7 @@ func delegatesIn(id uuid.UUID, delegates []messages.Delegate) {
 			}
 		} else {
 			// The linked agent's Base message agent ID is the same as a listeners ID until it authenticates
-			listener, err := listeners.GetListenerByID(delegate.ID)
+			listener, err := lrepo.GetListenerByID(delegate.ID)
 			if err != nil {
 				logging.Message("warn", fmt.Sprintf("there was an error getting the listener for delegate message with an ID of %s: %s", delegate.ID, err))
 				break

@@ -20,6 +20,8 @@ package menu
 import (
 	// Standard
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/lrepo"
+	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
 	"os"
 	"strings"
 	"time"
@@ -147,7 +149,7 @@ func handlerListeners(cmd []string) {
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"Name", "Interface", "Port", "Protocol", "Status", "Description"})
 		table.SetAlignment(tablewriter.ALIGN_CENTER)
-		listeners := listenerAPI.GetListeners()
+		listeners := lrepo.GetListeners()
 		for _, v := range listeners {
 			table.Append([]string{
 				v.Name,
@@ -177,11 +179,11 @@ func handlerListeners(cmd []string) {
 		}
 	case "use", "create":
 		if len(cmd) >= 2 {
-			types := listenerAPI.GetListenerTypes()
+			types := lrepo.GetListenerTypes()
 			for _, v := range types {
 				if strings.ToLower(cmd[1]) == v {
 					listenerType = cmd[1]
-					options = listenerAPI.GetListenerOptions(cmd[1])
+					options = repo.GetProtocolOptionDefaults(cmd[1])
 					options["Protocol"] = strings.ToLower(cmd[1])
 					Set(LISTENERSETUP)
 				}
@@ -211,17 +213,17 @@ func completerListeners() *readline.PrefixCompleter {
 	return readline.NewPrefixCompleter(
 		readline.PcItem("back"),
 		readline.PcItem("configure",
-			readline.PcItemDynamic(listenerAPI.GetListenerNamesCompleter()),
+			readline.PcItemDynamic(lrepo.GetList()),
 		),
 		readline.PcItem("create",
-			readline.PcItemDynamic(listenerAPI.GetListenerTypesCompleter()),
+			readline.PcItemDynamic(lrepo.GetListenerTypesCompleter()),
 		),
 		readline.PcItem("delete",
-			readline.PcItemDynamic(listenerAPI.GetListenerNamesCompleter()),
+			readline.PcItemDynamic(lrepo.GetList()),
 		),
 		readline.PcItem("help"),
 		readline.PcItem("info",
-			readline.PcItemDynamic(listenerAPI.GetListenerNamesCompleter()),
+			readline.PcItemDynamic(lrepo.GetList()),
 		),
 		readline.PcItem("interact",
 			readline.PcItemDynamic(agentListCompleter()),
@@ -230,13 +232,13 @@ func completerListeners() *readline.PrefixCompleter {
 		readline.PcItem("main"),
 		readline.PcItem("sessions"),
 		readline.PcItem("start",
-			readline.PcItemDynamic(listenerAPI.GetListenerNamesCompleter()),
+			readline.PcItemDynamic(lrepo.GetList()),
 		),
 		readline.PcItem("stop",
-			readline.PcItemDynamic(listenerAPI.GetListenerNamesCompleter()),
+			readline.PcItemDynamic(lrepo.GetList()),
 		),
 		readline.PcItem("use",
-			readline.PcItemDynamic(listenerAPI.GetListenerTypesCompleter()),
+			readline.PcItemDynamic(lrepo.GetListenerTypesCompleter()),
 		),
 	)
 }
