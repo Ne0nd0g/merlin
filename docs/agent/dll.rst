@@ -129,10 +129,10 @@ Then, we endeavor to drop our proxied DLL into the OneDrive application director
 
 When the application starts, our proxied DLL is pulled into the process and a thread is executed. Our session is established and our agent lives inside the OneDrive.exe process:
 
-.. image:: ./images/dll-proxy-1.png
+.. image:: ../images/dll-proxy-1.png
    :align: center
    :alt: DLL Proxy 1
    
-.. image:: ./images/dll-proxy-2.png
+.. image:: ../images/dll-proxy-2.png
    :align: center
    :alt: DLL Proxy 2
