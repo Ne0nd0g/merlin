@@ -24,12 +24,14 @@ import (
 	"time"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
+	"github.com/Ne0nd0g/merlin/pkg/agents/memory"
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
 	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 )
+
+var repo = memory.NewRepository()
 
 // GetModuleListCompleter return a tab completer of available modules for CLI interactions
 func GetModuleListCompleter() func(string) []string {
@@ -61,17 +63,18 @@ func RunModule(module modules.Module) []messages.UserMessage {
 
 	// TODO Move all of this logic to the modules.Run() function
 	// ALL Agents
+	agents := repo.GetAll()
 	if strings.ToLower(module.Agent.String()) == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		if len(agents.Agents) <= 0 {
+		if len(agents) <= 0 {
 			err := fmt.Errorf("there are 0 available agents, no jobs were created")
 			returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 			return returnMessages
 		}
-		for id := range agents.Agents {
+		for _, agent := range agents {
 			// Make sure OS platform match
-			if !strings.EqualFold(agents.Agents[id].Platform, module.Platform) {
+			if !strings.EqualFold(agent.Host().Platform, module.Platform) {
 				m := fmt.Sprintf("Module platform %s does not match agent %s platform %s. Skipping job...",
-					module.Platform, id, agents.Agents[id].Platform)
+					module.Platform, agent.ID(), agent.Host().Platform)
 				um := messages.UserMessage{
 					Error:   false,
 					Level:   messages.Note,
@@ -84,14 +87,14 @@ func RunModule(module modules.Module) []messages.UserMessage {
 			switch strings.ToLower(module.Type) {
 			case "standard":
 				// Standard modules use the `cmd` message type that must be in position 0
-				returnMessages = append(returnMessages, agentAPI.CMD(id, append([]string{"run"}, r...)))
+				returnMessages = append(returnMessages, agentAPI.CMD(agent.ID(), append([]string{"run"}, r...)))
 			case "extended":
 				// Was using Method: r[0]
-				job, err := jobs.Add(id, r[0], r[1:])
+				job, err := jobs.Add(agent.ID(), r[0], r[1:])
 				if err != nil {
 					returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 				} else {
-					returnMessages = append(returnMessages, messages.JobMessage(id, job))
+					returnMessages = append(returnMessages, messages.JobMessage(agent.ID(), job))
 				}
 			default:
 				err := fmt.Errorf("invalid module type: %s", module.Type)

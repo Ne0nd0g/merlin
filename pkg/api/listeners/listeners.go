@@ -20,9 +20,6 @@ package listeners
 import (
 	// Standard
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/lrepo"
-	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
-	"strings"
 	"time"
 
 	// 3rd Party
@@ -30,13 +27,18 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/servers"
+	"github.com/Ne0nd0g/merlin/pkg/services/listeners"
 )
+
+var listenerService listeners.ListenerService
+
+func init() {
+	listenerService = listeners.NewListenerService()
+}
 
 // Exists determines if the input listener name is an instantiated object
 func Exists(name string) messages.UserMessage {
-	_, err := lrepo.GetListenerByName(name)
+	_, err := listenerService.ListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -48,34 +50,32 @@ func Exists(name string) messages.UserMessage {
 
 // NewListener instantiates a new Listener object on the server
 func NewListener(options map[string]string) (messages.UserMessage, uuid.UUID) {
-	if newServer, err := repo.New(options); err != nil {
+	listener, err := listenerService.NewListener(options)
+	if err != nil {
 		return messages.ErrorMessage(err.Error()), uuid.Nil
-	} else if newListener, err := listeners.New(newServer, options); err != nil {
-		return messages.ErrorMessage(err.Error()), uuid.Nil
-	} else {
-		m := fmt.Sprintf("%s listener was created with an ID of: %s", newListener.Name, newListener.ID)
-		um := messages.UserMessage{
-			Level:   messages.Success,
-			Time:    time.Now().UTC(),
-			Message: m,
-			Error:   false,
-		}
-
-		return um, newListener.ID
 	}
+	m := fmt.Sprintf("%s listener was created with an ID of: %s", listener, listener.ID())
+	um := messages.UserMessage{
+		Level:   messages.Success,
+		Time:    time.Now().UTC(),
+		Message: m,
+		Error:   false,
+	}
+
+	return um, listener.ID()
 }
 
 // Remove deletes and removes the listener from the server
 func Remove(name string) messages.UserMessage {
-	l, errL := lrepo.GetListenerByName(name)
-	if errL != nil {
-		return messages.ErrorMessage(errL.Error())
-	}
-	err := lrepo.RemoveByID(l.ID)
+	l, err := listenerService.ListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	m := fmt.Sprintf("deleted listener %s:%s", l.Name, l.ID)
+	err = listenerService.Remove(l.ID())
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	m := fmt.Sprintf("deleted listener %s:%s", l, l.ID())
 	return messages.UserMessage{
 		Level:   messages.Success,
 		Time:    time.Now().UTC(),
@@ -86,129 +86,25 @@ func Remove(name string) messages.UserMessage {
 
 // Restart restarts the Listener's server
 func Restart(listenerID uuid.UUID) messages.UserMessage {
-	l, err := lrepo.GetListenerByID(listenerID)
+	err := listenerService.Restart(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	errRestart := l.Restart(l.GetConfiguredOptions())
-	if errRestart != nil {
-		return messages.ErrorMessage(errRestart.Error())
-	}
 
-	// TODO not sure if this should be here or in the listeners package
-	go func() {
-		err := l.Server.Start()
-		if err != nil {
-			messages.DelayedMessage(messages.ErrorMessage(err.Error()))
-		}
-	}()
 	return messages.UserMessage{
 		Level:   messages.Success,
 		Time:    time.Now().UTC(),
-		Message: fmt.Sprintf("%s listener was successfully restarted", l.Name),
+		Message: fmt.Sprintf("%s listener was successfully restarted", listenerID),
 		Error:   false,
 	}
 }
 
 // SetOption sets the value of a configurable Listener option
 func SetOption(listenerID uuid.UUID, Args []string) messages.UserMessage {
-	l, err := lrepo.GetListenerByID(listenerID)
-	if err != nil {
-		return messages.ErrorMessage(err.Error())
-	}
 	if len(Args) >= 2 {
-		for k := range l.GetConfiguredOptions() {
-			if Args[1] == k {
-				v := strings.Join(Args[2:], " ")
-				err := l.SetOption(k, v)
-				if err != nil {
-					return messages.ErrorMessage(err.Error())
-				}
-				return messages.UserMessage{
-					Error:   false,
-					Level:   messages.Success,
-					Time:    time.Now().UTC(),
-					Message: fmt.Sprintf("set %s to: %s", k, v),
-				}
-			}
-		}
-	}
-	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Listeners SetOption call: %s", Args))
-}
-
-// Start runs the Listener's server
-func Start(name string) messages.UserMessage {
-	l, err := lrepo.GetListenerByName(name)
-	if err != nil {
-		return messages.ErrorMessage(err.Error())
-	}
-	switch l.Server.Status() {
-	case servers.Running:
-		return messages.UserMessage{
-			Error:   false,
-			Level:   messages.Note,
-			Time:    time.Now().UTC(),
-			Message: "the server is already running",
-		}
-	case servers.Stopped:
-		go func() {
-			err := l.Server.Start()
-			if err != nil {
-				messages.DelayedMessage(messages.ErrorMessage(err.Error()))
-			}
-		}()
-		proto := servers.GetProtocol(l.Server.GetProtocol())
-		var msg string
-		switch strings.ToLower(proto) {
-		case "http", "https", "http2", "h2c", "http3":
-			msg = fmt.Sprintf("Started %s listener on %s:%d", proto, l.Server.GetInterface(), l.Server.GetPort())
-		case "tcp":
-			msg = fmt.Sprintf("Started %s listener\nThis listener is for linked agents and does not bind to an interface/port on the server", proto)
-		default:
-			msg = fmt.Sprintf("Started listener for unhandled type: %s", proto)
-		}
-		return messages.UserMessage{
-			Error:   false,
-			Level:   messages.Success,
-			Time:    time.Now().UTC(),
-			Message: msg,
-		}
-	case servers.Closed:
-		if err := l.Restart(l.GetConfiguredOptions()); err != nil {
-			return messages.ErrorMessage(err.Error())
-		}
-		go func() {
-			err := l.Server.Start()
-			if err != nil {
-				messages.DelayedMessage(messages.ErrorMessage(err.Error()))
-			}
-		}()
-		return messages.UserMessage{
-			Error: false,
-			Level: messages.Success,
-			Time:  time.Now().UTC(),
-			Message: fmt.Sprintf("Restarted %s %s listener on %s:%d", l.Name, servers.GetProtocol(l.Server.GetProtocol()),
-				l.Server.GetInterface(),
-				l.Server.GetPort()),
-		}
-	default:
-		return messages.UserMessage{
-			Error:   true,
-			Level:   messages.Warn,
-			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("unhandled server status: %s", servers.GetStateString(l.Server.Status())),
-		}
-	}
-}
-
-// Stop terminates the Listener's server
-func Stop(name string) messages.UserMessage {
-	l, err := lrepo.GetListenerByName(name)
-	if err != nil {
-		return messages.ErrorMessage(err.Error())
-	}
-	if l.Server.Status() == servers.Running {
-		err := l.Server.Stop()
+		option := make(map[string]string)
+		option[Args[0]] = Args[1]
+		err := listenerService.SetOptions(listenerID, option)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -216,26 +112,65 @@ func Stop(name string) messages.UserMessage {
 			Error:   false,
 			Level:   messages.Success,
 			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("%s listener was stopped", l.Name),
+			Message: fmt.Sprintf("set %s to: %s", Args[0], Args[1]),
 		}
+	}
+
+	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Listeners SetOption call: %s", Args))
+}
+
+// Start runs the Listener's server
+func Start(listenerID uuid.UUID) messages.UserMessage {
+	err := listenerService.Start(listenerID)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	l, err := listenerService.Listener(listenerID)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	if l.Server() != nil {
+		server := *l.Server()
+		return messages.UserMessage{
+			Level:   messages.Note,
+			Message: fmt.Sprintf("Started %s server on %s:%d", server.ProtocolString(), server.Interface(), server.Port()),
+			Time:    time.Now().UTC(),
+			Error:   false,
+		}
+	}
+	// Not all listeners have an infrastructure layer server
+	return messages.UserMessage{
+		Level:   messages.Note,
+		Message: fmt.Sprintf("Started %s listener", l.Name()),
+		Time:    time.Now().UTC(),
+		Error:   false,
+	}
+}
+
+// Stop terminates the Listener's server
+func Stop(listenerID uuid.UUID) messages.UserMessage {
+	err := listenerService.Stop(listenerID)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
 	}
 	return messages.UserMessage{
 		Error:   false,
-		Level:   messages.Note,
+		Level:   messages.Success,
 		Time:    time.Now().UTC(),
-		Message: "this listener is not running",
+		Message: fmt.Sprintf("%s listener was stopped", listenerID),
 	}
 }
 
 // GetListenerStatus returns the Listener's server status
 func GetListenerStatus(listenerID uuid.UUID) messages.UserMessage {
-	l, err := lrepo.GetListenerByID(listenerID)
+	l, err := listenerService.Listener(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
+
 	return messages.UserMessage{
 		Level:   messages.Plain,
-		Message: servers.GetStateString(l.Server.Status()),
+		Message: l.Status(),
 		Time:    time.Time{},
 		Error:   false,
 	}
@@ -243,7 +178,7 @@ func GetListenerStatus(listenerID uuid.UUID) messages.UserMessage {
 
 // GetListenerByName return the unique identifier for an instantiated Listener by its name
 func GetListenerByName(name string) (messages.UserMessage, uuid.UUID) {
-	l, err := lrepo.GetListenerByName(name)
+	l, err := listenerService.ListenerByName(name)
 	if err != nil {
 		return messages.ErrorMessage(err.Error()), uuid.Nil
 	}
@@ -251,12 +186,12 @@ func GetListenerByName(name string) (messages.UserMessage, uuid.UUID) {
 		Error: false,
 		Time:  time.Now().UTC(),
 	}
-	return um, l.ID
+	return um, l.ID()
 }
 
 // GetListenerConfiguredOptions enumerates all of a Listener's settings and returns them
 func GetListenerConfiguredOptions(listenerID uuid.UUID) (messages.UserMessage, map[string]string) {
-	l, err := lrepo.GetListenerByID(listenerID)
+	l, err := listenerService.Listener(listenerID)
 	if err != nil {
 		return messages.ErrorMessage(err.Error()), nil
 	}
@@ -265,5 +200,16 @@ func GetListenerConfiguredOptions(listenerID uuid.UUID) (messages.UserMessage, m
 		Time:    time.Now().UTC(),
 		Error:   false,
 	}
-	return um, l.GetConfiguredOptions()
+	return um, l.ConfiguredOptions()
+}
+
+func GetDefaultOptionsCompleter(listenerType string) func(string) []string {
+	return func(line string) []string {
+		listenerOptions, _ := listenerService.DefaultOptions(listenerType)
+		options := make([]string, 0)
+		for k := range listenerOptions {
+			options = append(options, k)
+		}
+		return options
+	}
 }

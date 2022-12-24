@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
+// Package messages contains message structures used to communicate with Agents
 package messages
 
 import (
@@ -66,10 +67,12 @@ type Base struct {
 	Delegates []Delegate  `json:"delegate,omitempty"`
 }
 
+// Delegate used with peer-to-peer communications and embedded in Base messages
 type Delegate struct {
-	ID        uuid.UUID  `json:"id"`
-	Payload   []byte     `json:"payload,omitempty"`
-	Delegates []Delegate `json:"delegates,omitempty"`
+	Listener  uuid.UUID  `json:"listener"`            // The payload or listener UUID, not the agent's UUID
+	Agent     uuid.UUID  `json:"agent"`               // The Agent's UUID
+	Payload   []byte     `json:"payload,omitempty"`   // A Base message encoded/encrypted for a child agent
+	Delegates []Delegate `json:"delegates,omitempty"` // Recursive field to support nested linked agents
 }
 
 // KeyExchange is a JSON payload used to exchange public keys for encryption

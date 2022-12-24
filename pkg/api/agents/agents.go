@@ -31,7 +31,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
@@ -40,7 +39,10 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
 	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
 	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
+	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 )
+
+var agentService = agent.NewAgentService()
 
 // CD is used to change the agent's current working directory
 func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
@@ -328,8 +330,8 @@ func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 // GetAgents returns a list of existing Agent UUID values
 func GetAgents() (agentList []uuid.UUID) {
-	for id := range agents.Agents {
-		agentList = append(agentList, id)
+	for _, a := range agentService.Agents() {
+		agentList = append(agentList, a.ID())
 	}
 	return
 }
@@ -338,41 +340,41 @@ func GetAgents() (agentList []uuid.UUID) {
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
 	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin", "Note"}
-	for _, agent := range agents.Agents {
-		status, _ := GetAgentStatus(agent.ID)
+	for _, a := range agentService.Agents() {
+		status, _ := GetAgentStatus(a.ID())
 
-		lastTime := lastCheckin(agent.StatusCheckIn)
+		lastTime := lastCheckin(a.StatusCheckin())
 
 		// Get the process name, sans full path
 		var proc string
-		if agent.Platform == "windows" {
-			proc = agent.Process[strings.LastIndex(agent.Process, "\\")+1:]
+		if a.Host().Platform == "windows" {
+			proc = a.Process().Name[strings.LastIndex(a.Process().Name, "\\")+1:]
 		} else {
-			proc = agent.Process[strings.LastIndex(agent.Process, "/")+1:]
+			proc = a.Process().Name[strings.LastIndex(a.Process().Name, "/")+1:]
 		}
-		p := fmt.Sprintf("%s(%d)", proc, agent.Pid)
+		p := fmt.Sprintf("%s(%d)", proc, a.Process().ID)
 
 		rows = append(rows, []string{
-			agent.ID.String(),
-			agent.Proto,
-			agent.Platform + "/" + agent.Architecture,
-			agent.HostName,
-			agent.UserName,
+			a.ID().String(),
+			a.Comms().Proto,
+			a.Host().Platform + "/" + a.Host().Architecture,
+			a.Host().Name,
+			a.Process().UserName,
 			p,
 			status,
 			lastTime,
-			agent.Note,
+			a.Note(),
 		})
 	}
 	return
 }
 
 // GetAgentInfo returns rows of data about an Agent's configuration that can be displayed in a table
-func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
-	var rows [][]string
-	a, ok := agents.Agents[agentID]
-	if !ok {
-		return rows, messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
+func GetAgentInfo(agentID uuid.UUID) (rows [][]string, um messages.UserMessage) {
+	a, err := agentService.Agent(agentID)
+	if err != nil {
+		um = messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
+		return
 	}
 
 	status, message := GetAgentStatus(agentID)
@@ -381,38 +383,42 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 	}
 
 	var groups []string
-	for _, row := range agents.GroupListAll() {
-		if row[1] == a.ID.String() {
+	for _, row := range agentService.GroupMembers() {
+		if row[1] == a.ID().String() {
 			groups = append(groups, row[0])
 		}
 	}
 
+	build := a.Build()
+	host := a.Host()
+	comms := a.Comms()
+	process := a.Process()
 	rows = [][]string{
 		{"Status", status},
-		{"ID", a.ID.String()},
-		{"Platform", fmt.Sprintf("%s/%s", a.Platform, a.Architecture)},
-		{"User Name", a.UserName},
-		{"User GUID", a.UserGUID},
-		{"Integrity Level", fmt.Sprintf("%d", a.Integrity)},
-		{"Hostname", a.HostName},
-		{"Process Name", a.Process},
-		{"Process ID", strconv.Itoa(a.Pid)},
-		{"IP", strings.Join(a.Ips, "\n")},
-		{"Initial Check In", a.InitialCheckIn.Format(time.RFC3339)},
-		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckIn.Format(time.RFC3339), lastCheckin(a.StatusCheckIn))},
+		{"ID", a.ID().String()},
+		{"Platform", fmt.Sprintf("%s/%s", host.Platform, host.Architecture)},
+		{"User Name", process.UserName},
+		{"User GUID", process.UserGUID},
+		{"Integrity Level", fmt.Sprintf("%d", process.Integrity)},
+		{"Hostname", host.Name},
+		{"Process Name", process.Name},
+		{"Process ID", strconv.Itoa(process.ID)},
+		{"IP", strings.Join(host.IPs, "\n")},
+		{"Initial Check In", a.Initial().Format(time.RFC3339)},
+		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckin().Format(time.RFC3339), lastCheckin(a.StatusCheckin()))},
 		{"Groups", strings.Join(groups, ", ")},
-		{"Note", a.Note},
+		{"Note", a.Note()},
 		{"", ""},
-		{"Agent Version", a.Version},
-		{"Agent Build", a.Build},
-		{"Agent Wait Time", a.WaitTime},
-		{"Agent Wait Time Skew", strconv.FormatInt(a.Skew, 10)},
-		{"Agent Message Padding Max", strconv.Itoa(a.PaddingMax)},
-		{"Agent Max Retries", strconv.Itoa(a.MaxRetry)},
-		{"Agent Failed Check In", strconv.Itoa(a.FailedCheckin)},
-		{"Agent Kill Date", time.Unix(a.KillDate, 0).UTC().Format(time.RFC3339)},
-		{"Agent Communication Protocol", a.Proto},
-		{"Agent JA3 TLS Client Signature", a.JA3},
+		{"Agent Version", build.Version},
+		{"Agent Build", build.Build},
+		{"Agent Wait Time", comms.Wait},
+		{"Agent Wait Time Skew", strconv.FormatInt(comms.Skew, 10)},
+		{"Agent Message Padding Max", strconv.Itoa(comms.Padding)},
+		{"Agent Max Retries", strconv.Itoa(comms.Retry)},
+		{"Agent Failed Check In", strconv.Itoa(comms.Failed)},
+		{"Agent Kill Date", time.Unix(comms.Kill, 0).UTC().Format(time.RFC3339)},
+		{"Agent Communication Protocol", comms.Proto},
+		{"Agent JA3 TLS Client Signature", comms.JA3},
 	}
 	return rows, messages.UserMessage{}
 }
@@ -420,17 +426,18 @@ func GetAgentInfo(agentID uuid.UUID) ([][]string, messages.UserMessage) {
 // GetAgentStatus determines if the agent is active, delayed, or dead based on its last checkin time
 func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
 	var status string
-	agent, ok := agents.Agents[agentID]
-	if !ok {
+	agent, err := agentService.Agent(agentID)
+	if err != nil {
 		return status, messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
 	}
-	dur, errDur := time.ParseDuration(agent.WaitTime)
-	if errDur != nil && agent.WaitTime != "" {
-		return status, messages.ErrorMessage(fmt.Sprintf("Error converting %s to a time duration: %s", agent.WaitTime, errDur))
+	comms := agent.Comms()
+	dur, errDur := time.ParseDuration(comms.Wait)
+	if errDur != nil && comms.Wait != "" {
+		return status, messages.ErrorMessage(fmt.Sprintf("Error converting %s to a time duration: %s", comms.Wait, errDur))
 	}
-	if agent.StatusCheckIn.Add(dur).After(time.Now()) {
+	if agent.StatusCheckin().Add(dur).After(time.Now()) {
 		status = "Active"
-	} else if agent.StatusCheckIn.Add(dur * time.Duration(agent.MaxRetry+1)).After(time.Now()) { // +1 to account for skew
+	} else if agent.StatusCheckin().Add(dur * time.Duration(comms.Retry+1)).After(time.Now()) { // +1 to account for skew
 		status = "Delayed"
 	} else {
 		status = "Dead"
@@ -462,7 +469,7 @@ func GroupAdd(agentID uuid.UUID, groupName string) messages.UserMessage {
 		}
 	}
 
-	err := agents.GroupAddAgent(agentID, groupName)
+	err := agentService.AddAgentToGroup(groupName, agentID)
 	if err == nil {
 		return messages.UserMessage{
 			Level:   messages.Info,
@@ -476,7 +483,7 @@ func GroupAdd(agentID uuid.UUID, groupName string) messages.UserMessage {
 // GroupList lists agents that are part of a specific group
 func GroupList(groupName string) []string {
 	var out []string
-	for _, row := range agents.GroupListAll() {
+	for _, row := range agentService.GroupMembers() {
 		if row[0] == groupName {
 			out = append(out, row[1])
 		}
@@ -486,12 +493,12 @@ func GroupList(groupName string) []string {
 
 // GroupListAll returns a table of {groupName, agentID}
 func GroupListAll() [][]string {
-	return agents.GroupListAll()
+	return agentService.GroupMembers()
 }
 
 // GroupListNames returns array of active group names
 func GroupListNames() []string {
-	return agents.GroupListNames()
+	return agentService.Groups()
 }
 
 // GroupRemove removes an agent from a group
@@ -503,7 +510,7 @@ func GroupRemove(agentID uuid.UUID, groupName string) messages.UserMessage {
 			Message: "Global group 'all' is immutable.",
 		}
 	}
-	err := agents.GroupRemoveAgent(agentID, groupName)
+	err := agentService.RemoveAgentFromGroup(groupName, agentID)
 	if err == nil {
 		return messages.UserMessage{
 			Level:   messages.Info,
@@ -595,7 +602,7 @@ func LinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
-// ListAssemblies instructs the agent to list all of the .NET assemblies that are currently loaded into the agent's process
+// ListAssemblies instructs the agent to list the .NET assemblies that are currently loaded into the agent's process
 // .NET assemblies are loaded with the LoadAssembly call
 func ListAssemblies(agentID uuid.UUID) messages.UserMessage {
 	job, err := jobs.Add(agentID, "list-assemblies", []string{})
@@ -605,7 +612,30 @@ func ListAssemblies(agentID uuid.UUID) messages.UserMessage {
 	return messages.JobMessage(agentID, job)
 }
 
-// LoadAssembly reads in a .NET assembly and sends it to the agent so it can be loaded
+// Listener interacts with Agent listeners used for peer-to-peer communications
+func Listener(agentID uuid.UUID, Args []string) messages.UserMessage {
+	// Validate argument count
+	if len(Args) < 2 {
+		return messages.ErrorMessage(fmt.Sprintf("Expected 2 arguments, received %d\nExample: listener [start, stop, list]", len(Args)))
+	}
+	switch strings.ToLower(Args[1]) {
+	case "start", "stop":
+		if len(Args) < 4 {
+			return messages.ErrorMessage(fmt.Sprintf("Expected 4 arguments, received %d\nExample: listener [start, stop] tcp 127.0.0.1:4444", len(Args)))
+		}
+	case "list":
+	default:
+		return messages.ErrorMessage(fmt.Sprintf("Unknown listener command: %s", Args[1]))
+	}
+
+	job, err := jobs.Add(agentID, "listener", Args[1:])
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// LoadAssembly reads in a .NET assembly and sends it to the agent, so it can be loaded
 // into a CLR AppDomain for later execution
 func LoadAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
@@ -652,7 +682,17 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 func MaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
 		// Need to set the Sleep time on the server first to calculate JWT lifetime
-		err := agents.SetMaxRetry(agentID, Args[1])
+		a, err := agentService.Agent(agentID)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		comms := a.Comms()
+		comms.Retry, err = strconv.Atoi(Args[1])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+
+		err = agentService.UpdateComms(agentID, comms)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -721,7 +761,7 @@ func Netstat(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Note sets a note on the Agent's Note field
 func Note(agentID uuid.UUID, Args []string) messages.UserMessage {
 	note := strings.Join(Args, " ")
-	err := agents.SetAgentNote(agentID, note)
+	err := agentService.UpdateNote(agentID, note)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
@@ -785,15 +825,12 @@ func PWD(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 // Remove deletes the agent from the server
 func Remove(agentID uuid.UUID) messages.UserMessage {
-	err := agents.RemoveAgent(agentID)
-	if err == nil {
-		return messages.UserMessage{
-			Level:   messages.Info,
-			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("Agent %s was removed from the server at %s", agentID, time.Now().UTC().Format(time.RFC3339)),
-		}
+	agentService.Remove(agentID)
+	return messages.UserMessage{
+		Level:   messages.Info,
+		Time:    time.Now().UTC(),
+		Message: fmt.Sprintf("Agent %s was removed from the server at %s", agentID, time.Now().UTC().Format(time.RFC3339)),
 	}
-	return messages.ErrorMessage(err.Error())
 }
 
 // RM removes, or deletes, a file
@@ -906,8 +943,14 @@ func Skew(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Sleep configures the Agent's sleep time between checkins
 func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
+		agent, err := agentService.Agent(agentID)
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		comms := agent.Comms()
+		comms.Wait = Args[1]
 		// Need to set the Sleep time on the server first to calculate JWT lifetime
-		err := agents.SetWaitTime(agentID, Args[1])
+		err = agentService.UpdateComms(agentID, comms)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}

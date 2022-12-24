@@ -15,104 +15,66 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
+// Package listeners houses listeners for various protocols to receive, handle, and return Agent traffic
 package listeners
 
 import (
-	// Standard
 	"fmt"
 	"strings"
 
-	// 3rd Party
+	//3rd Party
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 )
 
-type BaseHandler interface {
-	In()
-	Out()
+const (
+	UNKNOWN = 0
+	HTTP    = 1 // HTTP is a constant for all HTTP listener types (e.g., HTTP/1, HTTP/2, and HTTP/3)
+	TCP     = 2 // TCP is a constant for TCP bind listeners
+)
+
+// Listener is an interface that contains all the functions any Agent listener must implement
+type Listener interface {
+	Authenticate(id uuid.UUID, data interface{}) (messages.Base, error)
+	ConfiguredOptions() map[string]string
+	Construct(msg messages.Base, key []byte) (data []byte, err error)
+	Deconstruct(data, key []byte) (messages.Base, error)
+	Description() string
+	ID() uuid.UUID
+	Name() string
+	Options() map[string]string
+	Protocol() int
+	PSK() string
+	Server() *servers.ServerInterface
+	Status() string
 }
 
-type Encoder interface {
-	Encode()
-	Decode()
-}
-
-type Encrypter interface {
-	Encrypt()
-	Decrpyt()
-}
-
-// Listener is a structure for created Merlin listener with an embedded Server object
-type Listener struct {
-	ID          uuid.UUID               // Unique identifier for the Listener object
-	Name        string                  // Name of the listener
-	Description string                  // A description of the listener
-	Server      servers.ServerInterface // Interface to interact with server objects
-}
-
-// New instantiates a Listener object
-func New(server servers.ServerInterface, options map[string]string) (*Listener, error) {
-	var listener Listener
-
-	// Ensure a listener name was provided
-	listener.Name = options["Name"]
-	if listener.Name == "" {
-		return &listener, fmt.Errorf("a listener name must be provided")
-	}
-
-	// Get a new server object for the listener
-	listener.ID = uuid.NewV4()
-	listener.Server = server
-	listener.Description = options["Description"]
-
-	return &listener, nil
-}
-
-// GetConfiguredOptions returns the server's current configuration for options that can be set by the user
-func (l *Listener) GetConfiguredOptions() map[string]string {
-	options := l.Server.GetConfiguredOptions()
-	options["Name"] = l.Name
-	options["Description"] = l.Description
-	options["ID"] = l.ID.String()
-	return options
-}
-
-// Restart creates a new server instance because http servers can not be reused after they are stopped
-func (l *Listener) Restart(options map[string]string) error {
-	//var err error
-	//
-	//// Stop the running instance
-	//if l.Server.Status() == servers.Running {
-	//	if err = l.Server.Stop(); err != nil {
-	//		return err
-	//	}
-	//}
-	//
-	//// Create a new instance
-	//switch l.Server.GetProtocol() {
-	//case servers.HTTP, servers.HTTPS, servers.HTTP2:
-	//	l.Server, err = http.Renew(l.Server.GetContext(), options)
-	//case servers.H2C:
-	//	l.Server, err = http2.Renew(l.Server.GetContext(), options)
-	//case servers.HTTP3:
-	//	l.Server, err = http3.Renew(l.Server.GetContext(), options)
-	//default:
-	//	err = fmt.Errorf("invalid server protocol: %d (%s)", l.Server.GetProtocol(), servers.GetProtocol(l.Server.GetProtocol()))
-	//}
-	return l.Server.Restart(options)
-}
-
-// SetOption sets the value for a configurable option on the Listener
-func (l *Listener) SetOption(option string, value string) error {
-	switch strings.ToLower(option) {
-	case "name":
-		l.Name = value
-	case "description":
-		l.Description = value
+// FromString converts a string representation of the Listener type, or kind, to a constant
+func FromString(kind string) int {
+	switch strings.ToLower(kind) {
+	case "http", "https", "h2c", "http2", "http3":
+		return HTTP
+	case "tcp":
+		return TCP
 	default:
-		return l.Server.SetOption(option, value)
+		return UNKNOWN
 	}
-	return nil
+}
+
+func String(kind int) string {
+	switch kind {
+	case HTTP:
+		return "HTTP"
+	case TCP:
+		return "TCP"
+	default:
+		return fmt.Sprintf("Unknown Listener type: %d", kind)
+	}
+}
+
+func Listeners() []int {
+	return []int{HTTP, TCP}
 }

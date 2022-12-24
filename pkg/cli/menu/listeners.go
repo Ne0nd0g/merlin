@@ -20,8 +20,6 @@ package menu
 import (
 	// Standard
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/lrepo"
-	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
 	"os"
 	"strings"
 	"time"
@@ -36,8 +34,10 @@ import (
 	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/core"
-	"github.com/Ne0nd0g/merlin/pkg/servers"
+	"github.com/Ne0nd0g/merlin/pkg/services/listeners"
 )
+
+var listenerService = listeners.NewListenerService()
 
 // handlerListeners handles all the logic for the root Listeners menu
 func handlerListeners(cmd []string) {
@@ -147,17 +147,11 @@ func handlerListeners(cmd []string) {
 		}
 	case "list":
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Name", "Interface", "Port", "Protocol", "Status", "Description"})
+		table.SetHeader([]string{"ID", "Name", "Description"})
 		table.SetAlignment(tablewriter.ALIGN_CENTER)
-		listeners := lrepo.GetListeners()
-		for _, v := range listeners {
-			table.Append([]string{
-				v.Name,
-				v.Server.GetInterface(),
-				fmt.Sprintf("%d", v.Server.GetPort()),
-				servers.GetProtocol(v.Server.GetProtocol()),
-				servers.GetStateString(v.Server.Status()),
-				v.Description})
+		listeners := listenerService.Listeners()
+		for _, l := range listeners {
+			table.Append([]string{l.ID().String(), l.Name(), l.Description()})
 		}
 		fmt.Println()
 		table.Render()
@@ -170,24 +164,33 @@ func handlerListeners(cmd []string) {
 	case "start":
 		if len(cmd) >= 2 {
 			name := strings.Join(cmd[1:], " ")
-			core.MessageChannel <- listenerAPI.Start(name)
+			r, id := listenerAPI.GetListenerByName(name)
+			if r.Error {
+				core.MessageChannel <- r
+				return
+			}
+			core.MessageChannel <- listenerAPI.Start(id)
 		}
 	case "stop":
 		if len(cmd) >= 2 {
 			name := strings.Join(cmd[1:], " ")
-			core.MessageChannel <- listenerAPI.Stop(name)
+			r, id := listenerAPI.GetListenerByName(name)
+			if r.Error {
+				core.MessageChannel <- r
+				return
+			}
+			core.MessageChannel <- listenerAPI.Stop(id)
 		}
 	case "use", "create":
 		if len(cmd) >= 2 {
-			types := lrepo.GetListenerTypes()
-			for _, v := range types {
-				if strings.ToLower(cmd[1]) == v {
-					listenerType = cmd[1]
-					options = repo.GetProtocolOptionDefaults(cmd[1])
-					options["Protocol"] = strings.ToLower(cmd[1])
-					Set(LISTENERSETUP)
-				}
+			var err error
+			options, err = listenerService.DefaultOptions(cmd[1])
+			if err != nil {
+				core.MessageChannel <- messages.ErrorMessage(fmt.Sprintf("pkg/cli/menu/listeners.handlerListeners(): there was an error getting the default options for %s: %s", cmd[1], err))
+				return
 			}
+			listenerType = cmd[1]
+			Set(LISTENERSETUP)
 		}
 	default:
 		if cmd[0][0:1] == "!" {
@@ -213,17 +216,17 @@ func completerListeners() *readline.PrefixCompleter {
 	return readline.NewPrefixCompleter(
 		readline.PcItem("back"),
 		readline.PcItem("configure",
-			readline.PcItemDynamic(lrepo.GetList()),
+			readline.PcItemDynamic(listenerService.List()),
 		),
 		readline.PcItem("create",
-			readline.PcItemDynamic(lrepo.GetListenerTypesCompleter()),
+			readline.PcItemDynamic(listenerService.CLICompleter()),
 		),
 		readline.PcItem("delete",
-			readline.PcItemDynamic(lrepo.GetList()),
+			readline.PcItemDynamic(listenerService.List()),
 		),
 		readline.PcItem("help"),
 		readline.PcItem("info",
-			readline.PcItemDynamic(lrepo.GetList()),
+			readline.PcItemDynamic(listenerService.List()),
 		),
 		readline.PcItem("interact",
 			readline.PcItemDynamic(agentListCompleter()),
@@ -232,13 +235,13 @@ func completerListeners() *readline.PrefixCompleter {
 		readline.PcItem("main"),
 		readline.PcItem("sessions"),
 		readline.PcItem("start",
-			readline.PcItemDynamic(lrepo.GetList()),
+			readline.PcItemDynamic(listenerService.List()),
 		),
 		readline.PcItem("stop",
-			readline.PcItemDynamic(lrepo.GetList()),
+			readline.PcItemDynamic(listenerService.List()),
 		),
 		readline.PcItem("use",
-			readline.PcItemDynamic(lrepo.GetListenerTypesCompleter()),
+			readline.PcItemDynamic(listenerService.CLICompleter()),
 		),
 	)
 }

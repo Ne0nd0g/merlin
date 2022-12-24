@@ -17,12 +17,10 @@
 
 package http
 
-// HTTP2 is in this package because net/http inherently supports the protocol
-
 import (
-	"crypto/tls"
+	// Standard
+	"encoding/base64"
 	"fmt"
-	http2 "github.com/Ne0nd0g/merlin/pkg/handlers/http"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -33,238 +31,148 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	// 3rd Party
-	"github.com/cretz/gopaque/gopaque"
+	"github.com/lucas-clemente/quic-go/http3"
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/handlers"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
-	"github.com/Ne0nd0g/merlin/pkg/util"
 )
 
-// Server is a structure for the HTTP3 server
-type Server struct {
-	servers.Server
-	x509Cert string
-	x509Key  string
-	urls     []string
-	ctx      *http2.HTTPContext
+// init registers the server types with the root servers package for discovery
+func init() {
+	// Register Server
+	servers.RegisteredServers[servers.HTTP] = ""
+	servers.RegisteredServers[servers.HTTPS] = ""
+	servers.RegisteredServers[servers.H2C] = ""
+	servers.RegisteredServers[servers.HTTP2] = ""
+	servers.RegisteredServers[servers.HTTP3] = ""
 }
+
+// Server states
+const (
+	// Stopped is the server's state when it has not ever been started
+	Stopped int = 0
+	// Running means the server is actively accepting connections and serving content
+	Running int = 1
+	// Error is used when there was an error operating the server
+	Error int = 2
+	// Closed is used when the server was running but has been stopped; it can't be reused again
+	Closed int = 3
+)
+
+// Server is a structure for an HTTP server that impelents the Server interface
+type Server struct {
+	id        uuid.UUID // Unique identifier for the Server object
+	iface     string    // The network adapter interface the server will listen on
+	handler   *handler
+	port      int // The port the server will listen on
+	protocol  int // The protocol (i.e. HTTP/2 or HTTP/3) the server will use from the servers package
+	state     int
+	transport interface{} // The server, or transport, that will be used to send and receive traffic
+	x509Cert  string
+	x509Key   string
+	urls      []string
+}
+
+// TODO make this template a generic structure across all HTTP servers in the root
 
 // Template is a structure used to collect the information needed to create an instance with the New() function
 type Template struct {
-	servers.Template
-	X509Key  string // The x.509 private key used for TLS encryption
-	X509Cert string // The x.509 public key used for TLS encryption
-	URLS     string // A comma separated list of URL that handle incoming web traffic
-	PSK      string // The pre-shared key password used prior to Password Authenticated Key Exchange (PAKE)
+	Interface string
+	Port      string
+	Protocol  string
+	X509Key   string // The x.509 private key used for TLS encryption
+	X509Cert  string // The x.509 public key used for TLS encryption
+	URLS      string // A comma separated list of URL that handle incoming web traffic
+	PSK       string // The pre-shared key password used prior to Password Authenticated Key Exchange (PAKE)
+	JWTKey    string // 32-byte Base64 encoded key used to sign/encrypt JWTs
 }
 
-// init registers this server type with the servers package
-func init() {
-	// Register Server
-	servers.RegisteredServers["http"] = ""
-	servers.RegisteredServers["https"] = ""
-	servers.RegisteredServers["http2"] = ""
+// TODO update New to take the template instead of an options map
+
+// New creates a new HTTP server based on the passed in Template
+func New(options map[string]string) (Server, error) {
+	// Verify the options map has a protocol key
+	proto, ok := options["Protocol"]
+	if !ok {
+		return Server{}, fmt.Errorf("http: a protocol key was not provided")
+	}
+	switch strings.ToLower(proto) {
+	case "http", "https", "http2":
+		return newHTTP1(options)
+	case "h2c":
+		return newHTTP2(options)
+	case "http3":
+		return newHTTP3(options)
+	default:
+		return Server{}, fmt.Errorf("http: invalid http protocol type: %s", proto)
+	}
 }
 
-// GetOptions returns a map of configurable server options typically used when creating a listener
-func GetOptions(protocol string) map[string]string {
+// ConfiguredOptions returns the server's current configuration for options that can be set by the user
+func (s *Server) ConfiguredOptions() map[string]string {
 	options := make(map[string]string)
-	options["Interface"] = "127.0.0.1"
-	if protocol == "http" {
-		options["Port"] = "80"
-	} else {
-		options["Port"] = "443"
-	}
-
-	//options["Protocol"] = protocol
-	options["PSK"] = "merlin"
-	options["URLS"] = "/"
-
-	if strings.ToLower(protocol) != "http" {
-		options["X509Cert"] = filepath.Join(string(core.CurrentDir), "data", "x509", "server.crt")
-		options["X509Key"] = filepath.Join(string(core.CurrentDir), "data", "x509", "server.key")
-	}
-	return options
-}
-
-// New creates a new HTTP server object and returns a pointer
-// All arguments are taken in as strings and are converted/validate
-func New(options map[string]string) (*Server, error) {
-	var s Server
-	var certificates *tls.Certificate
-	var err error
-	proto := strings.ToLower(options["Protocol"])
-
-	// Verify protocol match
-	if proto != "http" && proto != "https" && proto != "http2" {
-		return &s, fmt.Errorf("server protocol mismatch, expected: http, https, or http2 got: %s", proto)
-	}
-	switch proto {
-	case "http":
-		s.Protocol = servers.HTTP
-	case "https":
-		s.Protocol = servers.HTTPS
-	case "http2":
-		s.Protocol = servers.HTTP2
-	}
-
-	// Convert port to integer from string
-	s.Port, err = strconv.Atoi(options["Port"])
-	if err != nil {
-		return &s, fmt.Errorf("there was an error converting the port number to an integer: %s", err.Error())
-	}
-
-	// Verify X509 Key file exists and can be parsed
-	if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
-		certificates, err = util.GetTLSCertificates(options["X509Cert"], options["X509Key"])
-		if err != nil {
-			m := fmt.Sprintf("Certificate was not found at: %s\r\n", options["X509Cert"])
-			m += "Creating in-memory x.509 certificate used for this session only"
-			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.Note,
-				Message: m,
-				Time:    time.Now().UTC(),
-				Error:   false,
-			})
-			// Generate in-memory certificates
-			certificates, err = util.GenerateTLSCert(nil, nil, nil, nil, nil, nil, true)
-			if err != nil {
-				return &s, err
-			}
-			// Leave empty to force the use of the server's TLSConfig
-			s.x509Cert = ""
-			s.x509Key = ""
-		} else {
-			s.x509Cert = options["X509Cert"]
-			s.x509Key = options["X509Key"]
-		}
-		insecure, errI := util.CheckInsecureFingerprint(*certificates)
-		if errI != nil {
-			return &s, errI
-		}
-		if insecure {
-			m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for %s server on %s:%s\r\n", proto, options["Interface"], options["Port"])
-			m += "Additional details: https://merlin-c2.readthedocs.io/en/latest/server/x509.html"
-			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.Warn,
-				Message: m,
-				Time:    time.Now().UTC(),
-				Error:   false,
-			})
-		}
-	}
-
-	mux := http.NewServeMux()
-
-	// Parse URLs
-	if options["URLS"] == "" {
-		s.urls = []string{"/"}
-	} else {
-		s.urls = strings.Split(options["URLS"], ",")
-	}
-
-	// Add agent handler for each URL
-	if options["PSK"] == "" {
-		return &s, fmt.Errorf("a Pre-Shared Key (PSK) password must be provided")
-	}
-	jwtKey := []byte(core.RandStringBytesMaskImprSrc(32)) // Used to sign and encrypt JWT
-	opaqueKey := gopaque.CryptoDefault.NewKey(nil)
-	s.ctx = &http2.HTTPContext{PSK: options["PSK"], JWTKey: jwtKey, OpaqueKey: opaqueKey}
-
-	// Add handler with context
-	for _, url := range s.urls {
-		mux.HandleFunc(url, s.ctx.AgentHTTP)
-	}
-
-	s.Transport = &http.Server{
-		Addr:              options["Interface"] + ":" + options["Port"],
-		Handler:           mux,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		ReadHeaderTimeout: 30 * time.Second,
-		MaxHeaderBytes:    1 << 20,
-	}
-
-	// Add X.509 certificates if using TLS
-	if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
-		s.Transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
-	}
-
-	s.Interface = options["Interface"]
-	s.ID = uuid.NewV4()
-	s.State = servers.Stopped
-
-	return &s, nil
-}
-
-// Renew generates a new Server object and retains original encryption keys
-func Renew(ctx handlers.ContextInterface, options map[string]string) (*Server, error) {
-	tempServer, err := New(options)
-	if err != nil {
-		return tempServer, err
-	}
-
-	// Retain server's original JWT key used to sign and encrypt authorization JWT
-	tempServer.ctx.JWTKey = ctx.(http2.HTTPContext).JWTKey
-
-	// Retain server's original OPAQUE key used with OPAQUE registration/authorization
-	tempServer.ctx.OpaqueKey = ctx.(http2.HTTPContext).OpaqueKey
-
-	return tempServer, nil
-}
-
-// GetConfiguredOptions returns the server's current configuration for options that can be set by the user
-func (s *Server) GetConfiguredOptions() map[string]string {
-	options := make(map[string]string)
-	options["Interface"] = s.Interface
-	options["Port"] = fmt.Sprintf("%d", s.Port)
-	options["Protocol"] = s.GetProtocolString()
-	options["PSK"] = s.ctx.PSK
+	options["Interface"] = s.iface
+	options["Port"] = fmt.Sprintf("%d", s.port)
+	options["Protocol"] = s.ProtocolString()
+	options["PSK"] = string(s.handler.psk)
 	options["URLS"] = strings.Join(s.urls, ",")
+	options["JWTKey"] = base64.StdEncoding.EncodeToString(s.handler.jwtKey)
 
-	if s.Protocol != servers.HTTP {
+	if s.protocol != servers.HTTP {
 		options["X509Cert"] = s.x509Cert
 		options["X509Key"] = s.x509Key
 	}
 	return options
 }
 
-// GetContext returns the Server's current context information such as encryption keys
-func (s *Server) GetContext() handlers.ContextInterface {
-	return *s.ctx
+// Handler returns the Server's current context information such as encryption keys
+func (s *Server) Handler() *handler {
+	return s.handler
 }
 
-// GetInterface function returns the interface that the server is bound to
-func (s *Server) GetInterface() string {
-	return s.Interface
+// Interface function returns the interface that the server is bound to
+func (s *Server) Interface() string {
+	return s.iface
 }
 
-// GetPort function returns the port that the server is bound to
-func (s *Server) GetPort() int {
-	return s.Port
+// Port function returns the port that the server is bound to
+func (s *Server) Port() int {
+	return s.port
 }
 
-// GetProtocol returns the server's protocol as an integer for a constant in the servers package
-func (s *Server) GetProtocol() int {
-	return s.Protocol
+// Protocol returns the server's protocol as an integer for a constant in the servers package
+func (s *Server) Protocol() int {
+	return s.protocol
 }
 
-// GetProtocolString function returns the server's protocol
-func (s *Server) GetProtocolString() string {
-	switch s.Protocol {
+// ProtocolString function returns the server's protocol
+func (s *Server) ProtocolString() string {
+	switch s.protocol {
 	case servers.HTTP:
 		return "HTTP"
 	case servers.HTTPS:
 		return "HTTPS"
 	case servers.HTTP2:
 		return "HTTP2"
+	case servers.H2C:
+		return "H2C"
+	case servers.HTTP3:
+		return "HTTP3"
 	default:
 		return "UNKNOWN"
 	}
+}
+
+func (s *Server) ID() uuid.UUID {
+	return s.id
+}
+
+func (s *Server) Restart(options map[string]string) error {
+	// TODO Implement this
+	return nil
 }
 
 // SetOption function sets an option for an instantiated server object
@@ -273,24 +181,24 @@ func (s *Server) SetOption(option string, value string) error {
 	// Check non-string options first
 	switch strings.ToLower(option) {
 	case "interface":
-		s.Interface = value
+		s.iface = value
 	case "port":
-		s.Port, err = strconv.Atoi(value)
+		s.port, err = strconv.Atoi(value)
 		if err != nil {
 			return fmt.Errorf("there was an error converting the port number to an integer: %s", err.Error())
 		}
 	case "protocol":
 		return fmt.Errorf("the protocol can not be changed; create a new listener instead")
 	case "psk":
-		s.ctx.PSK = value
+		s.handler.psk = []byte(value)
 	case "urls":
 		s.urls = strings.Split(value, ",")
 	case "x509cert":
-		if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
+		if s.protocol == servers.HTTPS || s.protocol == servers.HTTP2 {
 			s.x509Cert = option
 		}
 	case "x509key":
-		if s.Protocol == servers.HTTPS || s.Protocol == servers.HTTP2 {
+		if s.protocol == servers.HTTPS || s.protocol == servers.HTTP2 {
 			s.x509Key = option
 		}
 	default:
@@ -299,14 +207,15 @@ func (s *Server) SetOption(option string, value string) error {
 	return nil
 }
 
-// Start function starts the HTTP server
-func (s *Server) Start() error {
+// Start function starts the HTTP server and listens for incoming connections
+// This function does not return unless there is an error and should be called as Go routine
+func (s *Server) Start() {
 	var g errgroup.Group
 
 	// Catch Panic
 	defer func() {
 		if r := recover(); r != nil {
-			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", servers.GetProtocol(s.GetProtocol()), s.Interface, s.Port, r.(error))
+			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", s.Protocol(), s.iface, s.port, r.(error))
 			messages.SendBroadcastMessage(messages.UserMessage{
 				Level:   messages.Warn,
 				Message: m,
@@ -317,38 +226,115 @@ func (s *Server) Start() error {
 	}()
 
 	g.Go(func() error {
-		s.State = servers.Running
-		switch s.Protocol {
-		case servers.HTTP:
-			return s.Transport.(*http.Server).ListenAndServe()
+		s.state = Running
+		switch s.protocol {
+		case servers.HTTP, servers.H2C:
+			return s.transport.(*http.Server).ListenAndServe()
 		case servers.HTTPS, servers.HTTP2:
-			return s.Transport.(*http.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+			return s.transport.(*http.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+		case servers.HTTP3:
+			if s.x509Key != "" && s.x509Cert != "" {
+				return s.transport.(*http3.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+			}
+			return s.transport.(*http3.Server).ListenAndServe()
 		default:
-			return fmt.Errorf("could not start HTTP server, invalid protocol %d, %s", s.Protocol, servers.GetStateString(s.Protocol))
+			return fmt.Errorf("could not start HTTP server, invalid protocol %d, %s", s.protocol, State(s.protocol))
 		}
 	})
 
 	if err := g.Wait(); err != nil {
 		if err != http.ErrServerClosed {
-			s.State = servers.Error
-			return fmt.Errorf("there was an error with the %s server on %s:%d %s", s.GetProtocolString(), s.Interface, s.Port, err.Error())
+			s.state = Error
+			messages.SendBroadcastMessage(messages.ErrorMessage(fmt.Sprintf("there was an error with the %s server on %s:%d %s", s.ProtocolString(), s.iface, s.port, err.Error())))
 		}
 	}
-	return nil
 }
 
 // Status enumerates if the server is currently running or stopped and returns the value as a string
-func (s *Server) Status() int {
-	return s.State
+func (s *Server) Status() string {
+	return State(s.state)
 }
 
 // Stop function stops the server
-func (s *Server) Stop() error {
-	// Don't use Shutdown because it won't immediately release the port and will allow traffic to continue
-	err := s.Transport.(*http.Server).Close()
+func (s *Server) Stop() (err error) {
+	switch s.protocol {
+	case servers.HTTP3:
+		// The http3 Close() sends a QUIC CONNECTION_CLOSE frame
+		err = s.transport.(*http3.Server).Close()
+		// As of quic-go v0.17.3 CloseGracefully is not implemented which means no CONNECTION_CLOSE or GOAWAY frames are sent
+		// CloseGracefully() will not release the port since it is not implemented
+	default:
+		// Don't use Shutdown because it won't immediately release the port and will allow traffic to continue
+		err = s.transport.(*http.Server).Close()
+	}
+
 	if err != nil {
 		return fmt.Errorf("there was an error stopping the HTTP server:\r\n%s", err.Error())
 	}
-	s.State = servers.Closed
-	return nil
+	s.state = Closed
+	return
+}
+
+// State is used to transform a server state constant into a string for use in written messages or logs
+func State(state int) string {
+	switch state {
+	case Stopped:
+		return "Stopped"
+	case Running:
+		return "Running"
+	case Error:
+		return "Error"
+	case Closed:
+		return "Closed"
+	default:
+		return "Undefined"
+	}
+}
+
+// GetDefaultOptions returns a map of configurable server options typically used when creating a listener
+func GetDefaultOptions(protocol int) map[string]string {
+	options := make(map[string]string)
+	options["Interface"] = "127.0.0.1"
+	if protocol == servers.HTTP {
+		options["Port"] = "80"
+	} else {
+		options["Port"] = "443"
+	}
+
+	options["URLS"] = "/"
+
+	if protocol != servers.HTTP && protocol != servers.H2C {
+		options["X509Cert"] = filepath.Join(string(core.CurrentDir), "data", "x509", "server.crt")
+		options["X509Key"] = filepath.Join(string(core.CurrentDir), "data", "x509", "server.key")
+	}
+
+	switch protocol {
+	case servers.HTTP:
+		options["Protocol"] = "HTTP"
+	case servers.HTTPS:
+		options["Protocol"] = "HTTPS"
+	case servers.HTTP2:
+		options["Protocol"] = "HTTP2"
+	case servers.H2C:
+		options["Protocol"] = "H2C"
+	case servers.HTTP3:
+		options["Protocol"] = "HTTP3"
+	default:
+		options["Protocol"] = "HTTP-UNKNOWN"
+	}
+
+	return options
+}
+
+// Renew generates a new Server object and retains original encryption keys
+func Renew(ctx handler, options map[string]string) (Server, error) {
+	tempServer, err := New(options)
+	if err != nil {
+		return tempServer, err
+	}
+
+	// Retain server's original JWT key used to sign and encrypt authorization JWT
+	tempServer.handler.jwtKey = ctx.jwtKey
+
+	return tempServer, nil
 }

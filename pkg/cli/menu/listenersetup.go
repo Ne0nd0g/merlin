@@ -20,7 +20,6 @@ package menu
 import (
 	// Standard
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
 	"os"
 	"strings"
 	"time"
@@ -40,7 +39,7 @@ import (
 // listenerType is used to track the type of listener the CLI is currently interacting with
 var listenerType string
 
-// handlerListenerSetup handles all of the logic for setting up a Listener
+// handlerListenerSetup handles all the logic for setting up a Listener
 func handlerListenerSetup(cmd []string) {
 	switch strings.ToLower(cmd[0]) {
 	case "back":
@@ -108,9 +107,15 @@ func handlerListenerSetup(cmd []string) {
 			}
 			return
 		}
+		r, id := listenerAPI.GetListenerByName(options["Name"])
+		if r.Error {
+			core.MessageChannel <- r
+			return
+		}
 
 		listener = listenerInfo{id: id, name: options["Name"]}
-		startMessage := listenerAPI.Start(listener.name)
+		startMessage := listenerAPI.Start(id)
+
 		listener.status = listenerAPI.GetListenerStatus(id).Message
 		core.MessageChannel <- startMessage
 		um, options = listenerAPI.GetListenerConfiguredOptions(listener.id)
@@ -153,7 +158,7 @@ func completerListenerSetup() *readline.PrefixCompleter {
 		readline.PcItem("run"),
 		readline.PcItem("sessions"),
 		readline.PcItem("set",
-			readline.PcItemDynamic(repo.GetProtocolOptionDefaultsCompletor(options["Protocol"])),
+			readline.PcItemDynamic(listenerAPI.GetDefaultOptionsCompleter(listenerType)),
 		),
 		readline.PcItem("show"),
 		readline.PcItem("start"),

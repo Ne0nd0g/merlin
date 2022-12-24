@@ -128,6 +128,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.KillDate(agent, cmd)
 	case "link":
 		core.MessageChannel <- agentAPI.LinkAgent(agent, cmd)
+	case "listener":
+		core.MessageChannel <- agentAPI.Listener(agent, cmd)
 	case "list-assemblies":
 		core.MessageChannel <- agentAPI.ListAssemblies(agent)
 	case "load-assembly":
@@ -301,7 +303,22 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("jobs"),
 		readline.PcItem("kill"),
 		readline.PcItem("killdate"),
-		readline.PcItem("link"),
+		readline.PcItem("link",
+			readline.PcItem("tcp",
+				readline.PcItem("127.0.0.1:4444"),
+			),
+		),
+		readline.PcItem("listener",
+			readline.PcItem("list"),
+			readline.PcItem("start",
+				readline.PcItem("tcp",
+					readline.PcItem("127.0.0.1:4444"),
+				),
+			),
+			readline.PcItem("stop",
+				readline.PcItem("tcp"),
+			),
+		),
 		readline.PcItem("ls"),
 		readline.PcItem("main"),
 		readline.PcItem("maxretry"),
@@ -399,6 +416,8 @@ func helpAgent() {
 		{"jobs", "Display all active jobs for the agent", ""},
 		{"kill", "Kill a running process by its numerical identifier (pid)", "kill <pid>"},
 		{"killdate", "Set the epoch date/time the agent will quit running", "killdate <epoch date>"},
+		{"link", "Connect to an already listening bind Agent", "link <protocol> <interface:port>"},
+		{"listen", "Listen for incoming connections for agents", "listen <protocol> <interface:port>"},
 		{"ls", "List directory contents", "ls /etc OR ls C:\\\\Users OR ls C:/Users"},
 		{"main", "Return to the main menu", ""},
 		{"maxretry", "Set the maximum amount of times the agent can fail to check in before it dies", "maxretery <number>"},

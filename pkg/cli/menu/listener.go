@@ -20,7 +20,6 @@ package menu
 import (
 	// Standard
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/servers/repo"
 	"os"
 	"strings"
 	"time"
@@ -123,11 +122,11 @@ func handlerListener(cmd []string) {
 	case "set":
 		core.MessageChannel <- listenerAPI.SetOption(listener.id, cmd)
 	case "start":
-		core.MessageChannel <- listenerAPI.Start(listener.name)
+		core.MessageChannel <- listenerAPI.Start(listener.id)
 	case "status":
 		core.MessageChannel <- listenerAPI.GetListenerStatus(listener.id)
 	case "stop":
-		core.MessageChannel <- listenerAPI.Stop(listener.name)
+		core.MessageChannel <- listenerAPI.Stop(listener.id)
 	default:
 		if cmd[0][0:1] == "!" {
 			if len(cmd) > 1 {
@@ -163,7 +162,7 @@ func completerListener() *readline.PrefixCompleter {
 		readline.PcItem("restart"),
 		readline.PcItem("sessions"),
 		readline.PcItem("set",
-			readline.PcItemDynamic(repo.GetProtocolOptionDefaultsCompletor(options["Protocol"])),
+			readline.PcItemDynamic(listenerAPI.GetDefaultOptionsCompleter(listenerType)),
 		),
 		readline.PcItem("show"),
 		readline.PcItem("start"),

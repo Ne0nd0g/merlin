@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
+// Package opaque holds the functions and structures to perform OPAQUE registration and authentication
+// https://github.com/cfrg/draft-irtf-cfrg-opaque
 package opaque
 
 import (
@@ -88,7 +90,8 @@ func ServerRegisterInit(AgentID uuid.UUID, o Opaque, key kyber.Scalar) (Opaque, 
 			message("note", fmt.Sprintf("OPAQUE UserID: %v", userRegInit.UserID))
 			message("note", fmt.Sprintf("Merlin Message UserID: %v", AgentID.Bytes()))
 		}
-		return Opaque{}, &server, fmt.Errorf("the OPAQUE UserID doesn't match the Merlin message ID")
+		regUUID, _ := uuid.FromBytes(userRegInit.UserID)
+		return Opaque{}, &server, fmt.Errorf("the OPAQUE UserID %s doesn't match the Merlin message ID %s", regUUID, AgentID)
 	}
 
 	serverRegInit := server.reg.Init(&userRegInit)

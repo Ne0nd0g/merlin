@@ -35,13 +35,13 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/agents"
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	cli "github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	merlinJob "github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
+	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 )
 
 // JobsChannel contains a map of all instantiated jobs created on the server by each Agent's ID
@@ -50,7 +50,7 @@ var JobsChannel = make(map[uuid.UUID]chan merlinJob.Job)
 // Jobs is a map that contains specific information about an individual job and is embedded in the JobsChannel
 var Jobs = make(map[string]info)
 
-//  info is a structure for holding data for single task assigned to a single agent
+// info is a structure for holding data for single task assigned to a single agent
 type info struct {
 	AgentID   uuid.UUID // ID of the agent the job belong to
 	Type      string    // Type of job
@@ -62,6 +62,8 @@ type info struct {
 	Completed time.Time // Time the job finished
 	Command   string    // The actual command
 }
+
+var agentService = agent.NewAgentService()
 
 func init() {
 	// Start the go routine to listen for jobs coming from a SOCKS client
@@ -167,6 +169,13 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 		job.Type = merlinJob.MODULE
 		p := merlinJob.Command{
 			Command: "link",
+			Args:    jobArgs,
+		}
+		job.Payload = p
+	case "listener":
+		job.Type = merlinJob.MODULE
+		p := merlinJob.Command{
+			Command: "listener",
 			Args:    jobArgs,
 		}
 		job.Payload = p
@@ -450,14 +459,15 @@ func Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
 // AddJobChannel adds an already built Agent Job to the agent's job channel to be sent to the agent when it checks in.
 // A server-side job tracking structure is also added to track job status
 func AddJobChannel(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) (results string, err error) {
+	agents := agentService.Agents()
 	// If the Agent is set to broadcast identifier for ALL agents
 	if agentID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		if len(agents.Agents) <= 0 {
+		if len(agents) <= 0 {
 			return results, fmt.Errorf("there are 0 available agents, no jobs were created")
 		}
 		results = "Creating jobs for all agents through broadcast identifier ffffffff-ffff-ffff-ffff-ffffffffffff"
-		for a := range agents.Agents {
-			err = buildJob(a, job, jobArgs)
+		for _, a := range agents {
+			err = buildJob(a.ID(), job, jobArgs)
 			if err != nil {
 				return results, err
 			}
@@ -532,8 +542,8 @@ func Get(agentID uuid.UUID) ([]merlinJob.Job, error) {
 		message("debug", "Entering into jobs.Get() function...")
 	}
 	var jobs []merlinJob.Job
-	_, ok := agents.Agents[agentID]
-	if !ok {
+
+	if !agentService.Exist(agentID) {
 		return jobs, fmt.Errorf("%s is not a valid agent", agentID)
 	}
 
@@ -583,15 +593,17 @@ func Handler(m messages.Base) (err error) {
 	jobs := m.Payload.([]merlinJob.Job)
 
 	for _, job := range jobs {
-		// Check to make sure agent UUID is in dataset
-		agent, ok := agents.Agents[job.AgentID]
-		if ok {
+		if agentService.Exist(job.AgentID) {
+			agent, err := agentService.Agent(job.AgentID)
+			if err != nil {
+				return err
+			}
 			// Verify that the job contains the correct token and that it was not already completed
 			err = checkJob(job)
 			if err != nil {
 				// Agent will send back error messages that are not the result of a job
 				if job.Type != merlinJob.RESULT {
-					return
+					return err
 				}
 				if core.Debug {
 					message("debug", fmt.Sprintf("Received %s message without job token.\r\n%s", messages.String(job.Type), err))
@@ -627,11 +639,15 @@ func Handler(m messages.Base) (err error) {
 					messageAPI.SendBroadcastMessage(userMessage)
 				}
 			case merlinJob.AGENTINFO:
-				agent.UpdateInfo(job.Payload.(messages.AgentInfo))
+				err = agentService.UpdateAgentInfo(job.AgentID, job.Payload.(messages.AgentInfo))
+				if err != nil {
+					return err
+				}
+				//agent.UpdateInfo(job.Payload.(messages.AgentInfo))
 			case merlinJob.FILETRANSFER:
 				err = fileTransfer(job.AgentID, job.Payload.(merlinJob.FileTransfer))
 				if err != nil {
-					return
+					return err
 				}
 			case merlinJob.SOCKS:
 				// Send to SOCKS client
@@ -674,8 +690,7 @@ func GetTableActive(agentID uuid.UUID) ([][]string, error) {
 		message("debug", fmt.Sprintf("entering into jobs.GetTableActive for agent %s", agentID.String()))
 	}
 	var jobs [][]string
-	_, ok := agents.Agents[agentID]
-	if !ok {
+	if !agentService.Exist(agentID) {
 		return jobs, fmt.Errorf("%s is not a valid agent", agentID)
 	}
 
@@ -756,11 +771,12 @@ func GetTableAll() [][]string {
 // A server-side job tracking structure is also added to track job status.
 // The job is also added to the server-side agent log file
 func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
-	agent, ok := agents.Agents[agentID]
-	if !ok {
-		return fmt.Errorf("there was an error adding a job because %s is an unknown agent", agentID)
+	agent, err := agentService.Agent(agentID)
+
+	if err != nil {
+		return fmt.Errorf("pkg/server/jobs.buildJob(): there was an error adding a job because %s is an unknown agent", agentID)
 	}
-	job.AgentID = agent.ID
+	job.AgentID = agentID
 
 	// SOCKS jobs create their own token that is used through the lifetime of the connection
 	if job.Token == uuid.Nil {
@@ -773,17 +789,17 @@ func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
 	}
 
 	// Check to see if a job channel for the agent exist
-	_, k := JobsChannel[agent.ID]
+	_, k := JobsChannel[agentID]
 	// Create a job channel for the agent if one does not exist
 	if !k {
-		JobsChannel[agent.ID] = make(chan merlinJob.Job, 100)
+		JobsChannel[agentID] = make(chan merlinJob.Job, 100)
 	}
 	// Add job to the agent's job channel
-	JobsChannel[agent.ID] <- *job
+	JobsChannel[agentID] <- *job
 
 	// Create Job info structure
 	jobInfo := info{
-		AgentID: agent.ID,
+		AgentID: agentID,
 		Token:   job.Token,
 		Type:    merlinJob.String(job.Type),
 		Status:  merlinJob.CREATED,
@@ -869,8 +885,7 @@ func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
 // checkJob verifies that the input job message contains the expected token and was not already completed
 func checkJob(job merlinJob.Job) error {
 	// Check to make sure agent UUID is in dataset
-	_, ok := agents.Agents[job.AgentID]
-	if !ok {
+	if !agentService.Exist(job.AgentID) {
 		return fmt.Errorf("job %s was for an invalid agent %s", job.ID, job.AgentID)
 	}
 	j, k := Jobs[job.ID]
@@ -896,8 +911,7 @@ func fileTransfer(agentID uuid.UUID, p merlinJob.FileTransfer) error {
 	}
 
 	// Check to make sure it is a known agent
-	agent, ok := agents.Agents[agentID]
-	if !ok {
+	if !agentService.Exist(agentID) {
 		return fmt.Errorf("%s is not a valid agent", agentID)
 	}
 
@@ -906,7 +920,10 @@ func fileTransfer(agentID uuid.UUID, p merlinJob.FileTransfer) error {
 		_, f := filepath.Split(p.FileLocation) // We don't need the directory part for anything
 		if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
 			errorMessage := fmt.Errorf("there was an error locating the agent's directory:\r\n%s", errD.Error())
-			agent.Log(errorMessage.Error())
+			err := agentService.Log(agentID, errorMessage.Error())
+			if err != nil {
+				return fmt.Errorf("there were to errors:\n\t%s\n\t%s", errorMessage, err)
+			}
 			return errorMessage
 		}
 		message("success", fmt.Sprintf("Results for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)))
@@ -914,14 +931,20 @@ func fileTransfer(agentID uuid.UUID, p merlinJob.FileTransfer) error {
 
 		if downloadBlobErr != nil {
 			errorMessage := fmt.Errorf("there was an error decoding the fileBlob:\r\n%s", downloadBlobErr.Error())
-			agent.Log(errorMessage.Error())
+			err := agentService.Log(agentID, errorMessage.Error())
+			if err != nil {
+				return fmt.Errorf("there were to errors:\n\t%s\n\t%s", errorMessage, err)
+			}
 			return errorMessage
 		}
 		downloadFile := filepath.Join(agentsDir, agentID.String(), f)
 		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0600)
 		if writingErr != nil {
 			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
-			agent.Log(errorMessage.Error())
+			err := agentService.Log(agentID, errorMessage.Error())
+			if err != nil {
+				return fmt.Errorf("there were to errors:\n\t%s\n\t%s", errorMessage, err)
+			}
 			return errorMessage
 		}
 		successMessage := fmt.Sprintf("Successfully downloaded file %s with a size of %d bytes from agent %s to %s",
@@ -931,7 +954,10 @@ func fileTransfer(agentID uuid.UUID, p merlinJob.FileTransfer) error {
 			downloadFile)
 
 		message("success", successMessage)
-		agent.Log(successMessage)
+		err := agentService.Log(agentID, successMessage)
+		if err != nil {
+			return err
+		}
 	}
 	if core.Debug {
 		message("debug", "Leaving agents.FileTransfer")

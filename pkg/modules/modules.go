@@ -35,17 +35,15 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/satori/go.uuid"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-
 	// Merlin Modules
+	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
 	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
 	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
 	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
+	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 )
 
 // Module is a structure containing the base information or template for modules
@@ -91,14 +89,15 @@ func Run(m Module) ([]string, error) {
 		return nil, errors.New("agent not set for module")
 	}
 
-	if strings.ToLower(m.Agent.String()) != "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		platform, platformError := agents.GetAgentFieldValue(m.Agent, "platform")
-		if platformError != nil {
-			return nil, platformError
-		}
+	agentService := agent.NewAgentService()
+	agent, err := agentService.Agent(m.Agent)
+	if err != nil {
+		return []string{}, fmt.Errorf("pkg/modules.Run(): there was an error getting the Agent %s: %s", m.Agent, err)
+	}
 
-		if !strings.EqualFold(m.Platform, platform) {
-			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
+	if strings.ToLower(m.Agent.String()) != "ffffffff-ffff-ffff-ffff-ffffffffffff" {
+		if !strings.EqualFold(m.Platform, agent.Host().Platform) {
+			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, agent.Host().Platform)
 		}
 	}
 

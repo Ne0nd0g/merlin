@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+# 1.6.0 -
+
+## Added
+
+- New TCP listener
+  - Used to configure how the listener process Agent traffic or to generate Agents
+  - TCP listener DOES NOT bind to interfaces/ports on the Merlin server, used for Agent configuration/generation ONLY
+- Delegate message type and functions for processing them
+- Configurable listener authentication methods for Agent communications: OPAQUE & none
+- Configurable listener transforms for Agent communications: gob-base, base64, hex, aes, jwe, rc4, and xor
+- `link` command for the Agent to initiate a peer-to-peer connection with a listening bind agent
+  - Example: `link tcp 192.168.1.72:4444`
+- `listener` command for the Agent to start a listener to receive a connection from a reverse peer-to-peer connection
+  - `list` to return a list of instantiated on the Agent (e.g., `listener list`)
+  - `start` to start a listener based on the passed in type and interface
+    - Example: `listener start tcp 0.0.0.0:4444`
+  - `stop` to stop an already created listener
+    - Example: `listener stop tcp [::]:4444`
+
+## Changed
+
+- Refactored _some_ areas to align with DDD and SOLID to alleviate circular dependencies implementing peer-to-peer comms
+  - Implemented base "entity" structures and "aggregates"
+  - Implemented the "Repository" pattern for Agents, Delegates, Groups, Listeners, Servers
+  - Implemented the "Services" patter for interacting with Agents, Listeners, & Base messages
+- Configurable JWT key value for HTTP listeners
+- Removed util package and relocated function to appropriate packages
+
 # 1.5.0 - 2022-07-20
 
 ### Added

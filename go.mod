@@ -36,6 +36,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo v1.16.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/stretchr/testify v1.6.1 // indirect
 	go.dedis.ch/fixbuf v1.0.3 // indirect
 	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 // indirect
