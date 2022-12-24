@@ -156,13 +156,16 @@ func (l *Listener) Authenticate(id uuid.UUID, data interface{}) (messages.Base, 
 
 // ConfiguredOptions returns the server's current configuration for options that can be set by the user
 func (l *Listener) ConfiguredOptions() map[string]string {
+	// Server configuration
 	options := l.server.ConfiguredOptions()
+	// Listener configuration
+	options["ID"] = l.server.ID().String()
 	options["Name"] = l.name
 	options["Description"] = l.description
-	options["ID"] = l.server.ID().String()
+	options["Authenticator"] = l.auth.String()
 	options["Transforms"] = ""
 	for _, transform := range l.transformers {
-		options["Transforms"] += transform.String()
+		options["Transforms"] += fmt.Sprintf("%s,", transform)
 	}
 	// PSK is stored in l.PSK as a sha256 hash of the passed in clear-text PSK
 	options["PSK"] = l.options["PSK"]

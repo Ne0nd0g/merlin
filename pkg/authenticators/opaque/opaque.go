@@ -271,3 +271,8 @@ func (a *Authenticator) reAuthenticate(agentID uuid.UUID) (opaque.Opaque, error)
 
 	return returnMessage, nil
 }
+
+// String returns the name of authenticator type
+func (a *Authenticator) String() string {
+	return "OPAQUE"
+}

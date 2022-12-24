@@ -80,3 +80,8 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 	msg.Type = messages.IDLE
 	return
 }
+
+// String returns the name of authenticator type
+func (a *Authenticator) String() string {
+	return "none"
+}

@@ -177,14 +177,17 @@ func (l *Listener) Authenticate(id uuid.UUID, data interface{}) (messages.Base, 
 // ConfiguredOptions returns the server's current configuration for options that can be set by the user
 func (l *Listener) ConfiguredOptions() (options map[string]string) {
 	options = make(map[string]string)
-	options["Description"] = l.description
 	options["ID"] = l.id.String()
 	options["Name"] = l.name
-	options["PSK"] = l.PSK()
+	options["Description"] = l.description
+	options["Authenticator"] = l.auth.String()
 	options["Transforms"] = ""
 	for _, transform := range l.transformers {
-		options["Transforms"] += transform.String()
+		options["Transforms"] += fmt.Sprintf("%s,", transform)
 	}
+	options["PSK"] = l.options["PSK"]
+	options["Interface"] = l.iface
+	options["Port"] = fmt.Sprintf("%d", l.port)
 	return options
 }
 

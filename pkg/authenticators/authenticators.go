@@ -31,4 +31,6 @@ import (
 type Authenticator interface {
 	// Authenticate is the server-side steps to complete Agent authentication
 	Authenticate(id uuid.UUID, data interface{}) (messages.Base, error) // Returning Base so that way it can be sent to the agent
+	// String returns the name of authenticator type
+	String() string
 }

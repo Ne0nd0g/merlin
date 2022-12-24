@@ -114,10 +114,9 @@ func New(options map[string]string) (Server, error) {
 // ConfiguredOptions returns the server's current configuration for options that can be set by the user
 func (s *Server) ConfiguredOptions() map[string]string {
 	options := make(map[string]string)
+	options["Protocol"] = s.ProtocolString()
 	options["Interface"] = s.iface
 	options["Port"] = fmt.Sprintf("%d", s.port)
-	options["Protocol"] = s.ProtocolString()
-	options["PSK"] = string(s.handler.psk)
 	options["URLS"] = strings.Join(s.urls, ",")
 	options["JWTKey"] = base64.StdEncoding.EncodeToString(s.handler.jwtKey)
 
