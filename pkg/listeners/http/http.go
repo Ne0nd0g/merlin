@@ -138,12 +138,6 @@ func DefaultOptions() map[string]string {
 	options["Description"] = "Default HTTP Listener"
 	options["PSK"] = "merlin"
 	options["Transforms"] = "gob-string,jwe,gob-base"
-	options["JWTKey"] = base64.StdEncoding.EncodeToString([]byte(core.RandStringBytesMaskImprSrc(32)))
-	options["Interface"] = "127.0.0.1"
-	options["Port"] = "443"
-	options["URLS"] = "/"
-	options["X509Cert"] = ""
-	options["X509Key"] = ""
 	return options
 }
 

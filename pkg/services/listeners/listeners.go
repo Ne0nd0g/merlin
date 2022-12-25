@@ -278,7 +278,12 @@ func (ls *ListenerService) Restart(id uuid.UUID) error {
 		return fmt.Errorf("pkg/services/listeners.Restart(): %s", err)
 	}
 	server := *listener.Server()
-	return server.Restart(listener.Options())
+	err = server.Stop()
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.Restart(): %s", err)
+	}
+	go server.Start()
+	return nil
 }
 
 // SetOptions replaces an existing Listener's configurable options map with the one provided

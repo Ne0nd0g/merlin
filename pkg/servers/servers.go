@@ -53,7 +53,6 @@ type ServerInterface interface {
 	Port() int
 	SetOption(string, string) error
 	Start()
-	Restart(options map[string]string) error
 	Status() string
 	Stop() error
 }

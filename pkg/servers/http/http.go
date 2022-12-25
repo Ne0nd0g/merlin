@@ -19,6 +19,7 @@ package http
 
 import (
 	// Standard
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -28,9 +29,12 @@ import (
 	"time"
 
 	// X Packages
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
 	// 3rd Party
+	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/http3"
 	uuid "github.com/satori/go.uuid"
 
@@ -74,6 +78,8 @@ type Server struct {
 	x509Cert  string
 	x509Key   string
 	urls      []string
+	psk       string
+	jwtKey    string // A Base64 encoded 32-byte key used to sign JSON Web Tokens
 }
 
 // TODO make this template a generic structure across all HTTP servers in the root
@@ -94,21 +100,91 @@ type Template struct {
 
 // New creates a new HTTP server based on the passed in Template
 func New(options map[string]string) (Server, error) {
-	// Verify the options map has a protocol key
+	var err error
+	var s Server
+	s.id = uuid.NewV4()
+	s.state = Stopped
+
+	// Protocol
 	proto, ok := options["Protocol"]
-	if !ok {
-		return Server{}, fmt.Errorf("http: a protocol key was not provided")
+	if ok {
+		proto = strings.ToLower(proto)
+	} else {
+		return s, fmt.Errorf("the \"Protocol\" key was not found in the options map and is required")
 	}
-	switch strings.ToLower(proto) {
-	case "http", "https", "http2":
-		return newHTTP1(options)
+	switch proto {
+	case "http":
+		s.protocol = servers.HTTP
+	case "https":
+		s.protocol = servers.HTTPS
+	case "http2":
+		s.protocol = servers.HTTP2
 	case "h2c":
-		return newHTTP2(options)
+		s.protocol = servers.H2C
 	case "http3":
-		return newHTTP3(options)
+		s.protocol = servers.HTTP3
 	default:
 		return Server{}, fmt.Errorf("http: invalid http protocol type: %s", proto)
 	}
+
+	// Interface
+	s.iface, ok = options["Interface"]
+	if !ok {
+		return s, fmt.Errorf("the \"Interface\" key was not found in the options map and is required")
+	}
+
+	// Port
+	port, ok := options["Port"]
+	if !ok {
+		return s, fmt.Errorf("the \"Port\" key was not found in the options map and is required")
+	}
+	// Convert port to integer from string
+	s.port, err = strconv.Atoi(port)
+	if err != nil {
+		return s, fmt.Errorf("there was an error converting the port number to an integer: %s", err.Error())
+	}
+
+	// X.509 Certificate
+	if cert, ok := options["X509Cert"]; ok {
+		s.x509Cert = cert
+	}
+
+	// X.509 Key
+	if key, ok := options["X509Key"]; ok {
+		s.x509Key = key
+	}
+
+	// Parse URLs
+	urls, _ := options["URLS"]
+	if urls == "" {
+		s.urls = []string{"/"}
+	} else {
+		s.urls = strings.Split(urls, ",")
+	}
+
+	// Pre-Shared Key
+	s.psk, ok = options["PSK"]
+	if !ok {
+		return s, fmt.Errorf("the \"PSK\" key was not found in the options map and is required")
+	}
+
+	// JWT Key
+	jwtKey, ok := options["JWTKey"]
+	if !ok {
+		return s, fmt.Errorf("the \"JWTKey\" key was not found in the options map and is required")
+	}
+
+	// Key must be 32 bytes
+	jwt, err := base64.StdEncoding.DecodeString(options["JWTKey"])
+	if err != nil {
+		return s, fmt.Errorf("there was an error base64 decoding the provided JWT Key %s: %s", options["JWTKey"], err)
+	}
+	if len(jwt) != 32 {
+		return s, fmt.Errorf("the provided JWT key was %d bytes but must be 32 bytes", len(jwt))
+	}
+	s.jwtKey = jwtKey
+
+	return s, nil
 }
 
 // ConfiguredOptions returns the server's current configuration for options that can be set by the user
@@ -118,7 +194,7 @@ func (s *Server) ConfiguredOptions() map[string]string {
 	options["Interface"] = s.iface
 	options["Port"] = fmt.Sprintf("%d", s.port)
 	options["URLS"] = strings.Join(s.urls, ",")
-	options["JWTKey"] = base64.StdEncoding.EncodeToString(s.handler.jwtKey)
+	options["JWTKey"] = s.jwtKey
 
 	if s.protocol != servers.HTTP {
 		options["X509Cert"] = s.x509Cert
@@ -167,11 +243,6 @@ func (s *Server) ProtocolString() string {
 
 func (s *Server) ID() uuid.UUID {
 	return s.id
-}
-
-func (s *Server) Restart(options map[string]string) error {
-	// TODO Implement this
-	return nil
 }
 
 // SetOption function sets an option for an instantiated server object
@@ -225,6 +296,10 @@ func (s *Server) Start() {
 	}()
 
 	g.Go(func() error {
+		err := s.generateServer()
+		if err != nil {
+			return fmt.Errorf("pkg/servers/http.Start(): there was an error generating a new HTTP1 server: %s", err)
+		}
 		s.state = Running
 		switch s.protocol {
 		case servers.HTTP, servers.H2C:
@@ -242,7 +317,7 @@ func (s *Server) Start() {
 	})
 
 	if err := g.Wait(); err != nil {
-		if err != http.ErrServerClosed {
+		if err != http.ErrServerClosed && err != quic.ErrServerClosed {
 			s.state = Error
 			messages.SendBroadcastMessage(messages.ErrorMessage(fmt.Sprintf("there was an error with the %s server on %s:%d %s", s.ProtocolString(), s.iface, s.port, err.Error())))
 		}
@@ -294,12 +369,12 @@ func State(state int) string {
 func GetDefaultOptions(protocol int) map[string]string {
 	options := make(map[string]string)
 	options["Interface"] = "127.0.0.1"
-	if protocol == servers.HTTP {
+	if protocol == servers.HTTP || protocol == servers.H2C {
 		options["Port"] = "80"
 	} else {
 		options["Port"] = "443"
 	}
-
+	options["JWTKey"] = base64.StdEncoding.EncodeToString([]byte(core.RandStringBytesMaskImprSrc(32)))
 	options["URLS"] = "/"
 
 	if protocol != servers.HTTP && protocol != servers.H2C {
@@ -336,4 +411,111 @@ func Renew(ctx handler, options map[string]string) (Server, error) {
 	tempServer.handler.jwtKey = ctx.jwtKey
 
 	return tempServer, nil
+}
+
+// generateServer creates a new http.Server structure based on the configuration and assigns it to this package's Server structure
+func (s *Server) generateServer() error {
+	// JWT
+	jwt, err := base64.StdEncoding.DecodeString(s.jwtKey)
+	if err != nil {
+		return fmt.Errorf("there was an error base64 decoding the provided JWT Key %s: %s", s.jwtKey, err)
+	}
+
+	// Handler
+	s.handler = &handler{
+		// Used to sign and encrypt JWT
+		listener: s.id,
+		jwtKey:   jwt,
+		psk:      []byte(s.psk),
+	}
+
+	// Add multiplexer handler for URLs
+	mux := http.NewServeMux()
+	for _, url := range s.urls {
+		mux.HandleFunc(url, s.handler.agentHandler)
+	}
+
+	// Add server
+	switch s.protocol {
+	case servers.HTTP, servers.HTTPS, servers.HTTP2:
+		s.transport = &http.Server{
+			Addr:              fmt.Sprintf("%s:%d", s.iface, s.port),
+			Handler:           mux,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			ReadHeaderTimeout: 30 * time.Second,
+			MaxHeaderBytes:    1 << 20,
+		}
+	case servers.H2C:
+		h2s := &http2.Server{}
+		s.transport = &http.Server{
+			Addr:              fmt.Sprintf("%s:%d", s.iface, s.port),
+			Handler:           h2c.NewHandler(mux, h2s),
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			ReadHeaderTimeout: 30 * time.Second,
+			MaxHeaderBytes:    1 << 20,
+		}
+	case servers.HTTP3:
+		s.transport = &http3.Server{
+			Addr:           fmt.Sprintf("%s:%d", s.iface, s.port),
+			Port:           s.port,
+			Handler:        mux,
+			MaxHeaderBytes: 1 << 20,
+			//TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}, MinVersion: tls.VersionTLS12},
+			QuicConfig: &quic.Config{
+				// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
+				MaxIdleTimeout:  time.Until(time.Now().AddDate(0, 42, 0)),
+				KeepAlivePeriod: time.Second * 0,
+			},
+		}
+	default:
+		return fmt.Errorf("pkg/servers/http.generateServer(): unhandled server type %d", s.protocol)
+	}
+
+	// Add TLS X509 certificates
+	if s.protocol == servers.HTTPS || s.protocol == servers.HTTP2 || s.protocol == servers.HTTP3 {
+		certificates, err := GetTLSCertificates(s.x509Cert, s.x509Key)
+		if err != nil {
+			m := fmt.Sprintf("Certificate was not found at: \"%s\"\n", s.x509Cert)
+			m += "Creating in-memory x.509 certificate used for this session only"
+			messages.SendBroadcastMessage(messages.UserMessage{
+				Level:   messages.Note,
+				Message: m,
+				Time:    time.Now().UTC(),
+				Error:   false,
+			})
+			// Set to blank to force the HTTP server to use its TLS config. ListenAndServeTLS will fail with invalid file paths
+			s.x509Key = ""
+			s.x509Cert = ""
+			// Generate in-memory certificates
+			certificates, err = GenerateTLSCert(nil, nil, nil, nil, nil, nil, true)
+			if err != nil {
+				return err
+			}
+		}
+
+		insecure, err := CheckInsecureFingerprint(*certificates)
+		if err != nil {
+			return err
+		}
+
+		if insecure {
+			m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for %s server on %s:%d\n", s.ProtocolString(), s.iface, s.port)
+			m += "Additional details: https://merlin-c2.readthedocs.io/en/latest/server/x509.html"
+			messages.SendBroadcastMessage(messages.UserMessage{
+				Level:   messages.Warn,
+				Message: m,
+				Time:    time.Now().UTC(),
+				Error:   false,
+			})
+		}
+		switch s.protocol {
+		case servers.HTTPS, servers.HTTP2:
+			s.transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+		case servers.HTTP3:
+			s.transport.(*http3.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+		}
+	}
+	return nil
 }

@@ -471,7 +471,7 @@ func AddJobChannel(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) (res
 			if err != nil {
 				return results, err
 			}
-			results += fmt.Sprintf("\n\tCreated job %s for agent %s at %s", job.ID, a, time.Now().UTC().Format(time.RFC3339))
+			results += fmt.Sprintf("\n\tCreated job %s for agent %s at %s", job.ID, a.ID(), time.Now().UTC().Format(time.RFC3339))
 		}
 	} else {
 		// A single Agent
