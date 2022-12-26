@@ -28,9 +28,11 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
+	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/delegate"
 	delegateMemory "github.com/Ne0nd0g/merlin/pkg/delegate/memory"
+	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/http"
 	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
@@ -38,13 +40,14 @@ import (
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
-	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )
 
 // HandlerService is a structure with methods that execute the service functions for Agent messages
 type HandlerService struct {
 	agentService *agent.Service
+	jobService   *job.Service
 	listener     listeners.Listener
 	delegates    delegate.Repository
 }
@@ -58,6 +61,7 @@ func NewListenerHandlerService(id uuid.UUID) (*HandlerService, error) {
 	lhs := &HandlerService{
 		listener:     l,
 		agentService: agent.NewAgentService(),
+		jobService:   job.NewJobService(),
 		delegates:    withDelegateMemoryRepository(),
 	}
 	return lhs, nil
@@ -163,15 +167,23 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 
 	// Update the Agent's status checkin time
 	err = lhs.agentService.UpdateStatusCheckin(agent.ID(), time.Now().UTC())
+	if err != nil {
+		messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/handle/listener.Handle(): %s", err))
+	}
 
 	// Handle incoming message type
 	switch msg.Type {
 	case messages.CHECKIN:
 		// Nothing to do
 	case messages.JOBS:
-		err = jobs.Handler(msg)
+		err = lhs.jobService.Handler(msg.Payload.([]jobs.Job))
+		if err != nil {
+			messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/handle/listener.Handle(): %s", err))
+			return
+		}
 	default:
 		err = fmt.Errorf("unhandled authenticated messages.Base type %s", messages.String(msg.Type))
+		messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/handle/listener.Handle(): %s", err))
 		return
 	}
 
@@ -185,7 +197,8 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 
 	// Get return jobs
 	// TODO ensure jobs.Get doesn't return delegate or job
-	returnJobs, err := jobs.Get(msg.ID)
+	returnJobs, err := lhs.jobService.Get(msg.ID)
+
 	if len(returnJobs) > 0 {
 		returnMessage.Type = messages.JOBS
 		returnMessage.Payload = returnJobs
@@ -201,7 +214,7 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 		return nil, err
 	}
 
-	// Get a copy of the Agent structure so we can later extract the padding size
+	// Get a copy of the Agent structure, so we can later extract the padding size
 	agent, err = lhs.agentService.Agent(msg.ID)
 	if err != nil {
 		return nil, err

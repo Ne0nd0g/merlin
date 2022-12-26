@@ -52,7 +52,6 @@ func NewAgentService() *Service {
 		}
 	}
 	return memoryService
-
 }
 
 // WithMemoryAgentRepository retrieves an in-memory Agent repository interface used to manage Agent object

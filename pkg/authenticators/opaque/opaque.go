@@ -34,8 +34,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
-	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )
 
 // key is the Opaque server-side key
@@ -51,6 +51,7 @@ var out = sync.Map{}
 // Authenticator is a structure that holds an Agent service to add agents once they've completed authentication
 type Authenticator struct {
 	agentService *agent.Service
+	jobService   *job.Service
 }
 
 // NewAuthenticator is a factory to create and return an OPAQUE authenticator that implements the Authenticator interface
@@ -58,6 +59,7 @@ func NewAuthenticator() (*Authenticator, error) {
 	var err error
 	var auth Authenticator
 	auth.agentService = agent.NewAgentService()
+	auth.jobService = job.NewJobService()
 	return &auth, err
 }
 
@@ -86,7 +88,7 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 		}
 
 		// Add AgentInfo job
-		_, err = jobs.Add(id, "agentInfo", []string{})
+		_, err = a.jobService.Add(id, "agentInfo", []string{})
 		if err != nil {
 			logging.Message("warn", fmt.Sprintf("there was an error adding the agentInfo job:\r\n%s", err))
 		}

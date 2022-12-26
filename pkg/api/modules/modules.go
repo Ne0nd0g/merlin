@@ -28,10 +28,11 @@ import (
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/modules"
-	"github.com/Ne0nd0g/merlin/pkg/server/jobs"
+	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )
 
 var repo = memory.NewRepository()
+var jobService = job.NewJobService()
 
 // GetModuleListCompleter return a tab completer of available modules for CLI interactions
 func GetModuleListCompleter() func(string) []string {
@@ -90,7 +91,7 @@ func RunModule(module modules.Module) []messages.UserMessage {
 				returnMessages = append(returnMessages, agentAPI.CMD(agent.ID(), append([]string{"run"}, r...)))
 			case "extended":
 				// Was using Method: r[0]
-				job, err := jobs.Add(agent.ID(), r[0], r[1:])
+				job, err := jobService.Add(agent.ID(), r[0], r[1:])
 				if err != nil {
 					returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 				} else {
@@ -110,7 +111,7 @@ func RunModule(module modules.Module) []messages.UserMessage {
 		// Standard modules use the `cmd` message type that must be in position 0
 		returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, append([]string{"run"}, r...)))
 	case "extended":
-		job, err := jobs.Add(module.Agent, r[0], r[1:])
+		job, err := jobService.Add(module.Agent, r[0], r[1:])
 		if err != nil {
 			returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 		} else {

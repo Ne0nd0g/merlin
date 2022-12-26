@@ -42,9 +42,12 @@ type Repository struct {
 	sync.Mutex
 }
 
+// repo is the in-memory database
+var repo = &Repository{agents: make(map[uuid.UUID]agents.Agent)}
+
 // NewRepository creates and returns a Repository structure that contains an in-memory map of agents
 func NewRepository() *Repository {
-	return &Repository{agents: make(map[uuid.UUID]agents.Agent)}
+	return repo
 }
 
 // Add locks the in-memory database and adds Agent structures to the map
