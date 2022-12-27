@@ -99,7 +99,7 @@ func NewHTTPListener(server servers.ServerInterface, options map[string]string) 
 				t = jwe.NewEncrypter()
 				//t, err = encrypters.NewEncrypter(encrypters.JWE)
 			default:
-				err = fmt.Errorf("pkg/listeners.New(): unhandled transform type: %s", transform)
+				err = fmt.Errorf("pkg/listeners/http.New(): unhandled transform type: %s", transform)
 			}
 			if err != nil {
 				return
@@ -170,10 +170,10 @@ func (l *Listener) ConfiguredOptions() map[string]string {
 // on it to encode and encrypt it. If an empty key is passed in, then the listener's interface encryption key will be used.
 func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
+		logging.Message("debug", fmt.Sprintf("pkg/listeners/http.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
 	}
 
-	//fmt.Printf("pkg/listeners.Construct(): entering into function with Base message: %+v and key: %x\n", msg, key)
+	//fmt.Printf("pkg/listeners/http.Construct(): entering into function with Base message: %+v and key: %x\n", msg, key)
 	// Get a JWT and add it to the message
 	// Agent's that haven't authenticated won't be in the repository and will return an error and that is OK
 	// A zero will be passed in as the lifetime
@@ -181,10 +181,8 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 
 	msg.Token, err = GetJWT(msg.ID, lifetime, l.jwt)
 	if err != nil {
-		return nil, fmt.Errorf("pkg/listeners.Construct(): there was an error creating a JWT with key %x: %s", l.jwt, err)
+		return nil, fmt.Errorf("pkg/listeners/http.Construct(): there was an error creating a JWT with key %x: %s", l.jwt, err)
 	}
-
-	// TODO Message padding
 
 	if len(key) == 0 {
 		key = l.psk
@@ -199,7 +197,7 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 			data, err = l.transformers[i-1].Construct(data, key)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("pkg/listeners.Construct(): there was an error calling the transformer construct function: %s", err)
+			return nil, fmt.Errorf("pkg/listeners/http.Construct(): there was an error calling the transformer construct function: %s", err)
 		}
 	}
 	return
@@ -210,7 +208,7 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 // the listener's interface encryption key will be used.
 func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
+		logging.Message("debug", fmt.Sprintf("pkg/listeners/http.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
 	}
 
 	// Get the listener's interface encryption key
@@ -230,13 +228,13 @@ func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 		case string:
 			data = []byte(ret.(string)) // Probably not what I should be doing
 		case messages.Base:
-			//fmt.Printf("pkg/listeners.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
+			//fmt.Printf("pkg/listeners/http.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
 			return ret.(messages.Base), nil
 		default:
-			return messages.Base{}, fmt.Errorf("pkg/listeners.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)
+			return messages.Base{}, fmt.Errorf("pkg/listeners/http.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)
 		}
 	}
-	return messages.Base{}, fmt.Errorf("pkg/listeners.Deconstruct(): unable to transform data into messages.Base structure")
+	return messages.Base{}, fmt.Errorf("pkg/listeners/http.Deconstruct(): unable to transform data into messages.Base structure")
 }
 
 // Description returns the listener's description

@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
-// Package listener is a handler service to process and return Agent messages
-package listener
+// Package message is a service to process and return Agent Base messages
+package message
 
 import (
 	// Standard
@@ -44,21 +44,21 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )
 
-// HandlerService is a structure with methods that execute the service functions for Agent messages
-type HandlerService struct {
+// Service is a structure with methods that execute the service functions for Agent messages
+type Service struct {
 	agentService *agent.Service
 	jobService   *job.Service
 	listener     listeners.Listener
 	delegates    delegate.Repository
 }
 
-// NewListenerHandlerService is a factory to create and return a ListenerService
-func NewListenerHandlerService(id uuid.UUID) (*HandlerService, error) {
+// NewMessageService is a factory to create and return a ListenerService
+func NewMessageService(id uuid.UUID) (*Service, error) {
 	l, err := listener(id)
 	if err != nil {
-		return nil, fmt.Errorf("pkg/services/handle/listener.NewHandlerService(): %s", err)
+		return nil, fmt.Errorf("pkg/service/message.NewMessageService(): %s", err)
 	}
-	lhs := &HandlerService{
+	lhs := &Service{
 		listener:     l,
 		agentService: agent.NewAgentService(),
 		jobService:   job.NewJobService(),
@@ -101,16 +101,16 @@ func withDelegateMemoryRepository() delegate.Repository {
 // The raw data is decoded/decrypted by either Listener or Agent's secret key depending on if the Agent completed authentication.
 // Delegate messages are handled here. Once completed, this function checks for return messages that belong to the input
 // Agent and returns them along with any delegate messages.
-func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
+func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/services/handle/listener.Handle(): entering into function with ID: %s, Data length %d", id, len(data)))
+		logging.Message("debug", fmt.Sprintf("pkg/service/message.Handle(): entering into function with ID: %s, Data length %d", id, len(data)))
 	}
-	//fmt.Printf("pkg/services/handle/listener.Handle(): entering into function with ID: %s, Data length %d\n", id, len(data))
+	//fmt.Printf("pkg/service/message.Handle(): entering into function with ID: %s, Data length %d\n", id, len(data))
 
-	agent, err := lhs.agentService.Agent(id)
+	agent, err := s.agentService.Agent(id)
 	if err != nil {
 		if core.Debug {
-			logging.Message("debug", fmt.Sprintf("pkg/services/handle/listener.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
+			logging.Message("debug", fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
 		}
 	}
 
@@ -121,54 +121,54 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 		key = agent.Secret()
 	}
 
-	msg, err := lhs.listener.Deconstruct(data, key)
+	msg, err := s.listener.Deconstruct(data, key)
 	if err != nil {
 		return nil, err
 	}
 
 	var returnMessage messages.Base
 	// Agent authentication
-	if !lhs.agentService.Authenticated(msg.ID) {
-		returnMessage, err = lhs.listener.Authenticate(msg.ID, msg.Payload)
+	if !s.agentService.Authenticated(msg.ID) {
+		returnMessage, err = s.listener.Authenticate(msg.ID, msg.Payload)
 		if err != nil {
 			return nil, err
 		}
 		// The Authentication process does not return jobs
 		// Unauthenticated messages use the interface PSK, not the agent PSK
 		// the agent could be authenticated after processing the message
-		if lhs.agentService.Authenticated(msg.ID) {
+		if s.agentService.Authenticated(msg.ID) {
 			// It doesn't matter if an error is returned because we'll send in an empty key and the listener's key will be used
-			agent, err = lhs.agentService.Agent(id)
+			agent, err = s.agentService.Agent(id)
 			if err != nil {
 				if core.Debug {
-					logging.Message("debug", fmt.Sprintf("pkg/services/handle/listener.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
+					logging.Message("debug", fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
 				}
 			} else {
 				key = agent.Secret()
 			}
 		}
-		return lhs.listener.Construct(returnMessage, key)
+		return s.listener.Construct(returnMessage, key)
 	}
 
 	// Validate the agent exists
 	// Needs to be here because delegate messages come into Handle without an id
-	if !lhs.agentService.Exist(msg.ID) {
+	if !s.agentService.Exist(msg.ID) {
 		// Create a new agent
-		a, err := agents.NewAgent(id, []byte(lhs.listener.PSK()), nil, time.Now().UTC())
+		a, err := agents.NewAgent(id, []byte(s.listener.PSK()), nil, time.Now().UTC())
 		if err != nil {
 			return nil, err
 		}
 		// Add agent to repository
-		err = lhs.agentService.Add(a)
+		err = s.agentService.Add(a)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Update the Agent's status checkin time
-	err = lhs.agentService.UpdateStatusCheckin(agent.ID(), time.Now().UTC())
+	err = s.agentService.UpdateStatusCheckin(agent.ID(), time.Now().UTC())
 	if err != nil {
-		messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/handle/listener.Handle(): %s", err))
+		messageAPI.ErrorMessage(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 	}
 
 	// Handle incoming message type
@@ -176,20 +176,20 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 	case messages.CHECKIN:
 		// Nothing to do
 	case messages.JOBS:
-		err = lhs.jobService.Handler(msg.Payload.([]jobs.Job))
+		err = s.jobService.Handler(msg.Payload.([]jobs.Job))
 		if err != nil {
-			messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/handle/listener.Handle(): %s", err))
+			messageAPI.ErrorMessage(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 			return
 		}
 	default:
 		err = fmt.Errorf("unhandled authenticated messages.Base type %s", messages.String(msg.Type))
-		messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/handle/listener.Handle(): %s", err))
+		messageAPI.ErrorMessage(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 		return
 	}
 
 	// Send delegates to associated handler
 	if len(msg.Delegates) > 0 {
-		err = lhs.delegate(id, msg.Delegates)
+		err = s.delegate(id, msg.Delegates)
 		if err != nil {
 			return
 		}
@@ -197,7 +197,7 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 
 	// Get return jobs
 	// TODO ensure jobs.Get doesn't return delegate or job
-	returnJobs, err := lhs.jobService.Get(msg.ID)
+	returnJobs, err := s.jobService.Get(msg.ID)
 
 	if len(returnJobs) > 0 {
 		returnMessage.Type = messages.JOBS
@@ -209,13 +209,13 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 	returnMessage.ID = msg.ID
 
 	// Get delegate messages
-	returnMessage.Delegates, err = lhs.getDelegates(msg.ID)
+	returnMessage.Delegates, err = s.getDelegates(msg.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get a copy of the Agent structure, so we can later extract the padding size
-	agent, err = lhs.agentService.Agent(msg.ID)
+	agent, err = s.agentService.Agent(msg.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -223,20 +223,20 @@ func (lhs *HandlerService) Handle(id uuid.UUID, data []byte) (rdata []byte, err 
 	// Add padding here since we already have an agent service to get the needed information
 	returnMessage.Padding = core.RandStringBytesMaskImprSrc(agent.Padding())
 
-	return lhs.listener.Construct(returnMessage, agent.Secret())
+	return s.listener.Construct(returnMessage, agent.Secret())
 }
 
 // delegate takes in a list of delegate messages from their associated parent agent and processes them according to their
 // associated Listener configuration.
-func (lhs *HandlerService) delegate(parent uuid.UUID, delegates []messages.Delegate) error {
-	//fmt.Printf("pkg/services/handle/listener.delegate(): entered into function with %d delegate messages\n", len(delegates))
+func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) error {
+	//fmt.Printf("pkg/service/message.delegate(): entered into function with %d delegate messages\n", len(delegates))
 	for _, delegate := range delegates {
 		//fmt.Printf("Delegate message for agent: %s and listener: %s\n", delegate.Agent, delegate.Listener)
 
 		// Get a new Listener Handler Service
-		lhService, err := NewListenerHandlerService(delegate.Listener)
+		lhService, err := NewMessageService(delegate.Listener)
 		if err != nil {
-			fmt.Printf("there was an error getting a new listener handler service for %s: %s\n", delegate.Listener, err)
+			fmt.Printf("there was an error getting a new Base message service for %s: %s\n", delegate.Listener, err)
 			break
 		}
 
@@ -249,13 +249,13 @@ func (lhs *HandlerService) delegate(parent uuid.UUID, delegates []messages.Deleg
 		}
 
 		// Add the parent/child link if it doesn't already exist
-		linked, err := lhs.agentService.Linked(parent, delegate.Agent)
+		linked, err := s.agentService.Linked(parent, delegate.Agent)
 		if err != nil {
 			return err
 		}
 		if !linked {
 			//fmt.Printf("Adding child link %s to parent %s\n", delegate.Agent, parent)
-			err = lhs.agentService.Link(parent, delegate.Agent)
+			err = s.agentService.Link(parent, delegate.Agent)
 			if err != nil {
 				return err
 			}
@@ -263,37 +263,37 @@ func (lhs *HandlerService) delegate(parent uuid.UUID, delegates []messages.Deleg
 
 		// Add encrypted/encoded return message Base structure (bytes) to the repository
 		//fmt.Printf("Storing return delegate message bytes(%d) for %s\n", len(rdata), delegate.Agent)
-		lhs.delegates.Add(delegate.Agent, rdata)
+		s.delegates.Add(delegate.Agent, rdata)
 	}
 	return nil
 }
 
 // getDelegates retrieves messages stored in the delegates repository for the passed in Agent ID
-func (lhs *HandlerService) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
+func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 	// fmt.Printf("Getting delegate messages for %s\n", id)
 	var delegates []messages.Delegate
 
-	// Unauthenticated agents shouldn't handle delegates
-	if !lhs.agentService.Authenticated(id) {
+	// Unauthenticated agents shouldn't message delegates
+	if !s.agentService.Authenticated(id) {
 		//fmt.Printf("%s is not an authenticated agent, returning empty\n", id)
 		return delegates, nil
 	}
 
-	links, err := lhs.agentService.Links(id)
+	links, err := s.agentService.Links(id)
 	if err != nil {
 		return delegates, err
 	}
 
 	if len(links) > 0 {
 		for _, link := range links {
-			datas := lhs.delegates.Get(link)
+			datas := s.delegates.Get(link)
 			for _, data := range datas {
 				d := messages.Delegate{
 					Agent:   link,
 					Payload: data,
 				}
 				// Recursive Get
-				d.Delegates, err = lhs.getDelegates(link)
+				d.Delegates, err = s.getDelegates(link)
 				if err != nil {
 					return delegates, err
 				}

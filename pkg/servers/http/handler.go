@@ -33,7 +33,7 @@ import (
 	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/services/handle/listener"
+	message2 "github.com/Ne0nd0g/merlin/pkg/services/message"
 )
 
 // handler contains contextual information and methods to process HTTP traffic for Agents
@@ -112,9 +112,10 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lhs, err := listener.NewListenerHandlerService(h.listener)
+	// Get service to handle Agent Base messages
+	ms, err := message2.NewMessageService(h.listener)
 	if err != nil {
-		m := fmt.Sprintf("There was an error getting a new listener handler service: %s", err)
+		m := fmt.Sprintf("There was an error getting a new Base message service: %s", err)
 		message("warn", m)
 		logging.Server(m)
 		w.WriteHeader(500)
@@ -122,7 +123,7 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle the incoming data
-	rdata, err := lhs.Handle(agentID, data)
+	rdata, err := ms.Handle(agentID, data)
 	if err != nil {
 		m := fmt.Sprintf("There was an error handling the incoming data: %s", err)
 		message("warn", m)

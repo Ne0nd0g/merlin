@@ -36,7 +36,7 @@ import (
 // GetJWT returns a JSON Web Token for the provided agent using the interface JWT Key
 func GetJWT(agentID uuid.UUID, lifetime time.Duration, key []byte) (string, error) {
 	if core.Debug {
-		message("debug", "Entering into agents.GetJWT function")
+		message("debug", "pkg/listeners/http.GetJWT(): entering into function")
 	}
 
 	encrypter, encErr := jose.NewEncrypter(jose.A256GCM,
