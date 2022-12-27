@@ -235,6 +235,11 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 		return err
 	}
 
+	err = a.agentService.UpdateAlive(agentID, true)
+	if err != nil {
+		return err
+	}
+
 	m := fmt.Sprintf(" New authenticated agent checkin for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339))
 	logging.Message("success", m)
 

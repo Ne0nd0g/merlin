@@ -140,6 +140,19 @@ func (r *Repository) Update(agent agents.Agent) error {
 	return ErrAgentNotFound
 }
 
+// UpdateAlive updates the Agent's alive field to indicate if it is actively in use or not
+func (r *Repository) UpdateAlive(id uuid.UUID, alive bool) error {
+	if r.Exists(id) {
+		r.Lock()
+		agent := r.agents[id]
+		agent.UpdateAlive(alive)
+		r.agents[id] = agent
+		r.Unlock()
+		return nil
+	}
+	return ErrAgentNotFound
+}
+
 // UpdateAuthenticated updates that Agent's authenticated field, typically once authentication has completed
 func (r *Repository) UpdateAuthenticated(id uuid.UUID, authenticated bool) error {
 	if r.Exists(id) {

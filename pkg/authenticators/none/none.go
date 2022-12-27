@@ -57,6 +57,7 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 		return msg, fmt.Errorf("pkg/authenticaters/none.Authenticate(): there was an error getting a new Agent: %s", err)
 	}
 	newAgent.UpdateAuthenticated(true)
+	newAgent.UpdateAlive(true)
 
 	// Store the new Agent
 	err = a.agentService.Add(newAgent)

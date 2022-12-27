@@ -317,10 +317,14 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
 }
 
-// Exit instructs the agent to quit running
+// Exit instructs the agent to quit running and changes the Agent's "alive" status to false
 func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
 		job, err := jobService.Add(agentID, "exit", Args[0:])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		err = agentService.UpdateAlive(agentID, false)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -332,40 +336,44 @@ func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
 // GetAgents returns a list of existing Agent UUID values
 func GetAgents() (agentList []uuid.UUID) {
 	for _, a := range agentService.Agents() {
-		agentList = append(agentList, a.ID())
+		if a.Alive() {
+			agentList = append(agentList, a.ID())
+		}
 	}
 	return
 }
 
-// GetAgentsRows returns a row of data for every agent that includes information about it such as
+// GetAgentsRows returns a row of data for every alive agent that includes information about it such as
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {
 	header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin", "Note"}
 	for _, a := range agentService.Agents() {
-		status, _ := GetAgentStatus(a.ID())
+		if a.Alive() {
+			status, _ := GetAgentStatus(a.ID())
 
-		lastTime := lastCheckin(a.StatusCheckin())
+			lastTime := lastCheckin(a.StatusCheckin())
 
-		// Get the process name, sans full path
-		var proc string
-		if a.Host().Platform == "windows" {
-			proc = a.Process().Name[strings.LastIndex(a.Process().Name, "\\")+1:]
-		} else {
-			proc = a.Process().Name[strings.LastIndex(a.Process().Name, "/")+1:]
+			// Get the process name, sans full path
+			var proc string
+			if a.Host().Platform == "windows" {
+				proc = a.Process().Name[strings.LastIndex(a.Process().Name, "\\")+1:]
+			} else {
+				proc = a.Process().Name[strings.LastIndex(a.Process().Name, "/")+1:]
+			}
+			p := fmt.Sprintf("%s(%d)", proc, a.Process().ID)
+
+			rows = append(rows, []string{
+				a.ID().String(),
+				a.Comms().Proto,
+				a.Host().Platform + "/" + a.Host().Architecture,
+				a.Host().Name,
+				a.Process().UserName,
+				p,
+				status,
+				lastTime,
+				a.Note(),
+			})
 		}
-		p := fmt.Sprintf("%s(%d)", proc, a.Process().ID)
-
-		rows = append(rows, []string{
-			a.ID().String(),
-			a.Comms().Proto,
-			a.Host().Platform + "/" + a.Host().Architecture,
-			a.Host().Name,
-			a.Process().UserName,
-			p,
-			status,
-			lastTime,
-			a.Note(),
-		})
 	}
 	return
 }
@@ -395,8 +403,9 @@ func GetAgentInfo(agentID uuid.UUID) (rows [][]string, um messages.UserMessage) 
 	comms := a.Comms()
 	process := a.Process()
 	rows = [][]string{
-		{"Status", status},
 		{"ID", a.ID().String()},
+		{"Alive", fmt.Sprintf("%v", a.Alive())},
+		{"Status", status},
 		{"Platform", fmt.Sprintf("%s/%s", host.Platform, host.Architecture)},
 		{"User Name", process.UserName},
 		{"User GUID", process.UserGUID},
@@ -436,7 +445,9 @@ func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
 	if errDur != nil && comms.Wait != "" {
 		return status, messages.ErrorMessage(fmt.Sprintf("Error converting %s to a time duration: %s", comms.Wait, errDur))
 	}
-	if agent.StatusCheckin().Add(dur).After(time.Now()) {
+	if comms.Wait == "" {
+		status = "Init"
+	} else if agent.StatusCheckin().Add(dur).After(time.Now()) {
 		status = "Active"
 	} else if agent.StatusCheckin().Add(dur * time.Duration(comms.Retry+1)).After(time.Now()) { // +1 to account for skew
 		status = "Delayed"

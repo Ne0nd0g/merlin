@@ -30,6 +30,7 @@ type Repository interface {
 	Remove(id uuid.UUID) error
 	Log(id uuid.UUID, message string) error
 	Update(agent Agent) error
+	UpdateAlive(id uuid.UUID, alive bool) error
 	UpdateAuthenticated(id uuid.UUID, authenticated bool) error
 	UpdateBuild(id uuid.UUID, build Build) error
 	UpdateComms(id uuid.UUID, comms Comms) error

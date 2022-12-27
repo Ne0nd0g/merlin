@@ -35,6 +35,7 @@ import (
 // Agent is an aggregate structure that holds information about Agent's the server is communicating with
 type Agent struct {
 	id            uuid.UUID      // id is the Agent's unique identifier
+	alive         bool           // alive indicates if the Agent is alive or if it has been killed or instructed to exit
 	authenticated bool           // Is the agent authenticated?
 	build         Build          // Agent build hash and version number
 	host          Host           // Structure containing information about the host the agent is running on
@@ -95,6 +96,11 @@ func createLogFile(id uuid.UUID) (agentLog *os.File, err error) {
 		return nil, fmt.Errorf("pkg/agents.createLogFile(): there was an error opening the log file for agent %s: %s", id, err)
 	}
 	return
+}
+
+// Alive returns true if the Agent is actively in use and false if the agent has been killed or removed
+func (a *Agent) Alive() bool {
+	return a.alive
 }
 
 // Authenticated checks to see if the agent has successfully completed authentication
@@ -171,6 +177,11 @@ func (a *Agent) Padding() int {
 func (a *Agent) Log(message string) (err error) {
 	_, err = a.log.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), message))
 	return err
+}
+
+// UpdateAlive updates the Agent's alive status to the provided value
+func (a *Agent) UpdateAlive(alive bool) {
+	a.alive = alive
 }
 
 // UpdateAuthenticated updates the Agent's authentication status to the provided value

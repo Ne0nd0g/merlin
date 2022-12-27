@@ -242,6 +242,11 @@ func (s *Service) UpdateAgentInfo(id uuid.UUID, info messages.AgentInfo) (err er
 	return
 }
 
+// UpdateAlive set's the Agent's alive status to the provided value
+func (s *Service) UpdateAlive(id uuid.UUID, alive bool) error {
+	return s.agentRepo.UpdateAlive(id, alive)
+}
+
 // UpdateAuthenticated set's the Agent's authenticated field value
 func (s *Service) UpdateAuthenticated(id uuid.UUID, authenticated bool) error {
 	return s.agentRepo.UpdateAuthenticated(id, authenticated)
