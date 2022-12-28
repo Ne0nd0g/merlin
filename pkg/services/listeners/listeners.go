@@ -33,6 +33,8 @@ import (
 	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/tcp"
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
+	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	httpServer "github.com/Ne0nd0g/merlin/pkg/servers/http"
 	httpServerRepo "github.com/Ne0nd0g/merlin/pkg/servers/http/memory"
@@ -43,6 +45,7 @@ type ListenerService struct {
 	tcpRepo        tcp.Repository
 	httpRepo       http.Repository
 	httpServerRepo httpServer.Repository
+	udpRepo        udp.Repository
 }
 
 // NewListenerService is a factory to create and return a ListenerService
@@ -50,6 +53,7 @@ func NewListenerService() (ls ListenerService) {
 	ls.tcpRepo = WithTCPMemoryListenerRepository()
 	ls.httpRepo = WithHTTPMemoryListenerRepository()
 	ls.httpServerRepo = WithHTTPMemoryServerRepository()
+	ls.udpRepo = WithUDPMemoryListenerRepository()
 	return
 }
 
@@ -66,6 +70,10 @@ func WithHTTPMemoryListenerRepository() http.Repository {
 // WithHTTPMemoryServerRepository retrieves an in-memory HTTP Server repository interface used to manage Server objects
 func WithHTTPMemoryServerRepository() httpServer.Repository {
 	return httpServerRepo.NewRepository()
+}
+
+func WithUDPMemoryListenerRepository() udp.Repository {
+	return udpMemory.NewRepository()
 }
 
 // NewListener is a factory that takes in a map of options used to configure a Listener, adds the Listener to its
@@ -112,6 +120,18 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		}
 		listener = &tListener
 		return
+	case "udp":
+		uListener, err := udp.NewUDPListener(options)
+		if err != nil {
+			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+		}
+		// Store the TCP Listener
+		err = ls.udpRepo.Add(uListener)
+		if err != nil {
+			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+		}
+		listener = &uListener
+		return
 	default:
 		return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): unhandled server type %d", servers.FromString(options["Protocol"]))
 	}
@@ -149,6 +169,8 @@ func (ls *ListenerService) DefaultOptions(protocol string) (options map[string]s
 		serverOptions = httpServer.GetDefaultOptions(servers.FromString(protocol))
 	case listeners.TCP:
 		listenerOptions = tcp.DefaultOptions()
+	case listeners.UDP:
+		listenerOptions = udp.DefaultOptions()
 	default:
 		err = fmt.Errorf("pkg/services/listeners.DefaultOptions(): unhandled server type: %s", protocol)
 		return
@@ -190,6 +212,10 @@ func (ls *ListenerService) Listener(id uuid.UUID) (listeners.Listener, error) {
 	if err == nil {
 		return &tcpListener, nil
 	}
+	udpListener, err := ls.udpRepo.ListenerByID(id)
+	if err == nil {
+		return &udpListener, nil
+	}
 	return nil, fmt.Errorf("pkg/services/listeners.GetListenerByID(): could not find listener %s", id)
 }
 
@@ -203,6 +229,11 @@ func (ls *ListenerService) Listeners() (listenerList []listeners.Listener) {
 	// TCP Listeners
 	tcpListeners := ls.tcpRepo.Listeners()
 	for _, listener := range tcpListeners {
+		listenerList = append(listenerList, &listener)
+	}
+	// UDP Listeners
+	udpListeners := ls.udpRepo.Listeners()
+	for _, listener := range udpListeners {
 		listenerList = append(listenerList, &listener)
 	}
 	return
@@ -220,6 +251,11 @@ func (ls *ListenerService) ListenerNames() (names []string) {
 	for _, listener := range tcpListeners {
 		names = append(names, listener.Name())
 	}
+	// UDP Listeners
+	udpListeners := ls.udpRepo.Listeners()
+	for _, listener := range udpListeners {
+		names = append(names, listener.Name())
+	}
 	return
 }
 
@@ -230,10 +266,14 @@ func (ls *ListenerService) ListenerByName(name string) (listeners.Listener, erro
 		return &listener, err
 	}
 	tcpListener, err := ls.tcpRepo.ListenerByName(name)
-	if err != nil {
-		return nil, fmt.Errorf("pkg/services/listeners.GetListenerByName(): %s", err)
+	if err == nil {
+		return &tcpListener, err
 	}
-	return &tcpListener, nil
+	udpListener, err := ls.udpRepo.ListenerByName(name)
+	if err == nil {
+		return &udpListener, err
+	}
+	return nil, fmt.Errorf("pkg/services/listeners.GetListenerByName(): %s", err)
 }
 
 // ListenersByType returns a list of all stored listeners for the provided listener
@@ -247,6 +287,11 @@ func (ls *ListenerService) ListenersByType(protocol int) (listenerList []listene
 	case listeners.TCP:
 		tcpListeners := ls.tcpRepo.Listeners()
 		for _, listener := range tcpListeners {
+			listenerList = append(listenerList, &listener)
+		}
+	case listeners.UDP:
+		udpListeners := ls.udpRepo.Listeners()
+		for _, listener := range udpListeners {
 			listenerList = append(listenerList, &listener)
 		}
 	}
@@ -265,6 +310,8 @@ func (ls *ListenerService) Remove(id uuid.UUID) error {
 		return ls.httpRepo.RemoveByID(id)
 	case listeners.TCP:
 		return ls.tcpRepo.RemoveByID(id)
+	case listeners.UDP:
+		return ls.udpRepo.RemoveByID(id)
 	default:
 		return fmt.Errorf("pkg/services/listeners.Remove(): unhandled listener protocol type %d for listener %s", listener.Protocol(), id)
 	}
@@ -297,6 +344,8 @@ func (ls *ListenerService) SetOptions(id uuid.UUID, options map[string]string) e
 		return ls.httpRepo.UpdateOptions(id, options)
 	case listeners.TCP:
 		return ls.tcpRepo.UpdateOptions(id, options)
+	case listeners.UDP:
+		return ls.udpRepo.UpdateOptions(id, options)
 	default:
 		return fmt.Errorf("pkg/services/listeners.SetOptions(): unhandled protocol %d for listener %s", listener.Protocol(), id)
 	}
@@ -317,6 +366,8 @@ func (ls *ListenerService) Start(id uuid.UUID) error {
 		return nil
 	case listeners.TCP:
 		// Nothing to do, there is not an infrastructure layer server to start for the TCP listener
+		return nil
+	case listeners.UDP:
 		return nil
 	default:
 		return fmt.Errorf("pkg/services/listeners.Start(): unhandled listener protocol: %d", listener.Protocol())

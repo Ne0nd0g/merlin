@@ -38,6 +38,8 @@ import (
 	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/tcp"
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
+	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
@@ -78,7 +80,16 @@ func listener(id uuid.UUID) (listeners.Listener, error) {
 	// Check the TCP Listener's Repository
 	tcpRepo := withTCPMemoryListenerRepository()
 	tcpListener, err := tcpRepo.ListenerByID(id)
-	return &tcpListener, err
+	if err == nil {
+		return &tcpListener, err
+	}
+	// Check the UDP Listener's Repository
+	udpRepo := withUDPMemoryListenerRepository()
+	udpListener, err := udpRepo.ListenerByID(id)
+	if err == nil {
+		return &udpListener, err
+	}
+	return nil, fmt.Errorf("pkg/services/message.listener(): %s", err)
 }
 
 // withHTTPMemoryListenerRepository retrieves an in-memory HTTP Listener repository interface used to manage Listener object
@@ -89,6 +100,11 @@ func withHTTPMemoryListenerRepository() http.Repository {
 // withTCPMemoryListenerRepository retrieves an in-memory TCP Listener repository interface used to manage Listener object
 func withTCPMemoryListenerRepository() tcp.Repository {
 	return tcpMemory.NewRepository()
+}
+
+// withUDPMemoryListenerRepository retrieves an in-memory UDP Listener repository interface used to manage Listener object
+func withUDPMemoryListenerRepository() udp.Repository {
+	return udpMemory.NewRepository()
 }
 
 // withDelegateMemoryRepository retrieves an in-memory delegate message repository interface used to store/retrieve
@@ -236,7 +252,7 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 		// Get a new Listener Handler Service
 		lhService, err := NewMessageService(delegate.Listener)
 		if err != nil {
-			fmt.Printf("there was an error getting a new Base message service for %s: %s\n", delegate.Listener, err)
+			messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.delegate(): there was an error getting a new Base message service for %s: %s\n", delegate.Listener, err))
 			break
 		}
 

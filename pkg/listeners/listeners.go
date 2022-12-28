@@ -19,6 +19,7 @@
 package listeners
 
 import (
+	// Standard
 	"fmt"
 	"strings"
 
@@ -33,7 +34,8 @@ import (
 const (
 	UNKNOWN = 0
 	HTTP    = 1 // HTTP is a constant for all HTTP listener types (e.g., HTTP/1, HTTP/2, and HTTP/3)
-	TCP     = 2 // TCP is a constant for TCP bind listeners
+	TCP     = 2 // TCP is a constant for TCP bind & reverse listeners
+	UDP     = 3 // UDP is a constant for UDP bind & reverse listeners
 )
 
 // Listener is an interface that contains all the functions any Agent listener must implement
@@ -59,6 +61,8 @@ func FromString(kind string) int {
 		return HTTP
 	case "tcp":
 		return TCP
+	case "udp":
+		return UDP
 	default:
 		return UNKNOWN
 	}
@@ -70,11 +74,13 @@ func String(kind int) string {
 		return "HTTP"
 	case TCP:
 		return "TCP"
+	case UDP:
+		return "UDP"
 	default:
 		return fmt.Sprintf("Unknown Listener type: %d", kind)
 	}
 }
 
 func Listeners() []int {
-	return []int{HTTP, TCP}
+	return []int{HTTP, TCP, UDP}
 }
