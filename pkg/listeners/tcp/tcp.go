@@ -198,9 +198,6 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 		logging.Message("debug", fmt.Sprintf("pkg/listeners.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
 	}
 
-	//fmt.Printf("pkg/listeners.Construct(): entering into function with Base message: %+v and key: %x\n", msg, key)
-	// TODO Message padding
-
 	if len(key) == 0 {
 		key = l.psk
 	}

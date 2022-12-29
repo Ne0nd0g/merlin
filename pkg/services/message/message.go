@@ -249,19 +249,57 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 	for _, delegate := range delegates {
 		//fmt.Printf("Delegate message for agent: %s and listener: %s\n", delegate.Agent, delegate.Listener)
 
+		var lhService *Service
+		var rdata []byte
+		var err error
 		// Get a new Listener Handler Service
-		lhService, err := NewMessageService(delegate.Listener)
+		lhService, err = NewMessageService(delegate.Listener)
 		if err != nil {
-			messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.delegate(): there was an error getting a new Base message service for %s: %s\n", delegate.Listener, err))
-			break
-		}
-
-		// Send in the delegate message
-		//fmt.Println("Calling listener service for delegate message...")
-		rdata, err := lhService.Handle(delegate.Agent, delegate.Payload)
-		if err != nil {
-			fmt.Printf("there was an error handling delegate message from %s: %s\n", delegate.Agent, err)
-			break
+			if core.Verbose {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Warn,
+					Time:    time.Now().UTC(),
+					Error:   true,
+					Message: fmt.Sprintf("pkg/services/message.delegate(): %s", err),
+				})
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Info,
+					Time:    time.Now().UTC(),
+					Message: "Brute forcing all available listeners as a last resort to see if one of them can handle this message...",
+				})
+			}
+			lhService, rdata, err = bruteForceListener(delegate.Agent, delegate.Payload)
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level: messageAPI.Warn,
+					Time:  time.Now().UTC(),
+					Error: true,
+					Message: fmt.Sprintf("A delegate message was recieved from %s for the non-existent listener %s.\n"+
+						"Attempts to brute force all existing Listeners to find one configure to handle the message failed.\n"+
+						"Create a listener that matches the Agent's configuration before it reaches the maximum failed of login\n "+
+						"attempts, or try to re-link the agent, to recover control of it. %s", delegate.Agent, delegate.Listener, time.Now().UTC()),
+				})
+				break
+			}
+			if core.Verbose {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Success,
+					Time:    time.Now().UTC(),
+					Message: fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from %s", lhService.listener.ID(), delegate.Agent),
+				})
+			}
+		} else {
+			// Send in the delegate message
+			rdata, err = lhService.Handle(delegate.Agent, delegate.Payload)
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Warn,
+					Time:    time.Now().UTC(),
+					Error:   true,
+					Message: fmt.Sprintf("there was an error handling delegate message from %s: %s\n", delegate.Agent, err),
+				})
+				break
+			}
 		}
 
 		// Add the parent/child link if it doesn't already exist
@@ -319,4 +357,77 @@ func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 	}
 	//fmt.Printf("Returning %d delegate messages for %s without error\n", len(delegates), id)
 	return delegates, nil
+}
+
+func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata []byte, err error) {
+	// Check the TCP Listener's Repository
+	tcpRepo := withTCPMemoryListenerRepository()
+	tcpListeners := tcpRepo.Listeners()
+	if len(tcpListeners) > 0 {
+		for _, listener := range tcpListeners {
+			lhService, err = NewMessageService(listener.ID())
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Warn,
+					Time:    time.Now().UTC(),
+					Error:   true,
+					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
+				})
+				break
+			}
+			rdata, err = lhService.Handle(id, payload)
+			if err == nil {
+				// Found a listener that didn't error out handling message
+				return
+			}
+		}
+	}
+
+	// Check the UDP Listener's Repository
+	udpRepo := withUDPMemoryListenerRepository()
+	udpListeners := udpRepo.Listeners()
+	if len(udpListeners) > 0 {
+		for _, listener := range udpListeners {
+			lhService, err = NewMessageService(listener.ID())
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Warn,
+					Time:    time.Now().UTC(),
+					Error:   true,
+					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
+				})
+				break
+			}
+			rdata, err = lhService.Handle(id, payload)
+			if err == nil {
+				// Found a listener that didn't error out handling message
+				return
+			}
+		}
+	}
+
+	// Check the HTTP Listener's Repository
+	httpRepo := withHTTPMemoryListenerRepository()
+	httpListeners := httpRepo.Listeners()
+	if len(httpListeners) > 0 {
+		for _, listener := range httpListeners {
+			lhService, err = NewMessageService(listener.ID())
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Warn,
+					Time:    time.Now().UTC(),
+					Error:   true,
+					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
+				})
+				break
+			}
+			rdata, err = lhService.Handle(id, payload)
+			if err == nil {
+				// Found a listener that didn't error out handling message
+				return
+			}
+		}
+	}
+	err = fmt.Errorf("pkg/services/message.bruteForceListener(): listener brute force unsuccessful")
+	return
 }

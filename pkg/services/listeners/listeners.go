@@ -223,18 +223,18 @@ func (ls *ListenerService) Listener(id uuid.UUID) (listeners.Listener, error) {
 func (ls *ListenerService) Listeners() (listenerList []listeners.Listener) {
 	// HTTP Listeners
 	httpListeners := ls.httpRepo.Listeners()
-	for _, listener := range httpListeners {
-		listenerList = append(listenerList, &listener)
+	for i, _ := range httpListeners {
+		listenerList = append(listenerList, &httpListeners[i])
 	}
 	// TCP Listeners
 	tcpListeners := ls.tcpRepo.Listeners()
-	for _, listener := range tcpListeners {
-		listenerList = append(listenerList, &listener)
+	for i, _ := range tcpListeners {
+		listenerList = append(listenerList, &tcpListeners[i])
 	}
 	// UDP Listeners
 	udpListeners := ls.udpRepo.Listeners()
-	for _, listener := range udpListeners {
-		listenerList = append(listenerList, &listener)
+	for i, _ := range udpListeners {
+		listenerList = append(listenerList, &udpListeners[i])
 	}
 	return
 }
