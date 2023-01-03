@@ -209,6 +209,11 @@ func (a *Agent) UpdateInitial(initial time.Time) {
 	a.initial = initial
 }
 
+// UpdateListener updates the listener ID the Agent belongs to
+func (a *Agent) UpdateListener(listener uuid.UUID) {
+	a.listener = listener
+}
+
 // UpdateProcess updates the Agent's embedded Process entity structure with the provided structure
 func (a *Agent) UpdateProcess(process Process) {
 	a.process = process
@@ -239,7 +244,16 @@ func (a *Agent) Links() []uuid.UUID {
 	return a.linkedAgents
 }
 
-// AddLink adds new child agent the list of linked agents
+// AddLink adds a new child Agent to the list of linked Agents
 func (a *Agent) AddLink(link uuid.UUID) {
 	a.linkedAgents = append(a.linkedAgents, link)
+}
+
+// RemoveLink deletes the child Agent link from the list of linked Agents
+func (a *Agent) RemoveLink(link uuid.UUID) {
+	for i, agent := range a.linkedAgents {
+		if agent == link {
+			a.linkedAgents = append(a.linkedAgents[:i], a.linkedAgents[i+1:]...)
+		}
+	}
 }

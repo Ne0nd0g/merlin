@@ -175,6 +175,11 @@ func (s *Service) Remove(id uuid.UUID) error {
 	return s.agentRepo.Remove(id)
 }
 
+// Unlink removes a child Agent link from the parent Agent id
+func (s *Service) Unlink(id, link uuid.UUID) error {
+	return s.agentRepo.RemoveLinkedAgent(id, link)
+}
+
 // Update replaces an Agent object in the database with the one provided
 func (s *Service) Update(agent agents.Agent) error {
 	return s.agentRepo.Update(agent)
@@ -260,6 +265,10 @@ func (s *Service) UpdateComms(id uuid.UUID, comms agents.Comms) error {
 // UpdateInitial set's that Agent's initial checkin time field
 func (s *Service) UpdateInitial(id uuid.UUID, t time.Time) error {
 	return s.agentRepo.UpdateInitial(id, t)
+}
+
+func (s *Service) UpdateListener(id, listener uuid.UUID) error {
+	return s.agentRepo.UpdateListener(id, listener)
 }
 
 // UpdateNote replaces an existing Agent's note

@@ -315,6 +315,12 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 			}
 		}
 
+		// Set the child Agent's listener
+		err = s.agentService.UpdateListener(delegate.Agent, delegate.Listener)
+		if err != nil {
+			return fmt.Errorf("pkg/services/message.delegate(): there was an error updating the delegate Agent's Listener ID: %s", err)
+		}
+
 		// Add encrypted/encoded return message Base structure (bytes) to the repository
 		//fmt.Printf("Storing return delegate message bytes(%d) for %s\n", len(rdata), delegate.Agent)
 		s.delegates.Add(delegate.Agent, rdata)
@@ -355,7 +361,6 @@ func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 			}
 		}
 	}
-	//fmt.Printf("Returning %d delegate messages for %s without error\n", len(delegates), id)
 	return delegates, nil
 }
 

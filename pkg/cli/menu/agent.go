@@ -248,6 +248,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.Token(agent, cmd)
 	case "touch", "timestomp":
 		core.MessageChannel <- agentAPI.Touch(agent, cmd)
+	case "unlink":
+		core.MessageChannel <- agentAPI.UnlinkAgent(agent, cmd)
 	case "upload":
 		core.MessageChannel <- agentAPI.Upload(agent, cmd)
 	case "uptime":

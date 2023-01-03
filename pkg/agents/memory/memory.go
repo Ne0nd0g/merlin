@@ -115,6 +115,19 @@ func (r *Repository) Remove(id uuid.UUID) (err error) {
 	return ErrAgentNotFound
 }
 
+// RemoveLinkedAgent removed the provided link the Agent's linkedAgents list the contains all child agents for which it is the parent
+func (r *Repository) RemoveLinkedAgent(id uuid.UUID, link uuid.UUID) error {
+	agent, err := r.Get(id)
+	if err != nil {
+		return err
+	}
+	agent.RemoveLink(link)
+	r.Lock()
+	r.agents[id] = agent
+	r.Unlock()
+	return nil
+}
+
 // SetSecret updates the agent's secret key, typically derived once authentication has completed and per-agent key has
 // been established.
 func (r *Repository) SetSecret(id uuid.UUID, secret []byte) error {
@@ -211,6 +224,19 @@ func (r *Repository) UpdateInitial(id uuid.UUID, t time.Time) error {
 		r.Lock()
 		agent := r.agents[id]
 		agent.UpdateInitial(t)
+		r.agents[id] = agent
+		r.Unlock()
+		return nil
+	}
+	return ErrAgentNotFound
+}
+
+// UpdateListener updates the ID of the listener the Agent is associated with
+func (r *Repository) UpdateListener(id, listener uuid.UUID) error {
+	if r.Exists(id) {
+		r.Lock()
+		agent := r.agents[id]
+		agent.UpdateListener(listener)
 		r.agents[id] = agent
 		r.Unlock()
 		return nil

@@ -416,6 +416,7 @@ func GetAgentInfo(agentID uuid.UUID) (rows [][]string, um messages.UserMessage) 
 		{"IP", strings.Join(host.IPs, "\n")},
 		{"Initial Check In", a.Initial().Format(time.RFC3339)},
 		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckin().Format(time.RFC3339), lastCheckin(a.StatusCheckin()))},
+		{"Linked Agents", fmt.Sprintf("%+v", a.Links())},
 		{"Groups", strings.Join(groups, ", ")},
 		{"Note", a.Note()},
 		{"", ""},
@@ -1079,6 +1080,32 @@ func Touch(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage("Not enough arguments.")
 	}
 	job, err := jobService.Add(agentID, "touch", Args)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.JobMessage(agentID, job)
+}
+
+// UnlinkAgent instructs the parent Agent to close, or unlink, the connection with the child Agent
+func UnlinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
+	// Validate argument count
+	if len(Args) < 2 {
+		return messages.ErrorMessage(fmt.Sprintf("Expected 2 arguments, received %d", len(Args)))
+	}
+
+	// Parse link
+	link, err := uuid.FromString(Args[1])
+	if err != nil {
+		return messages.ErrorMessage(fmt.Sprintf("pkg/api/agents.UnlinkAgent(): there was an error parsing %s as an Agent UUID: %s", Args[1], err))
+	}
+
+	// Remove the linked Agent
+	err = agentService.Unlink(agentID, link)
+	if err != nil {
+		return messages.ErrorMessage(fmt.Sprintf("pkg/api/agents.UnlinkAgent(): %s", err))
+	}
+
+	job, err := jobService.Add(agentID, "unlink", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}

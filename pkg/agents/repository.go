@@ -36,8 +36,10 @@ type Repository interface {
 	UpdateComms(id uuid.UUID, comms Comms) error
 	UpdateHost(id uuid.UUID, host Host) error
 	UpdateInitial(id uuid.UUID, t time.Time) (err error)
+	UpdateListener(id, listener uuid.UUID) error
 	UpdateProcess(id uuid.UUID, process Process) error
 	UpdateNote(id uuid.UUID, note string) error
 	UpdateStatusCheckin(id uuid.UUID, t time.Time) (err error)
 	AddLinkedAgent(id uuid.UUID, link uuid.UUID) error
+	RemoveLinkedAgent(id uuid.UUID, link uuid.UUID) error
 }

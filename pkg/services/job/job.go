@@ -401,6 +401,13 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 			Command: jobType,
 			Args:    jobArgs,
 		}
+	case "unlink":
+		job.Type = jobs.MODULE
+		p := jobs.Command{
+			Command: "unlink",
+			Args:    jobArgs,
+		}
+		job.Payload = p
 	case "upload":
 		// jobArgs[0] - server-side source file location
 		// jobArgs[1] - agent-side file write location
