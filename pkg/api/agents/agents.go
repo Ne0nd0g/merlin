@@ -343,6 +343,11 @@ func GetAgents() (agentList []uuid.UUID) {
 	return
 }
 
+// GetAgentLinks returns a list of linked child Agent IDs
+func GetAgentLinks(agentID uuid.UUID) ([]uuid.UUID, error) {
+	return agentService.Links(agentID)
+}
+
 // GetAgentsRows returns a row of data for every alive agent that includes information about it such as
 // the Agent's GUID, platform, user, host, transport, and status
 func GetAgentsRows() (header []string, rows [][]string) {

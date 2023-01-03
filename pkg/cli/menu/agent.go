@@ -344,6 +344,9 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("ssh"),
 		readline.PcItem("status"),
 		readline.PcItem("touch"),
+		readline.PcItem("unlink",
+			readline.PcItemDynamic(agentLinksCompleter()),
+		),
 		readline.PcItem("upload"),
 	}
 
@@ -553,6 +556,22 @@ func agentListCompleter() func(string) []string {
 		a := make([]string, 0)
 		agentList := agentAPI.GetAgents()
 		for _, id := range agentList {
+			a = append(a, id.String())
+		}
+		return a
+	}
+}
+
+// agentLinksCompleter returns a list of child Agent IDs for the current Agent and is used for command line tab completion
+func agentLinksCompleter() func(string) []string {
+	return func(line string) []string {
+		a := make([]string, 0)
+		links, err := agentAPI.GetAgentLinks(agent)
+		if err != nil {
+			core.MessageChannel <- messages.ErrorMessage(err.Error())
+			return a
+		}
+		for _, id := range links {
 			a = append(a, id.String())
 		}
 		return a
