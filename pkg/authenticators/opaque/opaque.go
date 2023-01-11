@@ -72,6 +72,16 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 	if core.Verbose {
 		logging.Message("note", fmt.Sprintf("Received OPAQUE message type: %d for agent %s", data.(opaque.Opaque).Type, id))
 	}
+
+	// Verify the data interface is the opaque.Opaque type
+	switch data.(type) {
+	case opaque.Opaque:
+		// Do nothing
+	default:
+		err = fmt.Errorf("pkg/authenticators/opaque.Authenticate() received invalid data type %T", data)
+		return
+	}
+
 	var opq opaque.Opaque
 	o := data.(opaque.Opaque)
 	switch o.Type {

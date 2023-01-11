@@ -21,6 +21,7 @@ package message
 import (
 	// Standard
 	"fmt"
+	"math/rand"
 	"time"
 
 	// 3rd Party
@@ -131,10 +132,21 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	}
 
 	// If the agent exists then get its encryption key
-	// If the agent does not exist, leve th key blank and then the listener's key will be used
+	// If the agent does not exist, leve the key blank and then the listener's key will be used
 	var key []byte
 	if err == nil {
 		key = agent.Secret()
+	}
+
+	// If the Agent exists, and it's Listener ID is empty, set it
+	if err == nil {
+		if agent.Listener() == uuid.Nil {
+			err = s.agentService.UpdateListener(id, s.listener.ID())
+			if err != nil {
+				err = fmt.Errorf("pkg/service/message.Handle(): %s", err)
+				return
+			}
+		}
 	}
 
 	msg, err := s.listener.Deconstruct(data, key)
@@ -149,6 +161,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 		if err != nil {
 			return nil, err
 		}
+		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(4096))
 		// The Authentication process does not return jobs
 		// Unauthenticated messages use the interface PSK, not the agent PSK
 		// the agent could be authenticated after processing the message
@@ -211,35 +224,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 		}
 	}
 
-	// Get return jobs
-	// TODO ensure jobs.Get doesn't return delegate or job
-	returnJobs, err := s.jobService.Get(msg.ID)
-
-	if len(returnJobs) > 0 {
-		returnMessage.Type = messages.JOBS
-		returnMessage.Payload = returnJobs
-	} else {
-		returnMessage.Type = messages.IDLE
-	}
-
-	returnMessage.ID = msg.ID
-
-	// Get delegate messages
-	returnMessage.Delegates, err = s.getDelegates(msg.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get a copy of the Agent structure, so we can later extract the padding size
-	agent, err = s.agentService.Agent(msg.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add padding here since we already have an agent service to get the needed information
-	returnMessage.Padding = core.RandStringBytesMaskImprSrc(agent.Padding())
-
-	return s.listener.Construct(returnMessage, agent.Secret())
+	return s.getBase(id)
 }
 
 // delegate takes in a list of delegate messages from their associated parent agent and processes them according to their
@@ -252,6 +237,8 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 		var lhService *Service
 		var rdata []byte
 		var err error
+		var bruteforced bool
+
 		// Get a new Listener Handler Service
 		lhService, err = NewMessageService(delegate.Listener)
 		if err != nil {
@@ -262,12 +249,13 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 					Error:   true,
 					Message: fmt.Sprintf("pkg/services/message.delegate(): %s", err),
 				})
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Info,
-					Time:    time.Now().UTC(),
-					Message: "Brute forcing all available listeners as a last resort to see if one of them can handle this message...",
-				})
 			}
+			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("A delegate message was recieved from %s for the non-existent listener %s.", delegate.Agent, delegate.Listener)))
+			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+				Level:   messageAPI.Info,
+				Time:    time.Now().UTC(),
+				Message: "Brute forcing all available listeners as a last resort to see if one of them can handle this message...",
+			})
 			lhService, rdata, err = bruteForceListener(delegate.Agent, delegate.Payload)
 			if err != nil {
 				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
@@ -281,11 +269,29 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 				})
 				break
 			}
-			if core.Verbose {
+			bruteforced = true
+			if s.agentService.Authenticated(delegate.Agent) {
+				err = s.agentService.UpdateListener(delegate.Agent, lhService.listener.ID())
+				if err != nil {
+					return fmt.Errorf("pkg/services/message.delegate(): %s", err)
+				}
+			}
+			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+				Level:   messageAPI.Success,
+				Time:    time.Now().UTC(),
+				Message: fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from Agent %s. Instructing Agent to use this Listener ID", lhService.listener.ID(), delegate.Agent),
+			})
+
+			// Add an Agent Control job for the Agent to change it's associated listener
+			var job string
+			job, err = s.jobService.Add(delegate.Agent, "changelistener", []string{"listener", lhService.listener.ID().String()})
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(err.Error()))
+			} else {
 				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Success,
+					Level:   messageAPI.Note,
 					Time:    time.Now().UTC(),
-					Message: fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from %s", lhService.listener.ID(), delegate.Agent),
+					Message: fmt.Sprintf("%s", job),
 				})
 			}
 		} else {
@@ -317,22 +323,99 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 
 		if s.agentService.Authenticated(delegate.Agent) {
 			// Set the child Agent's listener
-			err = s.agentService.UpdateListener(delegate.Agent, delegate.Listener)
-			if err != nil {
-				return fmt.Errorf("pkg/services/message.delegate(): there was an error updating the delegate Agent's Listener ID: %s", err)
+			// If the listener had to be bruteforced, then the Agent's listener has already been updated
+			if !bruteforced {
+				err = s.agentService.UpdateListener(delegate.Agent, delegate.Listener)
+				if err != nil {
+					return fmt.Errorf("pkg/services/message.delegate(): there was an error updating the delegate Agent's Listener ID: %s", err)
+				}
 			}
 		}
 
 		// Add encrypted/encoded return message Base structure (bytes) to the repository
 		//fmt.Printf("Storing return delegate message bytes(%d) for %s\n", len(rdata), delegate.Agent)
-		s.delegates.Add(delegate.Agent, rdata)
+		if len(rdata) > 0 {
+			s.delegates.Add(delegate.Agent, rdata)
+		}
 	}
 	return nil
 }
 
+// getBase builds a return Base message for the Agent id, encodes/encrypts it, and returns it as bytes.
+// If there are any Jobs, they will be added to the Base message here
+func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
+	//fmt.Printf("Getting Base messages for %s\n", id)
+	// Ensure the id is for a valid Agent
+	var agent agents.Agent
+	agent, err = s.agentService.Agent(id)
+	if err != nil {
+		err = fmt.Errorf("pkg/services/message.getBase(): %s", err)
+		return
+	}
+
+	returnMessage := messages.Base{
+		Version:   0,
+		ID:        id,
+		Type:      messages.IDLE,
+		Payload:   nil,
+		Padding:   "",
+		Token:     "",
+		Delegates: nil,
+	}
+
+	var returnJobs []jobs.Job
+	// Get return jobs
+	returnJobs, err = s.jobService.Get(id)
+	if err != nil {
+		err = fmt.Errorf("pkg/services/message.getBase(): %s", err)
+		return
+	}
+
+	if len(returnJobs) > 0 {
+		returnMessage.Type = messages.JOBS
+		returnMessage.Payload = returnJobs
+	}
+
+	// Get delegate messages
+	returnMessage.Delegates, err = s.getDelegates(id)
+	if err != nil {
+		// Do not return an error because it will cause the Parent Agent to quit functioning
+		messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.getBase(): %s", err)))
+	}
+
+	// Add padding here since we already have an agent service to get the needed information
+	padding := agent.Padding()
+
+	if padding > 0 {
+		padding = rand.Intn(padding)
+	} else if agent.Comms() == (agents.Comms{}) {
+		// If we don't know what the Agent's padding configuration is, use this default number
+		padding = rand.Intn(4096)
+	}
+	returnMessage.Padding = core.RandStringBytesMaskImprSrc(padding)
+
+	// Synchronous Agents that have nothing to say should not return an IDLE message
+	if (agent.Comms().Proto == "tcp-bind" || agent.Comms().Proto == "tcp-reverse" || agent.Comms().Proto == "udp-bind" || agent.Comms().Proto == "udp-reverse") && returnMessage.Type == messages.IDLE && len(returnMessage.Delegates) <= 0 {
+		return nil, nil
+	}
+	//fmt.Printf("Agent: %s, Comms: %s, Message Type: %d, Delegates: %d\n", agent.ID(), agent.Comms().Proto, returnMessage.Type, len(returnMessage.Delegates))
+
+	// If the Listener associated with this Message Handler doesn't belong to the Agent, then get the one that is and use it
+	if agent.Listener() != s.listener.ID() {
+		var l listeners.Listener
+		l, err = listener(agent.Listener())
+		if err != nil {
+			err = fmt.Errorf("pkg/services/message.getBase() for Agent %s: %s", agent.ID(), err)
+			return
+		}
+		return l.Construct(returnMessage, agent.Secret())
+	}
+	return s.listener.Construct(returnMessage, agent.Secret())
+}
+
 // getDelegates retrieves messages stored in the delegates repository for the passed in Agent ID
 func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
-	// fmt.Printf("Getting delegate messages for %s\n", id)
+	//fmt.Printf("Getting delegate messages for %s\n", id)
 	var delegates []messages.Delegate
 
 	// Unauthenticated agents shouldn't message delegates
@@ -341,31 +424,58 @@ func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 		return delegates, nil
 	}
 
+	// Get a list of child Agents
 	links, err := s.agentService.Links(id)
 	if err != nil {
 		return delegates, err
 	}
 
+	// If there are any child Agents, get return messages
 	if len(links) > 0 {
+		// For each child Agent
 		for _, link := range links {
-			datas := s.delegates.Get(link)
-			for _, data := range datas {
-				d := messages.Delegate{
-					Agent:   link,
-					Payload: data,
+			// Get messages from the Delegate repository
+			delegateMessages := s.delegates.Get(link)
+			// If any delegate messages were returned, add them to the list of return delegates
+			if len(delegateMessages) > 0 {
+				for _, msg := range delegateMessages {
+					d := messages.Delegate{
+						Agent:   link,
+						Payload: msg,
+					}
+					// Recursive Get
+					d.Delegates, err = s.getDelegates(link)
+					if err != nil {
+						return delegates, err
+					}
+					delegates = append(delegates, d)
 				}
-				// Recursive Get
-				d.Delegates, err = s.getDelegates(link)
+			}
+			if s.agentService.Authenticated(link) {
+				// See if there are any Base messages (likely Jobs) for the delegate
+				var rdata []byte
+				rdata, err = s.getBase(link)
 				if err != nil {
+					err = fmt.Errorf("pkg/services/message/getDelegate(): %s", err)
 					return delegates, err
 				}
-				delegates = append(delegates, d)
+				// If there is an error, continue on. Happen when an Agent isn't authenticated and getBase can't find the Agent
+				if len(rdata) > 0 {
+					// Build the Delegate message
+					d := messages.Delegate{
+						Agent:   link,
+						Payload: rdata,
+					}
+					delegates = append(delegates, d)
+				}
 			}
 		}
 	}
 	return delegates, nil
 }
 
+// bruteForceListener iterates through all available listeners and tries to use it to decode/decrypt the message.
+// Used as a recovery mechanism when the Server receives messages it doesn't have a Listener for to ensure Agents aren't lost
 func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata []byte, err error) {
 	// Check the TCP Listener's Repository
 	tcpRepo := withTCPMemoryListenerRepository()
