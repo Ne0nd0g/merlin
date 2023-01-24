@@ -135,20 +135,18 @@ func (r *Repository) RemoveByID(id uuid.UUID) error {
 	return fmt.Errorf("could not remove listener: %s because it does not exist", id)
 }
 
-// UpdateOptions replaces the listener's configurable options map with the one passed in
-func (r *Repository) UpdateOptions(id uuid.UUID, options map[string]string) error {
+// SetOption replaces the listener's configurable options the provided value
+func (r *Repository) SetOption(id uuid.UUID, option, value string) error {
 	listener, err := r.ListenerByID(id)
 	if err != nil {
-		return err
+		return fmt.Errorf("pkg/listeners/tcp/memory.SetOption(): %s", err)
 	}
 	r.Lock()
 	defer r.Unlock()
-	for key, option := range options {
-		err = listener.SetOption(key, option)
-		if err != nil {
-			return err
-		}
+	err = listener.SetOption(option, value)
+	if err != nil {
+		return fmt.Errorf("pkg/listeners/tcp/memory.SetOption(): %s", err)
 	}
+	r.listeners[listener.ID()] = listener
 	return nil
-
 }

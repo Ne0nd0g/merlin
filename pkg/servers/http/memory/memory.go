@@ -66,9 +66,26 @@ func (r *Repository) Add(server http.Server) error {
 	return nil
 }
 
+// SetOption updates the http.Server's configurable option with the provided value
+func (r *Repository) SetOption(id uuid.UUID, option, value string) error {
+	server, err := r.Server(id)
+	if err != nil {
+		return fmt.Errorf("pkg/servers/http/memory.SetOption(): %s", err)
+	}
+	r.Lock()
+	defer r.Unlock()
+	err = server.SetOption(option, value)
+	if err != nil {
+		return fmt.Errorf("pkg/servers/http/memory.SetOption(): %s", err)
+	}
+	r.servers[server.ID()] = server
+	return nil
+}
+
 // Server returns a Server object for the passed in unique identifier
 func (r *Repository) Server(id uuid.UUID) (http.Server, error) {
 	r.Lock()
+	defer r.Unlock()
 	for _, s := range r.servers {
 		if s.ID() == id {
 			return s, nil
@@ -96,4 +113,15 @@ func (r *Repository) Remove(id uuid.UUID) {
 		defer r.Unlock()
 		delete(serverMap, server.ID())
 	}
+}
+
+func (r *Repository) Update(server http.Server) error {
+	r.Lock()
+	defer r.Unlock()
+	_, ok := r.servers[server.ID()]
+	if !ok {
+		return fmt.Errorf("pkg/servers/http/memory/Update(): a server with ID %s does not exist and can't be updated", server.ID())
+	}
+	r.servers[server.ID()] = server
+	return nil
 }

@@ -196,7 +196,7 @@ func (s *Server) ConfiguredOptions() map[string]string {
 	options["URLS"] = strings.Join(s.urls, ",")
 	options["JWTKey"] = s.jwtKey
 
-	if s.protocol != servers.HTTP {
+	if s.protocol != servers.HTTP && s.protocol != servers.H2C {
 		options["X509Cert"] = s.x509Cert
 		options["X509Key"] = s.x509Key
 	}

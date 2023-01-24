@@ -36,6 +36,7 @@ const (
 	HTTP    = 1 // HTTP is a constant for all HTTP listener types (e.g., HTTP/1, HTTP/2, and HTTP/3)
 	TCP     = 2 // TCP is a constant for TCP bind & reverse listeners
 	UDP     = 3 // UDP is a constant for UDP bind & reverse listeners
+	SMB     = 4 // SMB is a constant for SMB named pipe bind & reverse listeners
 )
 
 // Listener is an interface that contains all the functions any Agent listener must implement
@@ -59,6 +60,8 @@ func FromString(kind string) int {
 	switch strings.ToLower(kind) {
 	case "http", "https", "h2c", "http2", "http3":
 		return HTTP
+	case "smb":
+		return SMB
 	case "tcp":
 		return TCP
 	case "udp":
@@ -72,6 +75,8 @@ func String(kind int) string {
 	switch kind {
 	case HTTP:
 		return "HTTP"
+	case SMB:
+		return "SMB"
 	case TCP:
 		return "TCP"
 	case UDP:
@@ -82,5 +87,5 @@ func String(kind int) string {
 }
 
 func Listeners() []int {
-	return []int{HTTP, TCP, UDP}
+	return []int{HTTP, SMB, TCP, UDP}
 }

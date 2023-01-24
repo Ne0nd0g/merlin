@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
-// Package memory is an in-memory database used to store and retrieve UDP listeners
+// Package memory is an in-memory database used to store and retrieve SMB listeners
 package memory
 
 import (
@@ -26,18 +26,18 @@ import (
 	// 3rd Party
 	uuid "github.com/satori/go.uuid"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
+	// Internal
+	"github.com/Ne0nd0g/merlin/pkg/listeners/smb"
 )
 
 // Repository is a structure that implements the Repository interface
 type Repository struct {
-	listeners map[uuid.UUID]udp.Listener
+	listeners map[uuid.UUID]smb.Listener
 	sync.Mutex
 }
 
-// listenerMap is the in-memory structure that holds a map of created and stored UDP listeners
-var listenerMap = make(map[uuid.UUID]udp.Listener)
+// listenerMap is the in-memory structure that holds a map of created and stored SMB listeners
+var listenerMap = make(map[uuid.UUID]smb.Listener)
 
 // NewRepository is a factory to create and return a repository object to store and manage listeners
 func NewRepository() *Repository {
@@ -47,12 +47,12 @@ func NewRepository() *Repository {
 	}
 }
 
-// Add stores the passed in UDP listener
-func (r *Repository) Add(listener udp.Listener) error {
+// Add stores the passed in SMB listener
+func (r *Repository) Add(listener smb.Listener) error {
 	// Make sure the map exists and create it if not
 	if r.listeners == nil {
 		r.Lock()
-		r.listeners = make(map[uuid.UUID]udp.Listener)
+		r.listeners = make(map[uuid.UUID]smb.Listener)
 		r.Unlock()
 	}
 	// Make sure the listener isn't already in the map
@@ -88,8 +88,8 @@ func (r *Repository) List() func(string) []string {
 }
 
 // Listeners returns a list of Listener objects to be consumed by a client application
-func (r *Repository) Listeners() []udp.Listener {
-	var found []udp.Listener
+func (r *Repository) Listeners() []smb.Listener {
+	var found []smb.Listener
 	for _, l := range r.listeners {
 		found = append(found, l)
 	}
@@ -97,21 +97,21 @@ func (r *Repository) Listeners() []udp.Listener {
 }
 
 // ListenerByID finds and returns a pointer to an instantiated listener object by its ID (UUIDv4)
-func (r *Repository) ListenerByID(id uuid.UUID) (udp.Listener, error) {
+func (r *Repository) ListenerByID(id uuid.UUID) (smb.Listener, error) {
 	l, exists := r.listeners[id]
 	if !exists {
-		return udp.Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
+		return smb.Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
 	}
 	return l, nil
 }
 
 // ListenerByName finds and returns a pointer to an instantiated listener object by its name (string)
-func (r *Repository) ListenerByName(name string) (udp.Listener, error) {
+func (r *Repository) ListenerByName(name string) (smb.Listener, error) {
 	if !r.Exists(name) {
-		return udp.Listener{}, fmt.Errorf("%s listener does not exist", name)
+		return smb.Listener{}, fmt.Errorf("%s listener does not exist", name)
 	}
 
-	var listener udp.Listener
+	var listener smb.Listener
 	for _, l := range r.listeners {
 		if name == l.Name() {
 			listener = l
@@ -124,29 +124,23 @@ func (r *Repository) ListenerByName(name string) (udp.Listener, error) {
 // RemoveByID deletes a Listener from the global list of Listeners by the input UUID
 func (r *Repository) RemoveByID(id uuid.UUID) error {
 	if l, ok := r.listeners[id]; ok {
-		/*
-			err := l.Stop()
-			if err != nil {
-				return err
-			}
-		*/
 		delete(r.listeners, l.ID())
 		return nil
 	}
 	return fmt.Errorf("could not remove listener: %s because it does not exist", id)
 }
 
-// SetOption replaces the listener's configurable option with the provided value
+// SetOption replaces the listener's configurable option with the one passed in
 func (r *Repository) SetOption(id uuid.UUID, option, value string) error {
 	listener, err := r.ListenerByID(id)
 	if err != nil {
-		return fmt.Errorf("pkg/listeners/udp/memory.SetOption(): %s", err)
+		return fmt.Errorf("pkg/listeners/smb/memory.SetOption(): %s", err)
 	}
 	r.Lock()
 	defer r.Unlock()
 	err = listener.SetOption(option, value)
 	if err != nil {
-		return fmt.Errorf("pkg/listeners/udp/memory.SetOption(): %s", err)
+		return fmt.Errorf("pkg/listeners/smb/memory.SetOption(): %s", err)
 	}
 	r.listeners[listener.ID()] = listener
 	return nil

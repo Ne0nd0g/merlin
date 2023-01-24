@@ -101,10 +101,9 @@ func Restart(listenerID uuid.UUID) messages.UserMessage {
 
 // SetOption sets the value of a configurable Listener option
 func SetOption(listenerID uuid.UUID, Args []string) messages.UserMessage {
-	if len(Args) >= 2 {
-		option := make(map[string]string)
-		option[Args[0]] = Args[1]
-		err := listenerService.SetOptions(listenerID, option)
+	// set <options> <value>
+	if len(Args) >= 3 {
+		err := listenerService.SetOption(listenerID, Args[1], Args[2])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -112,10 +111,9 @@ func SetOption(listenerID uuid.UUID, Args []string) messages.UserMessage {
 			Error:   false,
 			Level:   messages.Success,
 			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("set %s to: %s", Args[0], Args[1]),
+			Message: fmt.Sprintf("set %s to: %s", Args[1], Args[2]),
 		}
 	}
-
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Listeners SetOption call: %s", Args))
 }
 

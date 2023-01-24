@@ -24,7 +24,6 @@ import (
 	// Standard
 	"crypto/sha256"
 	"fmt"
-
 	"net"
 	"strconv"
 	"strings"
@@ -43,8 +42,13 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/transformer"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/base64"
 	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/gob"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/hex"
 	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/aes"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/jwe"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/rc4"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/xor"
 )
 
 // Listener is an aggregate structure that implements the Listener interface
@@ -112,15 +116,26 @@ func NewTCPListener(options map[string]string) (listener Listener, err error) {
 		for _, transform := range transforms {
 			var t transformer.Transformer
 			switch strings.ToLower(transform) {
-			case "gob-base":
-				t = gob.NewEncoder(gob.BASE)
-				//t, err = encoders.New(encoders.GOB, 1)
-			case "gob-delegate":
-				// TODO I think I can remove this because the linked agent does the GOB decoding of this type
-				//t, err = encoders.New(encoders.GOB, 2)
 			case "aes":
 				t = aes.NewEncrypter()
-				//t, err = encrypters.NewEncrypter(encrypters.AES)
+			case "base64-byte":
+				t = base64.NewEncoder(base64.BYTE)
+			case "base64-string":
+				t = base64.NewEncoder(base64.STRING)
+			case "hex-byte":
+				t = hex.NewEncoder(hex.BYTE)
+			case "hex-string":
+				t = hex.NewEncoder(hex.STRING)
+			case "gob-base":
+				t = gob.NewEncoder(gob.BASE)
+			case "gob-string":
+				t = gob.NewEncoder(gob.STRING)
+			case "jwe":
+				t = jwe.NewEncrypter()
+			case "rc4":
+				t = rc4.NewEncrypter()
+			case "xor":
+				t = xor.NewEncrypter()
 			default:
 				err = fmt.Errorf("pkg/listeners/tcp.NewTCPListener(): unhandled transform type: %s", transform)
 			}
@@ -302,14 +317,85 @@ func (l *Listener) String() string {
 
 // SetOption sets the value for a configurable option on the Listener
 func (l *Listener) SetOption(option string, value string) error {
+	var err error
+	var key string
 	switch strings.ToLower(option) {
-	case "name":
-		l.name = value
+	case "authenticator":
+		switch strings.ToLower(value) {
+		case "opaque":
+			l.auth, err = opaque.NewAuthenticator()
+			if err != nil {
+				return fmt.Errorf("pkg/listeners/tcp.SetOptions(): there was an error getting the authenticator: %s", err)
+			}
+		default:
+			l.auth = none.NewAuthenticator()
+		}
+		key = "Authenticator"
 	case "description":
 		l.description = value
+		key = "Description"
+	case "interface":
+		ip := net.ParseIP(value)
+		if ip == nil {
+			return fmt.Errorf("pkg/listeners/tcp.SetOptions(): %s is not a valid network interface", value)
+		}
+		l.iface = value
+		key = "Interface"
+	case "name":
+		l.name = value
+		key = "Name"
+	case "port":
+		l.port, err = strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("pkg/listeners/tcp.SetOptions(): there was an error converting the port number to an integer: %s", err.Error())
+		}
+		key = "Port"
+	case "psk":
+		psk := sha256.Sum256([]byte(value))
+		l.psk = psk[:]
+		key = "PSK"
+	case "transforms":
+		var tl []transformer.Transformer
+		transforms := strings.Split(value, ",")
+		for _, transform := range transforms {
+			var t transformer.Transformer
+			switch strings.ToLower(transform) {
+			case "aes":
+				t = aes.NewEncrypter()
+			case "base64-byte":
+				t = base64.NewEncoder(base64.BYTE)
+			case "base64-string":
+				t = base64.NewEncoder(base64.STRING)
+			case "hex-byte":
+				t = hex.NewEncoder(hex.BYTE)
+			case "hex-string":
+				t = hex.NewEncoder(hex.STRING)
+			case "gob-base":
+				t = gob.NewEncoder(gob.BASE)
+			case "gob-string":
+				t = gob.NewEncoder(gob.STRING)
+			case "jwe":
+				t = jwe.NewEncrypter()
+			case "rc4":
+				t = rc4.NewEncrypter()
+			case "xor":
+				t = xor.NewEncrypter()
+			default:
+				return fmt.Errorf("pkg/listeners/tcp.SetOption(): unhandled transform type: %s", transform)
+			}
+			tl = append(tl, t)
+		}
+		l.transformers = tl
+		key = "Transforms"
 	default:
 		return fmt.Errorf("pkg/listeners/tcp.SetOptions(): unhandled option %s", option)
 	}
+	// Update the option map
+	_, ok := l.options[key]
+	if !ok {
+		return fmt.Errorf("pkg/listeners/tcp.SetOptions(): invalid options map key: \"%s\"", key)
+	}
+	l.options[key] = value
 	return nil
 }
 

@@ -15,17 +15,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
-// Package udp contains the structures and interface for peer-to-peer communications through a UDP bind listener used for Agent communications
-// UDP listener's do not have a server because the Merlin Server does not send/receive messages. They are sent through
+// Package smb contains the structures and interface for peer-to-peer communications through an SMB bind listener used for Agent communications
+// SMB listener's do not have a server because the Merlin Server does not send/receive messages. They are sent through
 // peer-to-peer communications
-package udp
+package smb
 
 import (
 	// Standard
 	"crypto/sha256"
 	"fmt"
-	"net"
-	"strconv"
 	"strings"
 
 	// 3rd Party
@@ -59,14 +57,13 @@ type Listener struct {
 	description  string                       // description of the listener
 	name         string                       // name of the listener
 	options      map[string]string            // options is a map of the listener's configurable options used with NewUDPListener function
+	pipe         string                       // pipe is the full UNC path of the named pipe used for communications (e.g., \\.\pipe\Merlin)
 	psk          []byte                       // psk is the Listener's Pre-Shared Key used for initial message encryption until the Agent is authenticated
-	iface        string                       // iface is the interface generated udp-bind Agents will listen on; used when compiling UDP Agents
-	port         int                          // port is the generated udp-bind agent will listen on; used when compiling udp Agents
 	agentService *agent.Service               // agentService is used to interact with Agents
 }
 
-// NewUDPListener is a factory that creates and returns a Listener aggregate that implements the Listener interface
-func NewUDPListener(options map[string]string) (listener Listener, err error) {
+// NewSMBListener is a factory that creates and returns a Listener aggregate that implements the Listener interface
+func NewSMBListener(options map[string]string) (listener Listener, err error) {
 	// Create and set the listener's ID
 	listener.id = uuid.NewV4()
 
@@ -87,28 +84,28 @@ func NewUDPListener(options map[string]string) (listener Listener, err error) {
 		listener.psk = psk[:]
 	}
 
-	// Set the Interface
-	if options["Interface"] == "" {
-		err = fmt.Errorf("a network interface address must be provided")
+	// Set the SMB named pipe
+	if options["Pipe"] == "" {
+		err = fmt.Errorf("a named pipe path must be provided")
 		return
 	}
-	ip := net.ParseIP(options["Interface"])
-	if ip == nil {
-		err = fmt.Errorf("%s is not a valid network interface", options["Interface"])
-		return
-	}
-	listener.iface = options["Interface"]
-
-	// Set the port
-	if options["Port"] == "" {
-		err = fmt.Errorf("a network interface port must be provided")
-		return
-	}
-	listener.port, err = strconv.Atoi(options["Port"])
-	if err != nil {
-		err = fmt.Errorf("there was an error converting the port number to an integer: %s", err.Error())
-		return
-	}
+	/*
+		temp := strings.Split(options["Pipe"], "\\")
+		if len(temp) < 5 {
+			err = fmt.Errorf("A full UNC named pipe path was not provided (e.g., \\\\.\\pipe\\Merlin)")
+			return
+		}
+		// If the UNC path is \\.\pipe\Merlin than it is on the local host
+		// If the UNC path is \\192.168.10.11\pipe\Merlin then validate the IP address
+		if temp[1] != "." {
+			ip := net.ParseIP(temp[1])
+			if ip == nil {
+				err = fmt.Errorf("%s is not a valid IP address", temp[1])
+				return
+			}
+		}
+	*/
+	listener.pipe = options["Pipe"]
 
 	// Set the Transforms
 	if _, ok := options["Transforms"]; ok {
@@ -137,7 +134,7 @@ func NewUDPListener(options map[string]string) (listener Listener, err error) {
 			case "xor":
 				t = xor.NewEncrypter()
 			default:
-				err = fmt.Errorf("pkg/listeners/udp.NewUDPListener(): unhandled transform type: %s", transform)
+				err = fmt.Errorf("pkg/listeners/smb.NewUDPListener(): unhandled transform type: %s", transform)
 			}
 			if err != nil {
 				return
@@ -152,7 +149,7 @@ func NewUDPListener(options map[string]string) (listener Listener, err error) {
 		case "opaque":
 			listener.auth, err = opaque.NewAuthenticator()
 			if err != nil {
-				return listener, fmt.Errorf("pkg/listeners/udp.NewUDPListener(): there was an error getting the authenticator: %s", err)
+				return listener, fmt.Errorf("pkg/listeners/smb.NewUDPListener(): there was an error getting the authenticator: %s", err)
 			}
 		default:
 			listener.auth = none.NewAuthenticator()
@@ -168,16 +165,15 @@ func NewUDPListener(options map[string]string) (listener Listener, err error) {
 	return listener, nil
 }
 
-// DefaultOptions returns a map of configurable listener options that will subsequently be passed to the NewUDPListener function
+// DefaultOptions returns a map of configurable listener options that will subsequently be passed to the NewSMBListener function
 func DefaultOptions() map[string]string {
 	options := make(map[string]string)
-	options["Name"] = "My UDP Listener"
-	options["Description"] = "Default UDP Listener"
-	options["Interface"] = "127.0.0.1"
-	options["Port"] = "4444"
+	options["Name"] = "My SMB Listener"
+	options["Description"] = "Default SMB Listener"
+	options["Pipe"] = "merlinpipe"
 	options["PSK"] = "merlin"
 	options["Transforms"] = "aes,gob-base"
-	options["Protocol"] = "UDP"
+	options["Protocol"] = "SMB"
 	options["Authenticator"] = "OPAQUE"
 	return options
 }
@@ -201,8 +197,7 @@ func (l *Listener) ConfiguredOptions() (options map[string]string) {
 		options["Transforms"] += fmt.Sprintf("%s,", transform)
 	}
 	options["PSK"] = l.options["PSK"]
-	options["Interface"] = l.iface
-	options["Port"] = fmt.Sprintf("%d", l.port)
+	options["Pipe"] = l.pipe
 	return options
 }
 
@@ -210,7 +205,7 @@ func (l *Listener) ConfiguredOptions() (options map[string]string) {
 // on it to encode and encrypt it. If an empty key is passed in, then the listener's interface encryption key will be used.
 func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners/udp.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
+		logging.Message("debug", fmt.Sprintf("pkg/listeners/smb.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
 	}
 
 	if len(key) == 0 {
@@ -219,20 +214,15 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 
 	for i := len(l.transformers); i > 0; i-- {
 		if i == len(l.transformers) {
-			//fmt.Printf("UDP construct transformer %T: %+v\n", l.transformers[i-1], l.transformers[i-1])
 			// First call should always take a Base message
 			data, err = l.transformers[i-1].Construct(msg, key)
 		} else {
-			//fmt.Printf("UDP construct transformer %T: %+v\n", l.transformers[i-1], l.transformers[i-1])
 			data, err = l.transformers[i-1].Construct(data, key)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("pkg/listeners/udp.Construct(): there was an error calling the transformer construct function: %s", err)
+			return nil, fmt.Errorf("pkg/listeners/smb.Construct(): there was an error calling the transformer construct function: %s", err)
 		}
 	}
-	// Prepend agent UUID bytes so outside functions can determine the ID
-	//data = append(msg.ID.Bytes(), data...)
-	//fmt.Printf("Returning data(%d) and error: %v\n", len(data), err)
 	return
 }
 
@@ -241,9 +231,9 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 // the listener's interface encryption key will be used.
 func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners/udp.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
+		logging.Message("debug", fmt.Sprintf("pkg/listeners/smb.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
 	}
-	//fmt.Printf("pkg/listeners/udp.Deconstruct(): entering into function with Data length %d and key: %x\n", len(data), key)
+	//fmt.Printf("pkg/listeners/smb.Deconstruct(): entering into function with Data length %d and key: %x\n", len(data), key)
 
 	// Get the listener's interface encryption key
 	if len(key) == 0 {
@@ -262,13 +252,13 @@ func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 		case string:
 			data = []byte(ret.(string)) // Probably not what I should be doing
 		case messages.Base:
-			//fmt.Printf("pkg/listeners/udp.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
+			//fmt.Printf("pkg/listeners/smb.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
 			return ret.(messages.Base), nil
 		default:
-			return messages.Base{}, fmt.Errorf("pkg/listeners/udp.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)
+			return messages.Base{}, fmt.Errorf("pkg/listeners/smb.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)
 		}
 	}
-	return messages.Base{}, fmt.Errorf("pkg/listeners/udp.Deconstruct(): unable to transform data into messages.Base structure")
+	return messages.Base{}, fmt.Errorf("pkg/listeners/smb.Deconstruct(): unable to transform data into messages.Base structure")
 
 }
 
@@ -294,7 +284,7 @@ func (l *Listener) Options() map[string]string {
 
 // Protocol returns a constant from the listeners package that represents the protocol type of this listener
 func (l *Listener) Protocol() int {
-	return listeners.UDP
+	return listeners.SMB
 }
 
 // PSK returns the listener's pre-shared key used for encrypting & decrypting agent messages
@@ -316,43 +306,52 @@ func (l *Listener) String() string {
 
 // SetOption sets the value for a configurable option on the Listener
 func (l *Listener) SetOption(option string, value string) error {
-	var err error
-	var key string
 	switch strings.ToLower(option) {
 	case "authenticator":
 		switch strings.ToLower(value) {
 		case "opaque":
+			var err error
 			l.auth, err = opaque.NewAuthenticator()
 			if err != nil {
-				return fmt.Errorf("pkg/listeners/tcp.SetOptions(): there was an error getting the authenticator: %s", err)
+				return fmt.Errorf("pkg/listeners/smb.SetOptions(): there was an error getting the authenticator: %s", err)
 			}
 		default:
 			l.auth = none.NewAuthenticator()
 		}
-		key = "Authenticator"
-	case "description":
-		l.description = value
-		key = "Description"
-	case "interface":
-		ip := net.ParseIP(value)
-		if ip == nil {
-			return fmt.Errorf("pkg/listeners/tcp.SetOptions(): %s is not a valid network interface", value)
+		_, ok := l.options["Authenticator"]
+		if !ok {
+			return fmt.Errorf("pkg/listeners/smb.SetOptions(): invalid options map key: \"Authenticator\"")
 		}
-		l.iface = value
-		key = "Interface"
+		l.options["Authenticator"] = value
 	case "name":
 		l.name = value
-		key = "Name"
-	case "port":
-		l.port, err = strconv.Atoi(value)
-		if err != nil {
-			return fmt.Errorf("pkg/listeners/tcp.SetOptions(): there was an error converting the port number to an integer: %s", err.Error())
+		_, ok := l.options["Name"]
+		if !ok {
+			return fmt.Errorf("pkg/listeners/smb.SetOptions(): invalid options map key: \"Name\"")
 		}
-		key = "Port"
+		l.options["Name"] = value
+	case "description":
+		l.description = value
+		_, ok := l.options["Description"]
+		if !ok {
+			return fmt.Errorf("pkg/listeners/smb.SetOptions(): invalid options map key: \"Description\"")
+		}
+		l.options["Description"] = value
+	case "pipe":
+		l.pipe = value
+		_, ok := l.options["Pipe"]
+		if !ok {
+			return fmt.Errorf("pkg/listeners/smb.SetOptions(): invalid options map key: \"Pipe\"")
+		}
+		l.options["Pipe"] = value
 	case "psk":
 		psk := sha256.Sum256([]byte(value))
 		l.psk = psk[:]
-		key = "PSK"
+		_, ok := l.options["PSK"]
+		if !ok {
+			return fmt.Errorf("pkg/listeners/smb.SetOptions(): invalid options map key: \"PSK\"")
+		}
+		l.options["PSK"] = value
 	case "transforms":
 		var tl []transformer.Transformer
 		transforms := strings.Split(value, ",")
@@ -380,21 +379,19 @@ func (l *Listener) SetOption(option string, value string) error {
 			case "xor":
 				t = xor.NewEncrypter()
 			default:
-				return fmt.Errorf("pkg/listeners/tcp.SetOption(): unhandled transform type: %s", transform)
+				return fmt.Errorf("pkg/listeners/smb.SetOptions(): unhandled transform type: %s", transform)
 			}
 			tl = append(tl, t)
 		}
 		l.transformers = tl
-		key = "Transforms"
+		_, ok := l.options["Transforms"]
+		if !ok {
+			return fmt.Errorf("pkg/listeners/smb.SetOptions(): invalid options map key: \"Transforms\"")
+		}
+		l.options["Transforms"] = value
 	default:
-		return fmt.Errorf("pkg/listeners/tcp.SetOptions(): unhandled option %s", option)
+		return fmt.Errorf("pkg/listeners/smb.SetOptions(): unhandled option %s", option)
 	}
-	// Update the option map
-	_, ok := l.options[key]
-	if !ok {
-		return fmt.Errorf("pkg/listeners/tcp.SetOptions(): invalid options map key: \"%s\"", key)
-	}
-	l.options[key] = value
 	return nil
 }
 

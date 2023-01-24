@@ -39,8 +39,13 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/transformer"
+	b64 "github.com/Ne0nd0g/merlin/pkg/transformer/encoders/base64"
 	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/gob"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/hex"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/aes"
 	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/jwe"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/rc4"
+	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/xor"
 )
 
 // Listener is an aggregate structure that implements the Listener interface used to listen for and handle Agent message traffic
@@ -89,15 +94,26 @@ func NewHTTPListener(server servers.ServerInterface, options map[string]string) 
 		for _, transform := range transforms {
 			var t transformer.Transformer
 			switch strings.ToLower(transform) {
+			case "aes":
+				t = aes.NewEncrypter()
+			case "base64-byte":
+				t = b64.NewEncoder(b64.BYTE)
+			case "base64-string":
+				t = b64.NewEncoder(b64.STRING)
+			case "hex-byte":
+				t = hex.NewEncoder(hex.BYTE)
+			case "hex-string":
+				t = hex.NewEncoder(hex.STRING)
 			case "gob-base":
 				t = gob.NewEncoder(gob.BASE)
-				//t, err = encoders.New(encoders.GOB, 1)
 			case "gob-string":
 				t = gob.NewEncoder(gob.STRING)
-				//t, err = encoders.New(encoders.GOB, 0)
 			case "jwe":
 				t = jwe.NewEncrypter()
-				//t, err = encrypters.NewEncrypter(encrypters.JWE)
+			case "rc4":
+				t = rc4.NewEncrypter()
+			case "xor":
+				t = xor.NewEncrypter()
 			default:
 				err = fmt.Errorf("pkg/listeners/http.New(): unhandled transform type: %s", transform)
 			}
@@ -284,13 +300,66 @@ func (l *Listener) String() string {
 
 // SetOption sets the value for a configurable option on the Listener
 func (l *Listener) SetOption(option string, value string) error {
+	var err error
+	var key string
 	switch strings.ToLower(option) {
-	case "name":
-		l.name = value
+	case "authenticator":
+		switch strings.ToLower(value) {
+		case "opaque":
+			var err error
+			l.auth, err = opaque.NewAuthenticator()
+			if err != nil {
+				return fmt.Errorf("pkg/listeners/http.SetOptions(): there was an error getting the authenticator: %s", err)
+			}
+		default:
+			l.auth = none.NewAuthenticator()
+		}
+		key = "Authenticator"
 	case "description":
 		l.description = value
+		key = "Description"
+	case "name":
+		l.name = value
+		key = "Name"
+	case "psk":
+		psk := sha256.Sum256([]byte(value))
+		l.psk = psk[:]
+		// PSK needs to be set on the Server too
+		err = l.server.SetOption(option, value)
+		key = "PSK"
+	case "transforms":
+		var tl []transformer.Transformer
+		transforms := strings.Split(value, ",")
+		for _, transform := range transforms {
+			var t transformer.Transformer
+			switch strings.ToLower(transform) {
+			case "aes":
+				t = aes.NewEncrypter()
+			case "gob-base":
+				t = gob.NewEncoder(gob.BASE)
+			case "gob-string":
+				t = gob.NewEncoder(gob.STRING)
+			case "jwe":
+				t = jwe.NewEncrypter()
+			default:
+				return fmt.Errorf("pkg/listeners/http.SetOption(): unhandled transform type: %s", transform)
+			}
+			tl = append(tl, t)
+		}
+		l.transformers = tl
+		key = "Transforms"
+	// Protocol, Interface, Port, URLS, JWTKey, X509CERT, X509KEY are handled by the server
 	default:
-		return l.server.SetOption(option, value)
+		err = l.server.SetOption(option, value)
+		if err != nil {
+			return fmt.Errorf("pkg/listeners/http.SetOptions(): %s", err)
+		}
+		return nil
 	}
+	_, ok := l.options[key]
+	if !ok {
+		return fmt.Errorf("pkg/listeners/http.SetOptions(): invalid options map key: \"%s\"", key)
+	}
+	l.options[key] = value
 	return nil
 }

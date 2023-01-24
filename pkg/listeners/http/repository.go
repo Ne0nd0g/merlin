@@ -27,6 +27,6 @@ type Repository interface {
 	Listeners() []Listener
 	ListenerByID(id uuid.UUID) (Listener, error)
 	ListenerByName(name string) (Listener, error)
-	UpdateOptions(id uuid.UUID, options map[string]string) error
 	RemoveByID(id uuid.UUID) error
+	SetOption(id uuid.UUID, option, value string) error
 }

@@ -31,6 +31,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/http"
 	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/smb"
+	smbMemory "github.com/Ne0nd0g/merlin/pkg/listeners/smb/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/tcp"
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
@@ -42,24 +44,21 @@ import (
 
 // ListenerService is a structure that implements the service methods holding references to Listener & Server repositories
 type ListenerService struct {
-	tcpRepo        tcp.Repository
 	httpRepo       http.Repository
 	httpServerRepo httpServer.Repository
+	smbRepo        smb.Repository
+	tcpRepo        tcp.Repository
 	udpRepo        udp.Repository
 }
 
 // NewListenerService is a factory to create and return a ListenerService
 func NewListenerService() (ls ListenerService) {
-	ls.tcpRepo = WithTCPMemoryListenerRepository()
 	ls.httpRepo = WithHTTPMemoryListenerRepository()
 	ls.httpServerRepo = WithHTTPMemoryServerRepository()
+	ls.smbRepo = WithSMBMemoryListenerRepository()
+	ls.tcpRepo = WithTCPMemoryListenerRepository()
 	ls.udpRepo = WithUDPMemoryListenerRepository()
 	return
-}
-
-// WithTCPMemoryListenerRepository retrieves an in-memory TCP Listener repository interface used to manage Listener objects
-func WithTCPMemoryListenerRepository() tcp.Repository {
-	return tcpMemory.NewRepository()
 }
 
 // WithHTTPMemoryListenerRepository retrieves an in-memory HTTP Listener repository interface used to manage Listener objects
@@ -70,6 +69,16 @@ func WithHTTPMemoryListenerRepository() http.Repository {
 // WithHTTPMemoryServerRepository retrieves an in-memory HTTP Server repository interface used to manage Server objects
 func WithHTTPMemoryServerRepository() httpServer.Repository {
 	return httpServerRepo.NewRepository()
+}
+
+// WithSMBMemoryListenerRepository retrieves an in-memory TCP Listener repository interface used to manage Listener objects
+func WithSMBMemoryListenerRepository() smb.Repository {
+	return smbMemory.NewRepository()
+}
+
+// WithTCPMemoryListenerRepository retrieves an in-memory TCP Listener repository interface used to manage Listener objects
+func WithTCPMemoryListenerRepository() tcp.Repository {
+	return tcpMemory.NewRepository()
 }
 
 func WithUDPMemoryListenerRepository() udp.Repository {
@@ -106,6 +115,19 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
 		}
 		listener = &hListener
+		return
+	case "smb":
+		// Create a new SMB Listener
+		sListener, err := smb.NewSMBListener(options)
+		if err != nil {
+			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+		}
+		// Store the SMB Listener
+		err = ls.smbRepo.Add(sListener)
+		if err != nil {
+			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+		}
+		listener = &sListener
 		return
 	case "tcp":
 		// Create a new TCP Listener
@@ -167,6 +189,8 @@ func (ls *ListenerService) DefaultOptions(protocol string) (options map[string]s
 		listenerOptions = http.DefaultOptions()
 		// Server, infrastructure layer, options
 		serverOptions = httpServer.GetDefaultOptions(servers.FromString(protocol))
+	case listeners.SMB:
+		listenerOptions = smb.DefaultOptions()
 	case listeners.TCP:
 		listenerOptions = tcp.DefaultOptions()
 	case listeners.UDP:
@@ -208,6 +232,10 @@ func (ls *ListenerService) Listener(id uuid.UUID) (listeners.Listener, error) {
 	if err == nil {
 		return &httpListener, nil
 	}
+	smbListener, err := ls.smbRepo.ListenerByID(id)
+	if err == nil {
+		return &smbListener, nil
+	}
 	tcpListener, err := ls.tcpRepo.ListenerByID(id)
 	if err == nil {
 		return &tcpListener, nil
@@ -225,6 +253,11 @@ func (ls *ListenerService) Listeners() (listenerList []listeners.Listener) {
 	httpListeners := ls.httpRepo.Listeners()
 	for i, _ := range httpListeners {
 		listenerList = append(listenerList, &httpListeners[i])
+	}
+	// SMB Listeners
+	smbListeners := ls.smbRepo.Listeners()
+	for i, _ := range smbListeners {
+		listenerList = append(listenerList, &smbListeners[i])
 	}
 	// TCP Listeners
 	tcpListeners := ls.tcpRepo.Listeners()
@@ -246,6 +279,11 @@ func (ls *ListenerService) ListenerNames() (names []string) {
 	for _, listener := range httpListeners {
 		names = append(names, listener.Name())
 	}
+	// SMB Listeners
+	smbListeners := ls.smbRepo.Listeners()
+	for _, listener := range smbListeners {
+		names = append(names, listener.Name())
+	}
 	// TCP Listeners
 	tcpListeners := ls.tcpRepo.Listeners()
 	for _, listener := range tcpListeners {
@@ -265,6 +303,10 @@ func (ls *ListenerService) ListenerByName(name string) (listeners.Listener, erro
 	if err == nil {
 		return &listener, err
 	}
+	smbListener, err := ls.smbRepo.ListenerByName(name)
+	if err == nil {
+		return &smbListener, err
+	}
 	tcpListener, err := ls.tcpRepo.ListenerByName(name)
 	if err == nil {
 		return &tcpListener, err
@@ -282,6 +324,11 @@ func (ls *ListenerService) ListenersByType(protocol int) (listenerList []listene
 	case listeners.HTTP:
 		httpListeners := ls.httpRepo.Listeners()
 		for _, listener := range httpListeners {
+			listenerList = append(listenerList, &listener)
+		}
+	case listeners.SMB:
+		smbListeners := ls.smbRepo.Listeners()
+		for _, listener := range smbListeners {
 			listenerList = append(listenerList, &listener)
 		}
 	case listeners.TCP:
@@ -308,6 +355,8 @@ func (ls *ListenerService) Remove(id uuid.UUID) error {
 	switch listener.Protocol() {
 	case listeners.HTTP:
 		return ls.httpRepo.RemoveByID(id)
+	case listeners.SMB:
+		return ls.smbRepo.RemoveByID(id)
 	case listeners.TCP:
 		return ls.tcpRepo.RemoveByID(id)
 	case listeners.UDP:
@@ -333,19 +382,21 @@ func (ls *ListenerService) Restart(id uuid.UUID) error {
 	return nil
 }
 
-// SetOptions replaces an existing Listener's configurable options map with the one provided
-func (ls *ListenerService) SetOptions(id uuid.UUID, options map[string]string) error {
+// SetOption updates an existing Listener's configurable option with the value provided
+func (ls *ListenerService) SetOption(id uuid.UUID, option, value string) error {
 	listener, err := ls.Listener(id)
 	if err != nil {
 		return err
 	}
 	switch listener.Protocol() {
 	case listeners.HTTP:
-		return ls.httpRepo.UpdateOptions(id, options)
+		return ls.httpRepo.SetOption(id, option, value)
+	case listeners.SMB:
+		return ls.smbRepo.SetOption(id, option, value)
 	case listeners.TCP:
-		return ls.tcpRepo.UpdateOptions(id, options)
+		return ls.tcpRepo.SetOption(id, option, value)
 	case listeners.UDP:
-		return ls.udpRepo.UpdateOptions(id, options)
+		return ls.udpRepo.SetOption(id, option, value)
 	default:
 		return fmt.Errorf("pkg/services/listeners.SetOptions(): unhandled protocol %d for listener %s", listener.Protocol(), id)
 	}
@@ -364,6 +415,8 @@ func (ls *ListenerService) Start(id uuid.UUID) error {
 		// Start() does not return until the transport server is killed and therefore must be run in a go routine
 		go server.Start()
 		return nil
+	case listeners.SMB:
+		return nil
 	case listeners.TCP:
 		// Nothing to do, there is not an infrastructure layer server to start for the TCP listener
 		return nil
@@ -381,6 +434,9 @@ func (ls *ListenerService) Stop(id uuid.UUID) error {
 	if err != nil {
 		return fmt.Errorf("pkg/services/listeners.Restart(): %s", err)
 	}
-	server := *listener.Server()
-	return server.Stop()
+	if listener.Protocol() == listeners.HTTP {
+		server := *listener.Server()
+		return server.Stop()
+	}
+	return nil
 }

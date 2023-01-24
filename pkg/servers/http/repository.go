@@ -23,7 +23,9 @@ import uuid "github.com/satori/go.uuid"
 // Repository is an interface to store and manage HTTP servers
 type Repository interface {
 	Add(server Server) error
+	Remove(id uuid.UUID)
 	Server(id uuid.UUID) (Server, error)
 	Servers() []Server
-	Remove(id uuid.UUID)
+	SetOption(id uuid.UUID, option, value string) error
+	Update(server Server) error
 }
