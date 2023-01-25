@@ -21,6 +21,8 @@ package message
 import (
 	// Standard
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/smb"
+	smbMemory "github.com/Ne0nd0g/merlin/pkg/listeners/smb/memory"
 	"math/rand"
 	"time"
 
@@ -78,6 +80,12 @@ func listener(id uuid.UUID) (listeners.Listener, error) {
 	if err == nil {
 		return &httpListener, nil
 	}
+	// Check the SMB Listener's Repository
+	smbRepo := withSMBMemoryListenerRepository()
+	smbListener, err := smbRepo.ListenerByID(id)
+	if err == nil {
+		return &smbListener, err
+	}
 	// Check the TCP Listener's Repository
 	tcpRepo := withTCPMemoryListenerRepository()
 	tcpListener, err := tcpRepo.ListenerByID(id)
@@ -96,6 +104,11 @@ func listener(id uuid.UUID) (listeners.Listener, error) {
 // withHTTPMemoryListenerRepository retrieves an in-memory HTTP Listener repository interface used to manage Listener object
 func withHTTPMemoryListenerRepository() http.Repository {
 	return httpMemory.NewRepository()
+}
+
+// withSMBMemoryListenerRepository retrieves an in-memory SMB Listener repository interface used to manage Listener object
+func withSMBMemoryListenerRepository() smb.Repository {
+	return smbMemory.NewRepository()
 }
 
 // withTCPMemoryListenerRepository retrieves an in-memory TCP Listener repository interface used to manage Listener object

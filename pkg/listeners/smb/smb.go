@@ -65,7 +65,19 @@ type Listener struct {
 // NewSMBListener is a factory that creates and returns a Listener aggregate that implements the Listener interface
 func NewSMBListener(options map[string]string) (listener Listener, err error) {
 	// Create and set the listener's ID
-	listener.id = uuid.NewV4()
+	id, ok := options["ID"]
+	if ok {
+		if id != "" {
+			listener.id, err = uuid.FromString(id)
+			if err != nil {
+				listener.id = uuid.NewV4()
+			}
+		} else {
+			listener.id = uuid.NewV4()
+		}
+	} else {
+		listener.id = uuid.NewV4()
+	}
 
 	// Ensure a listener name was provided
 	listener.name = options["Name"]
@@ -168,6 +180,7 @@ func NewSMBListener(options map[string]string) (listener Listener, err error) {
 // DefaultOptions returns a map of configurable listener options that will subsequently be passed to the NewSMBListener function
 func DefaultOptions() map[string]string {
 	options := make(map[string]string)
+	options["ID"] = ""
 	options["Name"] = "My SMB Listener"
 	options["Description"] = "Default SMB Listener"
 	options["Pipe"] = "merlinpipe"
