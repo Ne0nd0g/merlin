@@ -536,6 +536,29 @@ func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata
 		}
 	}
 
+	// Check the SMB Listener's Repository
+	smbRepo := withSMBMemoryListenerRepository()
+	smbListeners := smbRepo.Listeners()
+	if len(smbListeners) > 0 {
+		for _, listener := range smbListeners {
+			lhService, err = NewMessageService(listener.ID())
+			if err != nil {
+				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+					Level:   messageAPI.Warn,
+					Time:    time.Now().UTC(),
+					Error:   true,
+					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
+				})
+				break
+			}
+			rdata, err = lhService.Handle(id, payload)
+			if err == nil {
+				// Found a listener that didn't error out handling message
+				return
+			}
+		}
+	}
+
 	// Check the HTTP Listener's Repository
 	httpRepo := withHTTPMemoryListenerRepository()
 	httpListeners := httpRepo.Listeners()
