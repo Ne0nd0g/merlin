@@ -164,7 +164,15 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 
 	msg, err := s.listener.Deconstruct(data, key)
 	if err != nil {
-		return nil, err
+		// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
+		// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
+		messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+			Level:   messageAPI.Note,
+			Time:    time.Now().UTC(),
+			Error:   false,
+			Message: fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticated", id),
+		})
+		msg.ID = id
 	}
 
 	var returnMessage messages.Base
@@ -263,7 +271,7 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 					Message: fmt.Sprintf("pkg/services/message.delegate(): %s", err),
 				})
 			}
-			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("A delegate message was recieved from %s for the non-existent listener %s.", delegate.Agent, delegate.Listener)))
+			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("A delegate message was received from %s for the non-existent listener %s.", delegate.Agent, delegate.Listener)))
 			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
 				Level:   messageAPI.Info,
 				Time:    time.Now().UTC(),
@@ -275,7 +283,7 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 					Level: messageAPI.Warn,
 					Time:  time.Now().UTC(),
 					Error: true,
-					Message: fmt.Sprintf("A delegate message was recieved from %s for the non-existent listener %s.\n"+
+					Message: fmt.Sprintf("A delegate message was received from %s for the non-existent listener %s.\n"+
 						"Attempts to brute force all existing Listeners to find one configure to handle the message failed.\n"+
 						"Create a listener that matches the Agent's configuration before it reaches the maximum failed of login\n "+
 						"attempts, or try to re-link the agent, to recover control of it. %s", delegate.Agent, delegate.Listener, time.Now().UTC()),

@@ -613,6 +613,24 @@ func LinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(fmt.Sprintf("Expected 2 arguments, received %d", len(Args)))
 	}
 
+	if strings.ToLower(Args[1]) == "add" {
+		if len(Args) > 2 {
+			link, err := uuid.FromString(Args[2])
+			if err != nil {
+				return messages.ErrorMessage(fmt.Sprintf("api/agents.LinkAgent(): %s", err))
+			}
+			err = agentService.Link(agentID, link)
+			if err != nil {
+				return messages.ErrorMessage(fmt.Sprintf("api/agents.LinkAgent(): %s", err))
+			}
+			return messages.UserMessage{
+				Level:   messages.Success,
+				Message: fmt.Sprintf("Successfully added child agent link %s to parent agent %s", agentID, link),
+			}
+		}
+		return messages.ErrorMessage(fmt.Sprintf("Not enough arguments: \"link add <p2p agent ID>\""))
+	}
+
 	job, err := jobService.Add(agentID, "link", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())

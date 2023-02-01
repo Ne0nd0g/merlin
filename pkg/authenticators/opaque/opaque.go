@@ -78,8 +78,11 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 	case opaque.Opaque:
 		// Do nothing
 	default:
-		err = fmt.Errorf("pkg/authenticators/opaque.Authenticate() received invalid data type %T", data)
-		return
+		// If no Opaque data is passed in, assume the Agent needs to re-authenticate
+		data = opaque.Opaque{
+			Type:    opaque.ReAuthenticate,
+			Payload: nil,
+		}
 	}
 
 	var opq opaque.Opaque
@@ -265,7 +268,6 @@ func (a *Authenticator) reAuthenticate(agentID uuid.UUID) (opaque.Opaque, error)
 	if core.Debug {
 		logging.Message("debug", fmt.Sprintf("Entering into opaque.reAuthenticate function for agent %s...", agentID))
 	}
-	fmt.Printf("[DEBUG] Opaque ReAuth for %s\n", agentID)
 	returnMessage := opaque.Opaque{
 		Type: opaque.ReAuthenticate,
 	}
