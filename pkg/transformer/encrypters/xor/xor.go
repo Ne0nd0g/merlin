@@ -46,6 +46,7 @@ func (e *Encrypter) Deconstruct(data, key []byte) (any, error) {
 }
 
 func xor(data, key []byte) (retData []byte, err error) {
+	retData = make([]byte, len(data))
 	for k, v := range data {
 		retData[k] = v ^ key[k%len(key)]
 	}

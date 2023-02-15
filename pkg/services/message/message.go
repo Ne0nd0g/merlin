@@ -145,7 +145,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	}
 
 	// If the agent exists then get its encryption key
-	// If the agent does not exist, leve the key blank and then the listener's key will be used
+	// If the agent does not exist, leave the key blank and then the listener's key will be used
 	var key []byte
 	if err == nil {
 		key = agent.Secret()
@@ -164,6 +164,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 
 	msg, err := s.listener.Deconstruct(data, key)
 	if err != nil {
+		logging.Message("debug", fmt.Sprintf("pkg/services/message.Handle(): there was an error deconstructing the message for agent %s: %s", id, err))
 		// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
 		// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
 		messageAPI.SendBroadcastMessage(messageAPI.UserMessage{

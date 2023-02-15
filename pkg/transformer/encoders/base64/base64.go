@@ -39,23 +39,24 @@ func NewEncoder(concrete int) *Coder {
 
 // Construct takes in data, Base64 encodes it, and returns the encoded data as bytes
 func (c *Coder) Construct(data any, key []byte) (retData []byte, err error) {
-	base64.StdEncoding.Encode(retData, data.([]byte))
+	switch c.concrete {
+	case BYTE:
+		retData = make([]byte, base64.StdEncoding.EncodedLen(len(data.([]byte))))
+		base64.StdEncoding.Encode(retData, data.([]byte))
+	case STRING:
+		retData = []byte(base64.StdEncoding.EncodeToString(data.([]byte)))
+	}
 	return
 }
 
 // Deconstruct takes in bytes and Base64 decodes it to its original type
 func (c *Coder) Deconstruct(data, key []byte) (any, error) {
-	var retData []byte
-	n, err := base64.StdEncoding.Decode(retData, data)
-	fmt.Printf("Base64 decoded %d bytes\n", n)
-	if err != nil {
-		return nil, fmt.Errorf("transformer/encoders/base64.Deconstruct(): there was an error Base64 decoding the incoming data: %s", err)
-	}
 	switch c.concrete {
 	case BYTE:
-		return retData, nil
+		retData := make([]byte, base64.StdEncoding.DecodedLen(len(data)))
+		return base64.StdEncoding.Decode(retData, data)
 	case STRING:
-		return string(retData), nil
+		return base64.StdEncoding.DecodeString(string(data))
 	default:
 		return nil, fmt.Errorf("transformer/encoders/base64.Deconstruct(): unhandled concrete type %d", c.concrete)
 	}

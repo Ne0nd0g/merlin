@@ -41,9 +41,10 @@ func NewEncoder(concrete int) *Coder {
 func (c *Coder) Construct(data any, key []byte) (retData []byte, err error) {
 	switch c.concrete {
 	case BYTE:
+		retData = make([]byte, hex.EncodedLen(len(data.([]byte))))
 		hex.Encode(retData, data.([]byte))
 	case STRING:
-		hex.Encode(retData, []byte(data.(string)))
+		retData = []byte(hex.EncodeToString(data.([]byte)))
 	default:
 		err = fmt.Errorf("transformer/encoders/hex.Construct(): unhandled concrete type: %d", c.concrete)
 	}
@@ -52,9 +53,8 @@ func (c *Coder) Construct(data any, key []byte) (retData []byte, err error) {
 
 // Deconstruct takes in bytes and hex decodes it to its original type
 func (c *Coder) Deconstruct(data, key []byte) (any, error) {
-	var retData []byte
-	n, err := hex.Decode(retData, data)
-	fmt.Printf("Hex decoded %d bytes\n", n)
+	retData := make([]byte, hex.DecodedLen(len(data)))
+	_, err := hex.Decode(retData, data)
 	if err != nil {
 		return nil, fmt.Errorf("transformer/encoders/hex.Deconstruct(): there was an error Base64 decoding the incoming data: %s", err)
 	}

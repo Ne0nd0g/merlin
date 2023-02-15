@@ -70,7 +70,7 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 		logging.Message("debug", fmt.Sprintf("pkg/authenticaters/opaque.Authenticate() entering into function for agent %s with data type: %T", id, data))
 	}
 	if core.Verbose {
-		logging.Message("note", fmt.Sprintf("Received OPAQUE message type: %d for agent %s", data.(opaque.Opaque).Type, id))
+		logging.Message("note", fmt.Sprintf("Received OPAQUE message type: %T:%+v for agent %s", data, data, id))
 	}
 
 	// Verify the data interface is the opaque.Opaque type

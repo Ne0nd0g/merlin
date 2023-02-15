@@ -48,6 +48,7 @@ func (e *Encrypter) Deconstruct(data, key []byte) (any, error) {
 }
 
 func xor(data, key []byte) (retData []byte, err error) {
+	retData = make([]byte, len(data))
 	cipher, err := rc4.NewCipher(key)
 	if err != nil {
 		return []byte{}, fmt.Errorf("pkg/transformer/encrypters/rc4.Construct(): there was an error getting an RC4 cipher: %s", err)

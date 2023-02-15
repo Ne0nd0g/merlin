@@ -479,6 +479,8 @@ func (s *Service) AddJobChannel(agentID uuid.UUID, job *jobs.Job, jobArgs []stri
 		}
 		results = "Creating jobs for all agents through broadcast identifier ffffffff-ffff-ffff-ffff-ffffffffffff"
 		for _, a := range agents {
+			// Because the job structure is a pointer, we need to clear out the job ID for each iteration
+			job.ID = ""
 			err = s.buildJob(a.ID(), job, jobArgs)
 			if err != nil {
 				return results, err
