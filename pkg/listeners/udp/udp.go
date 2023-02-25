@@ -189,7 +189,7 @@ func DefaultOptions() map[string]string {
 	options["Interface"] = "127.0.0.1"
 	options["Port"] = "4444"
 	options["PSK"] = "merlin"
-	options["Transforms"] = "aes,gob-base"
+	options["Transforms"] = "jwe,gob-base"
 	options["Protocol"] = "UDP"
 	options["Authenticator"] = "OPAQUE"
 	return options

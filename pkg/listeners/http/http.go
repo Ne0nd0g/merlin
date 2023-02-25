@@ -153,7 +153,7 @@ func DefaultOptions() map[string]string {
 	options["Authenticator"] = "OPAQUE"
 	options["Description"] = "Default HTTP Listener"
 	options["PSK"] = "merlin"
-	options["Transforms"] = "gob-string,jwe,gob-base"
+	options["Transforms"] = "jwe,gob-base"
 	return options
 }
 

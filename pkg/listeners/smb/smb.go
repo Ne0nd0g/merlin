@@ -185,7 +185,7 @@ func DefaultOptions() map[string]string {
 	options["Description"] = "Default SMB Listener"
 	options["Pipe"] = "merlinpipe"
 	options["PSK"] = "merlin"
-	options["Transforms"] = "aes,gob-base"
+	options["Transforms"] = "jwe,gob-base"
 	options["Protocol"] = "SMB"
 	options["Authenticator"] = "OPAQUE"
 	return options
