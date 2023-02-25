@@ -822,7 +822,7 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				userMessage := messageAPI.UserMessage{
 					Level:   messageAPI.Note,
 					Time:    time.Now().UTC(),
-					Message: fmt.Sprintf("Results job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339)),
+					Message: fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339)),
 				}
 				messageAPI.SendBroadcastMessage(userMessage)
 				result := job.Payload.(jobs.Results)
@@ -849,7 +849,14 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				if err != nil {
 					return err
 				}
-				//agent.UpdateInfo(job.Payload.(messages.AgentInfo))
+				msg := fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339))
+				msg += fmt.Sprintf("\n\tConfiguration data received for Agent %s and updated. Issue the \"info\" command to view it.", job.AgentID)
+				userMessage := messageAPI.UserMessage{
+					Level:   messageAPI.Note,
+					Time:    time.Now().UTC(),
+					Message: msg,
+				}
+				messageAPI.SendBroadcastMessage(userMessage)
 			case jobs.FILETRANSFER:
 				err = s.fileTransfer(job.AgentID, job.Payload.(jobs.FileTransfer))
 				if err != nil {

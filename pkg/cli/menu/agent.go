@@ -53,6 +53,8 @@ func handlerAgent(cmd []string) {
 		Set(MAIN)
 	case "cd":
 		core.MessageChannel <- agentAPI.CD(agent, cmd)
+	case "checkin":
+		core.MessageChannel <- agentAPI.CheckIn(agent)
 	case "clear", "c":
 		core.MessageChannel <- agentAPI.ClearJobs(agent)
 	case "download":
@@ -278,6 +280,7 @@ func completerAgent() *readline.PrefixCompleter {
 	base := []readline.PrefixCompleterInterface{
 		readline.PcItem("back"),
 		readline.PcItem("cd"),
+		readline.PcItem("checkin"),
 		readline.PcItem("clear"),
 		readline.PcItem("download"),
 		readline.PcItem("env",
@@ -427,6 +430,7 @@ func helpAgent() {
 	// Commands available to all agents
 	base := [][]string{
 		{"cd", "Change directories", "cd ../../ OR cd c:\\\\Users"},
+		{"checkin", "Force the agent to send back an AgentInfo message", ""},
 		{"clear", "Clear any UNSENT jobs from the queue", ""},
 		{"back", "Return to the main menu", ""},
 		{"download", "Download a file from the agent", "download <remote_file>"},
