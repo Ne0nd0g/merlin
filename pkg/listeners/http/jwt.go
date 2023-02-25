@@ -30,7 +30,6 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
 // GetJWT returns a JSON Web Token for the provided agent using the interface JWT Key
@@ -79,7 +78,7 @@ func GetJWT(agentID uuid.UUID, lifetime time.Duration, key []byte) (string, erro
 	if errParse != nil {
 		return "", fmt.Errorf("there was an error parsing the encrypted JWT:\r\n%s", errParse.Error())
 	}
-	logging.Server(fmt.Sprintf("Created authenticated JWT for %s", agentID))
+	//logging.Server(fmt.Sprintf("Created authenticated JWT for %s", agentID))
 	if core.Debug {
 		message("debug", fmt.Sprintf("Sending agent %s an authenticated JWT with a lifetime of %v:\r\n%v",
 			agentID.String(), lifetime, agentJWT))

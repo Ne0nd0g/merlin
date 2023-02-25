@@ -195,11 +195,21 @@ func DefaultOptions() map[string]string {
 	return options
 }
 
+// Addr returns the network interface and port the peer-to-peer Agent is using
+func (l *Listener) Addr() string {
+	return fmt.Sprintf("%s:%d", l.iface, l.port)
+}
+
 // Authenticate takes data coming into the listener from an agent and passes it to the listener's configured
 // authenticator to authenticate the agent. Once an agent is authenticated, this function will no longer be used.
 func (l *Listener) Authenticate(id uuid.UUID, data interface{}) (messages.Base, error) {
 	auth := l.auth
 	return auth.Authenticate(id, data)
+}
+
+// Authenticator returns the authenticator the listener is configured to use
+func (l *Listener) Authenticator() authenticators.Authenticator {
+	return l.auth
 }
 
 // ConfiguredOptions returns the server's current configuration for options that can be set by the user
@@ -416,4 +426,9 @@ func (l *Listener) SetOption(option string, value string) error {
 // TCP Listeners do not have an embedded server and therefore returns a static "Created"
 func (l *Listener) Status() string {
 	return "Created"
+}
+
+// Transformers returns a list of transforms the lister is configured to use
+func (l *Listener) Transformers() []transformer.Transformer {
+	return l.transformers
 }

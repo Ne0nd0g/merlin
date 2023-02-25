@@ -45,6 +45,7 @@ var RegisteredServers = make(map[int]string)
 
 // ServerInterface is used to provide a standard set of methods a server module must support to work with Merlin
 type ServerInterface interface {
+	Addr() string
 	ConfiguredOptions() map[string]string
 	ID() uuid.UUID
 	Interface() string

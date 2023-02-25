@@ -31,6 +31,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents/memory"
 	"github.com/Ne0nd0g/merlin/pkg/group"
 	groupMemory "github.com/Ne0nd0g/merlin/pkg/group/memory"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
@@ -67,8 +68,13 @@ func WithMemoryGroupRepository() group.Repository {
 /* AGENT FUNCTIONS */
 
 // Add stores and Agent object in the database
-func (s *Service) Add(agent agents.Agent) error {
-	return s.agentRepo.Add(agent)
+func (s *Service) Add(agent agents.Agent) (err error) {
+	err = s.agentRepo.Add(agent)
+	if err != nil {
+		return err
+	}
+	logging.Server(fmt.Sprintf("Added Agent %s to the repository", agent.ID()))
+	return
 }
 
 // Agent returns a single Agent object for the provided id
@@ -171,8 +177,13 @@ func (s *Service) Log(id uuid.UUID, message string) error {
 }
 
 // Remove deletes an existing Agent from the database
-func (s *Service) Remove(id uuid.UUID) error {
-	return s.agentRepo.Remove(id)
+func (s *Service) Remove(id uuid.UUID) (err error) {
+	err = s.agentRepo.Remove(id)
+	if err != nil {
+		return
+	}
+	logging.Server(fmt.Sprintf("Added removed %s to the repository", id))
+	return
 }
 
 // Unlink removes a child Agent link from the parent Agent id

@@ -165,13 +165,15 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	msg, err := s.listener.Deconstruct(data, key)
 	if err != nil {
 		logging.Message("debug", fmt.Sprintf("pkg/services/message.Handle(): there was an error deconstructing the message for agent %s: %s", id, err))
+		// Unable to deconstruct because this listener's transforms don't match what the Agent used
+		messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("Ensure listener %s is configured the exact same way as the agent. If not create a new listener with the correct configuration and try again.", s.listener.ID())))
 		// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
 		// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
 		messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
 			Level:   messageAPI.Note,
 			Time:    time.Now().UTC(),
 			Error:   false,
-			Message: fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticated", id),
+			Message: fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id),
 		})
 		msg.ID = id
 	}

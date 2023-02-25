@@ -27,8 +27,10 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/authenticators"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
+	"github.com/Ne0nd0g/merlin/pkg/transformer"
 )
 
 const (
@@ -41,6 +43,8 @@ const (
 
 // Listener is an interface that contains all the functions any Agent listener must implement
 type Listener interface {
+	Addr() string
+	Authenticator() authenticators.Authenticator
 	Authenticate(id uuid.UUID, data interface{}) (messages.Base, error)
 	ConfiguredOptions() map[string]string
 	Construct(msg messages.Base, key []byte) (data []byte, err error)
@@ -53,6 +57,7 @@ type Listener interface {
 	PSK() string
 	Server() *servers.ServerInterface
 	Status() string
+	Transformers() []transformer.Transformer
 }
 
 // FromString converts a string representation of the Listener type, or kind, to a constant

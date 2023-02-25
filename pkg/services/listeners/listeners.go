@@ -37,6 +37,7 @@ import (
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
 	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	httpServer "github.com/Ne0nd0g/merlin/pkg/servers/http"
 	httpServerRepo "github.com/Ne0nd0g/merlin/pkg/servers/http/memory"
@@ -114,6 +115,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
 		}
+		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID %s, Authenticator: %s, Transforms: %s", hServer.ProtocolString(), hServer.Addr(), hListener.Name(), hListener.ID(), hListener.Authenticator(), hListener.Transformers()))
 		listener = &hListener
 		return
 	case "smb":
@@ -127,6 +129,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
 		}
+		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], sListener.Addr(), sListener.Name(), sListener.ID(), sListener.Authenticator(), sListener.Transformers()))
 		listener = &sListener
 		return
 	case "tcp":
@@ -140,6 +143,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
 		}
+		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], tListener.Addr(), tListener.Name(), tListener.ID(), tListener.Authenticator(), tListener.Transformers()))
 		listener = &tListener
 		return
 	case "udp":
@@ -152,6 +156,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
 		}
+		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], uListener.Addr(), uListener.Name(), uListener.ID(), uListener.Authenticator(), uListener.Transformers()))
 		listener = &uListener
 		return
 	default:

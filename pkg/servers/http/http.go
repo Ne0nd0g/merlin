@@ -187,6 +187,11 @@ func New(options map[string]string) (Server, error) {
 	return s, nil
 }
 
+// Addr returns the network interface and port it is bound to
+func (s *Server) Addr() string {
+	return fmt.Sprintf("%s:%d", s.iface, s.port)
+}
+
 // ConfiguredOptions returns the server's current configuration for options that can be set by the user
 func (s *Server) ConfiguredOptions() map[string]string {
 	options := make(map[string]string)
