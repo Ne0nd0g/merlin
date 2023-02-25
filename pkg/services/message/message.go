@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2022  Russel Van Tuyl
+// Copyright (C) 2023  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -417,7 +417,7 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 	returnMessage.Padding = core.RandStringBytesMaskImprSrc(padding)
 
 	// Synchronous Agents that have nothing to say should not return an IDLE message
-	if (agent.Comms().Proto == "tcp-bind" || agent.Comms().Proto == "tcp-reverse" || agent.Comms().Proto == "udp-bind" || agent.Comms().Proto == "udp-reverse") && returnMessage.Type == messages.IDLE && len(returnMessage.Delegates) <= 0 {
+	if (agent.Comms().Proto == "tcp-bind" || agent.Comms().Proto == "tcp-reverse" || agent.Comms().Proto == "udp-bind" || agent.Comms().Proto == "udp-reverse" || agent.Comms().Proto == "smb-bind" || agent.Comms().Proto == "smb-reverse") && returnMessage.Type == messages.IDLE && len(returnMessage.Delegates) <= 0 {
 		return nil, nil
 	}
 	//fmt.Printf("Agent: %s, Comms: %s, Message Type: %d, Delegates: %d\n", agent.ID(), agent.Comms().Proto, returnMessage.Type, len(returnMessage.Delegates))

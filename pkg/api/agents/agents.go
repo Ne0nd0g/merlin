@@ -1,6 +1,6 @@
 // Merlin is a post-exploitation command and control framework.
 // This file is part of Merlin.
-// Copyright (C) 2022  Russel Van Tuyl
+// Copyright (C) 2023  Russel Van Tuyl
 
 // Merlin is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -625,7 +625,7 @@ func LinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
 			}
 			return messages.UserMessage{
 				Level:   messages.Success,
-				Message: fmt.Sprintf("Successfully added child agent link %s to parent agent %s", agentID, link),
+				Message: fmt.Sprintf("Successfully added child agent %s link to parent agent %s", link, agentID),
 			}
 		}
 		return messages.ErrorMessage(fmt.Sprintf("Not enough arguments: \"link add <p2p agent ID>\""))
