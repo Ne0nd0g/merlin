@@ -31,9 +31,15 @@ type Repository struct {
 	sync.Mutex
 }
 
+// repo is the in-memory datastore
+var repo *Repository
+
 // NewRepository is a factory to return a repository structure
 func NewRepository() *Repository {
-	return &Repository{messages: make(map[uuid.UUID][]delegate)}
+	if repo == nil {
+		repo = &Repository{messages: make(map[uuid.UUID][]delegate)}
+	}
+	return repo
 }
 
 // Add data to the in-memory map for the provided Agent ID

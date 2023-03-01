@@ -248,6 +248,11 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 		}
 	}
 
+	// If the Base message being handled is for a peer-to-peer Agent, don't get a return Base message now
+	// Return Base messages for peer-to-peer Agents are gathered when the parent Agent Base message is being handled
+	if s.agentService.IsChild(id) {
+		return nil, nil
+	}
 	return s.getBase(id)
 }
 
@@ -387,8 +392,8 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 		Delegates: nil,
 	}
 
-	var returnJobs []jobs.Job
 	// Get return jobs
+	var returnJobs []jobs.Job
 	returnJobs, err = s.jobService.Get(id)
 	if err != nil {
 		err = fmt.Errorf("pkg/services/message.getBase(): %s", err)
@@ -407,6 +412,13 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 		messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.getBase(): %s", err)))
 	}
 
+	// Muted Agents that have nothing to say should not return an IDLE message
+	var sleep time.Duration
+	sleep, err = time.ParseDuration(agent.Comms().Wait)
+	if err == nil && sleep < 0 && len(returnMessage.Delegates) <= 0 && len(returnJobs) <= 0 {
+		return nil, nil
+	}
+
 	// Add padding here since we already have an agent service to get the needed information
 	padding := agent.Padding()
 
@@ -417,12 +429,6 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 		padding = rand.Intn(4096)
 	}
 	returnMessage.Padding = core.RandStringBytesMaskImprSrc(padding)
-
-	// Synchronous Agents that have nothing to say should not return an IDLE message
-	if (agent.Comms().Proto == "tcp-bind" || agent.Comms().Proto == "tcp-reverse" || agent.Comms().Proto == "udp-bind" || agent.Comms().Proto == "udp-reverse" || agent.Comms().Proto == "smb-bind" || agent.Comms().Proto == "smb-reverse") && returnMessage.Type == messages.IDLE && len(returnMessage.Delegates) <= 0 {
-		return nil, nil
-	}
-	//fmt.Printf("Agent: %s, Comms: %s, Message Type: %d, Delegates: %d\n", agent.ID(), agent.Comms().Proto, returnMessage.Type, len(returnMessage.Delegates))
 
 	// If the Listener associated with this Message Handler doesn't belong to the Agent, then get the one that is and use it
 	if agent.Listener() != s.listener.ID() {

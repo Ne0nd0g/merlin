@@ -23,6 +23,8 @@ import uuid "github.com/satori/go.uuid"
 
 // Repository is an interface to store and retrieve data
 type Repository interface {
+	// Add data to the in-memory map for the provided Agent ID
 	Add(id uuid.UUID, data []byte)
+	// Get return data from the in-memory map for the provided Agent ID
 	Get(id uuid.UUID) [][]byte
 }

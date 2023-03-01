@@ -176,6 +176,23 @@ func (s *Service) Log(id uuid.UUID, message string) error {
 	return s.agentRepo.Log(id, message)
 }
 
+// IsChild checks to see if the Agent id is a peer-to-peer child to any other Agent
+func (s *Service) IsChild(id uuid.UUID) bool {
+	agents := s.Agents()
+	for _, agent := range agents {
+		links, err := s.Links(agent.ID())
+		if err != nil {
+			return false
+		}
+		for _, link := range links {
+			if link == id {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Remove deletes an existing Agent from the database
 func (s *Service) Remove(id uuid.UUID) (err error) {
 	err = s.agentRepo.Remove(id)
