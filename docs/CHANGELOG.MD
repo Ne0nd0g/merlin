@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+# 1.5.1 - 2023-03-08
+
+### Added
+
+- Documentation for proxying Agent DLL provided by @HuskyHacks in [PR 136](https://github.com/Ne0nd0g/merlin/pull/136)
+
+## Security
+
+- [PR 137](https://github.com/Ne0nd0g/merlin/pull/137) - Bump golang.org/x/text from 0.3.7 to 0.3.8 by dependabot
+- [PR 138](https://github.com/Ne0nd0g/merlin/pull/138) - Bump golang.org/x/net from 0.0.0-20220708220712-1185a9018129 to 0.7.0 by dependabot
+- [PR 139](https://github.com/Ne0nd0g/merlin/pull/139) - Bump golang.org/x/crypto from 0.0.0-20200709230013-948cd5f35899 to 0.1.0 by dependabot
+- [PR 140](https://github.com/Ne0nd0g/merlin/pull/140) - Bump golang.org/x/net from 0.1.0 to 0.7.0 by dependabot
+
 # 1.5.0 - 2022-07-20
 
 ### Added
