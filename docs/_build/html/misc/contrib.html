@@ -1,0 +1,321 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Contributing &mdash; Merlin BETA documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Logging" href="logging.html" />
+    <link rel="prev" title="Blog Posts" href="blogs.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Merlin
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.8.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Quick Start</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/server.html">Merlin Server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/agent.html">Merlin Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/faq.html">FAQ</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Merlin Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Merlin Server</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/listeners.html">Listener Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Misc.</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="blogs.html">Blog Posts</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logging">Logging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#user-interface-messages">User Interface Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#agent-messages">Agent Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pull-requests">Pull Requests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#contributors">Contributors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Merlin</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Contributing</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/misc/contrib.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="contributing">
+<h1>Contributing<a class="headerlink" href="#contributing" title="Permalink to this heading">¶</a></h1>
+<p>Thank you for your interest in contributing to Merlin. This document
+outlines some basic guidelines for submitting your contributions. This
+is a living document and it will be updated regularly as the project
+matures.</p>
+<section id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this heading">¶</a></h2>
+<p>Go is slightly unique due to the way it imports packages. Simply forking
+Merlin and getting to work will result in problems due to imports. The
+proper way to work with a Go repository after forking it is:</p>
+<ol class="arabic simple">
+<li><p>Grab Merlin into your GOPATH <code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">github.com/Ne0nd0g/merlin</span></code></p></li>
+<li><p>Rename the current origin remote to upstream <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">remote</span> <span class="pre">rename</span> <span class="pre">origin</span> <span class="pre">upstream</span></code></p></li>
+<li><p>Add your fork as origin <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">remote</span> <span class="pre">add</span> <span class="pre">origin</span> <span class="pre">https://github.com/&lt;your</span> <span class="pre">user</span> <span class="pre">name&gt;/merlin</span></code></p></li>
+</ol>
+<p>An excellent blog post by <a class="reference external" href="https://github.com/ScottMansfield">Scott Mansfield</a> can be found
+<a class="reference external" href="https://blog.sgmansfield.com/2016/06/working-with-forks-in-go/">on his blog</a>.</p>
+</section>
+<section id="logging">
+<h2>Logging<a class="headerlink" href="#logging" title="Permalink to this heading">¶</a></h2>
+<p>Commands executed against an agent should be logged in the agent log.
+The results of messages executed on an agent, to include errors and
+successes, should also be sent back to the server and logged in the
+agent’s log file. Command results can be sent back using the
+“CmdResults” message structure.</p>
+<p>Commands only affecting the server should be entered into the server’s
+log file.</p>
+<p>When adding a new feature, ensure the associated activities are also
+logged.</p>
+</section>
+<section id="user-interface-messages">
+<h2>User Interface Messages<a class="headerlink" href="#user-interface-messages" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Informational messages are white and start with <code class="docutils literal notranslate"><span class="pre">[i]</span></code></p></li>
+<li><p>Warning and Error messages are red and start with <code class="docutils literal notranslate"><span class="pre">[!]</span></code></p></li>
+<li><p>Verbose messages (those that are not a warning or error) are yellow and start with <code class="docutils literal notranslate"><span class="pre">[-]</span></code></p></li>
+<li><p>Success messages are green and start with <code class="docutils literal notranslate"><span class="pre">[+]</span></code></p></li>
+<li><p>Informational messages are white and start with <code class="docutils literal notranslate"><span class="pre">[i]</span></code></p></li>
+<li><p>Debug messages are red and start with (in all caps) <code class="docutils literal notranslate"><span class="pre">[DEBUG]</span></code>. These messages go above verbose logging and are used to track down problems or print out raw data.</p></li>
+<li><p>Messages should be left aligned and rest against the message type symbol</p></li>
+</ul>
+</section>
+<section id="agent-messages">
+<h2>Agent Messages<a class="headerlink" href="#agent-messages" title="Permalink to this heading">¶</a></h2>
+<p>Merlin Agents are designed to run on a compromised host during a
+penetration test. As such, the agent should never display any messages
+to user on standard out or standard error <em>unless</em> verbose messages are
+enable.</p>
+</section>
+<section id="pull-requests">
+<h2>Pull Requests<a class="headerlink" href="#pull-requests" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Pull requests (PR) should be submitted to the <code class="docutils literal notranslate"><span class="pre">dev</span></code> branch</p></li>
+<li><p>Be sure to pull down any changes from <code class="docutils literal notranslate"><span class="pre">dev</span></code> prior to creating a PR</p></li>
+<li><p>All pull request will require a review and approval prior to being accepted and merged into <code class="docutils literal notranslate"><span class="pre">dev</span></code></p></li>
+<li><p>Ensure all code is free from spelling and grammatical errors</p></li>
+<li><p>Ensure code passes <code class="docutils literal notranslate"><span class="pre">golint</span></code></p></li>
+<li><p>Ensure code compiles without errors</p></li>
+<li><p>Ensure all errors are handled</p></li>
+<li><p>Error checking should be done as soon as possible</p></li>
+<li><p>Update the usage() function if applicable</p></li>
+<li><p>Ensure log entries are created in the respective log files</p></li>
+</ul>
+</section>
+<section id="contributors">
+<h2>Contributors<a class="headerlink" href="#contributors" title="Permalink to this heading">¶</a></h2>
+<p>Thank you to everyone that has contributed to Merlin. Your contributions help keep Merlin great and valuable.
+Merlin contributors can be viewed <a class="reference external" href="https://github.com/Ne0nd0g/merlin/graphs/contributors">here</a>.</p>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="logging.html" class="btn btn-neutral float-right" title="Logging" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="blogs.html" class="btn btn-neutral float-left" title="Blog Posts" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Russel Van Tuyl (@Ne0nd0g)
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

