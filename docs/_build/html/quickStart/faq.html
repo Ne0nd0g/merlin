@@ -1,10 +1,11 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>FAQ &mdash; Merlin BETA documentation</title>
@@ -13,6 +14,8 @@
   
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
 
   
   
@@ -26,10 +29,9 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -86,7 +88,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">Quick Start</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Quick Start</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="server.html">Merlin Server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="agent.html">Merlin Agent</a></li>
@@ -97,13 +99,13 @@
 </ul>
 </li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Agent</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../agent/cli.html">Command Line Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../agent/dll.html">DLL Agent</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../agent/custom.html">Custom Build</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Server</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
@@ -111,11 +113,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Modules</span></p>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Misc.</span></p>
+<p class="caption" role="heading"><span class="caption-text">Misc.</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../misc/contrib.html">Contributing</a></li>
@@ -185,19 +187,19 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="faq">
-<h1>FAQ<a class="headerlink" href="#faq" title="Permalink to this headline">¶</a></h1>
+  <section id="faq">
+<h1>FAQ<a class="headerlink" href="#faq" title="Permalink to this heading">¶</a></h1>
 <p>Frequently Asked Questions</p>
-<div class="section" id="when-i-double-click-the-pre-compiled-windows-agent-binary-nothing-happens">
-<h2>When I double click the pre-compiled Windows agent binary, nothing happens.<a class="headerlink" href="#when-i-double-click-the-pre-compiled-windows-agent-binary-nothing-happens" title="Permalink to this headline">¶</a></h2>
+<section id="when-i-double-click-the-pre-compiled-windows-agent-binary-nothing-happens">
+<h2>When I double click the pre-compiled Windows agent binary, nothing happens.<a class="headerlink" href="#when-i-double-click-the-pre-compiled-windows-agent-binary-nothing-happens" title="Permalink to this heading">¶</a></h2>
 <p>The pre-compiled Merlin Agent for Windows is compiled with an option that prevents the program from showing. Double clicking the <code class="docutils literal notranslate"><span class="pre">merlinAgent-Windows-x64.exe</span></code> file will launch the agent and it will connect to the hard coded URL (default is <code class="docutils literal notranslate"><span class="pre">https://127.0.0.1:443/</span></code>). The agent will eventually die once it fails to contact the server. Options include recompiling merlinAgent with the hard coded URL of your server or running it from the command line using the <code class="docutils literal notranslate"><span class="pre">-url</span></code> flag to specify your server. View the <a class="reference internal" href="../agent/custom.html"><span class="doc">Custom Build</span></a> page for details on building and compiling the agent from source. Additionally, the agent can be compiled without the <code class="docutils literal notranslate"><span class="pre">-H=windowsgui</span></code> so that it doesn’t disappear when executed by double clicking the file.</p>
-</div>
-<div class="section" id="i-get-errors-when-trying-to-compile-merlin">
-<h2>I get errors when trying to compile Merlin.<a class="headerlink" href="#i-get-errors-when-trying-to-compile-merlin" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="i-get-errors-when-trying-to-compile-merlin">
+<h2>I get errors when trying to compile Merlin.<a class="headerlink" href="#i-get-errors-when-trying-to-compile-merlin" title="Permalink to this heading">¶</a></h2>
 <p>The biggest contributor I see for getting errors while compiling is forgetting to ensure the <cite>GOPATH</cite> environment variable is set. View the <a class="reference internal" href="../agent/custom.html"><span class="doc">Custom Build</span></a> page for details on ensuring the environment is configured properly.</p>
-</div>
-<div class="section" id="input-and-output-redirection-pipes-don-t-work">
-<h2>Input and output redirection pipes don’t work<a class="headerlink" href="#input-and-output-redirection-pipes-don-t-work" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="input-and-output-redirection-pipes-don-t-work">
+<h2>Input and output redirection pipes don’t work<a class="headerlink" href="#input-and-output-redirection-pipes-don-t-work" title="Permalink to this heading">¶</a></h2>
 <p>Pipes <code class="docutils literal notranslate"><span class="pre">|</span></code> and redirectors <code class="docutils literal notranslate"><span class="pre">&lt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> are functions of a shell. By default, Merlin only executes programs in the
 host’s PATH variable.
 In order to use pipes and redirection, you must either use the <code class="docutils literal notranslate"><span class="pre">shell</span></code> command or specify the shell
@@ -206,8 +208,8 @@ In order to use pipes and redirection, you must either use the <code class="docu
 This requires the operator to combine multiple commands together so that they are all in the same context/environment.</p>
 <p>Example:</p>
 <p><code class="docutils literal notranslate"><span class="pre">Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]»shell</span> <span class="pre">/bin/sh</span> <span class="pre">-c</span> <span class="pre">&quot;ls</span> <span class="pre">-l</span> <span class="pre">&gt;</span> <span class="pre">/tmp/out.txt&quot;</span></code></p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

@@ -1,10 +1,11 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Custom Build &mdash; Merlin BETA documentation</title>
@@ -13,6 +14,8 @@
   
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
 
   
   
@@ -26,10 +29,9 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -86,13 +88,13 @@
               
             
             
-              <p class="caption"><span class="caption-text">Quick Start</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Quick Start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../quickStart/server.html">Merlin Server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickStart/agent.html">Merlin Agent</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickStart/faq.html">FAQ</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Agent</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="dll.html">DLL Agent</a></li>
@@ -105,7 +107,7 @@
 </ul>
 </li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Server</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
@@ -113,11 +115,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Modules</span></p>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Misc.</span></p>
+<p class="caption" role="heading"><span class="caption-text">Misc.</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../misc/contrib.html">Contributing</a></li>
@@ -187,230 +189,230 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="custom-build">
-<h1>Custom Build<a class="headerlink" href="#custom-build" title="Permalink to this headline">¶</a></h1>
+  <section id="custom-build">
+<h1>Custom Build<a class="headerlink" href="#custom-build" title="Permalink to this heading">¶</a></h1>
 <p>This section details how to build custom build a Merlin Agent using the Make file.</p>
 <p><strong>NOTE:</strong> Merlin is distributed with pre-compiled agent binaries for all major platforms in the <code class="docutils literal notranslate"><span class="pre">data/bin</span></code> directory.</p>
-<div class="section" id="basic">
-<h2>Basic<a class="headerlink" href="#basic" title="Permalink to this headline">¶</a></h2>
+<section id="basic">
+<h2>Basic<a class="headerlink" href="#basic" title="Permalink to this heading">¶</a></h2>
 <p>The provided Make file can be used to build a new agent from <strong>source</strong>. It is recommended that you first use
 <code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">github.com/Ne0nd0g/merlin-agent</span></code> to pull a copy of the Merlin source code to the host. Move into the Merlin root
 directory where the Make file is located.</p>
 <ul class="simple">
-<li>Windows agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">windows</span></code></li>
-<li>Linux agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">linux</span></code></li>
-<li>macOS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">darwin</span></code></li>
-<li>MIPS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">mips</span></code></li>
-<li>ARM agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">arm</span></code></li>
+<li><p>Windows agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">windows</span></code></p></li>
+<li><p>Linux agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">linux</span></code></p></li>
+<li><p>macOS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">darwin</span></code></p></li>
+<li><p>MIPS agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">mips</span></code></p></li>
+<li><p>ARM agent: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">arm</span></code></p></li>
 </ul>
-</div>
-<div class="section" id="advanced">
-<h2>Advanced<a class="headerlink" href="#advanced" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="advanced">
+<h2>Advanced<a class="headerlink" href="#advanced" title="Permalink to this heading">¶</a></h2>
 <p>Use the provided Make file to build a Merlin Agent with hard coded values. This removes the need for an operator to use
 commandline arguments and allows the Agent to simply be executed. The table below shows configurable compile options</p>
-<table border="1" class="colwidths-auto docutils" id="id1">
+<table class="docutils align-default" id="id1">
 <caption><span class="caption-text">Build Options</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Option</th>
-<th class="head">Description</th>
-<th class="head">Notes</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>Notes</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>HOST</td>
-<td>HTTP Host header</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-host</span></code> commandline flag</td>
+<tbody>
+<tr class="row-even"><td><p>HOST</p></td>
+<td><p>HTTP Host header</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-host</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-odd"><td>JA3</td>
-<td>JA3 signature string (not the MD5 hash). Overrides -proto flag</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> commandline flag</td>
+<tr class="row-odd"><td><p>JA3</p></td>
+<td><p>JA3 signature string (not the MD5 hash). Overrides -proto flag</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-ja3</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-even"><td>KILLDATE</td>
-<td>The date, as a Unix EPOCH timestamp, that the agent will quit running</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-killdate</span></code> commandline flag</td>
+<tr class="row-even"><td><p>KILLDATE</p></td>
+<td><p>The date, as a Unix EPOCH timestamp, that the agent will quit running</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-killdate</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-odd"><td>MAXRETRY</td>
-<td>The maximum amount of failed checkins before the agent will quit running</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-maxretry</span></code> commandline flag</td>
+<tr class="row-odd"><td><p>MAXRETRY</p></td>
+<td><p>The maximum amount of failed checkins before the agent will quit running</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-maxretry</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-even"><td>PADDING</td>
-<td>The maximum amount of data that will be randomly selected and appended to every message</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-padding</span></code> commandline flag</td>
+<tr class="row-even"><td><p>PADDING</p></td>
+<td><p>The maximum amount of data that will be randomly selected and appended to every message</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-padding</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-odd"><td>PROTO</td>
-<td>Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default ‘h2’)</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-proto</span></code> commandline flag</td>
+<tr class="row-odd"><td><p>PROTO</p></td>
+<td><p>Protocol for the agent to connect with [https (HTTP/1.1), http (HTTP/1.1 Clear-Text), h2 (HTTP/2), h2c (HTTP/2 Clear-Text), http3 (QUIC or HTTP/3.0)] (default ‘h2’)</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-proto</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-even"><td>PROXY</td>
-<td>Hardcoded proxy to use for http/1.1 traffic only that will override host configuration</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-proxy</span></code> commandline flag</td>
+<tr class="row-even"><td><p>PROXY</p></td>
+<td><p>Hardcoded proxy to use for http/1.1 traffic only that will override host configuration</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-proxy</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-odd"><td>PSK</td>
-<td>Pre-Shared Key used to encrypt initial communications (default “merlin”)</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-psk</span></code> commandline flag</td>
+<tr class="row-odd"><td><p>PSK</p></td>
+<td><p>Pre-Shared Key used to encrypt initial communications (default “merlin”)</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-psk</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-even"><td>SKEW</td>
-<td>Amount of skew, or variance, between agent checkins</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-skew</span></code> commandline flag</td>
+<tr class="row-even"><td><p>SKEW</p></td>
+<td><p>Amount of skew, or variance, between agent checkins</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-skew</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-odd"><td>SLEEP</td>
-<td>The amount of time the Agent will sleep between checkins Must use golang time notation (e.g., <code class="docutils literal notranslate"><span class="pre">10s</span></code> for ten seconds)</td>
-<td>same as <code class="docutils literal notranslate"><span class="pre">-sleep</span></code> command line flag</td>
+<tr class="row-odd"><td><p>SLEEP</p></td>
+<td><p>The amount of time the Agent will sleep between checkins Must use golang time notation (e.g., <code class="docutils literal notranslate"><span class="pre">10s</span></code> for ten seconds)</p></td>
+<td><p>same as <code class="docutils literal notranslate"><span class="pre">-sleep</span></code> command line flag</p></td>
 </tr>
-<tr class="row-even"><td>URL</td>
-<td>Full URL for agent to connect to (default “<a class="reference external" href="https://127.0.0.1:443">https://127.0.0.1:443</a>”)</td>
-<td>same as the <code class="docutils literal notranslate"><span class="pre">-url</span></code> commandline flag</td>
+<tr class="row-even"><td><p>URL</p></td>
+<td><p>Full URL for agent to connect to (default “<a class="reference external" href="https://127.0.0.1:443">https://127.0.0.1:443</a>”)</p></td>
+<td><p>same as the <code class="docutils literal notranslate"><span class="pre">-url</span></code> commandline flag</p></td>
 </tr>
-<tr class="row-odd"><td>USERAGENT</td>
-<td>The HTTP User-Agent header string that Agent will use while sending traffic</td>
-<td>same sas the <code class="docutils literal notranslate"><span class="pre">-useragent</span></code> commandline flag</td>
+<tr class="row-odd"><td><p>USERAGENT</p></td>
+<td><p>The HTTP User-Agent header string that Agent will use while sending traffic</p></td>
+<td><p>same sas the <code class="docutils literal notranslate"><span class="pre">-useragent</span></code> commandline flag</p></td>
 </tr>
 </tbody>
 </table>
 <p>An example of creating a new Linux HTTP agent that is using domain fronting through <code class="docutils literal notranslate"><span class="pre">https://merlin.com/c2endpoint.php</span></code> using a PSK of <code class="docutils literal notranslate"><span class="pre">SecurePassword1</span></code>:</p>
 <p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">linux</span> <span class="pre">URL=https://merlin.com:443/c2endpoint.php</span> <span class="pre">HOST=myendpoint.azureedge.net</span> <span class="pre">PROTO=https</span> <span class="pre">PSK=SecurePassword1</span></code></p>
-</div>
-<div class="section" id="windows-agent">
-<h2>Windows Agent<a class="headerlink" href="#windows-agent" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="windows-agent">
+<h2>Windows Agent<a class="headerlink" href="#windows-agent" title="Permalink to this heading">¶</a></h2>
 <p>The Windows Merlin Agent executable is compiled as a GUI application instead of console application. The Merlin Agent
 does not have a GUI component. The reason this is used is so that the Merlin Agent window disappears after it is executed.
 This behavior is intentional so that the user will not see the application window. This is done with the LDFLAGS when
 building the agent using the <code class="docutils literal notranslate"><span class="pre">-H=windowsgui</span></code> option as shown <a class="reference external" href="https://golang.org/cmd/link/">here</a></p>
 <p>This causes problems when a user <strong>WANTS</strong> to see the Merlin Agent verbose or debug output. To view Merlin verbose/debug
 output, use the Makefile <code class="docutils literal notranslate"><span class="pre">windows-debug</span></code> target (e.g., <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">windows-debug</span></code>)</p>
-</div>
-<div class="section" id="cross-compiling">
-<h2>Cross-Compiling<a class="headerlink" href="#cross-compiling" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="cross-compiling">
+<h2>Cross-Compiling<a class="headerlink" href="#cross-compiling" title="Permalink to this heading">¶</a></h2>
 <p>The Merlin agent and server can be cross-compiled to any operating system or architecture.
 A list of golang supported operating systems and architectures can be found here: <a class="reference external" href="https://golang.org/doc/install/source#environment">https://golang.org/doc/install/source#environment</a></p>
-<table border="1" class="colwidths-auto docutils" id="id2">
+<table class="docutils align-default" id="id2">
 <caption><span class="caption-text">Supported Platforms</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">$GOOS</th>
-<th class="head">$GOARCH</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>$GOOS</p></th>
+<th class="head"><p>$GOARCH</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>android</td>
-<td>arm</td>
+<tbody>
+<tr class="row-even"><td><p>android</p></td>
+<td><p>arm</p></td>
 </tr>
-<tr class="row-odd"><td>darwin</td>
-<td>386</td>
+<tr class="row-odd"><td><p>darwin</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-even"><td>darwin</td>
-<td>amd64</td>
+<tr class="row-even"><td><p>darwin</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-odd"><td>darwin</td>
-<td>arm</td>
+<tr class="row-odd"><td><p>darwin</p></td>
+<td><p>arm</p></td>
 </tr>
-<tr class="row-even"><td>darwin</td>
-<td>arm64</td>
+<tr class="row-even"><td><p>darwin</p></td>
+<td><p>arm64</p></td>
 </tr>
-<tr class="row-odd"><td>dragonfly</td>
-<td>amd64</td>
+<tr class="row-odd"><td><p>dragonfly</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-even"><td>freebsd</td>
-<td>386</td>
+<tr class="row-even"><td><p>freebsd</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-odd"><td>freebsd</td>
-<td>amd64</td>
+<tr class="row-odd"><td><p>freebsd</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-even"><td>freebsd</td>
-<td>arm</td>
+<tr class="row-even"><td><p>freebsd</p></td>
+<td><p>arm</p></td>
 </tr>
-<tr class="row-odd"><td>linux</td>
-<td>386</td>
+<tr class="row-odd"><td><p>linux</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-even"><td>linux</td>
-<td>amd64</td>
+<tr class="row-even"><td><p>linux</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-odd"><td>linux</td>
-<td>arm</td>
+<tr class="row-odd"><td><p>linux</p></td>
+<td><p>arm</p></td>
 </tr>
-<tr class="row-even"><td>linux</td>
-<td>arm64</td>
+<tr class="row-even"><td><p>linux</p></td>
+<td><p>arm64</p></td>
 </tr>
-<tr class="row-odd"><td>linux</td>
-<td>ppc64</td>
+<tr class="row-odd"><td><p>linux</p></td>
+<td><p>ppc64</p></td>
 </tr>
-<tr class="row-even"><td>linux</td>
-<td>ppc64le</td>
+<tr class="row-even"><td><p>linux</p></td>
+<td><p>ppc64le</p></td>
 </tr>
-<tr class="row-odd"><td>linux</td>
-<td>mips</td>
+<tr class="row-odd"><td><p>linux</p></td>
+<td><p>mips</p></td>
 </tr>
-<tr class="row-even"><td>linux</td>
-<td>mipsle</td>
+<tr class="row-even"><td><p>linux</p></td>
+<td><p>mipsle</p></td>
 </tr>
-<tr class="row-odd"><td>linux</td>
-<td>mips64</td>
+<tr class="row-odd"><td><p>linux</p></td>
+<td><p>mips64</p></td>
 </tr>
-<tr class="row-even"><td>linux</td>
-<td>mips64le</td>
+<tr class="row-even"><td><p>linux</p></td>
+<td><p>mips64le</p></td>
 </tr>
-<tr class="row-odd"><td>netbsd</td>
-<td>386</td>
+<tr class="row-odd"><td><p>netbsd</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-even"><td>netbsd</td>
-<td>amd64</td>
+<tr class="row-even"><td><p>netbsd</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-odd"><td>netbsd</td>
-<td>arm</td>
+<tr class="row-odd"><td><p>netbsd</p></td>
+<td><p>arm</p></td>
 </tr>
-<tr class="row-even"><td>openbsd</td>
-<td>386</td>
+<tr class="row-even"><td><p>openbsd</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-odd"><td>openbsd</td>
-<td>amd64</td>
+<tr class="row-odd"><td><p>openbsd</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-even"><td>openbsd</td>
-<td>arm</td>
+<tr class="row-even"><td><p>openbsd</p></td>
+<td><p>arm</p></td>
 </tr>
-<tr class="row-odd"><td>plan9</td>
-<td>386</td>
+<tr class="row-odd"><td><p>plan9</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-even"><td>plan9</td>
-<td>amd64</td>
+<tr class="row-even"><td><p>plan9</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-odd"><td>solaris</td>
-<td>amd64</td>
+<tr class="row-odd"><td><p>solaris</p></td>
+<td><p>amd64</p></td>
 </tr>
-<tr class="row-even"><td>windows</td>
-<td>386</td>
+<tr class="row-even"><td><p>windows</p></td>
+<td><p>386</p></td>
 </tr>
-<tr class="row-odd"><td>windows</td>
-<td>amd64</td>
+<tr class="row-odd"><td><p>windows</p></td>
+<td><p>amd64</p></td>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="mobile">
-<h2>Mobile<a class="headerlink" href="#mobile" title="Permalink to this headline">¶</a></h2>
-<dl class="docutils">
-<dt>The gomobile library can be used to compile for Android and iOS:</dt>
-<dd><a class="reference external" href="https://godoc.org/golang.org/x/mobile/cmd/gomobile">https://godoc.org/golang.org/x/mobile/cmd/gomobile</a></dd>
+</section>
+<section id="mobile">
+<h2>Mobile<a class="headerlink" href="#mobile" title="Permalink to this heading">¶</a></h2>
+<dl class="simple">
+<dt>The gomobile library can be used to compile for Android and iOS:</dt><dd><p><a class="reference external" href="https://godoc.org/golang.org/x/mobile/cmd/gomobile">https://godoc.org/golang.org/x/mobile/cmd/gomobile</a></p>
+</dd>
 </dl>
 <p>These instructions can be followed to compile for Android</p>
 <ul class="simple">
-<li>Install Android SDK: <a class="reference external" href="https://developer.android.com/ndk/guides/index.html">https://developer.android.com/ndk/guides/index.html</a></li>
-<li><dl class="first docutils">
-<dt>Install gomobile:</dt>
-<dd><code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">golang.org/x/mobile/cmd/gomobile</span></code></dd>
+<li><p>Install Android SDK: <a class="reference external" href="https://developer.android.com/ndk/guides/index.html">https://developer.android.com/ndk/guides/index.html</a></p></li>
+<li><dl class="simple">
+<dt>Install gomobile:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">get</span> <span class="pre">golang.org/x/mobile/cmd/gomobile</span></code></p>
+</dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt>Initialize gomobile:</dt>
-<dd><code class="docutils literal notranslate"><span class="pre">bin\gomobile</span> <span class="pre">init</span> <span class="pre">-ndk=C:\Users\[username]\AppData\Local\Android\Sdk\ndk-bundle</span></code></dd>
+<li><dl class="simple">
+<dt>Initialize gomobile:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">bin\gomobile</span> <span class="pre">init</span> <span class="pre">-ndk=C:\Users\[username]\AppData\Local\Android\Sdk\ndk-bundle</span></code></p>
+</dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt>Build the APK:</dt>
-<dd><code class="docutils literal notranslate"><span class="pre">bin\gomobile</span> <span class="pre">build</span> <span class="pre">-target=android</span> <span class="pre">merlinagent</span></code></dd>
+<li><dl class="simple">
+<dt>Build the APK:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">bin\gomobile</span> <span class="pre">build</span> <span class="pre">-target=android</span> <span class="pre">merlinagent</span></code></p>
+</dd>
 </dl>
 </li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

