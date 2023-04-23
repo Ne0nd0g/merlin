@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Implemented the "Services" patter for interacting with Agents, Listeners, & Base messages
 - Configurable JWT key value for HTTP listeners
 - Removed util package and relocated function to appropriate packages
+- Upgraded [quic-go](https://github.com/quic-go/quic-go) to v0.34.0
+- Minimum supported Go version is now 1.19
+- Added support for Go version 1.20
 
 # 1.5.0 - 2022-07-20
 

@@ -29,14 +29,12 @@ import (
 	"time"
 
 	// X Packages
+	"github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go/http3"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
-
-	// 3rd Party
-	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/http3"
-	uuid "github.com/satori/go.uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
