@@ -20,10 +20,10 @@ package message
 
 import (
 	// Standard
+	"encoding/base64"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/smb"
-	smbMemory "github.com/Ne0nd0g/merlin/pkg/listeners/smb/memory"
 	"math/rand"
+	"strings"
 	"time"
 
 	// 3rd Party
@@ -39,6 +39,8 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/http"
 	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
+	"github.com/Ne0nd0g/merlin/pkg/listeners/smb"
+	smbMemory "github.com/Ne0nd0g/merlin/pkg/listeners/smb/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/tcp"
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
@@ -127,6 +129,41 @@ func withDelegateMemoryRepository() delegate.Repository {
 	return delegateMemory.NewRepository()
 }
 
+// Construct takes a Base message and executes the appropriate Listener's Transforms (encoding/encryption) on the input
+// Base message and returns the Base message as bytes
+func (s *Service) Construct(msg messages.Base) (data []byte, err error) {
+	// Ensure the id is for a valid Agent
+	var a agents.Agent
+	a, err = s.agentService.Agent(msg.ID)
+	if err != nil {
+		err = fmt.Errorf("services/message.Construct(): %s", err)
+		return
+	}
+
+	// Add padding here since we already have an agent service to get the needed information
+	padding := a.Padding()
+
+	if padding > 0 {
+		padding = rand.Intn(padding)
+	} else if a.Comms() == (agents.Comms{}) {
+		// If we don't know what the Agent's padding configuration is, use this default number
+		padding = rand.Intn(4096)
+	}
+	msg.Padding = core.RandStringBytesMaskImprSrc(padding)
+
+	// If the Listener associated with this Message Handler doesn't belong to the Agent, then get the one that is and use it
+	if a.Listener() != s.listener.ID() {
+		var l listeners.Listener
+		l, err = listener(a.Listener())
+		if err != nil {
+			err = fmt.Errorf("services/message.Construct() for Agent %s: %s", a.ID(), err)
+			return
+		}
+		return l.Construct(msg, a.Secret())
+	}
+	return s.listener.Construct(msg, a.Secret())
+}
+
 // Handle is the primary entry function that processes incoming raw data Agent traffic.
 // The raw data is decoded/decrypted by either Listener or Agent's secret key depending on if the Agent completed authentication.
 // Delegate messages are handled here. Once completed, this function checks for return messages that belong to the input
@@ -162,20 +199,32 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 		}
 	}
 
-	msg, err := s.listener.Deconstruct(data, key)
-	if err != nil {
-		logging.Message("debug", fmt.Sprintf("pkg/services/message.Handle(): there was an error deconstructing the message for agent %s: %s", id, err))
-		// Unable to deconstruct because this listener's transforms don't match what the Agent used
-		messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("Ensure listener %s is configured the exact same way as the agent. If not create a new listener with the correct configuration and try again.", s.listener.ID())))
-		// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
-		// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
+	var msg messages.Base
+	if len(data) > 0 {
+		msg, err = s.listener.Deconstruct(data, key)
+		if err != nil {
+			//logging.Message("debug", fmt.Sprintf("pkg/services/message.Handle(): there was an error deconstructing the message for agent %s: %s", id, err))
+			// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
+			// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
+			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+				Level:   messageAPI.Note,
+				Time:    time.Now().UTC(),
+				Error:   false,
+				Message: fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id),
+			})
+			// Unable to deconstruct because this listener's transforms don't match what the Agent used
+			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("Ensure listener %s is configured the exact same way as the agent. If not create a new listener with the correct configuration and try again.", s.listener.ID())))
+			msg.ID = id
+		}
+	} else if !agent.Authenticated() {
+		msg.ID = id
+		msg.Type = messages.CHECKIN
 		messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
 			Level:   messageAPI.Note,
 			Time:    time.Now().UTC(),
 			Error:   false,
-			Message: fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id),
+			Message: fmt.Sprintf("Orphaned peer-to-peer agent %s detected due an empty payload, instructing agent to re-authenticate", id),
 		})
-		msg.ID = id
 	}
 
 	var returnMessage messages.Base
@@ -254,6 +303,49 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 		return nil, nil
 	}
 	return s.getBase(id)
+}
+
+// childDisconnect holds the business logic for the reset command that creates a final disconnect message for a child Agent
+func (s *Service) childDisconnect(id uuid.UUID) (payload string, err error) {
+	//fmt.Println("pkg/services/message.childDisconnect(): entering into function")
+
+	// If child Agent is an upd-bind agent, tell it to reset the connection
+	var a agents.Agent
+	a, err = s.agentService.Agent(id)
+	if err != nil {
+		err = fmt.Errorf("pkg/services/message.childDisconnect(): there was an error getting the child agent: %s", err)
+		return
+	}
+	if a.Comms().Proto != "udp-bind" {
+		// Only the UDP agent needs this notification. Other protocols like TCP can tell when the parent disconnects
+		return
+	}
+
+	// Build the embedded Job telling the child to disconnect
+	j := jobs.Job{
+		AgentID: id,
+		Type:    jobs.CONTROL,
+		Payload: jobs.Command{Command: "reset"},
+	}
+
+	// Build the embedded Base message
+	msg := messages.Base{
+		ID:      id,
+		Type:    messages.JOBS,
+		Payload: []jobs.Job{j},
+	}
+
+	// Transform the Base message
+	var data []byte
+	data, err = s.Construct(msg)
+	if err != nil {
+		err = fmt.Errorf("pkg/services/message.getBase(): there was an error constructing the embeded Base message for agent %s with the unlink job: %s", id, err)
+		return
+	}
+	// Base64 encode the data
+	payload = base64.StdEncoding.EncodeToString(data)
+
+	return
 }
 
 // delegate takes in a list of delegate messages from their associated parent agent and processes them according to their
@@ -367,6 +459,7 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 			s.delegates.Add(delegate.Agent, rdata)
 		}
 	}
+	//fmt.Printf("pkg/service/message.delegate(): returning nil\n")
 	return nil
 }
 
@@ -402,6 +495,22 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 
 	if len(returnJobs) > 0 {
 		returnMessage.Type = messages.JOBS
+
+		// Check for unlink job
+		for i, job := range returnJobs {
+			// Check to see if it is an unlink job
+			if job.Type == jobs.MODULE {
+				cmd := job.Payload.(jobs.Command)
+				if strings.ToLower(cmd.Command) == "unlink" {
+					job.Payload, err = s.unlink(id, cmd)
+					if err != nil {
+						messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.getBase(): %s", err)))
+						break
+					}
+					returnJobs[i] = job
+				}
+			}
+		}
 		returnMessage.Payload = returnJobs
 	}
 
@@ -419,28 +528,7 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 		return nil, nil
 	}
 
-	// Add padding here since we already have an agent service to get the needed information
-	padding := agent.Padding()
-
-	if padding > 0 {
-		padding = rand.Intn(padding)
-	} else if agent.Comms() == (agents.Comms{}) {
-		// If we don't know what the Agent's padding configuration is, use this default number
-		padding = rand.Intn(4096)
-	}
-	returnMessage.Padding = core.RandStringBytesMaskImprSrc(padding)
-
-	// If the Listener associated with this Message Handler doesn't belong to the Agent, then get the one that is and use it
-	if agent.Listener() != s.listener.ID() {
-		var l listeners.Listener
-		l, err = listener(agent.Listener())
-		if err != nil {
-			err = fmt.Errorf("pkg/services/message.getBase() for Agent %s: %s", agent.ID(), err)
-			return
-		}
-		return l.Construct(returnMessage, agent.Secret())
-	}
-	return s.listener.Construct(returnMessage, agent.Secret())
+	return s.Construct(returnMessage)
 }
 
 // getDelegates retrieves messages stored in the delegates repository for the passed in Agent ID
@@ -599,5 +687,43 @@ func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata
 		}
 	}
 	err = fmt.Errorf("pkg/services/message.bruteForceListener(): listener brute force unsuccessful")
+	return
+}
+
+// unlink holds the business logic for the unlink command that creates a final disconnect message for the child and adds
+// it as an argument to the parent's unlink message
+// Tried to do this in other packages, but it created circular dependencies
+func (s *Service) unlink(parentID uuid.UUID, cmd jobs.Command) (returnCmd jobs.Command, err error) {
+	if len(cmd.Args) > 0 {
+		cmd.Args = []string{cmd.Args[0], ""}
+		// Convert UUID from string
+		var childID uuid.UUID
+		childID, err = uuid.FromString(cmd.Args[0])
+		if err != nil {
+			err = fmt.Errorf("pkg/services/message.unlink(): there was an error converting the child agent's UUID: %s from a string for the unlink command: %s", cmd.Args[0], err)
+			return
+		}
+		// Get the child agent's disconnect job and add it as an argument to the parent's unlink job
+		cmd.Args[1], err = s.childDisconnect(childID)
+		if err != nil {
+			err = fmt.Errorf("pkg/services/message.unlink(): there was an error getting the child agent's disconnect job: %s", err)
+			return
+		}
+		// If the child agent's disconnect job is empty, then just send the parent agent's unlink job
+		if cmd.Args[1] == "" {
+			cmd.Args = []string{cmd.Args[0]}
+		}
+		returnCmd = cmd
+
+		// Ensure the child agent is unlinked
+		err = s.agentService.Unlink(parentID, childID)
+		if err != nil {
+			err = fmt.Errorf("pkg/services/message.unlink(): %s", err)
+			return
+		}
+	} else {
+		err = fmt.Errorf("pkg/services/message.unlink(): unlink job for %s did not contain a child agent UUID argument", parentID)
+		return
+	}
 	return
 }
