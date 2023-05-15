@@ -104,6 +104,15 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 			p.Args = jobArgs[1:]
 		}
 		job.Payload = p
+	case "connect":
+		job.Type = jobs.CONTROL
+		p := jobs.Command{
+			Command: jobType,
+		}
+		if len(jobArgs) > 0 {
+			p.Args = jobArgs[0:]
+		}
+		job.Payload = p
 	case "CreateProcess":
 		job.Type = jobs.MODULE
 		p := jobs.Command{

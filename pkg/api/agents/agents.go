@@ -112,6 +112,18 @@ func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	return messages.ErrorMessage("not enough arguments provided for the Agent Cmd call")
 }
 
+// Connect instructs an Agent to disconnect from its current server and connect to the new provided target
+func Connect(agentID uuid.UUID, Args []string) messages.UserMessage {
+	if len(Args) > 1 {
+		job, err := jobService.Add(agentID, Args[0], Args[1:])
+		if err != nil {
+			return messages.ErrorMessage(err.Error())
+		}
+		return messages.JobMessage(agentID, job)
+	}
+	return messages.ErrorMessage("not enough arguments provided for the Agent \"connect\" call.")
+}
+
 // Download is used to download the file through the corresponding agent from the provided input file path
 // Args[0] = download
 // Args[1] = file path to download

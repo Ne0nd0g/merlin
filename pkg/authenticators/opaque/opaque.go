@@ -159,6 +159,23 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 		return opaque.Opaque{}, err
 	}
 
+	agent, err := a.agentService.Agent(agentID)
+	// If the error is not nil, continue on and create a new agent
+	if err == nil {
+		// if the error is nil, the agent already exists and likely re-registering and the Agent doesn't need to be created
+		agent.UpdateOPAQUE(opaqueServer.(*opaque.Server))
+		agent.UpdateStatusCheckin(time.Now().UTC())
+		err = a.agentService.Update(agent)
+		if err != nil {
+			return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.registrationComplete(): error updating agent %s: %s", agentID, err)
+		}
+		err = agent.Log("OPAQUE registration complete")
+		if err != nil {
+			fmt.Printf("pkg/authenticaters/opaque.registrationComplete(): there was an error writting a log message for agent %s: %s\n", agentID, err)
+		}
+		return returnMessage, nil
+	}
+
 	// After successful registration, create the agent
 	// Want to add it now for future support when the agent doesn't need to register and the registration data is already in a database
 	newAgent, err := agents.NewAgent(agentID, []byte{}, opaqueServer.(*opaque.Server), time.Now().UTC())
@@ -193,6 +210,10 @@ func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (op
 	if err != nil {
 		// Agent does not exist and must re-register itself
 		m := fmt.Sprintf("Un-Registered agent %s sent OPAQUE authentication, instructing agent to OPAQUE register", agentID)
+		logging.Message("note", m) // TODO Should use messages API
+		return opaque.Opaque{Type: opaque.ReRegister}, nil
+	} else if agent.OPAQUE() == nil {
+		m := fmt.Sprintf("registration information for Agent %s is empty, instructing agent to OPAQUE register", agentID)
 		logging.Message("note", m) // TODO Should use messages API
 		return opaque.Opaque{Type: opaque.ReRegister}, nil
 	}
@@ -275,6 +296,10 @@ func (a *Authenticator) reAuthenticate(agentID uuid.UUID) (opaque.Opaque, error)
 	agent, err := a.agentService.Agent(agentID)
 	if err != nil {
 		// Agent does not exist and must re-register itself
+		returnMessage.Type = opaque.ReRegister
+		return returnMessage, nil
+	} else if agent.OPAQUE() == nil {
+		// Agent's OPAQUE registration information is empty or reset and must re-register itself
 		returnMessage.Type = opaque.ReRegister
 		return returnMessage, nil
 	}

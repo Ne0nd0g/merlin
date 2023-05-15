@@ -168,6 +168,11 @@ func (a *Agent) OPAQUE() *opaque.Server {
 	return a.opaque
 }
 
+// ResetOPAQUE resets the Agent's embedded OPAQUE server structure to nil
+func (a *Agent) ResetOPAQUE() {
+	a.opaque = nil
+}
+
 // Padding returns the Agent's communication profile message padding size
 func (a *Agent) Padding() int {
 	return a.comms.Padding
@@ -212,6 +217,11 @@ func (a *Agent) UpdateInitial(initial time.Time) {
 // UpdateListener updates the listener ID the Agent belongs to
 func (a *Agent) UpdateListener(listener uuid.UUID) {
 	a.listener = listener
+}
+
+// UpdateOPAQUE updates the Agent's embedded OPAQUE server structure with the provided structure
+func (a *Agent) UpdateOPAQUE(opaque *opaque.Server) {
+	a.opaque = opaque
 }
 
 // UpdateProcess updates the Agent's embedded Process entity structure with the provided structure

@@ -141,6 +141,11 @@ func ServerAuthenticateInit(o Opaque, server *Server) (Opaque, error) {
 		message("debug", "Entering into opaque.ServerAuthenticateInit() function...")
 	}
 
+	// Ensure the server parameter is not nil
+	if server == nil {
+		return Opaque{}, fmt.Errorf("pkg/opaque.ServerAuthenticateInit(): the OPAQUE server parameter was nil")
+	}
+
 	// 1 - Receive the user's UserAuthInit
 	server.Kex = gopaque.NewKeyExchangeSigma(gopaque.CryptoDefault)
 	server.auth = gopaque.NewServerAuth(gopaque.CryptoDefault, server.Kex)

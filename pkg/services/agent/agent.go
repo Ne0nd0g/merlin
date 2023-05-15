@@ -203,6 +203,19 @@ func (s *Service) Remove(id uuid.UUID) (err error) {
 	return
 }
 
+// ResetAuthentication sets the Agent's authentication status to false and its secret back to empty
+func (s *Service) ResetAuthentication(id uuid.UUID) (err error) {
+	var agent agents.Agent
+	agent, err = s.agentRepo.Get(id)
+	if err != nil {
+		return err
+	}
+	agent.UpdateAuthenticated(false)
+	agent.SetSecret([]byte{})
+	agent.ResetOPAQUE()
+	return s.Update(agent)
+}
+
 // Unlink removes a child Agent link from the parent Agent id
 func (s *Service) Unlink(id, link uuid.UUID) error {
 	return s.agentRepo.RemoveLinkedAgent(id, link)

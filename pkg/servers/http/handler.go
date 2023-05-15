@@ -152,6 +152,10 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 // If that fails, it will try to decrypt the incoming JWT with the HTTP interface's PSK used only with unauthenticated agents.
 // After the JWT is decrypted, its claims are validated.
 func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) {
+	if core.Debug {
+		message("debug", fmt.Sprintf("pkg/servers/http/handler.checkJWT(): entering into function with request: %+v\n", request))
+	}
+
 	// Make sure the message has a JWT
 	token := request.Header.Get("Authorization")
 	if token == "" {
@@ -184,53 +188,35 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 
 	var err error
 	agentID, err = ValidateJWT(jwt, h.jwtKey)
-	// If agentID was returned, then message contained a JWT encrypted with the HTTP interface key
-	// Else the message is from an unauthenticated agent encrypted with the listener's PSK
-	if err != nil && agentID == uuid.Nil {
-		if core.Verbose {
-			message("warn", err.Error())
-			message("note", "Authorization JWT not signed with server's interface key, trying again with PSK...")
-		}
-		// Validate JWT using interface PSK; Used by unauthenticated agents
-		hashedKey := sha256.Sum256(h.psk)
-		key := hashedKey[:]
-		agentID, err = ValidateJWT(jwt, key)
-		if agentID != uuid.Nil {
-			if core.Debug {
-				message("info", fmt.Sprintf("UnAuthenticated JWT from %s", agentID))
-			}
-		}
-	} else {
-		if core.Debug {
-			message("info", fmt.Sprintf("Authenticated JWT from %s", agentID))
-		}
-	}
-
-	// Handle edge case situations
 	if err != nil {
-		// If both an agentID and error were returned, then the claims were likely bad and the agent needs to re-authenticate
+		// If agentID was returned, then message contained a JWT encrypted with the HTTP interface key and the claims were likely invalid
 		if agentID != uuid.Nil {
-			m := fmt.Sprintf("Agent %s connected with expired JWT. Instructing agent to re-authenticate", agentID)
-			message("note", m)
-			logging.Server(m)
-			code = 403
-			return
-		} else if len(token) == 402 && request.ContentLength > 390 {
-			// Check to see if the request matches traffic that could be an orphaned agent
-			// An orphaned agent will have a JWT encrypted with server's JWT key, not the PSK
-
-			m := fmt.Sprintf("Orphaned agent request detected from %s, instructing agent to re-register and authenticate", request.RemoteAddr)
-			message("note", m)
+			m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the HTTP interface key. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
+			message("warn", m)
 			logging.Server(m)
 			code = 401
 			return
 		} else {
-			code = 404
 			if core.Verbose {
-				message("note", "Authorization JWT not signed with PSK, returning 404...")
 				message("warn", err.Error())
+				message("note", "Authorization JWT not signed with server's interface key, trying again with PSK...")
 			}
-			return
+			// Validate JWT using interface PSK; Used by unauthenticated agents
+			hashedKey := sha256.Sum256(h.psk)
+			key := hashedKey[:]
+			agentID, err = ValidateJWT(jwt, key)
+			if err != nil {
+				m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the listener's PSK. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
+				message("warn", m)
+				logging.Server(m)
+				code = 401
+				return
+			}
+			if agentID != uuid.Nil {
+				if core.Debug {
+					message("info", fmt.Sprintf("UnAuthenticated JWT from %s", agentID))
+				}
+			}
 		}
 	}
 	return

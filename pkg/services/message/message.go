@@ -190,7 +190,8 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 
 	// If the Agent exists, and it's Listener ID is empty, set it
 	if err == nil {
-		if agent.Listener() == uuid.Nil {
+		//if agent.Listener() == uuid.Nil
+		if agent.Listener() != s.listener.ID() {
 			err = s.agentService.UpdateListener(id, s.listener.ID())
 			if err != nil {
 				err = fmt.Errorf("pkg/service/message.Handle(): %s", err)
@@ -215,6 +216,20 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 			// Unable to deconstruct because this listener's transforms don't match what the Agent used
 			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("Ensure listener %s is configured the exact same way as the agent. If not create a new listener with the correct configuration and try again.", s.listener.ID())))
 			msg.ID = id
+			// If the agent previously authenticated, connected to a different server, and then connected back to this one, it will need to re-authenticate
+			if s.agentService.Exist(id) && s.agentService.Authenticated(id) {
+				//fmt.Println("Orphaned, exists, and authenticated, resetting authentication")
+				key = nil
+				err = s.agentService.ResetAuthentication(id)
+				if err != nil {
+					messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
+						Level:   messageAPI.Warn,
+						Time:    time.Now().UTC(),
+						Error:   false,
+						Message: fmt.Sprintf("there was an error resetting the authentication status for orphaned agent %s: %s", id, err),
+					})
+				}
+			}
 		}
 	} else if !agent.Authenticated() {
 		msg.ID = id

@@ -34,8 +34,7 @@ import (
 func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 	var agentID uuid.UUID
 	if core.Debug {
-		message("debug", "Entering into jwt.ValidateJWT")
-		message("debug", fmt.Sprintf("Input JWT: %v", agentJWT))
+		message("debug", fmt.Sprintf("pkg/servers/http.ValidateJWT(): entering into function with JWT: %s, key: %x", agentJWT, key))
 	}
 
 	claims := jwt.Claims{}
@@ -43,19 +42,19 @@ func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 	// Parse to make sure it is a valid JWT
 	nestedToken, err := jwt.ParseSignedAndEncrypted(agentJWT)
 	if err != nil {
-		return agentID, fmt.Errorf("there was an error parsing the JWT:\r\n%s", err.Error())
+		return agentID, fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an error parsing the JWT: %s", err)
 	}
 
 	// Decrypt JWT
 	token, errToken := nestedToken.Decrypt(key)
 	if errToken != nil {
-		return agentID, fmt.Errorf("there was an error decrypting the JWT:\r\n%s", errToken.Error())
+		return agentID, fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an error decrypting the JWT: %s", errToken)
 	}
 
 	// Deserialize the claims and validate the signature
 	errClaims := token.Claims(key, &claims)
 	if errClaims != nil {
-		return agentID, fmt.Errorf("there was an deserializing the JWT claims:\r\n%s", errClaims.Error())
+		return agentID, fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an deserializing the JWT claims: %s", errClaims)
 	}
 
 	agentID = uuid.FromStringOrNil(claims.ID)

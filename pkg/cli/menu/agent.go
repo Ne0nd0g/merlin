@@ -55,6 +55,8 @@ func handlerAgent(cmd []string) {
 		core.MessageChannel <- agentAPI.CD(agent, cmd)
 	case "checkin":
 		core.MessageChannel <- agentAPI.CheckIn(agent)
+	case "connect":
+		core.MessageChannel <- agentAPI.Connect(agent, cmd)
 	case "clear", "c":
 		core.MessageChannel <- agentAPI.ClearJobs(agent)
 	case "download":
@@ -285,7 +287,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("connect",
 			readline.PcItem("https://127.0.0.1"),
 			readline.PcItem("127.0.0.1:7777"),
-			readline.PcItem("\\\\127.0.0.1\\merlinpipe"),
+			readline.PcItem("\\\\\\\\127.0.0.1\\\\pipe\\\\merlinpipe"),
 		),
 		readline.PcItem("download"),
 		readline.PcItem("env",

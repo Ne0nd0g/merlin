@@ -205,9 +205,12 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 	// A zero will be passed in as the lifetime
 	lifetime, _ := l.agentService.Lifetime(msg.ID)
 
-	msg.Token, err = GetJWT(msg.ID, lifetime, l.jwt)
-	if err != nil {
-		return nil, fmt.Errorf("pkg/listeners/http.Construct(): there was an error creating a JWT with key %x: %s", l.jwt, err)
+	// Only provide a token if the agent is authenticated
+	if l.agentService.Authenticated(msg.ID) {
+		msg.Token, err = GetJWT(msg.ID, lifetime, l.jwt)
+		if err != nil {
+			return nil, fmt.Errorf("pkg/listeners/http.Construct(): there was an error creating a JWT with key %x: %s", l.jwt, err)
+		}
 	}
 
 	if len(key) == 0 {
