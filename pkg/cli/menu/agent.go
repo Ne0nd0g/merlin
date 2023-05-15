@@ -318,6 +318,7 @@ func completerAgent() *readline.PrefixCompleter {
 		readline.PcItem("link",
 			readline.PcItem("add"),
 			readline.PcItem("list"),
+			readline.PcItem("remove"),
 			readline.PcItem("refresh"),
 			readline.PcItem("tcp",
 				readline.PcItem("127.0.0.1:7777"),
