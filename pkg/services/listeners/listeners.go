@@ -91,7 +91,7 @@ func WithUDPMemoryListenerRepository() udp.Repository {
 func (ls *ListenerService) NewListener(options map[string]string) (listener listeners.Listener, er error) {
 	// Determine the infrastructure layer server
 	if _, ok := options["Protocol"]; !ok {
-		return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): the options map did not contain the \"Protocol\" key")
+		return nil, fmt.Errorf("pkg/services/listeners.NewListener(): the options map did not contain the \"Protocol\" key")
 	}
 
 	switch strings.ToLower(options["Protocol"]) {
@@ -99,21 +99,21 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 	case "http", "https", "h2c", "http2", "http3":
 		hServer, err := httpServer.New(options)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		err = ls.httpServerRepo.Add(hServer)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		// Create a new HTTP Listener
 		hListener, err := http.NewHTTPListener(&hServer, options)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		// Store the HTTP Listener
 		err = ls.httpRepo.Add(hListener)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID %s, Authenticator: %s, Transforms: %s", hServer.ProtocolString(), hServer.Addr(), hListener.Name(), hListener.ID(), hListener.Authenticator(), hListener.Transformers()))
 		listener = &hListener
@@ -122,12 +122,12 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		// Create a new SMB Listener
 		sListener, err := smb.NewSMBListener(options)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		// Store the SMB Listener
 		err = ls.smbRepo.Add(sListener)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], sListener.Addr(), sListener.Name(), sListener.ID(), sListener.Authenticator(), sListener.Transformers()))
 		listener = &sListener
@@ -136,12 +136,12 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		// Create a new TCP Listener
 		tListener, err := tcp.NewTCPListener(options)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		// Store the TCP Listener
 		err = ls.tcpRepo.Add(tListener)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], tListener.Addr(), tListener.Name(), tListener.ID(), tListener.Authenticator(), tListener.Transformers()))
 		listener = &tListener
@@ -149,18 +149,18 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 	case "udp":
 		uListener, err := udp.NewUDPListener(options)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		// Store the TCP Listener
 		err = ls.udpRepo.Add(uListener)
 		if err != nil {
-			return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): %s", err)
+			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
 		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], uListener.Addr(), uListener.Name(), uListener.ID(), uListener.Authenticator(), uListener.Transformers()))
 		listener = &uListener
 		return
 	default:
-		return nil, fmt.Errorf("pkg/services/listeners.CreateListener(): unhandled server type %d", servers.FromString(options["Protocol"]))
+		return nil, fmt.Errorf("pkg/services/listeners.NewListener(): unhandled server type %d", servers.FromString(options["Protocol"]))
 	}
 }
 

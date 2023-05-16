@@ -77,7 +77,8 @@ type Server struct {
 	x509Key   string
 	urls      []string
 	psk       string
-	jwtKey    string // A Base64 encoded 32-byte key used to sign JSON Web Tokens
+	jwtKey    string        // A Base64 encoded 32-byte key used to sign JSON Web Tokens
+	jwtLeeway time.Duration // The amount of flexibility allowed in the JWT expiration time. Less than 0 disables checking JWT expiration
 }
 
 // TODO make this template a generic structure across all HTTP servers in the root
@@ -92,6 +93,7 @@ type Template struct {
 	URLS      string // A comma separated list of URL that handle incoming web traffic
 	PSK       string // The pre-shared key password used prior to Password Authenticated Key Exchange (PAKE)
 	JWTKey    string // 32-byte Base64 encoded key used to sign/encrypt JWTs
+	JWTLeeway string // The amount of flexibility allowed in the JWT expiration time. Less than 0 disables checking JWT expiration
 }
 
 // TODO update New to take the template instead of an options map
@@ -182,6 +184,15 @@ func New(options map[string]string) (Server, error) {
 	}
 	s.jwtKey = jwtKey
 
+	// JWT Leeway
+	leeway, ok := options["JWTLeeway"]
+	if !ok {
+		return s, fmt.Errorf("the \"JWTLeeway\" key was not found in the options map and is required")
+	}
+	s.jwtLeeway, err = time.ParseDuration(leeway)
+	if err != nil {
+		return s, fmt.Errorf("there was an error parsing the JWTLeeway duration %s: %s", leeway, err)
+	}
 	return s, nil
 }
 
@@ -198,6 +209,7 @@ func (s *Server) ConfiguredOptions() map[string]string {
 	options["Port"] = fmt.Sprintf("%d", s.port)
 	options["URLS"] = strings.Join(s.urls, ",")
 	options["JWTKey"] = s.jwtKey
+	options["JWTLeeway"] = s.jwtLeeway.String()
 
 	if s.protocol != servers.HTTP && s.protocol != servers.H2C {
 		options["X509Cert"] = s.x509Cert
@@ -378,6 +390,7 @@ func GetDefaultOptions(protocol int) map[string]string {
 		options["Port"] = "443"
 	}
 	options["JWTKey"] = base64.StdEncoding.EncodeToString([]byte(core.RandStringBytesMaskImprSrc(32)))
+	options["JWTLeeway"] = "1m"
 	options["URLS"] = "/"
 
 	if protocol != servers.HTTP && protocol != servers.H2C {
@@ -427,9 +440,10 @@ func (s *Server) generateServer() error {
 	// Handler
 	s.handler = &handler{
 		// Used to sign and encrypt JWT
-		listener: s.id,
-		jwtKey:   jwt,
-		psk:      []byte(s.psk),
+		listener:  s.id,
+		jwtKey:    jwt,
+		jwtLeeway: s.jwtLeeway,
+		psk:       []byte(s.psk),
 	}
 
 	// Add multiplexer handler for URLs

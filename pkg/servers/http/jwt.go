@@ -31,10 +31,10 @@ import (
 )
 
 // ValidateJWT validates the provided JSON Web Token
-func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
-	var agentID uuid.UUID
+func ValidateJWT(agentJWT string, leeway time.Duration, key []byte) (agentID uuid.UUID, err error) {
 	if core.Debug {
 		message("debug", fmt.Sprintf("pkg/servers/http.ValidateJWT(): entering into function with JWT: %s, key: %x", agentJWT, key))
+		defer message("debug", fmt.Sprintf("pkg/servers/http.ValidateJWT(): exiting function with agentID %s and error: %s", agentID, err))
 	}
 
 	claims := jwt.Claims{}
@@ -42,40 +42,43 @@ func ValidateJWT(agentJWT string, key []byte) (uuid.UUID, error) {
 	// Parse to make sure it is a valid JWT
 	nestedToken, err := jwt.ParseSignedAndEncrypted(agentJWT)
 	if err != nil {
-		return agentID, fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an error parsing the JWT: %s", err)
+		err = fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an error parsing the JWT: %s", err)
+		return
 	}
 
 	// Decrypt JWT
 	token, errToken := nestedToken.Decrypt(key)
 	if errToken != nil {
-		return agentID, fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an error decrypting the JWT: %s", errToken)
+		err = fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an error decrypting the JWT: %s", errToken)
+		return
 	}
 
 	// Deserialize the claims and validate the signature
 	errClaims := token.Claims(key, &claims)
 	if errClaims != nil {
-		return agentID, fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an deserializing the JWT claims: %s", errClaims)
+		err = fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an deserializing the JWT claims: %s", errClaims)
+		return
 	}
 
 	agentID = uuid.FromStringOrNil(claims.ID)
 
-	// Validate claims; Default Leeway is 1 minute; Set it to 1x the agent's WaitTime setting
-	errValidate := claims.ValidateWithLeeway(jwt.Expected{
-		Time: time.Now(),
-	}, 60*time.Second)
-
-	if errValidate != nil {
-		if core.Verbose {
-			message("warn", fmt.Sprintf("The JWT claims were not valid for %s", agentID))
-			message("note", fmt.Sprintf("JWT Claim Expiry: %s", claims.Expiry.Time()))
-			message("note", fmt.Sprintf("JWT Claim Issued: %s", claims.IssuedAt.Time()))
+	// Validate claims if leeway is greater than or equal to 0
+	if leeway >= 0 {
+		err = claims.ValidateWithLeeway(jwt.Expected{Time: time.Now()}, leeway)
+		if err != nil {
+			err = fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an validating the JWT claims with a leeway of %s: %s", leeway, errClaims)
+			if core.Verbose {
+				message("warn", fmt.Sprintf("The JWT claims were not valid for %s: %s", agentID, err))
+				message("note", fmt.Sprintf("JWT Claim Expiry: %s", claims.Expiry.Time()))
+				message("note", fmt.Sprintf("JWT Claim Issued: %s", claims.IssuedAt.Time()))
+			}
+			return
 		}
-		return agentID, errValidate
-	}
-	if core.Debug {
-		message("debug", fmt.Sprintf("agentID: %s", agentID.String()))
-		message("debug", "Leaving jwt.ValidateJWT without error")
+	} else {
+		if core.Verbose {
+			message("note", fmt.Sprintf("JWT leeway is %s and is less than 0, skipping validation for Agent %s", leeway, agentID))
+		}
 	}
 	// TODO I need to validate other things like token age/expiry
-	return agentID, nil
+	return
 }

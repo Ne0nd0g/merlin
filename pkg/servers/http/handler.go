@@ -38,9 +38,10 @@ import (
 
 // handler contains contextual information and methods to process HTTP traffic for Agents
 type handler struct {
-	jwtKey   []byte // The password used by the server to create JWTs
-	listener uuid.UUID
-	psk      []byte // The Pre-Shared Key that the listener was created with; Unauthenticated agent's encrypt their JWT with this
+	jwtKey    []byte        // The password used by the server to create JWTs
+	jwtLeeway time.Duration // The amount of flexibility in validating the JWT's expiration time. Less than 0 will disable the expiration check
+	listener  uuid.UUID
+	psk       []byte // The Pre-Shared Key that the listener was created with; Unauthenticated agent's encrypt their JWT with this
 }
 
 // agentHandler implements the HTTP Handler interface and processes HTTP traffic for agents
@@ -187,7 +188,7 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 	}
 
 	var err error
-	agentID, err = ValidateJWT(jwt, h.jwtKey)
+	agentID, err = ValidateJWT(jwt, h.jwtLeeway, h.jwtKey)
 	if err != nil {
 		// If agentID was returned, then message contained a JWT encrypted with the HTTP interface key and the claims were likely invalid
 		if agentID != uuid.Nil {
@@ -204,7 +205,7 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 			// Validate JWT using interface PSK; Used by unauthenticated agents
 			hashedKey := sha256.Sum256(h.psk)
 			key := hashedKey[:]
-			agentID, err = ValidateJWT(jwt, key)
+			agentID, err = ValidateJWT(jwt, h.jwtLeeway, key)
 			if err != nil {
 				m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the listener's PSK. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
 				message("warn", m)
