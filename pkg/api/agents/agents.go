@@ -61,7 +61,7 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 }
 
 // CheckIn creates an AgentInfo job that forces the Agent to send data back to the server
-func CheckIn(agentID uuid.UUID) messages.UserMessage {
+func CheckIn(agentID uuid.UUID, Args []string) messages.UserMessage {
 	job, err := jobService.Add(agentID, "agentInfo", []string{})
 	if err != nil {
 		return messages.ErrorMessage(err.Error())

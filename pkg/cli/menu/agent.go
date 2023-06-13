@@ -44,7 +44,6 @@ var platform string
 
 // handlerAgent contains the logic to handle the "agent" menu commands
 func handlerAgent(cmd []string) {
-	// TODO create a structure for every command that has a Name,Function,Help
 	if len(cmd) <= 0 {
 		return
 	}
@@ -54,7 +53,7 @@ func handlerAgent(cmd []string) {
 	case "cd":
 		core.MessageChannel <- agentAPI.CD(agent, cmd)
 	case "checkin":
-		core.MessageChannel <- agentAPI.CheckIn(agent)
+		core.MessageChannel <- agentAPI.CheckIn(agent, cmd)
 	case "connect":
 		core.MessageChannel <- agentAPI.Connect(agent, cmd)
 	case "clear", "c":
