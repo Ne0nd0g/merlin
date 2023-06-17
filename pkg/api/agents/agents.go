@@ -48,8 +48,8 @@ var jobService = job.NewJobService()
 // CD is used to change the agent's current working directory
 func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	var args []string
-	if len(Args) > 1 {
-		args = []string{Args[1]}
+	if len(Args) > 0 {
+		args = []string{Args[0]}
 	} else {
 		return messages.ErrorMessage("a directory path must be provided")
 	}

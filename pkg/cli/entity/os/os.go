@@ -18,12 +18,9 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package commands
+package os
 
-import (
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	uuid "github.com/satori/go.uuid"
-)
+type OS int
 
 // os structure constants
 const (
@@ -42,8 +39,6 @@ const (
 	// DEBIAN represents commands that can be executed by Agents on Debian operating systems
 	DEBIAN
 )
-
-type OS int
 
 // String returns the string representation of the os type
 func (o OS) String() string {
@@ -64,43 +59,5 @@ func (o OS) String() string {
 		return "Debian"
 	default:
 		return "unknown operating system"
-	}
-}
-
-// API is the Merlin API function that is called when a command is executed
-type API func(agentID uuid.UUID, Args []string) messages.UserMessage
-
-type Help struct {
-	Description string // Description is a single sentence description of the command
-	Example     string // Example is an example of how to use the command
-	Notes       string
-	Usage       string
-}
-
-type Menu int
-
-const (
-	ALLMENUS Menu = iota
-	MAIN
-	AGENT
-	LISTENER
-	MODULE
-)
-
-// String returns the string representation of the menu type
-func (m Menu) String() string {
-	switch m {
-	case ALLMENUS:
-		return "all"
-	case MAIN:
-		return "main"
-	case AGENT:
-		return "agent"
-	case LISTENER:
-		return "listener"
-	case MODULE:
-		return "module"
-	default:
-		return "unknown menu"
 	}
 }

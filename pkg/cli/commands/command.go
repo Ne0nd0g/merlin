@@ -20,26 +20,22 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
 package commands
 
-// Command is an aggregate structure for a command executed on the command line interface
-type Command struct {
-	name   string // name is the name of the command
-	api    API    // api is the API used to execute the command
-	help   Help   // help is the Help structure for the command
-	menu   Menu   // menu is the Menu the command can be used in
-	native bool   // native is true if the command is executed by an Agent using only Golang native code
-	os     OS     // os is the supported operating system the Agent command can be executed on
-}
+import (
+	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
+	"github.com/chzyer/readline"
+	uuid "github.com/satori/go.uuid"
+)
 
-// NewCommand returns a new Command structure
-func NewCommand(name string, api API, help Help, menu Menu, native bool, os OS) (cmd Command) {
-	cmd.name = name
-	cmd.os = os
-	cmd.api = api
-	cmd.native = native
-	cmd.help = help
-	return
-}
+var pkg = "pkg/cli/commands/command.go"
 
-func (c *Command) String() string {
-	return c.name
+type Command interface {
+	Completer() readline.PrefixCompleterInterface
+	Description() string
+	Do(arguments string) (message messages.UserMessage)
+	DoAgent(agent uuid.UUID, arguments string) (message messages.UserMessage)
+	// Menu checks to see if the command is supported for the provided menu
+	Menu(menu.Menu) bool
+	String() string
+	Usage() string
 }

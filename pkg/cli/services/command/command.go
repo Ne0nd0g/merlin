@@ -22,8 +22,12 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package command
 
 import (
+	"fmt"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/back"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/cd"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/memory"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Service holds references to repositories to manage Agent objects or Group objects
@@ -33,6 +37,8 @@ type Service struct {
 
 // memoryService is an in-memory instantiation of the Command service so that it can be used by others
 var memoryService *Service
+
+var pkg = "pkg/cli/services/command/command.go"
 
 // NewCommandService is a factory to create a Command service to be used by other packages or services
 func NewCommandService() *Service {
@@ -49,11 +55,25 @@ func WithMemoryCommandRepository() commands.Repository {
 	return memory.NewRepository()
 }
 
+// HandleAgentMenu parses the input entered from user at the Agent menu on the command line interface and executes the appropriate command
+func (s *Service) HandleAgentMenu(agent uuid.UUID, command string, arguments string) (message string, err error) {
+	cmd, err := s.commandRepo.Get(commands.AGENT, command)
+	if err != nil {
+		err = fmt.Errorf("%s: %s", pkg, err)
+		return
+	}
+	message, err = cmd.Execute(agent, arguments)
+	if err != nil {
+		err = fmt.Errorf("%s: %s", pkg, err)
+	}
+	return
+}
+
 // Load adds all the commands to the repository
 func (s *Service) Load() (err error) {
 	var cmds []commands.Command
-	cmds = append(cmds, commands.Back())
-	cmds = append(cmds, commands.CD())
+	cmds = append(cmds, back.Back())
+	cmds = append(cmds, cd.CD())
 	cmds = append(cmds, commands.CheckIn())
 	cmds = append(cmds, commands.Clear())
 	cmds = append(cmds, commands.Connect())

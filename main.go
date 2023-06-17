@@ -20,6 +20,7 @@ package main
 import (
 	// Standard
 	"flag"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/cli"
 	"os"
 
 	// 3rd Party
@@ -27,7 +28,6 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/cli"
 	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/pwnboard"
@@ -64,5 +64,6 @@ func main() {
 	}
 
 	// Start Merlin Command Line Interface
-	cli.Shell()
+	cliService := cli.NewCLIService()
+	cliService.Run()
 }

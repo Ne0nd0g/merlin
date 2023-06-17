@@ -20,7 +20,11 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
 package commands
 
+import "github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
+
 // Repository is an interface used to add or get, or update CLI commands from a repository
 type Repository interface {
-	Add(cmd Command) error
+	Add(cmd Command)
+	Get(menu menu.Menu, cmd string) (Command, error)
+	GetAll() (commands []Command)
 }

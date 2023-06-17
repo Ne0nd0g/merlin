@@ -18,18 +18,11 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package commands
+package help
 
-import "github.com/Ne0nd0g/merlin/pkg/api/agents"
-
-// template returns the Command structure for the ?? command
-func template() (cmd Command) {
-	name := "template"
-	var help Help
-	help.Description = ""
-	help.Usage = "template <arg1> <arg2>"
-	help.Example = ""
-	help.Notes = ""
-	cmd = NewCommand(name, agents.CD, help, AGENT, true, ALL)
-	return
+type Help struct {
+	Description string // Description is a single sentence description of the command
+	Example     string // Example is an example of how to use the command
+	Notes       string
+	Usage       string
 }
