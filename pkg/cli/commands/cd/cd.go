@@ -62,8 +62,8 @@ func NewCommand() *Command {
 	return &cmd
 }
 
-func (c *Command) Completer() readline.PrefixCompleterInterface {
-	return readline.PcItem(c.name)
+func (c *Command) Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error) {
+	return readline.PcItem(c.name), nil
 }
 
 func (c *Command) Description() string {
@@ -75,7 +75,7 @@ func (c *Command) Do(arguments string) (message messages.UserMessage) {
 	return
 }
 
-func (c *Command) DoAgent(agent uuid.UUID, arguments string) (message messages.UserMessage) {
+func (c *Command) DoID(agent uuid.UUID, arguments string) (message messages.UserMessage) {
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 

@@ -30,10 +30,10 @@ import (
 var pkg = "pkg/cli/commands/command.go"
 
 type Command interface {
-	Completer() readline.PrefixCompleterInterface
+	Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error)
 	Description() string
 	Do(arguments string) (message messages.UserMessage)
-	DoAgent(agent uuid.UUID, arguments string) (message messages.UserMessage)
+	DoID(id uuid.UUID, arguments string) (message messages.UserMessage)
 	// Menu checks to see if the command is supported for the provided menu
 	Menu(menu.Menu) bool
 	String() string

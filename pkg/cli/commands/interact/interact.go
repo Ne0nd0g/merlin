@@ -18,18 +18,18 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package banner
+package interact
 
 import (
-	merlin "github.com/Ne0nd0g/merlin/pkg"
+	"fmt"
+	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/chzyer/readline"
-	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
+	"strings"
 	"time"
 )
 
@@ -44,17 +44,20 @@ type Command struct {
 
 func NewCommand() *Command {
 	var cmd Command
-	cmd.name = "banner"
+	cmd.name = "interact"
 	cmd.menus = []menu.Menu{menu.ALLMENUS}
 	cmd.os = os.LOCAL
-	cmd.help.Description = "Display the Merlin ASCII art banner"
-	cmd.help.Usage = "banner"
-	cmd.help.Example = ""
+	cmd.help.Description = "Interact with the provided Agent"
+	cmd.help.Usage = "interact <agent id>"
+	cmd.help.Example = "interact 0035409c-088f-45fc-9872-47aa1efab06b"
+	cmd.help.Notes = "Use tab completion to select the desired agent"
 	return &cmd
 }
 
 func (c *Command) Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error) {
-	return readline.PcItem(c.name), nil
+	return readline.PcItem(c.name,
+		readline.PcItemDynamic(agentListCompleter()),
+	), nil
 }
 
 func (c *Command) Description() string {
@@ -62,24 +65,39 @@ func (c *Command) Description() string {
 }
 
 func (c *Command) Do(arguments string) (message messages.UserMessage) {
-	m := "\n"
-	m += color.BlueString(banner.MerlinBanner1)
-	m += color.BlueString("\r\n\t\t   Version: %s", merlin.Version)
-	m += color.BlueString("\r\n\t\t   Build: %s\n", merlin.Build)
+	// Parse the arguments
+	args := strings.Split(arguments, " ")
 
-	message.Level = messages.Plain
-	message.Message = m
-	message.Time = time.Now().UTC()
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?", "?":
+			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+		default:
+			message.Message = c.Usage()
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+		}
+	} else {
+		message.Message = c.Usage()
+		message.Level = messages.Info
+		message.Time = time.Now().UTC()
+	}
 	return
 }
 
-func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
+func (c *Command) DoID(agent uuid.UUID, arguments string) (message messages.UserMessage) {
 	return c.Do(arguments)
 }
 
 func (c *Command) Menu(m menu.Menu) bool {
-	// Menu is ALLMENUS so return true
-	return true
+	for _, v := range c.menus {
+		if v == m || v == menu.ALLMENUS {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Command) String() string {
@@ -88,4 +106,16 @@ func (c *Command) String() string {
 
 func (c *Command) Usage() string {
 	return c.help.Usage
+}
+
+// agentListCompleter returns a list of agents that exist and is used for command line tab completion
+func agentListCompleter() func(string) []string {
+	return func(line string) []string {
+		a := make([]string, 0)
+		agentList := agentAPI.GetAgents()
+		for _, id := range agentList {
+			a = append(a, id.String())
+		}
+		return a
+	}
 }

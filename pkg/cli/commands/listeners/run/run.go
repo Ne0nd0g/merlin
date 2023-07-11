@@ -18,14 +18,16 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package back
+package run
 
 import (
 	"fmt"
+	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 	"strings"
@@ -41,16 +43,21 @@ type Command struct {
 	os     os.OS       // os is the supported operating system the Agent command can be executed on
 }
 
-// NewCommand returns the Command structure for the ?? command
 func NewCommand() *Command {
 	var cmd Command
-	cmd.name = "back"
-	cmd.help.Description = "Go up one level to the parent menu from the current child menu"
-	cmd.help.Usage = "back"
-	cmd.help.Example = "Merlin[agent][c1090dbc-f2f7-4d90-a241-86e0c0217786]» back\nMerlin»"
-	cmd.help.Notes = "This command is only for the local command line interface and does not interact with an API."
-	cmd.menus = []menu.Menu{menu.ALLMENUS}
+	cmd.name = "run"
+	cmd.menus = []menu.Menu{menu.LISTENERSETUP}
 	cmd.os = os.LOCAL
+	cmd.help.Description = "Create and start the listener on the server"
+	cmd.help.Usage = "run"
+	cmd.help.Example = "Merlin[listeners]» use https\n" +
+		"Merlin[listeners][https]» run\n\n" +
+		"[!] Insecure publicly distributed Merlin x.509 testing certificate in use for https server on 127.0.0.1:443\n" +
+		"Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates\n\n" +
+		"[+] Default listener was created with an ID of: 632db67c-7045-462f-bf09-aea90272aed5\n" +
+		"Merlin[listeners][Default]»\n[+] Started HTTPS listener on 127.0.0.1:443\n" +
+		"Merlin[listeners][Default]»"
+	cmd.help.Notes = ""
 	return &cmd
 }
 
@@ -63,28 +70,57 @@ func (c *Command) Description() string {
 }
 
 func (c *Command) Do(arguments string) (message messages.UserMessage) {
+	return
+}
+
+func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "/?":
-			message.Message = fmt.Sprintf("\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
+			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
 			message.Level = messages.Info
 			message.Time = time.Now().UTC()
 			return
 		}
 	}
+	// Get the options from the listener repository
+	repo := memory.NewRepository()
+	listener, err := repo.Get(id)
+	if err != nil {
+		message.Message = fmt.Sprintf("there was an error getting the listener for ID %s: %s", id, err)
+		message.Level = messages.Warn
+		message.Time = time.Now().UTC()
+		return
+	}
+	// Use the API to create a new listener
+	var serverID uuid.UUID
+	message, serverID = listenerAPI.NewListener(listener.Options())
+	if message.Error {
+		return
+	}
+	// Update the listener structure with the server assigned ID
+	err = repo.ServerID(id, serverID)
+	if err != nil {
+		message.Message = fmt.Sprintf("there was an error updating the server ID (%s) for listener %s: %s", serverID, id, err)
+		message.Level = messages.Warn
+		message.Time = time.Now().UTC()
+		return
+	}
+	// Use the API to start the listener
+	message = listenerAPI.Start(serverID)
 	return
 }
 
-func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
-	return c.Do(arguments)
-}
-
 func (c *Command) Menu(m menu.Menu) bool {
-	// Menu is ALLMENUS so return true
-	return true
+	for _, v := range c.menus {
+		if v == m || v == menu.ALLMENUS {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Command) String() string {

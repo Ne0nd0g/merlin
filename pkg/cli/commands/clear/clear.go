@@ -18,24 +18,25 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package banner
+package clear
 
 import (
-	merlin "github.com/Ne0nd0g/merlin/pkg"
+	"fmt"
+	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/chzyer/readline"
-	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
+	"strings"
 	"time"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
 type Command struct {
-	name   string      // name is the name of the command
+	name   string // name is the name of the command
+	alias  []string
 	help   help.Help   // help is the Help structure for the command
 	menus  []menu.Menu // menu is the Menu the command can be used in
 	native bool        // native is true if the command is executed by an Agent using only Golang native code
@@ -44,12 +45,14 @@ type Command struct {
 
 func NewCommand() *Command {
 	var cmd Command
-	cmd.name = "banner"
+	cmd.name = "clear"
+	cmd.alias = []string{"c"}
 	cmd.menus = []menu.Menu{menu.ALLMENUS}
 	cmd.os = os.LOCAL
-	cmd.help.Description = "Display the Merlin ASCII art banner"
-	cmd.help.Usage = "banner"
-	cmd.help.Example = ""
+	cmd.help.Description = "cancel all Agent jobs that have not been sent"
+	cmd.help.Usage = "clear"
+	cmd.help.Example = "clear"
+	cmd.help.Notes = ""
 	return &cmd
 }
 
@@ -62,18 +65,24 @@ func (c *Command) Description() string {
 }
 
 func (c *Command) Do(arguments string) (message messages.UserMessage) {
-	m := "\n"
-	m += color.BlueString(banner.MerlinBanner1)
-	m += color.BlueString("\r\n\t\t   Version: %s", merlin.Version)
-	m += color.BlueString("\r\n\t\t   Build: %s\n", merlin.Build)
+	// Parse the arguments
+	args := strings.Split(arguments, " ")
 
-	message.Level = messages.Plain
-	message.Message = m
-	message.Time = time.Now().UTC()
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?":
+			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+			return
+		default:
+			message = agentAPI.ClearJobsCreated()
+		}
+	}
 	return
 }
 
-func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
+func (c *Command) DoID(agent uuid.UUID, arguments string) (message messages.UserMessage) {
 	return c.Do(arguments)
 }
 

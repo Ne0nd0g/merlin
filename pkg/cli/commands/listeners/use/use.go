@@ -18,18 +18,18 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package banner
+package use
 
 import (
-	merlin "github.com/Ne0nd0g/merlin/pkg"
+	"fmt"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/services/listeners"
 	"github.com/chzyer/readline"
-	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
+	"strings"
 	"time"
 )
 
@@ -44,17 +44,21 @@ type Command struct {
 
 func NewCommand() *Command {
 	var cmd Command
-	cmd.name = "banner"
-	cmd.menus = []menu.Menu{menu.ALLMENUS}
+	cmd.name = "use"
+	cmd.menus = []menu.Menu{menu.LISTENER}
 	cmd.os = os.LOCAL
-	cmd.help.Description = "Display the Merlin ASCII art banner"
-	cmd.help.Usage = "banner"
-	cmd.help.Example = ""
+	cmd.help.Description = "Create a listener for the specified protocol"
+	cmd.help.Usage = "use <protocol>"
+	cmd.help.Example = "Merlin[listeners]» use http3\nMerlin[listeners][http3]»"
+	cmd.help.Notes = "Use tab to cycle through available listener types"
 	return &cmd
 }
 
 func (c *Command) Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error) {
-	return readline.PcItem(c.name), nil
+	listenerService := listeners.NewListenerService()
+	return readline.PcItem(c.name,
+		readline.PcItemDynamic(listenerService.CLICompleter()),
+	), nil
 }
 
 func (c *Command) Description() string {
@@ -62,14 +66,22 @@ func (c *Command) Description() string {
 }
 
 func (c *Command) Do(arguments string) (message messages.UserMessage) {
-	m := "\n"
-	m += color.BlueString(banner.MerlinBanner1)
-	m += color.BlueString("\r\n\t\t   Version: %s", merlin.Version)
-	m += color.BlueString("\r\n\t\t   Build: %s\n", merlin.Build)
+	// Parse the arguments
+	args := strings.Split(arguments, " ")
 
-	message.Level = messages.Plain
-	message.Message = m
-	message.Time = time.Now().UTC()
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?":
+			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+			return
+		default:
+			message.Message = c.Usage()
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+		}
+	}
 	return
 }
 
@@ -78,8 +90,12 @@ func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMes
 }
 
 func (c *Command) Menu(m menu.Menu) bool {
-	// Menu is ALLMENUS so return true
-	return true
+	for _, v := range c.menus {
+		if v == m || v == menu.ALLMENUS {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Command) String() string {

@@ -302,6 +302,20 @@ func (ls *ListenerService) ListenerNames() (names []string) {
 	return
 }
 
+// ListenerTypes returns a list of Listener types as a string (e.g. HTTP, SMB, TCP, UDP)
+func (ls *ListenerService) ListenerTypes() (types []string) {
+	// TODO Create a function to dynamically enumerate available listener types
+	types = append(types, "HTTP")
+	types = append(types, "HTTPS")
+	types = append(types, "H2C")
+	types = append(types, "HTTP2")
+	types = append(types, "HTTP3")
+	types = append(types, "SMB")
+	types = append(types, "TCP")
+	types = append(types, "UDP")
+	return
+}
+
 // ListenerByName returns the first Listener object that matches the input name
 func (ls *ListenerService) ListenerByName(name string) (listeners.Listener, error) {
 	listener, err := ls.httpRepo.ListenerByName(name)

@@ -18,18 +18,18 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package banner
+package start
 
 import (
-	merlin "github.com/Ne0nd0g/merlin/pkg"
+	"fmt"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/run"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/chzyer/readline"
-	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
+	"strings"
 	"time"
 )
 
@@ -44,12 +44,19 @@ type Command struct {
 
 func NewCommand() *Command {
 	var cmd Command
-	cmd.name = "banner"
-	cmd.menus = []menu.Menu{menu.ALLMENUS}
+	cmd.name = "start"
+	cmd.menus = []menu.Menu{menu.LISTENERSETUP}
 	cmd.os = os.LOCAL
-	cmd.help.Description = "Display the Merlin ASCII art banner"
-	cmd.help.Usage = "banner"
-	cmd.help.Example = ""
+	cmd.help.Description = "Create and start the listener on the server"
+	cmd.help.Usage = "start"
+	cmd.help.Example = "Merlin[listeners]» use https\n" +
+		"Merlin[listeners][https]» start\n\n" +
+		"[!] Insecure publicly distributed Merlin x.509 testing certificate in use for https server on 127.0.0.1:443\n" +
+		"Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates\n\n" +
+		"[+] Default listener was created with an ID of: 632db67c-7045-462f-bf09-aea90272aed5\n" +
+		"Merlin[listeners][Default]»\n[+] Started HTTPS listener on 127.0.0.1:443\n" +
+		"Merlin[listeners][Default]»"
+	cmd.help.Notes = "This command is an alias for the 'run' command"
 	return &cmd
 }
 
@@ -62,24 +69,36 @@ func (c *Command) Description() string {
 }
 
 func (c *Command) Do(arguments string) (message messages.UserMessage) {
-	m := "\n"
-	m += color.BlueString(banner.MerlinBanner1)
-	m += color.BlueString("\r\n\t\t   Version: %s", merlin.Version)
-	m += color.BlueString("\r\n\t\t   Build: %s\n", merlin.Build)
-
-	message.Level = messages.Plain
-	message.Message = m
-	message.Time = time.Now().UTC()
 	return
 }
 
 func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
-	return c.Do(arguments)
+	// Parse the arguments
+	args := strings.Split(arguments, " ")
+
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?":
+			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+			return
+		}
+	}
+
+	cmd := run.NewCommand()
+	message = cmd.DoID(id, arguments)
+
+	return
 }
 
 func (c *Command) Menu(m menu.Menu) bool {
-	// Menu is ALLMENUS so return true
-	return true
+	for _, v := range c.menus {
+		if v == m || v == menu.ALLMENUS {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Command) String() string {

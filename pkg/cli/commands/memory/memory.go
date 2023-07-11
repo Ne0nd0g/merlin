@@ -28,6 +28,19 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/back"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/cd"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/clear"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/group"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/info"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/interact"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/jobs"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/run"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/start"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/use"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/queue"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/quit"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/remove"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/set"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"sync"
 )
@@ -94,4 +107,17 @@ func (r *Repository) load() {
 	r.Add(back.NewCommand())
 	r.Add(banner.NewCommand())
 	r.Add(cd.NewCommand())
+	r.Add(clear.NewCommand())
+	r.Add(group.NewCommand())
+	r.Add(info.NewCommand())
+	r.Add(interact.NewCommand())
+	r.Add(jobs.NewCommand())
+	r.Add(listeners.NewCommand())
+	r.Add(quit.NewCommand())
+	r.Add(queue.NewCommand())
+	r.Add(remove.NewCommand())
+	r.Add(run.NewCommand())
+	r.Add(start.NewCommand())
+	r.Add(set.NewCommand())
+	r.Add(use.NewCommand())
 }

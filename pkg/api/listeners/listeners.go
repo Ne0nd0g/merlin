@@ -201,6 +201,11 @@ func GetListenerConfiguredOptions(listenerID uuid.UUID) (messages.UserMessage, m
 	return um, l.ConfiguredOptions()
 }
 
+// GetDefaultOptions returns the default options map for a given Listener type
+func GetDefaultOptions(listenerType string) (options map[string]string, err error) {
+	return listenerService.DefaultOptions(listenerType)
+}
+
 func GetDefaultOptionsCompleter(listenerType string) func(string) []string {
 	return func(line string) []string {
 		listenerOptions, _ := listenerService.DefaultOptions(listenerType)
@@ -210,4 +215,9 @@ func GetDefaultOptionsCompleter(listenerType string) func(string) []string {
 		}
 		return options
 	}
+}
+
+// GetListenerTypes returns a list of all available Listener types (e.g. http, tcp, etc.)
+func GetListenerTypes() []string {
+	return listenerService.ListenerTypes()
 }

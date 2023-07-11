@@ -18,7 +18,7 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package template
+package info
 
 import (
 	"fmt"
@@ -26,8 +26,11 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
 	"github.com/chzyer/readline"
+	"github.com/olekukonko/tablewriter"
 	uuid "github.com/satori/go.uuid"
+	os2 "os"
 	"strings"
 	"time"
 )
@@ -43,12 +46,35 @@ type Command struct {
 
 func NewCommand() *Command {
 	var cmd Command
-	cmd.name = ""
-	cmd.menus = []menu.Menu{menu.AGENT}
-	cmd.os = os.ALL
-	cmd.help.Description = ""
-	cmd.help.Usage = ""
-	cmd.help.Example = ""
+	cmd.name = "info"
+	cmd.menus = []menu.Menu{menu.LISTENERSETUP}
+	cmd.os = os.LOCAL
+	cmd.help.Description = "Display the Listener template configurable options and their current value."
+	cmd.help.Usage = "info"
+	cmd.help.Example = "Merlin[listeners]» use https\n" +
+		"Merlin[listeners][https]» info\n" +
+		"+-------------+------------------+\n" +
+		"|    NAME     |      VALUE       |\n" +
+		"+-------------+------------------+\n" +
+		"| PSK         | merlin           |\n" +
+		"+-------------+------------------+\n" +
+		"| Interface   | 127.0.0.1        |\n" +
+		"+-------------+------------------+\n" +
+		"| Port        | 443              |\n" +
+		"+-------------+------------------+\n" +
+		"| URLS        | /                |\n" +
+		"+-------------+------------------+\n" +
+		"| X509Cert    |                  |\n" +
+		"+-------------+------------------+\n" +
+		"| X509Key     |                  |\n" +
+		"+-------------+------------------+\n" +
+		"| Name        | Default          |\n" +
+		"+-------------+------------------+\n" +
+		"| Description | Default listener |\n" +
+		"+-------------+------------------+\n" +
+		"| Protocol    | https            |\n" +
+		"+-------------+------------------+\n" +
+		"Merlin[listeners][https]»"
 	cmd.help.Notes = ""
 	return &cmd
 }
@@ -78,11 +104,34 @@ func (c *Command) Do(arguments string) (message messages.UserMessage) {
 			message.Time = time.Now().UTC()
 		}
 	}
+
 	return
 }
 
 func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
-	return c.Do(arguments)
+	// Get the options from the listener repository
+	repo := memory.NewRepository()
+	listener, err := repo.Get(id)
+	if err != nil {
+		message.Message = fmt.Sprintf("there was an error getting the listener for ID %s: %s", id, err)
+		message.Level = messages.Warn
+		message.Time = time.Now().UTC()
+		return
+	}
+
+	// Set up the table
+	table := tablewriter.NewWriter(os2.Stdout)
+	table.SetHeader([]string{"Name", "Value"})
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	table.SetRowLine(true)
+	table.SetBorder(true)
+
+	for k, v := range listener.Options() {
+		table.Append([]string{k, v})
+	}
+	// TODO lock STDOUT
+	table.Render()
+	return messages.UserMessage{}
 }
 
 func (c *Command) Menu(m menu.Menu) bool {

@@ -22,9 +22,10 @@ package agent
 
 import (
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/api/agents"
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/interact"
+	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
@@ -46,22 +47,24 @@ type Command struct {
 func NewCommand() *Command {
 	var cmd Command
 	cmd.name = "agent"
-	cmd.menus = []menu.Menu{menu.MAIN}
+	cmd.menus = []menu.Menu{menu.ALLMENUS}
 	cmd.os = os.LOCAL
-	cmd.help.Description = ""
-	cmd.help.Usage = ""
-	cmd.help.Example = ""
+	cmd.help.Description = "Interact with agents or list connected agents"
+	cmd.help.Usage = "agent [interact <agent id> | list]"
+	cmd.help.Example = "agent list\nagent interact 0035409c-088f-45fc-9872-47aa1efab06b"
 	cmd.help.Notes = ""
 	return &cmd
 }
 
-func (c *Command) Completer() readline.PrefixCompleterInterface {
+func (c *Command) Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error) {
+	complete, err := interact.NewCommand().Completer(id)
+	if err != nil {
+		return nil, err
+	}
 	return readline.PcItem(c.name,
 		readline.PcItem("list"),
-		readline.PcItem("interact",
-			readline.PcItemDynamic(agentListCompleter()),
-		),
-	)
+		complete,
+	), nil
 }
 
 func (c *Command) Description() string {
@@ -69,41 +72,45 @@ func (c *Command) Description() string {
 }
 
 func (c *Command) Do(arguments string) (message messages.UserMessage) {
-	message = messages.ErrorMessage("this command can only be executed from the Agent menu")
-	return
-}
-
-func (c *Command) DoAgent(agent uuid.UUID, arguments string) (message messages.UserMessage) {
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
-
-	// Validate the arguments
-	// 0. command
-	// 1. <args> || help
-	if len(args) < 2 {
+	if len(args) < 1 {
 		message = messages.ErrorMessage(fmt.Sprintf("invalid number of arguments for the '%s' command\n%s", c, c.help.Usage))
 		return
 	}
 
-	// Do
-	switch strings.ToLower(args[1]) {
-	case "help", "-h", "--help", "/?":
-		message.Message = fmt.Sprintf("%s\n%s\n\n%s\n\n%s", c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
-		message.Level = 1
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?":
+			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+		case "interact":
+			message = interact.NewCommand().Do(strings.Join(args[1:], " "))
+		case "list":
+			header, rows := agentAPI.GetAgentsRows()
+			core.DisplayTable(header, rows)
+		default:
+			message.Message = c.Usage()
+			message.Level = messages.Info
+			message.Time = time.Now().UTC()
+		}
+	} else {
+		message.Message = c.Usage()
+		message.Level = messages.Info
 		message.Time = time.Now().UTC()
-	default:
-		message = agents.CD(agent, args[1:])
 	}
+
 	return
 }
 
+func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
+	return c.Do(arguments)
+}
+
 func (c *Command) Menu(m menu.Menu) bool {
-	for _, v := range c.menus {
-		if v == m {
-			return true
-		}
-	}
-	return false
+	// Menu is ALLMENUS so return true
+	return true
 }
 
 func (c *Command) String() string {
@@ -112,16 +119,4 @@ func (c *Command) String() string {
 
 func (c *Command) Usage() string {
 	return c.help.Usage
-}
-
-// agentListCompleter returns a list of agents that exist and is used for command line tab completion
-func agentListCompleter() func(string) []string {
-	return func(line string) []string {
-		a := make([]string, 0)
-		agentList := agentAPI.GetAgents()
-		for _, id := range agentList {
-			a = append(a, id.String())
-		}
-		return a
-	}
 }

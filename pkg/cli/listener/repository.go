@@ -18,33 +18,16 @@ You should have received a copy of the GNU General Public License
 along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package menu
+package listener
 
-type Menu int
-
-const (
-	ALLMENUS Menu = iota
-	MAIN
-	AGENT
-	LISTENER
-	LISTENERS
-	LISTENERSETUP
-	MODULE
+import (
+	"github.com/Ne0nd0g/merlin/pkg/cli/entity/listener"
+	uuid "github.com/satori/go.uuid"
 )
 
-func (m *Menu) String() string {
-	switch *m {
-	case ALLMENUS:
-		return "all"
-	case MAIN:
-		return "main"
-	case AGENT:
-		return "agent"
-	case LISTENER:
-		return "listener"
-	case MODULE:
-		return "module"
-	default:
-		return "unknown menu"
-	}
+type Repository interface {
+	Add(listener listener.Listener)
+	Get(id uuid.UUID) (*listener.Listener, error)
+	ServerID(id uuid.UUID, serverID uuid.UUID) error
+	Update(id uuid.UUID, options map[string]string) error
 }
