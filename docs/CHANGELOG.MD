@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
     - Example: `listener start tcp 0.0.0.0:4444`
   - `stop` to stop an already created listener
     - Example: `listener stop tcp [::]:4444`
+- Help is available for all commands using `-h` after the command
 
 ## Changed
 
@@ -32,8 +33,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Configurable JWT key value for HTTP listeners
 - Removed util package and relocated function to appropriate packages
 - Upgraded [quic-go](https://github.com/quic-go/quic-go) to v0.34.0
-- Minimum supported Go version is now 1.19
+- The Minimum supported Go version is now 1.19
 - Added support for Go version 1.20
+- Refactored the `pkg/cli` package to be more modular
+- Listeners are now handled by a UUID and no longer by a name as a string
+- Changed CLI commands:
+ - Replaced `use module <module name>` with `modules` command to switch to the modules menu
+ - Removed the `agents` command from the main menu. Use `sessions` instead
+ - Replaces `set verbose` & `set debug` (to enable verbose & debug output) with `verbose` & `debug` switch commands
+- Moved the `build` string out of `main.go` and into `pkg/merlin.go`
+- Removed PWNBoard from `main.go`
+- Removed wiki documentation from `docs` to a new repository at https://github.com/Ne0nd0g/merlin-documentation
 
 # 1.5.0 - 2022-07-20
 
