@@ -79,6 +79,6 @@ func FromString(operatingSystem string) OS {
 	case "debian":
 		return DEBIAN
 	default:
-		return ALL
+		return UNDEFINED
 	}
 }

@@ -3,8 +3,6 @@ package cli
 import (
 	// Standard
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"io"
 	"log"
 	"os"
@@ -26,8 +24,10 @@ import (
 	merlin "github.com/Ne0nd0g/merlin/pkg"
 	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 
 	// Internal - CLI
+	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/repository"
 	"github.com/Ne0nd0g/merlin/pkg/cli/core"
@@ -296,6 +296,7 @@ func (s *Service) handle(input string) {
 	// Check if the active Agent ID has changed
 	if resp.Agent != uuid.Nil {
 		s.agent = resp.Agent
+		s.agentOS = resp.AgentOS
 	}
 	// Check if the active Listener ID has changed
 	if resp.Listener != uuid.Nil {
@@ -325,6 +326,39 @@ func (s *Service) help() {
 	cmds := s.commandRepo.GetAll()
 	for _, cmd := range cmds {
 		if cmd.Menu(s.menu) {
+			if s.menu == menu.AGENT {
+				// If we don't know what operating system the Agent is running on, try to update it
+				if s.agentOS == merlinOS.UNDEFINED {
+					if s.agent != uuid.Nil {
+						_, agentOS, err := agentAPI.GetAgent(s.agent)
+						if err != nil {
+							if core.Debug {
+								core.MessageChannel <- messages.UserMessage{
+									Level: messages.Warn,
+									Message: fmt.Sprintf("there was an error trying to update the Agent's OS when"+
+										" making the GetAgent API call to filter the commands displayed in help "+
+										"menu: %s", err),
+									Time:  time.Now().UTC(),
+									Error: false,
+								}
+							}
+						}
+						o := merlinOS.FromString(agentOS)
+						// Update the Agent's OS know that we know it
+						if o != merlinOS.UNDEFINED && o != merlinOS.LOCAL {
+							s.agentOS = o
+						}
+					}
+				}
+				// If the Agent's OS is ALL or UNDEFINED, add the command help
+				// If the command's OS is ALL or LOCAL, add the command help
+				if cmd.OS() == merlinOS.ALL || cmd.OS() == merlinOS.LOCAL || s.agentOS == merlinOS.UNDEFINED || s.agentOS == merlinOS.ALL {
+					// Continue on to the code below to add the command to the help table
+				} else if s.agentOS != cmd.OS() {
+					// Do not add the command because it is not supported by the Agent's OS
+					continue
+				}
+			}
 			h := cmd.Help(s.menu)
 			d := []string{cmd.String(), h.Description(), h.Usage()}
 			data = append(data, d)
