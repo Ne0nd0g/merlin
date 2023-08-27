@@ -212,7 +212,7 @@ func (ls *ListenerService) DefaultOptions(protocol string) (options map[string]s
 
 	// Sort the keys
 	var keys []string
-	for key, _ := range listenerOptions {
+	for key := range listenerOptions {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -256,22 +256,22 @@ func (ls *ListenerService) Listener(id uuid.UUID) (listeners.Listener, error) {
 func (ls *ListenerService) Listeners() (listenerList []listeners.Listener) {
 	// HTTP Listeners
 	httpListeners := ls.httpRepo.Listeners()
-	for i, _ := range httpListeners {
+	for i := range httpListeners {
 		listenerList = append(listenerList, &httpListeners[i])
 	}
 	// SMB Listeners
 	smbListeners := ls.smbRepo.Listeners()
-	for i, _ := range smbListeners {
+	for i := range smbListeners {
 		listenerList = append(listenerList, &smbListeners[i])
 	}
 	// TCP Listeners
 	tcpListeners := ls.tcpRepo.Listeners()
-	for i, _ := range tcpListeners {
+	for i := range tcpListeners {
 		listenerList = append(listenerList, &tcpListeners[i])
 	}
 	// UDP Listeners
 	udpListeners := ls.udpRepo.Listeners()
-	for i, _ := range udpListeners {
+	for i := range udpListeners {
 		listenerList = append(listenerList, &udpListeners[i])
 	}
 	return
@@ -370,7 +370,12 @@ func (ls *ListenerService) Remove(id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-
+	// Stop the server before removing it but don't handle any errors
+	server := *listener.Server()
+	err = server.Stop()
+	if err != nil {
+		return err
+	}
 	switch listener.Protocol() {
 	case listeners.HTTP:
 		return ls.httpRepo.RemoveByID(id)

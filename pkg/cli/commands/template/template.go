@@ -21,15 +21,22 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package template
 
 import (
+	// Standard
 	"fmt"
+	"strings"
+	"time"
+
+	// 3rd Party
+	"github.com/chzyer/readline"
+	uuid "github.com/satori/go.uuid"
+
+	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
+	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
-	"github.com/chzyer/readline"
-	uuid "github.com/satori/go.uuid"
-	"strings"
-	"time"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -41,50 +48,92 @@ type Command struct {
 	os     os.OS       // os is the supported operating system the Agent command can be executed on
 }
 
+// NewCommand is a factory that builds and returns a Command structure that implements the Command interface
 func NewCommand() *Command {
 	var cmd Command
+	// name MUST be unique across all commands and is used as the primary key in the database
 	cmd.name = ""
 	cmd.menus = []menu.Menu{menu.AGENT}
 	cmd.os = os.ALL
-	cmd.help.Description = ""
-	cmd.help.Usage = ""
-	cmd.help.Example = ""
-	cmd.help.Notes = ""
+	description := ""
+	usage := ""
+	example := ""
+	notes := ""
+	cmd.help = help.NewHelp(description, example, notes, usage)
 	return &cmd
 }
 
-func (c *Command) Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error) {
-	return readline.PcItem(c.name), nil
+// Completer returns the data that is displayed in the CLI for tab completion depending on the menu the command is for
+// Errors are not returned to ensure the CLI is not interrupted.
+// Errors are logged and can be viewed by enabling debug output in the CLI
+func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
+	if core.Debug {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Debug,
+			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
+			Time:    time.Now().UTC(),
+		}
+	}
+	return readline.PcItem(c.name)
 }
 
-func (c *Command) Description() string {
-	return c.help.Description
-}
+// Do executes the command and returns a Response to the caller to facilitate changes in the CLI service
+// m, an optional parameter, is the Menu the command was executed from
+// id, an optional parameter, used to identify a specific Agent or Listener
+// arguments, an optional parameter, is the full unparsed string entered on the command line to include the
+// command itself passed into command for processing
+func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
+	if core.Debug {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Debug,
+			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
+			Time:    time.Now().UTC(),
+		}
+	}
 
-func (c *Command) Do(arguments string) (message messages.UserMessage) {
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
+	// Validate at least one argument, in addition to the command, was provided
+	/*
+		if len(args) < 2 {
+			response.Message = &messages.UserMessage{
+				Level:   messages.Info,
+				Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()),
+				Time:    time.Now().UTC(),
+			}
+			return
+		}
+	*/
+
+	// Check for help first
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
-		case "help", "-h", "--help", "/?":
-			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
-			message.Level = messages.Info
-			message.Time = time.Now().UTC()
+		case "help", "-h", "--help", "?", "/?":
+			response.Message = &messages.UserMessage{
+				Level:   messages.Info,
+				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
+				Time:    time.Now().UTC(),
+			}
 			return
-		default:
-			message.Message = c.Usage()
-			message.Level = messages.Info
-			message.Time = time.Now().UTC()
 		}
 	}
 	return
 }
 
-func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
-	return c.Do(arguments)
+// Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
+func (c *Command) Help(m menu.Menu) help.Help {
+	if core.Debug {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Debug,
+			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
+			Time:    time.Now().UTC(),
+		}
+	}
+	return c.help
 }
 
+// Menu checks to see if the command is supported for the provided menu
 func (c *Command) Menu(m menu.Menu) bool {
 	for _, v := range c.menus {
 		if v == m || v == menu.ALLMENUS {
@@ -94,10 +143,12 @@ func (c *Command) Menu(m menu.Menu) bool {
 	return false
 }
 
-func (c *Command) String() string {
-	return c.name
+// OS returns the supported operating system the Agent command can be executed on
+func (c *Command) OS() os.OS {
+	return c.os
 }
 
-func (c *Command) Usage() string {
-	return c.help.Usage
+// String returns the unique name of the command as a string
+func (c *Command) String() string {
+	return c.name
 }

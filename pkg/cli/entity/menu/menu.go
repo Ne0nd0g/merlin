@@ -23,17 +23,27 @@ package menu
 type Menu int
 
 const (
-	ALLMENUS Menu = iota
+	// NONE is the default or zero value used when the menu is not set
+	NONE Menu = iota
+	ALLMENUS
 	MAIN
 	AGENT
+	// LISTENER is for a specific, already instantiated, listener menu
 	LISTENER
+	// LISTENERS is for the top-level listeners menu
 	LISTENERS
+	// LISTENERSETUP is the menu used to configure listener options before creation
 	LISTENERSETUP
+	// MODULE is for a specific, already instantiated, module menu
 	MODULE
+	// MODULES is for the top-level module menu
+	MODULES
 )
 
-func (m *Menu) String() string {
-	switch *m {
+func (m Menu) String() string {
+	switch m {
+	case NONE:
+		return "none"
 	case ALLMENUS:
 		return "all"
 	case MAIN:
@@ -42,8 +52,14 @@ func (m *Menu) String() string {
 		return "agent"
 	case LISTENER:
 		return "listener"
+	case LISTENERS:
+		return "listeners"
+	case LISTENERSETUP:
+		return "listenersetup"
 	case MODULE:
 		return "module"
+	case MODULES:
+		return "modules"
 	default:
 		return "unknown menu"
 	}

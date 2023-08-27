@@ -31,6 +31,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Merlin
+	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
@@ -53,20 +54,20 @@ func CD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	} else {
 		return messages.ErrorMessage("a directory path must be provided")
 	}
-	job, err := jobService.Add(agentID, "cd", args)
+	result, err := jobService.Add(agentID, "cd", args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // CheckIn creates an AgentInfo job that forces the Agent to send data back to the server
-func CheckIn(agentID uuid.UUID, Args []string) messages.UserMessage {
-	job, err := jobService.Add(agentID, "agentInfo", []string{})
+func CheckIn(agentID uuid.UUID) messages.UserMessage {
+	result, err := jobService.Add(agentID, "agentInfo", []string{})
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // ClearJobs removes any jobs the queue that have been created, but NOT sent to the agent
@@ -103,11 +104,11 @@ func ClearJobsCreated() messages.UserMessage {
 // Used with `cmd` and `shell` commands as well as through "standard" modules
 func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		job, err := jobService.Add(agentID, Args[0], Args[1:])
+		result, err := jobService.Add(agentID, Args[0], Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage("not enough arguments provided for the Agent Cmd call")
 }
@@ -115,11 +116,11 @@ func CMD(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Connect instructs an Agent to disconnect from its current server and connect to the new provided target
 func Connect(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		job, err := jobService.Add(agentID, Args[0], Args[1:])
+		result, err := jobService.Add(agentID, Args[0], Args[1:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage("not enough arguments provided for the Agent \"connect\" call.")
 }
@@ -129,18 +130,18 @@ func Connect(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Args[1] = file path to download
 func Download(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) >= 2 {
-		job, err := jobService.Add(agentID, "download", []string{Args[1]})
+		result, err := jobService.Add(agentID, "download", []string{Args[1]})
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Download call: %s", Args))
 }
 
 // ENV is used to view or modify a host's environment variables
 func ENV(agentID uuid.UUID, Args []string) messages.UserMessage {
-	var job string
+	var result string
 	var err error
 	if len(Args) > 1 {
 		switch strings.ToLower(Args[1]) {
@@ -148,9 +149,9 @@ func ENV(agentID uuid.UUID, Args []string) messages.UserMessage {
 			if len(Args) < 2 {
 				return messages.ErrorMessage(fmt.Sprintf("Not enough arguments for the env %s command.\nenv %s <environment variable>", Args[0], Args[1]))
 			}
-			job, err = jobService.Add(agentID, "env", Args[1:])
+			result, err = jobService.Add(agentID, "env", Args[1:])
 		case "showall":
-			job, err = jobService.Add(agentID, "env", Args[1:2])
+			result, err = jobService.Add(agentID, "env", Args[1:2])
 		}
 	} else {
 		return messages.ErrorMessage("Not enough arguments for the env command.")
@@ -158,7 +159,7 @@ func ENV(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // ExecuteAssembly calls the donut module to create shellcode from a .NET 4.0 assembly and then uses the CreateProcess
@@ -217,11 +218,11 @@ func ExecuteAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	}
 
 	// Add job to the Agent's queue
-	job, err := jobService.Add(agentID, j[0], j[1:])
+	result, err := jobService.Add(agentID, j[0], j[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // ExecutePE calls the donut module to create shellcode from PE and then uses the CreateProcess
@@ -277,11 +278,11 @@ func ExecutePE(agentID uuid.UUID, Args []string) messages.UserMessage {
 	}
 
 	// Add job to the Agent's queue
-	job, err := jobService.Add(agentID, j[0], j[1:])
+	result, err := jobService.Add(agentID, j[0], j[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // ExecuteShellcode calls the corresponding shellcode module to create a job that executes the provided shellcode
@@ -328,11 +329,11 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 				m := fmt.Sprintf("there was an error parsing the shellcode:\r\n%s", errSh.Error())
 				return messages.ErrorMessage(m)
 			}
-			job, err := jobService.Add(agentID, sh[0], sh[1:])
+			result, err := jobService.Add(agentID, sh[0], sh[1:])
 			if err != nil {
 				return messages.ErrorMessage(err.Error())
 			}
-			return messages.JobMessage(agentID, job)
+			return messages.JobMessage(agentID, result)
 		}
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent ExecuteShellcode call: %s", Args))
@@ -341,7 +342,7 @@ func ExecuteShellcode(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Exit instructs the agent to quit running and changes the Agent's "alive" status to false
 func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 0 {
-		job, err := jobService.Add(agentID, "exit", Args[0:])
+		result, err := jobService.Add(agentID, "exit", Args[0:])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
@@ -349,9 +350,19 @@ func Exit(agentID uuid.UUID, Args []string) messages.UserMessage {
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"exit\" command: %s", Args))
+}
+
+// GetAgent returns the Agent's UUID and operating system; used with the CLI to build a struct
+func GetAgent(agentID uuid.UUID) (id uuid.UUID, os string, err error) {
+	var a agents.Agent
+	a, err = agentService.Agent(agentID)
+	if err != nil {
+		return
+	}
+	return a.ID(), a.Host().Platform, nil
 }
 
 // GetAgents returns a list of existing Agent UUID values
@@ -463,20 +474,20 @@ func GetAgentInfo(agentID uuid.UUID) (rows [][]string, um messages.UserMessage) 
 // GetAgentStatus determines if the agent is active, delayed, or dead based on its last checkin time
 func GetAgentStatus(agentID uuid.UUID) (string, messages.UserMessage) {
 	var status string
-	agent, err := agentService.Agent(agentID)
+	a, err := agentService.Agent(agentID)
 	if err != nil {
 		return status, messages.ErrorMessage(fmt.Sprintf("%s is not a valid agent", agentID))
 	}
-	comms := agent.Comms()
+	comms := a.Comms()
 	dur, errDur := time.ParseDuration(comms.Wait)
 	if errDur != nil && comms.Wait != "" {
 		return status, messages.ErrorMessage(fmt.Sprintf("Error converting %s to a time duration: %s", comms.Wait, errDur))
 	}
 	if comms.Wait == "" {
 		status = "Init"
-	} else if agent.StatusCheckin().Add(dur).After(time.Now()) {
+	} else if a.StatusCheckin().Add(dur).After(time.Now()) {
 		status = "Active"
-	} else if agent.StatusCheckin().Add(dur * time.Duration(comms.Retry+1)).After(time.Now()) { // +1 to account for skew
+	} else if a.StatusCheckin().Add(dur * time.Duration(comms.Retry+1)).After(time.Now()) { // +1 to account for skew
 		status = "Delayed"
 	} else {
 		status = "Dead"
@@ -562,11 +573,11 @@ func GroupRemove(agentID uuid.UUID, groupName string) messages.UserMessage {
 
 // IFConfig lists the agent's network adapter information
 func IFConfig(agentID uuid.UUID) messages.UserMessage {
-	job, err := jobService.Add(agentID, "ifconfig", nil)
+	result, err := jobService.Add(agentID, "ifconfig", nil)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // InvokeAssembly executes an assembly that was previously loaded with the load-assembly command
@@ -574,21 +585,21 @@ func InvokeAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
 		return messages.ErrorMessage("not enough arguments, the assembly name must be provided")
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:])
+	result, err := jobService.Add(agentID, Args[0], Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // JA3 is used to change the Agent's JA3 signature
 func JA3(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		job, err := jobService.Add(agentID, "ja3", Args)
+		result, err := jobService.Add(agentID, "ja3", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetJA3 call: %s", Args))
 }
@@ -596,17 +607,17 @@ func JA3(agentID uuid.UUID, Args []string) messages.UserMessage {
 // KillDate configures the date and time that the agent will stop running
 func KillDate(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		_, errU := strconv.ParseInt(Args[2], 10, 64)
+		_, errU := strconv.ParseInt(Args[1], 10, 64)
 		if errU != nil {
 			m := fmt.Sprintf("There was an error converting %s to an int64", Args[1])
 			m = m + "\r\nKill date takes in a UNIX epoch timestamp such as 811123200 for September 15, 1995"
 			return messages.ErrorMessage(m)
 		}
-		job, err := jobService.Add(agentID, "killdate", Args)
+		result, err := jobService.Add(agentID, "killdate", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetKillDate call: %s", Args))
 }
@@ -619,11 +630,11 @@ func KillProcess(agentID uuid.UUID, Args []string) messages.UserMessage {
 			return messages.ErrorMessage(fmt.Sprintf("Invalid PID provided: %s\n%s", Args[1], err))
 		}
 		args := []string{Args[1]}
-		job, err := jobService.Add(agentID, "killprocess", args)
+		result, err := jobService.Add(agentID, "killprocess", args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent \"kill\" command: %s", Args))
 }
@@ -652,21 +663,21 @@ func LinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(fmt.Sprintf("Not enough arguments: \"link add <p2p agent ID>\""))
 	}
 
-	job, err := jobService.Add(agentID, "link", Args[1:])
+	result, err := jobService.Add(agentID, "link", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // ListAssemblies instructs the agent to list the .NET assemblies that are currently loaded into the agent's process
 // .NET assemblies are loaded with the LoadAssembly call
 func ListAssemblies(agentID uuid.UUID) messages.UserMessage {
-	job, err := jobService.Add(agentID, "list-assemblies", []string{})
+	result, err := jobService.Add(agentID, "list-assemblies", []string{})
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Listener interacts with Agent listeners used for peer-to-peer communications
@@ -685,11 +696,11 @@ func Listener(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(fmt.Sprintf("Unknown listener command: %s", Args[1]))
 	}
 
-	job, err := jobService.Add(agentID, "listener", Args[1:])
+	result, err := jobService.Add(agentID, "listener", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // LoadAssembly reads in a .NET assembly and sends it to the agent, so it can be loaded
@@ -702,11 +713,11 @@ func LoadAssembly(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if err != nil {
 		return messages.ErrorMessage(fmt.Sprintf("there was an error accessing the assembly:\n%s", err))
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:])
+	result, err := jobService.Add(agentID, Args[0], Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // LoadCLR loads the .NET Common Language Runtime (CLR) into the agent's process
@@ -715,11 +726,11 @@ func LoadCLR(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
 		return messages.ErrorMessage("not enough arguments, a .NET version must be provided")
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:])
+	result, err := jobService.Add(agentID, Args[0], Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // LS uses native Go to list the directory
@@ -728,11 +739,11 @@ func LS(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
 		args = []string{Args[1]}
 	}
-	job, err := jobService.Add(agentID, "ls", args)
+	result, err := jobService.Add(agentID, "ls", args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // MaxRetry configures the amount of times an Agent will try to checkin before it quits
@@ -753,11 +764,11 @@ func MaxRetry(agentID uuid.UUID, Args []string) messages.UserMessage {
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		job, err := jobService.Add(agentID, "maxretry", Args)
+		result, err := jobService.Add(agentID, "maxretry", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetMaxRetry call: %s", Args))
 }
@@ -771,11 +782,11 @@ func Memory(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if Args[1] != "read" && Args[1] != "patch" && Args[1] != "write" {
 		return messages.ErrorMessage(fmt.Sprintf("Invalid memory module command: \"%s\"", Args[1]))
 	}
-	job, err := jobService.Add(agentID, "memory", Args[1:])
+	result, err := jobService.Add(agentID, "memory", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // MEMFD run a linux executable from memory
@@ -783,11 +794,11 @@ func MEMFD(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
 		return messages.ErrorMessage("not enough arguments. An executable was not provided")
 	}
-	job, err := jobService.Add(agentID, "memfd", Args[1:])
+	result, err := jobService.Add(agentID, "memfd", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Netstat is used to print network connections on the target system
@@ -808,11 +819,11 @@ func Netstat(agentID uuid.UUID, Args []string) messages.UserMessage {
 			return messages.ErrorMessage("Incorrect arguments provided to the netstat command")
 		}
 	}
-	job, err := jobService.Add(agentID, "netstat", Args)
+	result, err := jobService.Add(agentID, "netstat", Args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Note sets a note on the Agent's Note field
@@ -834,55 +845,58 @@ func NSLOOKUP(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 1 {
 		return messages.ErrorMessage("not enough arguments. A query was not provided")
 	}
-	job, err := jobService.Add(agentID, "nslookup", Args[1:])
+	result, err := jobService.Add(agentID, "nslookup", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Padding configures the maxium size for the random amount of padding added to each message
 func Padding(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		job, err := jobService.Add(agentID, "padding", Args)
+		result, err := jobService.Add(agentID, "padding", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetPadding call: %s", Args))
 }
 
 // Pipes enumerates and displays named pipes on Windows hosts only
 func Pipes(agentID uuid.UUID) messages.UserMessage {
-	job, err := jobService.Add(agentID, "pipes", nil)
+	result, err := jobService.Add(agentID, "pipes", nil)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // PS displays running processes
 func PS(agentID uuid.UUID) messages.UserMessage {
-	job, err := jobService.Add(agentID, "ps", nil)
+	result, err := jobService.Add(agentID, "ps", nil)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // PWD is used to print the Agent's current working directory
 func PWD(agentID uuid.UUID, Args []string) messages.UserMessage {
-	job, err := jobService.Add(agentID, "pwd", Args)
+	result, err := jobService.Add(agentID, "pwd", Args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Remove deletes the agent from the server
 func Remove(agentID uuid.UUID) messages.UserMessage {
-	agentService.Remove(agentID)
+	err := agentService.Remove(agentID)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
 	return messages.UserMessage{
 		Level:   messages.Info,
 		Time:    time.Now().UTC(),
@@ -895,11 +909,11 @@ func RM(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 2 {
 		return messages.ErrorMessage("not enough arguments: rm <filepath>")
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:2])
+	result, err := jobService.Add(agentID, Args[0], Args[1:2])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // RunAs creates a new process as the provided user
@@ -907,11 +921,11 @@ func RunAs(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 4 {
 		return messages.ErrorMessage("not enough arguments: runas <username> <password> <application> [<args>]")
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:])
+	result, err := jobService.Add(agentID, Args[0], Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // SecureDelete securely deletes supplied file
@@ -919,11 +933,11 @@ func SecureDelete(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 2 {
 		return messages.ErrorMessage("Not enough arguments. A file path was not provided.")
 	}
-	job, err := jobService.Add(agentID, "sdelete", Args)
+	result, err := jobService.Add(agentID, "sdelete", Args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // SharpGen generates a .NET core assembly, converts it to shellcode with go-donut, and executes it in the spawnto process
@@ -978,21 +992,21 @@ func SharpGen(agentID uuid.UUID, Args []string) messages.UserMessage {
 	}
 
 	// Add job to the Agent's queue
-	job, err := jobService.Add(agentID, j[0], j[1:])
+	result, err := jobService.Add(agentID, j[0], j[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Skew configures the amount of skew an Agent uses to randomize checkin times
 func Skew(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		job, err := jobService.Add(agentID, "skew", Args)
+		result, err := jobService.Add(agentID, "skew", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSkew call: %s", Args))
 }
@@ -1000,22 +1014,22 @@ func Skew(agentID uuid.UUID, Args []string) messages.UserMessage {
 // Sleep configures the Agent's sleep time between checkins
 func Sleep(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) > 1 {
-		agent, err := agentService.Agent(agentID)
+		a, err := agentService.Agent(agentID)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		comms := agent.Comms()
+		comms := a.Comms()
 		comms.Wait = Args[1]
 		// Need to set the Sleep time on the server first to calculate JWT lifetime
 		err = agentService.UpdateComms(agentID, comms)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		job, err := jobService.Add(agentID, "sleep", Args)
+		result, err := jobService.Add(agentID, "sleep", Args)
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 	}
 	return messages.ErrorMessage(fmt.Sprintf("Not enough arguments provided for the Agent SetSleep call: %s", Args))
 }
@@ -1072,11 +1086,11 @@ func Socks(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(fmt.Sprintf("unknown SOCKS command: %s", Args[1]))
 	}
 
-	job, err := socks.Parse(options)
+	result, err := socks.Parse(options)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, strings.Join(job, " "))
+	return messages.JobMessage(agentID, strings.Join(result, " "))
 }
 
 // SSH executes a command on a remote host through the SSH protocol and returns the output
@@ -1084,11 +1098,11 @@ func SSH(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 5 {
 		return messages.ErrorMessage("not enough arguments: ssh <username> <password> <host:port> <application> [<args>]")
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:])
+	result, err := jobService.Add(agentID, Args[0], Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Token is used to interact with Windows Access Tokens on the agent
@@ -1111,11 +1125,11 @@ func Token(agentID uuid.UUID, Args []string) messages.UserMessage {
 			return messages.ErrorMessage(fmt.Sprintf("there was an error converting the pid \"%s\" to an integer:%s", Args[2], err))
 		}
 	}
-	job, err := jobService.Add(agentID, Args[0], Args[1:])
+	result, err := jobService.Add(agentID, Args[0], Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Touch matches the destination file's timestamps with source file
@@ -1123,11 +1137,11 @@ func Touch(agentID uuid.UUID, Args []string) messages.UserMessage {
 	if len(Args) < 3 {
 		return messages.ErrorMessage("Not enough arguments.")
 	}
-	job, err := jobService.Add(agentID, "touch", Args)
+	result, err := jobService.Add(agentID, "touch", Args)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // UnlinkAgent instructs the parent Agent to close, or unlink, the connection with the child Agent
@@ -1149,11 +1163,11 @@ func UnlinkAgent(agentID uuid.UUID, Args []string) messages.UserMessage {
 		return messages.ErrorMessage(fmt.Sprintf("pkg/api/agents.UnlinkAgent(): %s", err))
 	}
 
-	job, err := jobService.Add(agentID, "unlink", Args[1:])
+	result, err := jobService.Add(agentID, "unlink", Args[1:])
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // Upload transfers a file from the Merlin Server to the Agent
@@ -1167,11 +1181,11 @@ func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 			m := fmt.Sprintf("there was an error accessing the source upload file:\r\n%s", errF.Error())
 			return messages.ErrorMessage(m)
 		}
-		job, err := jobService.Add(agentID, "upload", Args[1:3])
+		result, err := jobService.Add(agentID, "upload", Args[1:3])
 		if err != nil {
 			return messages.ErrorMessage(err.Error())
 		}
-		return messages.JobMessage(agentID, job)
+		return messages.JobMessage(agentID, result)
 
 	}
 	return messages.ErrorMessage(fmt.Sprintf("not enough arguments provided for the Agent Upload call: %s", Args))
@@ -1179,11 +1193,11 @@ func Upload(agentID uuid.UUID, Args []string) messages.UserMessage {
 
 // Uptime retrieves the target host's uptime. Windows only
 func Uptime(agentID uuid.UUID) messages.UserMessage {
-	job, err := jobService.Add(agentID, "uptime", nil)
+	result, err := jobService.Add(agentID, "uptime", nil)
 	if err != nil {
 		return messages.ErrorMessage(err.Error())
 	}
-	return messages.JobMessage(agentID, job)
+	return messages.JobMessage(agentID, result)
 }
 
 // lastCheckin returns a nicely formatted string for time since the last checkin (HH:MM:SS)

@@ -20,9 +20,45 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
 package help
 
+// Help captures the pertitenent pieces of information for a CLI command
 type Help struct {
-	Description string // Description is a single sentence description of the command
-	Example     string // Example is an example of how to use the command
-	Notes       string
-	Usage       string
+	description string // description is a single sentence description of the command
+	example     string // example is an example of how to use the command
+	notes       string // notes returns any additional information that is relevant to understanding the command
+	usage       string // usage returns the command's required and optional arguments along with exclusive groupings. Style guide for usage https://developers.google.com/style/code-syntax
+}
+
+// NewHelp is a factory to build and return a Help structure
+func NewHelp(description, example, notes, usage string) Help {
+	return Help{
+		description: description,
+		example:     example,
+		notes:       notes,
+		usage:       usage,
+	}
+}
+
+// Description returns a single sentence description of the command
+func (h *Help) Description() string {
+	return h.description
+}
+
+// Example returns an example of running the command
+func (h *Help) Example() string {
+	return h.example
+}
+
+// Notes returns any additional information that is relevant to understanding the command
+func (h *Help) Notes() string {
+	return h.notes
+}
+
+// String returns the command's usage as the required and optional arguments along with exclusive groupings
+func (h *Help) String() string {
+	return h.usage
+}
+
+// Usage returns the command's required and optional arguments along with exclusive groupings
+func (h *Help) Usage() string {
+	return h.usage
 }

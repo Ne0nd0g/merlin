@@ -21,7 +21,7 @@ import (
 	// Standard
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -105,7 +105,7 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Read the request message until EOF
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		m := fmt.Sprintf("There was an error reading a POST message sent by an agent:\r\n%s", err)
 		message("warn", m)
@@ -207,7 +207,12 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 			key := hashedKey[:]
 			agentID, err = ValidateJWT(jwt, h.jwtLeeway, key)
 			if err != nil {
-				m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the listener's PSK. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
+				var m string
+				if agentID == uuid.Nil {
+					m = "Orphaned Agent JWT detected. Returning 401 instructing the Agent to generate a self-signed JWT and try again."
+				} else {
+					m = fmt.Sprintf("There was an error validating the JWT for Agent %s using the listener's PSK. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
+				}
 				message("warn", m)
 				logging.Server(m)
 				code = 401

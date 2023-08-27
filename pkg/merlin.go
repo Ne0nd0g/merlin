@@ -18,7 +18,7 @@
 package merlin
 
 // Version is a constant variable containing the version number for the Merlin package
-const Version = "1.5.0"
+const Version = "1.6.0"
 
-// Build is the unique number based off the git commit in which it is compiled against
+// Build is a hash off the git commit and is stamped it at compile time
 var Build = "nonRelease"

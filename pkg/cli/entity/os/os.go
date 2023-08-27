@@ -20,6 +20,8 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
 package os
 
+import "strings"
+
 type OS int
 
 // os structure constants
@@ -59,5 +61,24 @@ func (o OS) String() string {
 		return "Debian"
 	default:
 		return "unknown operating system"
+	}
+}
+
+func FromString(operatingSystem string) OS {
+	switch strings.ToLower(operatingSystem) {
+	case "local":
+		return LOCAL
+	case "all":
+		return ALL
+	case "windows":
+		return WINDOWS
+	case "linux":
+		return LINUX
+	case "macos":
+		return MACOS
+	case "debian":
+		return DEBIAN
+	default:
+		return ALL
 	}
 }

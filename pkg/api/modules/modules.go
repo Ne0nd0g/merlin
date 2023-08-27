@@ -20,6 +20,8 @@ package modules
 import (
 	// Standard
 	"fmt"
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -41,7 +43,15 @@ func GetModuleListCompleter() func(string) []string {
 
 // GetModule returns a module object based on it's JSON file location
 func GetModule(modulePath string) (messages.UserMessage, modules.Module) {
-	module, err := modules.Create(modulePath)
+	// Get the absolute path to the module
+	cwd, err := os.Getwd()
+	if err != nil {
+		err = fmt.Errorf("pkg/api/modules.GetModule(): there was an error getting the working directory: %s", err)
+		return messages.ErrorMessage(err.Error()), modules.Module{}
+	}
+	modulePath = path.Join(cwd, "data", "modules", fmt.Sprintf("%s.json", modulePath))
+
+	module, err := modules.NewModule(modulePath)
 	if err != nil {
 		return messages.ErrorMessage(err.Error()), modules.Module{}
 	}
@@ -91,11 +101,11 @@ func RunModule(module modules.Module) []messages.UserMessage {
 				returnMessages = append(returnMessages, agentAPI.CMD(agent.ID(), append([]string{"run"}, r...)))
 			case "extended":
 				// Was using Method: r[0]
-				job, err := jobService.Add(agent.ID(), r[0], r[1:])
+				result, err := jobService.Add(agent.ID(), r[0], r[1:])
 				if err != nil {
 					returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 				} else {
-					returnMessages = append(returnMessages, messages.JobMessage(agent.ID(), job))
+					returnMessages = append(returnMessages, messages.JobMessage(agent.ID(), result))
 				}
 			default:
 				err := fmt.Errorf("invalid module type: %s", module.Type)
@@ -111,11 +121,11 @@ func RunModule(module modules.Module) []messages.UserMessage {
 		// Standard modules use the `cmd` message type that must be in position 0
 		returnMessages = append(returnMessages, agentAPI.CMD(module.Agent, append([]string{"run"}, r...)))
 	case "extended":
-		job, err := jobService.Add(module.Agent, r[0], r[1:])
+		result, err := jobService.Add(module.Agent, r[0], r[1:])
 		if err != nil {
 			returnMessages = append(returnMessages, messages.ErrorMessage(err.Error()))
 		} else {
-			returnMessages = append(returnMessages, messages.JobMessage(module.Agent, job))
+			returnMessages = append(returnMessages, messages.JobMessage(module.Agent, result))
 		}
 		return returnMessages
 	default:

@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -48,23 +47,25 @@ import (
 
 // Module is a structure containing the base information or template for modules
 type Module struct {
-	Agent        uuid.UUID   // The Agent that will later be associated with this module prior to execution
-	Name         string      `json:"name"`                 // Name of the module
-	Type         string      `json:"type"`                 // Type of module (i.e. standard or extended)
-	Author       []string    `json:"author"`               // A list of module authors
-	Credits      []string    `json:"credits"`              // A list of people to credit for underlying tool or techniques
-	Path         []string    `json:"path"`                 // Path to the module (i.e. data/modules/powershell/powerview)
-	Platform     string      `json:"platform"`             // Platform the module can run on (i.e. Windows, Linux, Darwin, or ALL)
-	Arch         string      `json:"arch"`                 // The Architecture the module can run on (i.e. x86, x64, MIPS, ARM, or ALL)
-	Lang         string      `json:"lang"`                 // What language does the module execute in (i.e. PowerShell, Python, or Perl)
-	Priv         bool        `json:"privilege"`            // Does this module required a privileged level account like root or SYSTEM?
-	Description  string      `json:"description"`          // A description of what the module does
-	Notes        string      `json:"notes"`                // Additional information or notes about the module
-	Commands     []string    `json:"commands"`             // A list of commands to be run on the agent
-	SourceRemote string      `json:"remote"`               // Online or remote source code for a module
-	SourceLocal  []string    `json:"local"`                // The local file path to the script or payload
-	Options      []Option    `json:"options"`              // A list of configurable options/arguments for the module
-	Powershell   interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
+	id              uuid.UUID   // id the unique identifier for this instance of the module
+	Agent           uuid.UUID   // The Agent that will later be associated with this module prior to execution
+	Name            string      `json:"name"`        // Name of the module
+	Type            string      `json:"type"`        // Type of module (i.e., standard or extended)
+	Author          []string    `json:"author"`      // A list of module authors
+	Credits         []string    `json:"credits"`     // A list of people to credit for underlying tool or techniques
+	Path            []string    `json:"path"`        // Path to the module (i.e., data/modules/powershell/powerview)
+	Platform        string      `json:"platform"`    // Platform that the module can run on (i.e., Windows, Linux, Darwin, or ALL)
+	Arch            string      `json:"arch"`        // The Architecture the module can run on (i.e., x86, x64, MIPS, ARM, or ALL)
+	Lang            string      `json:"lang"`        // What language does the module execute in (i.e., PowerShell, Python, or Perl)
+	Priv            bool        `json:"privilege"`   // Does this module require a privileged level account like root or SYSTEM?
+	Description     string      `json:"description"` // A description of what the module does
+	Notes           string      `json:"notes"`       // Additional information or notes about the module
+	Commands        []string    `json:"commands"`    // A list of commands to be run on the agent
+	SourceRemote    string      `json:"remote"`      // Online or remote source code for a module
+	SourceLocal     []string    `json:"local"`       // The local file path to the script or payload
+	Options         []Option    `json:"options"`     // A list of configurable options/arguments for the module
+	originalOptions []Option    // An original and unmodified list of configurable options/arguments for the module
+	Powershell      interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
 }
 
 // Option is a structure containing the keys for the object
@@ -83,21 +84,85 @@ type PowerShell struct {
 	Base64      bool // Base64 encode the powershell command?
 }
 
+// NewModule is a factory to instantiate a module object using the provided file path to a module's json file
+func NewModule(modulePath string) (Module, error) {
+	m := Module{
+		id: uuid.NewV4(),
+	}
+
+	// Read in the module's JSON configuration file
+	f, err := os.ReadFile(modulePath) // #nosec G304 - User should be able to read in any file
+	if err != nil {
+		return m, err
+	}
+
+	// Unmarshal module's JSON message
+	var moduleJSON map[string]*json.RawMessage
+	errModule := json.Unmarshal(f, &moduleJSON)
+	if errModule != nil {
+		return m, errModule
+	}
+
+	// Determine all message types
+	var keys []string
+	for k := range moduleJSON {
+		keys = append(keys, k)
+	}
+
+	// Validate that module's JSON contains at least the base message
+	var containsBase bool
+	for i := range keys {
+		if keys[i] == "base" {
+			containsBase = true
+		}
+	}
+
+	// Marshal Base message type
+	if !containsBase {
+		return m, errors.New("the module's definition does not contain the 'BASE' message type")
+	}
+	errJSON := json.Unmarshal(*moduleJSON["base"], &m)
+	if errJSON != nil {
+		return m, errJSON
+	}
+
+	// Check for PowerShell configuration options
+	for k := range keys {
+		switch keys[k] {
+		case "base":
+		case "powershell":
+			k := marshalMessage(*moduleJSON["powershell"])
+			m.Powershell = (*json.RawMessage)(&k)
+			var p PowerShell
+			err := json.Unmarshal(k, &p)
+			if err != nil {
+				return m, errors.New("there was an error unmarshaling the powershell JSON object")
+			}
+		}
+	}
+
+	_, errValidate := validateModule(m)
+	if errValidate != nil {
+		return m, errValidate
+	}
+	m.originalOptions = m.Options
+	return m, nil
+}
+
 // Run function returns an array of commands to execute the module on an agent
 func Run(m Module) ([]string, error) {
 	if m.Agent == uuid.FromStringOrNil("00000000-0000-0000-0000-000000000000") {
 		return nil, errors.New("agent not set for module")
 	}
 
-	agentService := agent.NewAgentService()
-	agent, err := agentService.Agent(m.Agent)
-	if err != nil {
-		return []string{}, fmt.Errorf("pkg/modules.Run(): there was an error getting the Agent %s: %s", m.Agent, err)
-	}
-
 	if strings.ToLower(m.Agent.String()) != "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		if !strings.EqualFold(m.Platform, agent.Host().Platform) {
-			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, agent.Host().Platform)
+		agentService := agent.NewAgentService()
+		a, err := agentService.Agent(m.Agent)
+		if err != nil {
+			return []string{}, fmt.Errorf("pkg/modules.Run(): there was an error getting the Agent %s: %s", m.Agent, err)
+		}
+		if !strings.EqualFold(m.Platform, a.Host().Platform) {
+			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, a.Host().Platform)
 		}
 	}
 
@@ -158,7 +223,8 @@ func Run(m Module) ([]string, error) {
 func (m *Module) ShowOptions() {
 	color.Cyan(fmt.Sprintf("\r\nAgent: %s\r\n", m.Agent.String()))
 	color.Yellow("\r\nModule options(" + m.Name + ")\r\n\r\n")
-	table := tablewriter.NewWriter(os.Stdout)
+	builder := &strings.Builder{}
+	table := tablewriter.NewWriter(builder)
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
 	table.SetBorder(false)
@@ -212,6 +278,21 @@ func GetModuleList() func(string) []string {
 	}
 }
 
+// ID returns the unique identifier for this instance of the module
+func (m *Module) ID() uuid.UUID {
+	return m.id
+}
+
+// Reload resets the module's options to their original values
+func (m *Module) Reload() {
+	m.Options = m.originalOptions
+}
+
+// String returns the name of the module
+func (m *Module) String() string {
+	return m.Name
+}
+
 // SetOption is used to change the passed in module option's value. Used when a user is configuring a module
 func (m *Module) SetOption(option string, value []string) (string, error) {
 	// Verify this option exists
@@ -227,6 +308,10 @@ func (m *Module) SetOption(option string, value []string) (string, error) {
 
 // SetAgent is used to set the agent associated with the module.
 func (m *Module) SetAgent(agentUUID string) (string, error) {
+	if agentUUID == "" {
+		m.Agent = uuid.Nil
+		return "agent set to nil", nil
+	}
 	if strings.ToLower(agentUUID) == "all" {
 		agentUUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
 	}
@@ -254,68 +339,6 @@ func (m *Module) ShowInfo() {
 	m.ShowOptions()
 	fmt.Println()
 	color.Yellow("Notes: %s", m.Notes)
-}
-
-// Create is module function used to instantiate a module object using the provided file path to a module's json file
-func Create(modulePath string) (Module, error) {
-	var m Module
-
-	// Read in the module's JSON configuration file
-	f, err := ioutil.ReadFile(modulePath) // #nosec G304 - User should be able to read in any file
-	if err != nil {
-		return m, err
-	}
-
-	// Unmarshal module's JSON message
-	var moduleJSON map[string]*json.RawMessage
-	errModule := json.Unmarshal(f, &moduleJSON)
-	if errModule != nil {
-		return m, errModule
-	}
-
-	// Determine all message types
-	var keys []string
-	for k := range moduleJSON {
-		keys = append(keys, k)
-	}
-
-	// Validate that module's JSON contains at least the base message
-	var containsBase bool
-	for i := range keys {
-		if keys[i] == "base" {
-			containsBase = true
-		}
-	}
-
-	// Marshal Base message type
-	if !containsBase {
-		return m, errors.New("the module's definition does not contain the 'BASE' message type")
-	}
-	errJSON := json.Unmarshal(*moduleJSON["base"], &m)
-	if errJSON != nil {
-		return m, errJSON
-	}
-
-	// Check for PowerShell configuration options
-	for k := range keys {
-		switch keys[k] {
-		case "base":
-		case "powershell":
-			k := marshalMessage(*moduleJSON["powershell"])
-			m.Powershell = (*json.RawMessage)(&k)
-			var p PowerShell
-			err := json.Unmarshal(k, &p)
-			if err != nil {
-				return m, errors.New("there was an error unmarshaling the powershell JSON object")
-			}
-		}
-	}
-
-	_, errValidate := validateModule(m)
-	if errValidate != nil {
-		return m, errValidate
-	}
-	return m, nil
 }
 
 // validateModule function is used to check a module's configuration for errors
@@ -366,25 +389,25 @@ func getExtendedCommand(m *Module) ([]string, error) {
 	var err error
 	switch strings.ToLower(m.Name) {
 	case "createprocess":
-		extendedCommand, err = createprocess.Parse(m.getMapFromOptions())
+		extendedCommand, err = createprocess.Parse(m.GetMapFromOptions())
 	case "donut":
-		extendedCommand, err = donut.Parse(m.getMapFromOptions())
+		extendedCommand, err = donut.Parse(m.GetMapFromOptions())
 	case "minidump":
-		extendedCommand, err = minidump.Parse(m.getMapFromOptions())
+		extendedCommand, err = minidump.Parse(m.GetMapFromOptions())
 	case "sharpgen":
-		extendedCommand, err = sharpgen.Parse(m.getMapFromOptions())
+		extendedCommand, err = sharpgen.Parse(m.GetMapFromOptions())
 	case "shellcodeinjection":
-		extendedCommand, err = shellcode.Parse(m.getMapFromOptions())
+		extendedCommand, err = shellcode.Parse(m.GetMapFromOptions())
 	case "srdi":
-		extendedCommand, err = srdi.Parse(m.getMapFromOptions())
+		extendedCommand, err = srdi.Parse(m.GetMapFromOptions())
 	default:
 		return nil, fmt.Errorf("the %s module's extended command function was not found", m.Name)
 	}
 	return extendedCommand, err
 }
 
-// getMapFromOptions is used to generate a map containing module option names and values to be used with other functions
-func (m *Module) getMapFromOptions() map[string]string {
+// GetMapFromOptions is used to generate a map containing module option names and values to be used with other functions
+func (m *Module) GetMapFromOptions() map[string]string {
 	optionsMap := make(map[string]string)
 
 	for _, v := range m.Options {

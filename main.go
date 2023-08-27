@@ -20,47 +20,20 @@ package main
 import (
 	// Standard
 	"flag"
-	"github.com/Ne0nd0g/merlin/pkg/cli/services/cli"
-	"os"
-
-	// 3rd Party
-	"github.com/fatih/color"
+	"fmt"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/pwnboard"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/cli"
 )
 
-// Global Variables
-var build = "nonRelease"
-
 func main() {
-	logging.Server("Starting Merlin Server version " + merlin.Version + " build " + merlin.Build)
-
-	flag.Usage = func() {
-		color.Blue("#################################################")
-		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
-		color.Blue("#################################################")
-		color.Blue("Version: " + merlin.Version)
-		color.Blue("Build: " + build)
-		color.Yellow("Merlin Server does not take any command line arguments")
-		color.Yellow("Visit the Merlin wiki for additional information: https://merlin-c2.readthedocs.io/en/latest/")
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
-
-	ip := flag.String("pwn", "", "The IP address / hostname of pwnboard server")
-
+	version := flag.Bool("version", false, "Print the version number and exit")
 	flag.Parse()
 
-	color.Blue(banner.MerlinBanner1)
-	color.Blue("\t\t   Version: %s", merlin.Version)
-	color.Blue("\t\t   Build: %s", build)
-
-	if *ip != "" {
-		go pwnboard.Updateserver(*ip)
+	if *version {
+		fmt.Printf("Merlin Version: %s, Build: %s\n", merlin.Version, merlin.Build)
+		return
 	}
 
 	// Start Merlin Command Line Interface

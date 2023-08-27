@@ -84,6 +84,20 @@ func Remove(name string) messages.UserMessage {
 	}
 }
 
+// RemoveID deletes and removes the listener from the server
+func RemoveID(id uuid.UUID) messages.UserMessage {
+	err := listenerService.Remove(id)
+	if err != nil {
+		return messages.ErrorMessage(err.Error())
+	}
+	return messages.UserMessage{
+		Level:   messages.Success,
+		Time:    time.Now().UTC(),
+		Message: fmt.Sprintf("deleted listener %s", id),
+		Error:   false,
+	}
+}
+
 // Restart restarts the Listener's server
 func Restart(listenerID uuid.UUID) messages.UserMessage {
 	err := listenerService.Restart(listenerID)
@@ -206,18 +220,35 @@ func GetDefaultOptions(listenerType string) (options map[string]string, err erro
 	return listenerService.DefaultOptions(listenerType)
 }
 
-func GetDefaultOptionsCompleter(listenerType string) func(string) []string {
-	return func(line string) []string {
-		listenerOptions, _ := listenerService.DefaultOptions(listenerType)
-		options := make([]string, 0)
-		for k := range listenerOptions {
-			options = append(options, k)
-		}
-		return options
-	}
-}
-
 // GetListenerTypes returns a list of all available Listener types (e.g. http, tcp, etc.)
 func GetListenerTypes() []string {
 	return listenerService.ListenerTypes()
+}
+
+func GetListenerRows() (header []string, rows [][]string) {
+	header = []string{"ID", "NAME", "INTERFACE", "PROTOCOL", "STATUS", "DESCRIPTION"}
+	for _, l := range listenerService.Listeners() {
+		if l != nil {
+			server := *l.Server()
+
+			rows = append(rows, []string{
+				l.ID().String(),
+				l.Name(),
+				fmt.Sprintf("%s:%d", server.Interface(), server.Port()),
+				server.ProtocolString(),
+				l.Status(),
+				l.Description(),
+			})
+		}
+	}
+	return
+}
+
+func GetListenerIDs() []uuid.UUID {
+	ls := listenerService.Listeners()
+	ids := make([]uuid.UUID, 0)
+	for _, l := range ls {
+		ids = append(ids, l.ID())
+	}
+	return ids
 }

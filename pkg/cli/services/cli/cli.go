@@ -1,25 +1,10 @@
 package cli
 
 import (
+	// Standard
 	"fmt"
-	merlin "github.com/Ne0nd0g/merlin/pkg"
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	moduleAPI "github.com/Ne0nd0g/merlin/pkg/api/modules"
-	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/commands/memory"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
-	listenerEntity "github.com/Ne0nd0g/merlin/pkg/cli/entity/listener"
-	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
-	"github.com/Ne0nd0g/merlin/pkg/cli/listener"
-	lmemory "github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
-	"github.com/Ne0nd0g/merlin/pkg/modules"
-	"github.com/chzyer/readline"
-	"github.com/fatih/color"
-	"github.com/mattn/go-shellwords"
-	"github.com/olekukonko/tablewriter"
-	uuid "github.com/satori/go.uuid"
+	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"io"
 	"log"
 	"os"
@@ -29,23 +14,50 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	// 3rd Party
+	"github.com/chzyer/readline"
+	"github.com/fatih/color"
+	"github.com/mattn/go-shellwords"
+	"github.com/olekukonko/tablewriter"
+	uuid "github.com/satori/go.uuid"
+
+	// Merlin
+	merlin "github.com/Ne0nd0g/merlin/pkg"
+	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
+	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+
+	// Internal - CLI
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/repository"
+	"github.com/Ne0nd0g/merlin/pkg/cli/core"
+	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
+	merlinOS "github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/listener"
+	lmemory "github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
 )
 
+// Service is a structure for the CLI service that holds the state of the CLI
 type Service struct {
-	id           uuid.UUID
-	agent        uuid.UUID
-	listener     uuid.UUID
-	commandRepo  commands.Repository
-	listenerRepo listener.Repository
-	prompt       *readline.Instance
-	menu         menu.Menu
-	module       modules.Module
+	id           uuid.UUID           // id is the unique identifier for the CLI service
+	agent        uuid.UUID           // agent is the unique identifier for the Agent the CLI is interacting with
+	agentOS      merlinOS.OS         // agentOS is the operating system of the Agent the CLI is interacting with
+	listener     uuid.UUID           // listener is the unique identifier for the Listener the CLI is interacting with
+	commandRepo  commands.Repository // commandRepo is the repository of commands the CLI can execute
+	listenerRepo listener.Repository // listenerRepo is the repository of listeners the CLI can interact with
+	prompt       *readline.Instance  // prompt is the visual string displayed to the user as well as other components such as tab completion
+	menu         menu.Menu           // menu is the current menu the CLI is in
+	module       uuid.UUID           // module is the unique identifier for the Module the CLI is interacting with
 	sync.Mutex
 }
 
+// services in the instantiated Service structure for this CLI service
 var service *Service
+
+// pkg is a string containing the package name for this file used with error messages
 var pkg = "pkg/cli/services/cli"
 
+// NewCLIService is a factory that creates a new CLI service
 func NewCLIService() *Service {
 	if service == nil {
 		config := &readline.Config{
@@ -77,24 +89,40 @@ func NewCLIService() *Service {
 			listener:     uuid.Nil,
 		}
 		service.prompt.Config.AutoComplete = service.completer()
-		// Start UserMessage channel
-		osSignalHandler()
-		printUserMessage()
-		service.registerMessageChannel()
-		service.getUserMessages()
 	}
 	return service
 }
 
+// withMemoryCommandRepository calls a factory that creates a new in-memory command repository
 func withMemoryCommandRepository() commands.Repository {
-	return memory.NewRepository()
+	return repository.NewRepository()
 }
 
+// withMemoryListenerRepository calls a factory that creates a new in-memory listener repository
 func withMemoryListenerRepository() listener.Repository {
 	return lmemory.NewRepository()
 }
 
+// Run is the main entry point for the CLI service called by the main package
 func (s *Service) Run() {
+	logging.Server(fmt.Sprintf("Starting Merlin version: %s, build: %s, client ID: %s", merlin.Version, merlin.Build, s.id))
+
+	// Start handlers and go routines
+	osSignalHandler()
+	printUserMessage()
+	s.registerMessageChannel()
+	s.getUserMessages()
+
+	// Display the Merlin banner
+	display := color.BlueString(banner.MerlinBanner1)
+	display += color.BlueString(fmt.Sprintf("\n\t\t\tVersion: %s\n", merlin.Version))
+	display += color.BlueString(fmt.Sprintf("\t\t\tBuild: %s\n", merlin.Build))
+	core.MessageChannel <- messages.UserMessage{
+		Level:   messages.Plain,
+		Message: display,
+	}
+
+	// Start infinite loop to process command line input
 	for {
 		// Read command line input
 		line, err := s.prompt.Readline()
@@ -124,20 +152,20 @@ func (s *Service) Run() {
 		if len(cmd) > 0 {
 			switch s.menu {
 			case menu.MAIN:
-				s.handleMainMenu(line)
+				s.handle(line)
 			default:
-				s.handleMainMenu(line)
+				s.handle(line)
 			}
 		}
 	}
 }
 
-// handleMainMenu handles commands issued at the main menu
-func (s *Service) handleMainMenu(input string) {
+// handle processes the user input and executes the appropriate command
+func (s *Service) handle(input string) {
 	if len(input) <= 0 {
 		core.MessageChannel <- messages.UserMessage{
 			Level:   messages.Warn,
-			Message: fmt.Sprintf("%s.handleMainMenu(): no input provided", pkg),
+			Message: fmt.Sprintf("%s.handle(): no input provided", pkg),
 			Time:    time.Now().UTC(),
 			Error:   false,
 		}
@@ -148,146 +176,38 @@ func (s *Service) handleMainMenu(input string) {
 	if len(command) <= 0 {
 		core.MessageChannel <- messages.UserMessage{
 			Level:   messages.Warn,
-			Message: fmt.Sprintf("%s.handleMainMenu(): no command provided", pkg),
+			Message: fmt.Sprintf("%s.handle(): no command provided", pkg),
 			Time:    time.Now().UTC(),
 			Error:   false,
 		}
 		return
 	}
 
-	// Commands
-	// agent
-	// clear
-	// group
-	// interact
-	// jobs
-	// queue
-	// remove
-	// sessions
-	// set
-	// socks
-	// use
 	switch strings.ToLower(command[0]) {
-	case "agent":
+	case "help", "--help", "-h", "?", "/?":
 		if len(command) > 1 {
-			switch strings.ToLower(command[1]) {
-			case "interact":
-				// Must do this here to change the prompt
-				if len(command) > 2 {
-					s.interactAgent(command[2])
-					return
-				}
-			}
+			// Get help for a specific command
+			input = fmt.Sprintf("%s help", command[1])
+			command = []string{command[1]}
+		} else {
+			s.help()
+			return
 		}
-	case "exit":
-		// The exit command is reserved to instruct an Agent to exit
-		// From the main menu, swap exit for quit
-		command[0] = "quit"
-	case "help", "--help", "-h", "?":
-		s.help()
-		return
-	case "interact":
-		if len(command) > 1 {
-			if command[1] != "-h" && command[1] != "--help" && command[1] != "?" && command[1] != "help" {
-				s.interactAgent(command[1])
-				return
-			}
-		}
-	case "listeners":
-		s.menu = menu.LISTENER
-		s.prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m]»\033[0m ")
-		s.prompt.Config.AutoComplete = s.completer()
-		return
-	case "main":
-		s.menu = menu.MAIN
-		s.prompt.SetPrompt("\u001B[31mMerlin»\u001B[0m ")
-		s.prompt.Config.AutoComplete = s.completer()
-		return
 	case "queue":
 		// Must process queue command here because it subsequently calls other commands
-		if len(command) > 2 {
-			// Check for uuid match
-			id, err := uuid.FromString(command[1])
-			if err == nil {
-				s.id = id
-				s.handleMainMenu(strings.Join(command[2:], " "))
-				s.id = uuid.Nil
-			} else {
-				found := false
-				// Check for a group name match
-				for _, group := range agentAPI.GroupListNames() {
-					if group == command[1] {
-						found = true
-						for _, agent := range agentAPI.GroupList(group) {
-							// We know it's a valid UUID because it's already in a group
-							id, err := uuid.FromString(agent)
-							if err != nil {
-								core.MessageChannel <- messages.UserMessage{
-									Level:   messages.Warn,
-									Message: fmt.Sprintf("error parsing UUID from string: %s", err),
-									Time:    time.Now().UTC(),
-									Error:   false,
-								}
-								return
-							}
-							s.id = id
-							s.handleMainMenu(strings.Join(command[2:], " "))
-							s.id = uuid.Nil
-						}
-					}
-				}
-				// Nothing found
-				if !found {
-					core.MessageChannel <- messages.UserMessage{
-						Level:   messages.Warn,
-						Message: fmt.Sprintf("Couldn't find an Agent or group with the name '%s'", command[1]),
-						Time:    time.Now().UTC(),
-						Error:   true,
-					}
-				}
-				return
-			}
-		}
-	case "use":
-		switch s.menu {
-		case menu.MAIN:
-			s.handleModuleMenu(input)
-		case menu.LISTENER:
-			if len(command) > 1 {
-				types := listenerAPI.GetListenerTypes()
-				for _, t := range types {
-					if strings.ToLower(t) == strings.ToLower(command[1]) {
-						options, err := listenerAPI.GetDefaultOptions(t)
-						if err != nil {
-							core.MessageChannel <- messages.UserMessage{
-								Level:   messages.Warn,
-								Message: fmt.Sprintf("error getting default listener options: %s", err),
-								Time:    time.Now().UTC(),
-								Error:   false,
-							}
-							return
-						}
-						l := listenerEntity.NewListener(t, options)
-						s.listenerRepo.Add(l)
-						s.listener = l.ID()
-						s.menu = menu.LISTENERSETUP
-						s.prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m" + t + "\033[31m]»\033[0m ")
-						s.prompt.Config.AutoComplete = s.completer()
-						return
-					}
-				}
-			}
-		}
+		s.queueCommand(input)
 		return
-	case "version":
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Plain,
-			Message: color.BlueString("Merlin version: %s\n", merlin.Version),
-			Time:    time.Now().UTC(),
-			Error:   false,
-		}
-		return
-	default:
+	}
+
+	// Set up the UUID for the command
+	id := uuid.Nil
+	switch s.menu {
+	case menu.AGENT:
+		id = s.agent
+	case menu.LISTENER, menu.LISTENERSETUP:
+		id = s.listener
+	case menu.MODULE:
+		id = s.module
 	}
 
 	// Get the command from the repository
@@ -299,164 +219,138 @@ func (s *Service) handleMainMenu(input string) {
 			Error: false,
 		}
 		switch err {
-		case memory.ErrCommandNotFound:
+		case repository.ErrCommandNotFound:
 			msg.Message = fmt.Sprintf("'%s' is not a valid command", command[0])
-		case memory.ErrCommandNotInMenu:
+		case repository.ErrCommandNotInMenu:
 			msg.Message = fmt.Sprintf("'%s' is not a valid command for this '%s' menu", command[0], s.menu.String())
 		default:
-			msg.Message = fmt.Sprintf("%s.handleMainMenu(): %s", pkg, err)
+			msg.Message = fmt.Sprintf("%s.handle(): %s", pkg, err)
 		}
 		core.MessageChannel <- msg
 		return
 	}
 
-	// Send the original input so the command can decide how to parse it
-	var message messages.UserMessage
-	switch s.menu {
-	case menu.LISTENERSETUP:
-		if s.listener != uuid.Nil {
-			message = cmd.DoID(s.listener, input)
-			if message.Error {
-				break
-			}
-			switch strings.ToLower(command[0]) {
-			case "run", "start":
-				// Need to process here to change the CLI prompt
-				l, err := s.listenerRepo.Get(s.listener)
-				if err != nil {
+	// Validate the command can be used with the Agent's operating system
+	if s.menu == menu.AGENT {
+		if s.agentOS == merlinOS.UNDEFINED {
+			// There is time between when the Agent first checks in, and when it sends back its configuration.
+			// Update it to all so that all commands are available to the Agent when we don't know the OS
+			s.agentOS = merlinOS.ALL
+		}
+		// See if we know the Agent's OS now
+		if s.agentOS == merlinOS.ALL {
+			var agentOS string
+			_, agentOS, err = agentAPI.GetAgent(s.agent)
+			if err != nil {
+				if core.Debug {
 					core.MessageChannel <- messages.UserMessage{
 						Level:   messages.Warn,
-						Message: fmt.Sprintf("there was an error getting the listener for ID %s: %s", s.listener, err),
+						Message: fmt.Sprintf("there was an error making the GetAgent API call: %s", err),
 						Time:    time.Now().UTC(),
-						Error:   true,
+						Error:   false,
 					}
-				}
-				if _, ok := l.Options()["Name"]; !ok {
-					core.MessageChannel <- messages.UserMessage{
-						Level:   messages.Warn,
-						Message: fmt.Sprintf("the 'name' key was not found in the listener options for %s", s.listener),
-						Time:    time.Now().UTC(),
-						Error:   true,
-					}
-					break
-				}
-				s.menu = menu.LISTENER
-				s.prompt.SetPrompt("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m" + l.Options()["Name"] + "\033[31m]»\033[0m ")
-				s.prompt.Config.AutoComplete = s.completer()
-			}
-		} else {
-			message = cmd.Do(input)
-		}
-	default:
-		if s.agent != uuid.Nil {
-			message = cmd.DoID(s.agent, input)
-		} else {
-			message = cmd.Do(input)
-		}
-	}
-
-	if message.Message != "" {
-		core.MessageChannel <- message
-	}
-	return
-}
-
-func (s *Service) handleModuleMenu(input string) (err error) {
-	if len(input) <= 0 {
-		return fmt.Errorf("%s.handleModuleMenu(): no input provided", pkg)
-	}
-
-	cmd := strings.Split(input, " ")
-	if len(cmd) <= 1 {
-		return fmt.Errorf("%s.handleModuleMenu(): no command provided", pkg)
-	}
-
-	switch cmd[1] {
-	// For when "use module <module> is called from the main menu
-	case "module":
-		if len(cmd) > 2 {
-			if len(cmd) > 0 {
-				mPath := path.Join(core.CurrentDir, "data", "modules", cmd[2]+".json")
-				um, m := moduleAPI.GetModule(mPath)
-				if um.Error {
-					core.MessageChannel <- um
 					return
 				}
-				if m.Name != "" {
-					s.module = m
-					s.menu = menu.MODULE
-					core.Prompt.SetPrompt("\033[31mMerlin[\033[32mmodule\033[31m][\033[33m" + s.module.Name + "\033[31m]»\033[0m ")
-					core.Prompt.Config.AutoComplete = s.completer()
-				}
 			}
-		} else {
+			o := merlinOS.FromString(agentOS)
+			// Update the Agent's OS know that we know it
+			if o != merlinOS.UNDEFINED && o != merlinOS.LOCAL {
+				s.agentOS = o
+			}
+		}
+
+		// See if the command is supported by the Agent's OS
+		// 1. The Agent's OS doesn't match the command's OS
+		// 2. The Agent's OS is not ALL, used when we don't know the Agent's OS to ensure all commands are accessible
+		// 3. The command's OS is not ALL, because if it is, then it doesn't matter that we don't know the Agent's OS
+		// 4. The command's OS is not LOCAL, because if it is, then it doesn't matter that we don't know the Agent's OS
+		if s.agentOS != cmd.OS() && s.agentOS != merlinOS.ALL && cmd.OS() != merlinOS.ALL && cmd.OS() != merlinOS.LOCAL {
 			core.MessageChannel <- messages.UserMessage{
 				Level:   messages.Warn,
-				Message: "Invalid module",
+				Message: fmt.Sprintf("The '%s' command is for the %s operating system and not supported for this agent's operating system (%s)", cmd, cmd.OS(), s.agentOS),
 				Time:    time.Now().UTC(),
 				Error:   false,
 			}
-		}
-	case "":
-	default:
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Note,
-			Message: "Invalid 'use' command",
-			Time:    time.Now().UTC(),
-			Error:   false,
+			return
 		}
 	}
+
+	// Send the original input so the command can decide how to parse it
+	resp := cmd.Do(s.menu, id, input)
+	if resp.Message != nil {
+		if resp.Message.Error {
+			core.MessageChannel <- *resp.Message
+			return
+		}
+	}
+
+	// Check if the Menu has changed
+	//fmt.Printf("Response Menu: %s(%d)\n", resp.Menu, resp.Menu)
+	if resp.Menu != menu.NONE {
+		s.menu = resp.Menu
+	}
+	// Check if the prompt has changed
+	if resp.Prompt != "" {
+		s.prompt.SetPrompt(resp.Prompt)
+	}
+	// Check if the active Agent ID has changed
+	if resp.Agent != uuid.Nil {
+		s.agent = resp.Agent
+	}
+	// Check if the active Listener ID has changed
+	if resp.Listener != uuid.Nil {
+		s.listener = resp.Listener
+	}
+	// Check if the active Module ID has changed
+	if resp.Module != uuid.Nil {
+		s.module = resp.Module
+	}
+	// Check if there is a UserMessage to send
+	if resp.Message != nil {
+		core.MessageChannel <- *resp.Message
+	}
+	// Set the completer
+	comp := s.completer()
+	if comp != nil {
+		s.prompt.Config.AutoComplete = comp
+	}
+
 	return
 }
 
+// help prints a table of commands, their descriptions, and their usage string that are available for the current menu
 func (s *Service) help() {
-	var data [][]string
 	// Table of command, description, usage
+	var data [][]string
 	cmds := s.commandRepo.GetAll()
 	for _, cmd := range cmds {
 		if cmd.Menu(s.menu) {
-			d := []string{cmd.String(), cmd.Description(), cmd.Usage()}
+			h := cmd.Help(s.menu)
+			d := []string{cmd.String(), h.Description(), h.Usage()}
 			data = append(data, d)
 		}
 	}
 
-	core.MessageChannel <- messages.UserMessage{
-		Level:   messages.Plain,
-		Message: color.YellowString("Merlin C2 Server (version %s)\n", merlin.Version),
-		Time:    time.Now().UTC(),
-		Error:   false,
-	}
-
-	table := tablewriter.NewWriter(os.Stdout)
+	tableString := &strings.Builder{}
+	table := tablewriter.NewWriter(tableString)
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetBorder(false)
-	table.SetCaption(true, "Main Menu Help")
 	table.SetHeader([]string{"Command", "Description", "Usage"})
-
 	table.AppendBulk(data)
-	// TODO lock STDOUT so nothing else writes to it
-	fmt.Println()
 	table.Render()
-	fmt.Println()
+
+	version := color.YellowString("Merlin C2 Server (version %s)", merlin.Version)
+	wiki := color.BlueString("Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/main.html")
 	core.MessageChannel <- messages.UserMessage{
-		Level:   messages.Info,
-		Message: "Visit the wiki for additional information https://merlin-c2.readthedocs.io/en/latest/server/menu/main.html",
+		Level:   messages.Plain,
+		Message: fmt.Sprintf("%s\n%s\n\n%s", version, tableString, wiki),
 		Time:    time.Now().UTC(),
 		Error:   false,
 	}
 }
 
-func (s *Service) exit(cmd []string) {
-	if len(cmd) > 1 {
-		if strings.ToLower(cmd[1]) == "-y" {
-			core.Exit()
-		}
-	}
-	if core.Confirm("Are you sure you want to quit the server?") {
-		core.Exit()
-	}
-}
-
+// completer gets a list of all commands in the repository and creates the tab completion functions for all commands
+// that are available for the current menu
 func (s *Service) completer() *readline.PrefixCompleter {
 	var completers []readline.PrefixCompleterInterface
 
@@ -465,17 +359,146 @@ func (s *Service) completer() *readline.PrefixCompleter {
 		if cmd.Menu(s.menu) {
 			var c readline.PrefixCompleterInterface
 			switch s.menu {
-			case menu.LISTENERSETUP:
-				c, _ = cmd.Completer(s.listener)
+			case menu.AGENT:
+				c = cmd.Completer(s.menu, s.agent)
+				if c != nil {
+					// If the Agent's OS is ALL or UNDEFINED, add the completer
+					// If the command's OS is ALL or LOCAL, add the completer
+					if cmd.OS() == merlinOS.ALL || cmd.OS() == merlinOS.LOCAL || s.agentOS == merlinOS.UNDEFINED || s.agentOS == merlinOS.ALL {
+						completers = append(completers, c)
+						continue
+					}
+					// If the Agent's OS is defined, check if the command is valid for the Agent's OS
+					if s.agentOS == cmd.OS() {
+						completers = append(completers, c)
+					}
+				}
+			case menu.LISTENER, menu.LISTENERS, menu.LISTENERSETUP:
+				c = cmd.Completer(s.menu, s.listener)
+				if c != nil {
+					completers = append(completers, c)
+				}
+			case menu.MAIN:
+				c = cmd.Completer(s.menu, uuid.Nil)
+				if c != nil {
+					completers = append(completers, c)
+				}
+			case menu.MODULE, menu.MODULES:
+				c = cmd.Completer(s.menu, s.module)
+				if c != nil {
+					completers = append(completers, c)
+				}
 			default:
-				c, _ = cmd.Completer(s.agent)
+				core.MessageChannel <- messages.ErrorMessage(fmt.Sprintf("pkg/cli/services/cli.completer(): unhandled menu %s", s.menu))
 			}
-			completers = append(completers, c)
 		}
 	}
 	return readline.NewPrefixCompleter(completers...)
 }
 
+// queueCommand processes the 'queue' command that results in calling handle() multiple times, once for each Agent in the group
+func (s *Service) queueCommand(input string) {
+	// 0. queue, 1. AgentID/GroupID, 2. command, 3. args
+	command := strings.Split(input, " ")
+
+	// Get the queue command from the repository
+	cmd, err := s.commandRepo.Get(s.menu, command[0])
+	if err != nil {
+		msg := messages.UserMessage{
+			Level: messages.Warn,
+			Time:  time.Now().UTC(),
+			Error: false,
+		}
+		switch err {
+		case repository.ErrCommandNotFound:
+			msg.Message = fmt.Sprintf("'%s' is not a valid command", command[0])
+		case repository.ErrCommandNotInMenu:
+			msg.Message = fmt.Sprintf("'%s' is not a valid command for this '%s' menu", command[0], s.menu.String())
+		default:
+			msg.Message = fmt.Sprintf("%s.handle(): %s", pkg, err)
+		}
+		core.MessageChannel <- msg
+		return
+	}
+
+	// Check for help and desired argument counts
+	resp := cmd.Do(s.menu, uuid.Nil, input)
+	if resp.Message != nil {
+		core.MessageChannel <- *resp.Message
+		return
+	}
+
+	// Ensure the original menu context is preserved and restored to include the completer
+	originalMenu := s.menu
+	defer func(m menu.Menu) {
+		s.menu = m
+		service.prompt.Config.AutoComplete = s.completer()
+	}(originalMenu)
+
+	// See if the first argument is a UUID
+	id, err := uuid.FromString(command[1])
+	if err == nil {
+		s.Lock()
+		s.menu = menu.AGENT
+		s.agent = id
+		s.handle(strings.Join(command[2:], " "))
+		s.agent = uuid.Nil
+		s.menu = menu.MAIN
+		s.Unlock()
+		return
+	}
+
+	var found bool
+	var group string
+
+	// See if the first argument is a group
+	for _, group = range agentAPI.GroupListNames() {
+		if group == command[1] {
+			found = true
+			break
+		}
+	}
+
+	// Could not find a group with the provided name
+	if !found {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Warn,
+			Message: fmt.Sprintf("Couldn't find an Agent or group with the name '%s'", command[1]),
+			Time:    time.Now().UTC(),
+			Error:   true,
+		}
+		return
+	}
+
+	// Run the command for each agent in the group
+	for _, agent := range agentAPI.GroupList(group) {
+		// We know it's a valid UUID because it's already in a group
+		id, err = uuid.FromString(agent)
+		if err != nil {
+			core.MessageChannel <- messages.UserMessage{
+				Level:   messages.Warn,
+				Message: fmt.Sprintf("error parsing UUID from string: %s", err),
+				Time:    time.Now().UTC(),
+				Error:   false,
+			}
+			return
+		}
+		s.Lock()
+		s.menu = menu.AGENT
+		s.agent = id
+		// 0. queue
+		// 1. agent or group ID
+		// 2. command to run
+		s.handle(strings.Join(command[2:], " "))
+		s.menu = menu.MAIN
+		s.agent = uuid.Nil
+		s.Unlock()
+	}
+
+	return
+}
+
+// registerMessageChannel registers as a message channel to receive messages from the server
 func (s *Service) registerMessageChannel() {
 	um := messages.Register(s.id)
 	if um.Error {
@@ -487,6 +510,8 @@ func (s *Service) registerMessageChannel() {
 	}
 }
 
+// getUserMessages is an infinite loop as a go routine that listens for messages from the server and adds them to the
+// local message channel
 func (s *Service) getUserMessages() {
 	go func() {
 		for {
@@ -495,11 +520,12 @@ func (s *Service) getUserMessages() {
 	}()
 }
 
-// printUserMessage is used to print all messages to STDOUT for command line clients
+// printUserMessage is an infinite loop as go routine that receives messages and prints them to STDOUT
 func printUserMessage() {
 	go func() {
 		for {
 			m := <-core.MessageChannel
+			core.STDOUT.Lock()
 			switch m.Level {
 			case messages.Info:
 				fmt.Println(color.CyanString("\n[i] %s", m.Message))
@@ -518,6 +544,7 @@ func printUserMessage() {
 			default:
 				fmt.Println(color.RedString("\n[_-_] Invalid message level: %d\r\n%s", m.Level, m.Message))
 			}
+			core.STDOUT.Unlock()
 		}
 	}()
 }
@@ -532,22 +559,4 @@ func osSignalHandler() {
 			core.Exit()
 		}
 	}()
-}
-
-// interactAgent is used to issue commands to a specific agent
-func (s *Service) interactAgent(id string) {
-	agentID, err := uuid.FromString(id)
-	if err != nil {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("There was an error interacting with agent %s", id),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-	} else {
-		// TODO Validate the agent exists
-		s.agent = agentID
-		s.menu = menu.AGENT
-		s.prompt.SetPrompt(fmt.Sprintf("\033[31mMerlin[\033[32magent\033[31m][\033[33m%s\033[31m]»\033[0m ", agentID))
-	}
 }

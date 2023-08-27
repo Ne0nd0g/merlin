@@ -63,6 +63,16 @@ func (r *Repository) Get(id uuid.UUID) (listener *listener.Listener, err error) 
 	return nil, ErrListenerNotFound
 }
 
+func (r *Repository) Remove(id uuid.UUID) {
+	r.Lock()
+	defer r.Unlock()
+	for i, l := range r.listeners {
+		if l.ID() == id {
+			r.listeners = append(r.listeners[:i], r.listeners[i+1:]...)
+		}
+	}
+}
+
 func (r *Repository) ServerID(id uuid.UUID, serverID uuid.UUID) (err error) {
 	r.Lock()
 	defer r.Unlock()

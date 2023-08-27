@@ -21,16 +21,25 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package start
 
 import (
+	// Standard
 	"fmt"
+	"strings"
+	"time"
+
+	// 3rd Party
+	"github.com/chzyer/readline"
+	uuid "github.com/satori/go.uuid"
+
+	// Internal
+	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/run"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/multi/run"
+	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
+	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
-	"github.com/chzyer/readline"
-	uuid "github.com/satori/go.uuid"
-	"strings"
-	"time"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -42,56 +51,141 @@ type Command struct {
 	os     os.OS       // os is the supported operating system the Agent command can be executed on
 }
 
+// NewCommand is a factory that builds and returns a Command structure that implements the Command interface
 func NewCommand() *Command {
 	var cmd Command
 	cmd.name = "start"
-	cmd.menus = []menu.Menu{menu.LISTENERSETUP}
+	cmd.menus = []menu.Menu{menu.LISTENER, menu.LISTENERS, menu.LISTENERSETUP}
 	cmd.os = os.LOCAL
-	cmd.help.Description = "Create and start the listener on the server"
-	cmd.help.Usage = "start"
-	cmd.help.Example = "Merlin[listeners]» use https\n" +
-		"Merlin[listeners][https]» start\n\n" +
-		"[!] Insecure publicly distributed Merlin x.509 testing certificate in use for https server on 127.0.0.1:443\n" +
-		"Additional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates\n\n" +
-		"[+] Default listener was created with an ID of: 632db67c-7045-462f-bf09-aea90272aed5\n" +
-		"Merlin[listeners][Default]»\n[+] Started HTTPS listener on 127.0.0.1:443\n" +
-		"Merlin[listeners][Default]»"
-	cmd.help.Notes = "This command is an alias for the 'run' command"
+	description := "Create and start the listener on the server"
+	usage := "start listenerID"
+	example := "Merlin[listeners]» use https\n" +
+		"\tMerlin[listeners][https]» start\n\n" +
+		"\t[!] Insecure publicly distributed Merlin x.509 testing certificate in use for https server on 127.0.0.1:443\n" +
+		"\tAdditional details: https://github.com/Ne0nd0g/merlin/wiki/TLS-Certificates\n\n" +
+		"\t[+] Default listener was created with an ID of: 632db67c-7045-462f-bf09-aea90272aed5\n" +
+		"\tMerlin[listeners][Default]»\n" +
+		"\t[+] Started HTTPS listener on 127.0.0.1:443\n" +
+		"\tMerlin[listeners][Default]»"
+	notes := "This command is an alias for the 'run' command"
+	cmd.help = help.NewHelp(description, example, notes, usage)
 	return &cmd
 }
 
-func (c *Command) Completer(id uuid.UUID) (readline.PrefixCompleterInterface, error) {
-	return readline.PcItem(c.name), nil
-}
-
-func (c *Command) Description() string {
-	return c.help.Description
-}
-
-func (c *Command) Do(arguments string) (message messages.UserMessage) {
+func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixCompleterInterface) {
+	if core.Debug {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Debug,
+			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
+			Time:    time.Now().UTC(),
+		}
+	}
+	switch m {
+	case menu.LISTENER:
+		comp = readline.PcItem(c.name)
+	case menu.LISTENERS:
+		comp = readline.PcItem(c.name,
+			readline.PcItemDynamic(completer.ListenerListCompleter()),
+		)
+	default:
+		comp = readline.PcItem(c.name)
+	}
 	return
 }
 
-func (c *Command) DoID(id uuid.UUID, arguments string) (message messages.UserMessage) {
-	// Parse the arguments
-	args := strings.Split(arguments, " ")
-
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
-		case "help", "-h", "--help", "/?":
-			message.Message = fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description, c.help.Usage, c.help.Example, c.help.Notes)
-			message.Level = messages.Info
-			message.Time = time.Now().UTC()
-			return
+// Do executes the command and returns a Response to the caller to facilitate changes in the CLI service
+// m, an optional parameter, is the Menu the command was executed from
+// id, an optional parameter, used to identify a specific Agent or Listener
+// arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
+// command itself passed into command for processing
+func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
+	if core.Debug {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Debug,
+			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
+			Time:    time.Now().UTC(),
 		}
 	}
 
-	cmd := run.NewCommand()
-	message = cmd.DoID(id, arguments)
+	// Parse the arguments
+	args := strings.Split(arguments, " ")
 
+	// Check for help first
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?":
+			response.Message = &messages.UserMessage{
+				Level:   messages.Info,
+				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
+				Time:    time.Now().UTC(),
+			}
+			return
+		}
+	}
+	switch m {
+	case menu.LISTENER:
+		msg := listenerAPI.Start(id)
+		response.Message = &msg
+	case menu.LISTENERS:
+		return c.DoListeners(arguments)
+	case menu.LISTENERSETUP:
+		return run.NewCommand().Do(m, id, arguments)
+	}
 	return
 }
 
+func (c *Command) DoListeners(arguments string) (response commands.Response) {
+	// Parse the arguments
+	args := strings.Split(arguments, " ")
+
+	if len(args) < 2 {
+		response.Message = &messages.UserMessage{
+			Level:   messages.Info,
+			Message: fmt.Sprintf("'%s' command requires at least one argument from this menu\nstart listenerID", c),
+			Time:    time.Now().UTC(),
+		}
+		return
+	}
+
+	// Check for help first
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "help", "-h", "--help", "/?":
+			response.Message = &messages.UserMessage{
+				Level:   messages.Info,
+				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
+				Time:    time.Now().UTC(),
+			}
+			return
+		}
+	}
+	// Parse the UUID
+	id, err := uuid.FromString(args[1])
+	if err != nil {
+		response.Message = &messages.UserMessage{
+			Level:   messages.Warn,
+			Message: fmt.Sprintf("there was an error parsing the UUID '%s': %s\n%s", args[1], err, c.help.Usage()),
+		}
+		return
+	}
+	msg := listenerAPI.Start(id)
+	response.Message = &msg
+	return
+}
+
+// Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
+func (c *Command) Help(m menu.Menu) help.Help {
+	if core.Debug {
+		core.MessageChannel <- messages.UserMessage{
+			Level:   messages.Debug,
+			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
+			Time:    time.Now().UTC(),
+		}
+	}
+	return c.help
+}
+
+// Menu checks to see if the command is supported for the provided menu
 func (c *Command) Menu(m menu.Menu) bool {
 	for _, v := range c.menus {
 		if v == m || v == menu.ALLMENUS {
@@ -101,10 +195,12 @@ func (c *Command) Menu(m menu.Menu) bool {
 	return false
 }
 
-func (c *Command) String() string {
-	return c.name
+// OS returns the supported operating system the Agent command can be executed on
+func (c *Command) OS() os.OS {
+	return c.os
 }
 
-func (c *Command) Usage() string {
-	return c.help.Usage
+// String returns the unique name of the command as a string
+func (c *Command) String() string {
+	return c.name
 }

@@ -28,6 +28,7 @@ import (
 type Repository interface {
 	Add(listener listener.Listener)
 	Get(id uuid.UUID) (*listener.Listener, error)
+	Remove(id uuid.UUID)
 	ServerID(id uuid.UUID, serverID uuid.UUID) error
 	Update(id uuid.UUID, options map[string]string) error
 }
