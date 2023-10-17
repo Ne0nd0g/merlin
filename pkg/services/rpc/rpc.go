@@ -39,7 +39,7 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
@@ -127,7 +127,7 @@ func withMemoryClientMessageRepository() message.Repository {
 // Listen provides a stream of messages for a CLI client
 func (s *Server) Listen(in *pb.ID, stream pb.Merlin_ListenServer) error {
 	// Parse the UUID from the request
-	id, err := uuid.FromString(in.Id)
+	id, err := uuid.Parse(in.Id)
 	if err != nil {
 		return err
 	}
@@ -161,7 +161,7 @@ func (s *Server) ListenForClientMessages() {
 // Reconnect is used by RPC client's to re-establish a connection to the RPC server
 func (s *Server) Reconnect(ctx context.Context, id *pb.ID) (*pb.ID, error) {
 	// Parse the UUID from the request
-	clientID, err := uuid.FromString(id.Id)
+	clientID, err := uuid.Parse(id.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (s *Server) Socks(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 	}
 
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(in.ID)
+	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 		slog.Error(err.Error())

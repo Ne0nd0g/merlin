@@ -19,6 +19,7 @@
 package job
 
 import (
+	// Standard
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -29,22 +30,25 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
+	"github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/client/message"
 	memoryMessage "github.com/Ne0nd0g/merlin/pkg/client/message/memory"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/jobs"
+	infoJobs "github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/jobs/memory"
-	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 )
 
 // Service holds references to repositories to manage Job objects
 type Service struct {
-	jobRepo      jobs.Repository
+	jobRepo      infoJobs.Repository
 	messageRepo  message.Repository
 	agentService *agent.Service
 }
@@ -66,7 +70,7 @@ func NewJobService() *Service {
 	return memoryService
 }
 
-func WithJobMemoryRepository() jobs.Repository {
+func WithJobMemoryRepository() infoJobs.Repository {
 	return memory.NewRepository()
 }
 
@@ -521,11 +525,11 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 		command = fmt.Sprintf("SOCKS connection %s packet %d", conn.ID, conn.Index)
 	default:
 		fmt.Printf("DEFAULT\n")
-		command = fmt.Sprintf("%s %+v", jobs.String(job.Type), job.Payload)
+		command = fmt.Sprintf("%s %+v", job.Type, job.Payload)
 	}
 
 	// Create Job info structure
-	jobInfo := jobs.NewInfo(agentID, jobs.String(job.Type), command)
+	jobInfo := infoJobs.NewInfo(agentID, job.Type.String(), command)
 
 	// SOCKS jobs create their own token that is used through the lifetime of the connection
 	if job.Token == uuid.Nil {
@@ -542,7 +546,7 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 
 	// Log the job
 	msg := fmt.Sprintf("Created job Type:%s, ID:%s, Status:%s, Command:%s",
-		messages.String(job.Type),
+		job.Type,
 		job.ID,
 		"Created",
 		command,
@@ -565,10 +569,10 @@ func (s *Service) checkJob(job jobs.Job) error {
 	if job.Token != j.Token() {
 		return fmt.Errorf("job %s for agent %s did not contain the correct token. Expected: %s, Got: %s", job.ID, job.AgentID, j.Token(), job.Token)
 	}
-	if j.Status() == jobs.COMPLETE {
+	if j.Status() == infoJobs.COMPLETE {
 		return fmt.Errorf("job %s for agent %s was previously completed on %s", job.ID, job.AgentID, j.Completed())
 	}
-	if j.Status() == jobs.CANCELED {
+	if j.Status() == infoJobs.CANCELED {
 		return fmt.Errorf("job %s for agent %s was previously canceled on", job.ID, job.AgentID)
 	}
 	return nil
@@ -652,8 +656,8 @@ func (s *Service) Get(agentID uuid.UUID) ([]jobs.Job, error) {
 }
 
 // GetAll returns a map of all jobs in the job repository
-func (s *Service) GetAll() []jobs.Info {
-	var returnJobs []jobs.Info
+func (s *Service) GetAll() []infoJobs.Info {
+	var returnJobs []infoJobs.Info
 	for _, job := range s.jobRepo.GetAll() {
 		returnJobs = append(returnJobs, job)
 	}
@@ -661,25 +665,25 @@ func (s *Service) GetAll() []jobs.Info {
 }
 
 // GetAllActive returns a list of all jobs that are not complete or canceled
-func (s *Service) GetAllActive() []jobs.Info {
-	var returnJobs []jobs.Info
+func (s *Service) GetAllActive() []infoJobs.Info {
+	var returnJobs []infoJobs.Info
 	for _, job := range s.jobRepo.GetAll() {
-		if job.Status() != jobs.COMPLETE && job.Status() != jobs.CANCELED {
+		if job.Status() != infoJobs.COMPLETE && job.Status() != infoJobs.CANCELED {
 			returnJobs = append(returnJobs, job)
 		}
 	}
 	return returnJobs
 }
 
-func (s *Service) GetAgentActive(agentID uuid.UUID) ([]jobs.Info, error) {
-	var returnJobs []jobs.Info
+func (s *Service) GetAgentActive(agentID uuid.UUID) ([]infoJobs.Info, error) {
+	var returnJobs []infoJobs.Info
 	if !s.agentService.Exist(agentID) {
 		return returnJobs, fmt.Errorf("%s is not a valid agent", agentID)
 	}
 
 	for _, job := range s.jobRepo.GetAll() {
 		if job.AgentID() == agentID {
-			if job.Status() != jobs.COMPLETE && job.Status() != jobs.CANCELED && job.AgentID() == agentID {
+			if job.Status() != infoJobs.COMPLETE && job.Status() != infoJobs.CANCELED && job.AgentID() == agentID {
 				returnJobs = append(returnJobs, job)
 			}
 		}
@@ -700,20 +704,20 @@ func (s *Service) GetTableActive(agentID uuid.UUID) ([][]string, error) {
 			//message("debug", fmt.Sprintf("GetTableActive(%s) ID: %s, Job: %+v", agentID.String(), id, job))
 			var status string
 			switch job.Status() {
-			case jobs.ACTIVE:
+			case infoJobs.ACTIVE:
 				status = "Active"
-			case jobs.CREATED:
+			case infoJobs.CREATED:
 				status = "Created"
-			case jobs.SENT:
+			case infoJobs.SENT:
 				status = "Sent"
-			case jobs.RETURNED:
+			case infoJobs.RETURNED:
 				status = "Returned"
 			default:
 				status = fmt.Sprintf("Unknown job status: %d", job.Status())
 			}
 			var zeroTime time.Time
 			// Don't add completed or canceled jobs
-			if job.Status() != jobs.COMPLETE && job.Status() != jobs.CANCELED {
+			if job.Status() != infoJobs.COMPLETE && job.Status() != infoJobs.CANCELED {
 				var sent string
 				if job.Sent() != zeroTime {
 					sent = job.Sent().Format(time.RFC3339)
@@ -739,16 +743,16 @@ func (s *Service) GetTableAll() [][]string {
 	for id, job := range s.jobRepo.GetAll() {
 		var status string
 		switch job.Status() {
-		case jobs.CREATED:
+		case infoJobs.CREATED:
 			status = "Created"
-		case jobs.SENT:
+		case infoJobs.SENT:
 			status = "Sent"
-		case jobs.RETURNED:
+		case infoJobs.RETURNED:
 			status = "Returned"
 		default:
 			status = fmt.Sprintf("Unknown job status: %d", job.Status())
 		}
-		if job.Status() != jobs.COMPLETE && job.Status() != jobs.CANCELED {
+		if job.Status() != infoJobs.COMPLETE && job.Status() != infoJobs.CANCELED {
 			var zeroTime time.Time
 			var sent string
 			if job.Sent() != zeroTime {
@@ -794,7 +798,7 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 					return err
 				}
 				if core.Debug {
-					fmt.Printf("Received %s message without job token: %s\n", messages.String(job.Type), err)
+					fmt.Printf("Received %s message without job token: %s\n", job.Type, err)
 				}
 			}
 			switch job.Type {

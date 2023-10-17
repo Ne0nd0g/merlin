@@ -21,14 +21,14 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 // Package client contains code for working with Merlin Command Line Interface (CLI) clients connected over gRPC
 package client
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 type Client struct {
 	id uuid.UUID
 }
 
 func NewClient() Client {
-	return Client{id: uuid.NewV4()}
+	return Client{id: uuid.New()}
 }
 
 func NewClientWithID(id uuid.UUID) Client {

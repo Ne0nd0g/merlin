@@ -25,7 +25,7 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"gopkg.in/square/go-jose.v2/jwt"
 
 	// Merlin
@@ -61,7 +61,10 @@ func ValidateJWT(agentJWT string, leeway time.Duration, key []byte) (agentID uui
 		return
 	}
 
-	agentID = uuid.FromStringOrNil(claims.ID)
+	agentID, err = uuid.Parse(claims.ID)
+	if err != nil {
+		return
+	}
 
 	// Validate claims if leeway is greater than or equal to 0
 	if leeway >= 0 {

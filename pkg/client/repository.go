@@ -1,6 +1,6 @@
 package client
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 type Repository interface {
 	Add(client Client)

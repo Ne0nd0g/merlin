@@ -31,7 +31,7 @@ import (
 	"strings"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
@@ -129,7 +129,7 @@ func (s *Server) RunModule(ctx context.Context, m *pb.ModuleRun) (msgs *pb.Messa
 	msgs = &pb.Messages{}
 
 	// Parse Agent UUID
-	agentID, err := uuid.FromString(m.Agent)
+	agentID, err := uuid.Parse(m.Agent)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", m.Agent, err)
 		slog.Error(err.Error())

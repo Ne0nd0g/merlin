@@ -33,9 +33,9 @@ import (
 	"time"
 
 	// X Packages
+	"github.com/google/uuid"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
-	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
@@ -109,7 +109,7 @@ type Template struct {
 func New(options map[string]string) (Server, error) {
 	var err error
 	var s Server
-	s.id = uuid.NewV4()
+	s.id = uuid.New()
 	s.state = Stopped
 
 	// Protocol

@@ -18,7 +18,7 @@
 // Package group manages Agent groupings so that tasks can be issued against a group
 package group
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 // Repository is an interface used to add, get, or update groups from a data source
 type Repository interface {

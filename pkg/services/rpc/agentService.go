@@ -29,7 +29,7 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
@@ -106,7 +106,7 @@ func (s *Server) agentToAgentInfo(a agents.Agent) *pb.AgentInfo {
 func (s *Server) GetAgent(ctx context.Context, id *pb.ID) (agentInfo *pb.AgentInfo, err error) {
 	agentInfo = &pb.AgentInfo{}
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(id.Id)
+	agentID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		return
@@ -125,7 +125,7 @@ func (s *Server) GetAgent(ctx context.Context, id *pb.ID) (agentInfo *pb.AgentIn
 // GetAgentLinks returns a list of linked child Agent IDs
 func (s *Server) GetAgentLinks(ctx context.Context, id *pb.ID) (*pb.Slice, error) {
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(id.Id)
+	agentID, err := uuid.Parse(id.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func (s *Server) GetAgents(ctx context.Context, e *emptypb.Empty) (*pb.Slice, er
 func (s *Server) GetAgentStatus(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	msg = &pb.Message{}
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(id.Id)
+	agentID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		return
@@ -233,7 +233,7 @@ func (s *Server) GetAgentStatus(ctx context.Context, id *pb.ID) (msg *pb.Message
 func (s *Server) GroupAdd(ctx context.Context, in *pb.Group) (msg *pb.Message, err error) {
 	msg = &pb.Message{}
 	// Parse the UUID from the request
-	agentUUID, err := uuid.FromString(in.AgentID)
+	agentUUID, err := uuid.Parse(in.AgentID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.AgentID, err)
 		slog.Error(err.Error())
@@ -279,7 +279,7 @@ func (s *Server) GroupListAll(ctx context.Context, e *emptypb.Empty) (*pb.GroupM
 func (s *Server) GroupRemove(ctx context.Context, in *pb.Group) (msg *pb.Message, err error) {
 	msg = &pb.Message{}
 	// Parse the UUID from the request
-	agentUUID, err := uuid.FromString(in.AgentID)
+	agentUUID, err := uuid.Parse(in.AgentID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.AgentID, err)
 		slog.Error(err.Error())
@@ -317,7 +317,7 @@ func lastCheckin(t time.Time) string {
 // args[0:] = the note to set
 func (s *Server) Note(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(in.ID)
+	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 		slog.Error(err.Error())
@@ -338,7 +338,7 @@ func (s *Server) Note(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, er
 func (s *Server) Remove(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	msg = &pb.Message{}
 	// Parse the UUID from the request
-	agentUUID, err := uuid.FromString(id.Id)
+	agentUUID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id, err)
 		slog.Error(err.Error())

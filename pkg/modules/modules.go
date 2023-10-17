@@ -29,7 +29,7 @@ import (
 	"strings"
 
 	// Third-Party
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 // Module is a structure containing the base information or template for modules
@@ -75,7 +75,7 @@ type PowerShell struct {
 // NewModule is a factory to instantiate a module object using the provided file path to a module's json file
 func NewModule(modulePath string) (Module, error) {
 	m := Module{
-		id: uuid.NewV4(),
+		id: uuid.New(),
 	}
 
 	// Read in the module's JSON configuration file

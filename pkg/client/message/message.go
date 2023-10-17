@@ -22,7 +22,7 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package message
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"time"
 )
 
@@ -56,7 +56,7 @@ type Message struct {
 // NewMessage is a factory that builds and returns a Message structure
 func NewMessage(level Level, message string) *Message {
 	return &Message{
-		id:        uuid.NewV4(),
+		id:        uuid.New(),
 		level:     level,
 		message:   message,
 		timestamp: time.Now().UTC(),
@@ -68,7 +68,7 @@ func NewMessage(level Level, message string) *Message {
 // with a specified timestamp and error flag for converting protobuf messages
 func NewMessageFull(level Level, message string, timestamp time.Time, isError bool) *Message {
 	return &Message{
-		id:        uuid.NewV4(),
+		id:        uuid.New(),
 		level:     level,
 		message:   message,
 		timestamp: timestamp,
@@ -78,7 +78,7 @@ func NewMessageFull(level Level, message string, timestamp time.Time, isError bo
 
 func NewErrorMessage(err error) *Message {
 	return &Message{
-		id:        uuid.NewV4(),
+		id:        uuid.New(),
 		level:     Warn,
 		message:   err.Error(),
 		timestamp: time.Now().UTC(),

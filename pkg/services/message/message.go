@@ -19,18 +19,21 @@
 package message
 
 import (
-	"context"
 	// Standard
+	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"log/slog"
 	"math/rand"
 	"strings"
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
+	"github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
@@ -39,7 +42,6 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/delegate"
 	delegateMemory "github.com/Ne0nd0g/merlin/pkg/delegate/memory"
-	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/http"
 	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
@@ -49,7 +51,7 @@ import (
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
 	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
-	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )
@@ -210,9 +212,11 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	if len(data) > 0 {
 		msg, err = s.listener.Deconstruct(data, key)
 		if err != nil {
+			slog.Warn("there was an error deconstructing the message", "error", err, "agent", id)
 			//logging.Message("debug", fmt.Sprintf("pkg/services/message.Handle(): there was an error deconstructing the message for agent %s: %s", id, err))
 			// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
 			// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
+			slog.Warn(fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id))
 			s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id)))
 
 			// Unable to deconstruct because this listener's transforms don't match what the Agent used
@@ -302,7 +306,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 			return
 		}
 	default:
-		err = fmt.Errorf("unhandled authenticated messages.Base type %s", messages.String(msg.Type))
+		err = fmt.Errorf("unhandled authenticated messages.Base type %s", msg.Type)
 		slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 		return
 	}
@@ -469,7 +473,6 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 	}
 
 	returnMessage := messages.Base{
-		Version:   0,
 		ID:        id,
 		Type:      messages.IDLE,
 		Payload:   nil,
@@ -676,7 +679,7 @@ func (s *Service) unlink(parentID uuid.UUID, cmd jobs.Command) (returnCmd jobs.C
 		cmd.Args = []string{cmd.Args[0], ""}
 		// Convert UUID from string
 		var childID uuid.UUID
-		childID, err = uuid.FromString(cmd.Args[0])
+		childID, err = uuid.Parse(cmd.Args[0])
 		if err != nil {
 			err = fmt.Errorf("pkg/services/message.unlink(): there was an error converting the child agent's UUID: %s from a string for the unlink command: %s", cmd.Args[0], err)
 			return

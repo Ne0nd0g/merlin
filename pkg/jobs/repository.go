@@ -17,11 +17,17 @@
 
 package jobs
 
-import uuid "github.com/satori/go.uuid"
+import (
+	// 3rd Party
+	"github.com/google/uuid"
+
+	// Merlin Message
+	jobs2 "github.com/Ne0nd0g/merlin-message/jobs"
+)
 
 type Repository interface {
 	// Add the Job and associated Info tracking structure to the repository
-	Add(job Job, info Info)
+	Add(job jobs2.Job, info Info)
 	// Clear removes all Jobs that have not already been sent to the associated Agent
 	Clear(agentID uuid.UUID) error
 	// ClearAll removes all Jobs that have not already been sent for ALL Agents
@@ -31,7 +37,7 @@ type Repository interface {
 	// GetInfo returns the Job Info tracking structure for the associate Job ID
 	GetInfo(jobID string) (Info, error)
 	// GetJobs returns all jobs waiting to be sent to the associated Agent
-	GetJobs(agentID uuid.UUID) ([]Job, error)
+	GetJobs(agentID uuid.UUID) ([]jobs2.Job, error)
 	// UpdateInfo replaces the Job Info tracking structure with the one provided
 	UpdateInfo(info Info) error
 }

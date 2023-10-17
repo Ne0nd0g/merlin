@@ -28,7 +28,7 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
@@ -42,7 +42,7 @@ import (
 func addJob(agentID string, jobType string, jobArgs []string) (msg *pb.Message, err error) {
 	msg = &pb.Message{}
 	// Parse the UUID from the request
-	agentUUID, err := uuid.FromString(agentID)
+	agentUUID, err := uuid.Parse(agentID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", agentID, err)
 		slog.Error(err.Error())
@@ -64,7 +64,7 @@ func addJob(agentID string, jobType string, jobArgs []string) (msg *pb.Message, 
 func (s *Server) ClearJobs(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	msg = &pb.Message{}
 	// Parse the UUID from the request
-	agentUUID, err := uuid.FromString(id.Id)
+	agentUUID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id, err)
 		return
@@ -90,7 +90,7 @@ func (s *Server) ClearJobsCreated(ctx context.Context, e *emptypb.Empty) (msg *p
 func (s *Server) GetAgentActiveJobs(ctx context.Context, id *pb.ID) (*pb.Jobs, error) {
 	returnJobs := &pb.Jobs{}
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(id.Id)
+	agentID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		slog.Error(err.Error())

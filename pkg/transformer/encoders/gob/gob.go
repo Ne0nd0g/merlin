@@ -21,11 +21,16 @@ package gob
 import (
 	// Standard
 	"bytes"
+	"context"
 	"encoding/gob"
 	"fmt"
+	"log/slog"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/messages"
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
+
+	// Internal
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
 const (
@@ -89,20 +94,30 @@ func (c *Coder) Encode(e any) ([]byte, error) {
 // Decode takes in bytes and Gob decodes it to its original type
 // This function is exported so that it can be called directly outside the Transformer interface
 func (c *Coder) Decode(data []byte) (any, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "data length", len(data), "concrete type", fmt.Sprintf("%d", c.concrete))
 	//fmt.Printf("Gob Decode %T concrete: %d\n", data, c.concrete)
 	var err error
 	switch c.concrete {
 	case STRING:
 		var d string
 		err = gob.NewDecoder(bytes.NewReader(data)).Decode(&d)
+		if err != nil {
+			slog.Error("there was an error gob decoding the 'string' type", "error", err)
+		}
 		return d, err
 	case BASE:
 		var d messages.Base
 		err = gob.NewDecoder(bytes.NewReader(data)).Decode(&d)
+		if err != nil {
+			slog.Error("there was an error gob decoding the 'BASE' type", "error", err)
+		}
 		return d, err
 	case DELEGATE:
 		var d messages.Delegate
 		err = gob.NewDecoder(bytes.NewReader(data)).Decode(&d)
+		if err != nil {
+			slog.Error("there was an error gob decoding the 'DELEGATE' type", "error", err)
+		}
 		return d, err
 	default:
 		return nil, fmt.Errorf("pkg/gob/encoders.Decode(): unhandled concrete type %d", c.concrete)

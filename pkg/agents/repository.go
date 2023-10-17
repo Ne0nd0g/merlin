@@ -18,7 +18,7 @@
 package agents
 
 import (
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"time"
 )
 

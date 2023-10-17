@@ -27,13 +27,15 @@ import (
 	"net"
 	"strings"
 	"sync"
+
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	merlinJob "github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
-	cli "github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	merlinJob "github.com/Ne0nd0g/merlin/pkg/jobs"
 )
 
 // listeners is a map of single TCP bound interfaces associated keyed to a specific agent ID
@@ -84,7 +86,7 @@ func Parse(options map[string]string) ([]string, error) {
 			return nil, fmt.Errorf("there was an error starting the SOCKS tcp listener on %s - %s", iface, err)
 		}
 		// Convert Agent UUID from string
-		agent, err := uuid.FromString(options["agent"])
+		agent, err := uuid.Parse(options["agent"])
 		if err != nil {
 			return nil, fmt.Errorf("there was an error converting the agent UUID from a string in the SOCKS module: %s", err)
 		}
@@ -106,7 +108,7 @@ func Parse(options map[string]string) ([]string, error) {
 		return []string{fmt.Sprintf("Started SOCKS listener for agent %s on %s", agent, iface)}, nil
 	case "stop":
 		// Convert Agent UUID from string
-		agent, err := uuid.FromString(options["agent"])
+		agent, err := uuid.Parse(options["agent"])
 		if err != nil {
 			return nil, fmt.Errorf("there was an error converting the agent UUID from a string in the SOCKS module: %s", err)
 		}
@@ -161,8 +163,8 @@ func start(agent uuid.UUID) {
 			slog.Error(fmt.Sprintf("there was an error accepting a SOCKS connection for agent %s: %s", agent, err))
 			break
 		}
-		id := uuid.NewV4()
-		if cli.Verbose {
+		id := uuid.New()
+		if core.Verbose {
 			slog.Info(fmt.Sprintf("Received connection from %s to %s and assigned connection ID %s", conn.RemoteAddr(), conn.LocalAddr(), id))
 		}
 		connection := &Connection{
@@ -185,7 +187,7 @@ func readSOCKSClient(id uuid.UUID) {
 
 	var index int
 	jobID := core.RandStringBytesMaskImprSrc(10)
-	token := uuid.NewV4()
+	token := uuid.New()
 	for {
 		// Create SOCKS payload
 		socks := merlinJob.Socks{

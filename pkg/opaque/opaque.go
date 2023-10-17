@@ -28,7 +28,7 @@ import (
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
 	"github.com/fatih/color"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"go.dedis.ch/kyber/v3"
 
 	// Internal
@@ -85,10 +85,14 @@ func ServerRegisterInit(AgentID uuid.UUID, o Opaque, key kyber.Scalar) (Opaque, 
 		return Opaque{}, &server, fmt.Errorf("there was an error unmarshalling the OPAQUE user register initialization message from bytes:\r\n%s", errUserRegInit)
 	}
 
-	if !bytes.Equal(userRegInit.UserID, AgentID.Bytes()) {
+	agentIDBytes, err := AgentID.MarshalBinary()
+	if err != nil {
+		return Opaque{}, &server, fmt.Errorf("there was an error marshalling the AgentID to bytes: %s", err)
+	}
+	if !bytes.Equal(userRegInit.UserID, agentIDBytes) {
 		if core.Verbose {
 			message("note", fmt.Sprintf("OPAQUE UserID: %v", userRegInit.UserID))
-			message("note", fmt.Sprintf("Merlin Message UserID: %v", AgentID.Bytes()))
+			message("note", fmt.Sprintf("Merlin Message UserID: %v", agentIDBytes))
 		}
 		regUUID, _ := uuid.FromBytes(userRegInit.UserID)
 		return Opaque{}, &server, fmt.Errorf("the OPAQUE UserID %s doesn't match the Merlin message ID %s", regUUID, AgentID)
@@ -124,9 +128,14 @@ func ServerRegisterComplete(AgentID uuid.UUID, o Opaque, server *Server) (Opaque
 
 	server.regComplete = server.reg.Complete(&userRegComplete)
 
+	agentIDBytes, err := AgentID.MarshalBinary()
+	if err != nil {
+		return Opaque{}, fmt.Errorf("there was an error marshalling the AgentID to bytes: %s", err)
+	}
+
 	// Check to make sure Merlin  UserID matches OPAQUE UserID
-	if !bytes.Equal(AgentID.Bytes(), server.regComplete.UserID) {
-		return Opaque{}, fmt.Errorf("the OPAQUE UserID: %v doesn't match the Merlin UserID: %v", server.regComplete.UserID, AgentID.Bytes())
+	if !bytes.Equal(agentIDBytes, server.regComplete.UserID) {
+		return Opaque{}, fmt.Errorf("the OPAQUE UserID: %v doesn't match the Merlin UserID: %v", server.regComplete.UserID, agentIDBytes)
 	}
 
 	returnMessage := Opaque{

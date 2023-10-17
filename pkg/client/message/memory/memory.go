@@ -27,7 +27,7 @@ import (
 	"sync"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/client/message"

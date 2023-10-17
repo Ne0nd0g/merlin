@@ -21,10 +21,10 @@ package authenticators
 
 import (
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/messages"
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
 )
 
 // Authenticator is an interface used by various authentication methods

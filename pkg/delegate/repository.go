@@ -19,7 +19,7 @@
 // into a byte slice using the Agent's transforms and keys
 package delegate
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 // Repository is an interface to store and retrieve data
 type Repository interface {

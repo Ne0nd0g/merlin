@@ -18,23 +18,25 @@
 package opaque
 
 import (
-	"context"
 	// Standard
+	"context"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"log/slog"
 	"sync"
 	"time"
 
 	// 3rd Party
 	"github.com/cretz/gopaque/gopaque"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"go.dedis.ch/kyber/v3"
+
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/services/job"

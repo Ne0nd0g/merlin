@@ -21,10 +21,8 @@
 package tcp
 
 import (
-	"context"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-
 	// Standard
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"log/slog"
@@ -33,14 +31,17 @@ import (
 	"strings"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/authenticators"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/none"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/opaque"
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/transformer"
@@ -73,15 +74,15 @@ func NewTCPListener(options map[string]string) (listener Listener, err error) {
 	id, ok := options["ID"]
 	if ok {
 		if id != "" {
-			listener.id, err = uuid.FromString(id)
+			listener.id, err = uuid.Parse(id)
 			if err != nil {
-				listener.id = uuid.NewV4()
+				listener.id = uuid.New()
 			}
 		} else {
-			listener.id = uuid.NewV4()
+			listener.id = uuid.New()
 		}
 	} else {
-		listener.id = uuid.NewV4()
+		listener.id = uuid.New()
 	}
 
 	// Ensure a listener name was provided

@@ -32,7 +32,7 @@ import (
 	"strings"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/core"
@@ -257,7 +257,7 @@ func (s *Server) Exit(ctx context.Context, id *pb.ID) (msg *pb.Message, err erro
 	}
 
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(id.Id)
+	agentID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", agentID, err)
 		slog.Error(err.Error())
@@ -329,7 +329,7 @@ func (s *Server) LinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Messag
 		}
 		// Parse the Agent iD
 		var agentID uuid.UUID
-		agentID, err = uuid.FromString(in.ID)
+		agentID, err = uuid.Parse(in.ID)
 		if err != nil {
 			err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 			slog.Error(err.Error())
@@ -337,7 +337,7 @@ func (s *Server) LinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Messag
 		}
 		// Parse the UUID from the request
 		var childID uuid.UUID
-		childID, err = uuid.FromString(in.Arguments[1])
+		childID, err = uuid.Parse(in.Arguments[1])
 		if err != nil {
 			err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.Arguments[1], err)
 			slog.Error(err.Error())
@@ -398,7 +398,7 @@ func (s *Server) MaxRetry(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message
 		return
 	}
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(in.ID)
+	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 		slog.Error(err.Error())
@@ -577,7 +577,7 @@ func (s *Server) Skew(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, er
 // in.Arguments[0] = the amount of time to sleep between checkins
 func (s *Server) Sleep(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(in.ID)
+	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 		slog.Error(err.Error())
@@ -635,7 +635,7 @@ func (s *Server) Touch(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 // in.Arguments[0] = the child Agent's UUID
 func (s *Server) UnlinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
 	// Parse the UUID from the request
-	agentID, err := uuid.FromString(in.ID)
+	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 		slog.Error(err.Error())
@@ -643,7 +643,7 @@ func (s *Server) UnlinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Mess
 	}
 
 	// Parse the link UUID from the request
-	link, err := uuid.FromString(in.Arguments[0])
+	link, err := uuid.Parse(in.Arguments[0])
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.Arguments[0], err)
 		slog.Error(err.Error())

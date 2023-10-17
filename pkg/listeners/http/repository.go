@@ -17,7 +17,7 @@
 
 package http
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 // Repository is an interface to store and manage HTTP listeners
 type Repository interface {

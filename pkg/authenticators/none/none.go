@@ -25,11 +25,13 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )

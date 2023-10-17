@@ -20,7 +20,7 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 
 package message
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 type Repository interface {
 	// Add store a message in the repository

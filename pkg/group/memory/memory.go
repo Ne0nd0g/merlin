@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	//3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 var (
@@ -41,7 +41,7 @@ type Repository struct {
 func NewRepository() *Repository {
 	groups := make(map[string][]uuid.UUID)
 
-	globalUUID, err := uuid.FromString("ffffffff-ffff-ffff-ffff-ffffffffffff")
+	globalUUID, err := uuid.Parse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 	if err == nil {
 		groups["all"] = []uuid.UUID{globalUUID}
 	}
@@ -61,7 +61,7 @@ func (r *Repository) AddAgent(group string, id uuid.UUID) error {
 	}
 	// See if the agent is already in the group
 	for _, agent := range agents {
-		if uuid.Equal(agent, id) {
+		if agent == id {
 			return nil
 		}
 	}

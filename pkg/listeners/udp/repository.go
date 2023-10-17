@@ -17,7 +17,7 @@
 
 package udp
 
-import uuid "github.com/satori/go.uuid"
+import "github.com/google/uuid"
 
 // Repository is an interface to store and manage TCP listeners
 type Repository interface {

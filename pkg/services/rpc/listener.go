@@ -28,7 +28,7 @@ import (
 	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
@@ -78,7 +78,7 @@ func (s *Server) GetListenerIDs(ctx context.Context, e *emptypb.Empty) (*pb.Slic
 // GetListenerOptions returns a previously instantiated listener's options
 func (s *Server) GetListenerOptions(ctx context.Context, id *pb.ID) (options *pb.Options, err error) {
 	// Parse the UUID
-	listenerID, err := uuid.FromString(id.Id)
+	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		slog.Error(err.Error())
@@ -135,7 +135,7 @@ func (s *Server) GetListeners(ctx context.Context, e *emptypb.Empty) (table *pb.
 // GetListenerStatus returns the status of a previously instantiated listener
 func (s *Server) GetListenerStatus(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	// Parse the UUID
-	listenerID, err := uuid.FromString(id.Id)
+	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		slog.Error(err.Error())
@@ -159,7 +159,7 @@ func (s *Server) GetListenerTypes(ctx context.Context, e *emptypb.Empty) (*pb.Sl
 // RemoveListener deletes an instantiated Listener on the RPC server
 func (s *Server) RemoveListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	// Parse the UUID from the request
-	listenerID, err := uuid.FromString(id.Id)
+	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		slog.Error(err.Error())
@@ -178,7 +178,7 @@ func (s *Server) RemoveListener(ctx context.Context, id *pb.ID) (msg *pb.Message
 // RestartListener restarts a listener on the RPC server
 func (s *Server) RestartListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	// Parse the UUID from the request
-	listenerID, err := uuid.FromString(id.Id)
+	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		slog.Error(err.Error())
@@ -209,7 +209,7 @@ func (s *Server) SetListenerOption(ctx context.Context, in *pb.AgentCMD) (msg *p
 	}
 
 	// Parse the UUID from the request
-	listenerID, err := uuid.FromString(in.ID)
+	listenerID, err := uuid.Parse(in.ID)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", in.ID, err)
 		slog.Error(err.Error())
@@ -230,7 +230,7 @@ func (s *Server) SetListenerOption(ctx context.Context, in *pb.AgentCMD) (msg *p
 func (s *Server) StartListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	// Validate id is a UUID
 	var listenerID uuid.UUID
-	listenerID, err = uuid.FromString(id.Id)
+	listenerID, err = uuid.Parse(id.Id)
 	if err != nil {
 		msg = NewPBErrorMessage(fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err))
 		err = nil
@@ -277,7 +277,7 @@ func (s *Server) StartListener(ctx context.Context, id *pb.ID) (msg *pb.Message,
 // StopListener stops a previously instantiated listener on the RPC server
 func (s *Server) StopListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	// Parse the UUID
-	listenerID, err := uuid.FromString(id.Id)
+	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
 		err = fmt.Errorf("there was an error parsing '%s' as a UUID: %s", id.Id, err)
 		slog.Error(err.Error())

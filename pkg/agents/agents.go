@@ -26,7 +26,7 @@ import (
 	"time"
 
 	// 3rd Party
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/opaque"

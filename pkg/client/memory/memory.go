@@ -23,7 +23,7 @@ package memory
 import (
 	"fmt"
 	"github.com/Ne0nd0g/merlin/pkg/client"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"sync"
 )
 

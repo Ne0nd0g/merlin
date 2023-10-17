@@ -19,24 +19,26 @@
 package http
 
 import (
-	"context"
 	// Standard
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"log/slog"
 	"strings"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/authenticators"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/none"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/opaque"
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/messages"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/transformer"
@@ -72,7 +74,7 @@ func NewHTTPListener(server servers.ServerInterface, options map[string]string) 
 	}
 
 	// Get a new server object for the listener
-	//listener.id = uuid.NewV4()
+	//listener.id = uuid.New()
 	listener.server = server
 	listener.description = options["Description"]
 
@@ -244,6 +246,7 @@ func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 	}
 
 	for _, transform := range l.transformers {
+		slog.Log(context.Background(), logging.LevelTrace, fmt.Sprintf("Transformer %T: %+v\n", transform, transform))
 		//fmt.Printf("Transformer %T: %+v\n", transform, transform)
 		ret, err := transform.Deconstruct(data, key)
 		if err != nil {
@@ -347,12 +350,24 @@ func (l *Listener) SetOption(option string, value string) error {
 			switch strings.ToLower(transform) {
 			case "aes":
 				t = aes.NewEncrypter()
+			case "base64-byte":
+				t = b64.NewEncoder(b64.BYTE)
+			case "base64-string":
+				t = b64.NewEncoder(b64.STRING)
+			case "hex-byte":
+				t = hex.NewEncoder(hex.BYTE)
+			case "hex-string":
+				t = hex.NewEncoder(hex.STRING)
 			case "gob-base":
 				t = gob.NewEncoder(gob.BASE)
 			case "gob-string":
 				t = gob.NewEncoder(gob.STRING)
 			case "jwe":
 				t = jwe.NewEncrypter()
+			case "rc4":
+				t = rc4.NewEncrypter()
+			case "xor":
+				t = xor.NewEncrypter()
 			default:
 				return fmt.Errorf("pkg/listeners/http.SetOption(): unhandled transform type: %s", transform)
 			}

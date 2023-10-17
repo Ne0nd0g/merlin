@@ -24,7 +24,10 @@ import (
 	"sync"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	jobs2 "github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/jobs"
@@ -33,8 +36,8 @@ import (
 // Repository is the structure that implements the in-memory repository for interacting with Agent Jobs
 type Repository struct {
 	sync.Mutex
-	jobsChannel map[uuid.UUID]chan jobs.Job // jobsChannel contains all outgoing Jobs that need to be sent to an Agent
-	jobs        map[string]jobs.Info        // jobs is a map of all Job Info tracking structures
+	jobsChannel map[uuid.UUID]chan jobs2.Job // jobsChannel contains all outgoing Jobs that need to be sent to an Agent
+	jobs        map[string]jobs.Info         // jobs is a map of all Job Info tracking structures
 }
 
 // repo is the in-memory datastore
@@ -45,7 +48,7 @@ func NewRepository() *Repository {
 	if repo == nil {
 		repo = &Repository{
 			Mutex:       sync.Mutex{},
-			jobsChannel: make(map[uuid.UUID]chan jobs.Job),
+			jobsChannel: make(map[uuid.UUID]chan jobs2.Job),
 			jobs:        make(map[string]jobs.Info),
 		}
 	}
@@ -53,13 +56,13 @@ func NewRepository() *Repository {
 }
 
 // Add the Job and associated Info tracking structure to the repository
-func (r *Repository) Add(job jobs.Job, info jobs.Info) {
+func (r *Repository) Add(job jobs2.Job, info jobs.Info) {
 	r.Lock()
 	// Check to see if a job channel for the agent exist
 	_, k := r.jobsChannel[job.AgentID]
 	// Create a job channel for the agent if one does not exist
 	if !k {
-		r.jobsChannel[job.AgentID] = make(chan jobs.Job, 100)
+		r.jobsChannel[job.AgentID] = make(chan jobs2.Job, 100)
 	}
 
 	// Add job to the agent's job channel
@@ -124,7 +127,7 @@ func (r *Repository) GetInfo(jobID string) (jobs.Info, error) {
 }
 
 // GetJobs returns all jobs waiting to be sent to the associated Agent
-func (r *Repository) GetJobs(agentID uuid.UUID) (jobs []jobs.Job, err error) {
+func (r *Repository) GetJobs(agentID uuid.UUID) (jobs []jobs2.Job, err error) {
 	r.Lock()
 	defer r.Unlock()
 	jobChannel, ok := r.jobsChannel[agentID]

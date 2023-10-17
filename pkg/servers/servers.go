@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 )
 
 // Supported protocols
