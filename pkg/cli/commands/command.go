@@ -21,12 +21,11 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package commands
 
 import (
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
-	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
@@ -61,7 +60,7 @@ type Response struct {
 	Completer *readline.PrefixCompleterInterface
 	Listener  uuid.UUID
 	Menu      menu.Menu
-	Message   *messages.UserMessage // Message is used to display a message on the CLI; A pointer is used to allow for nil values for evaluation
+	Message   *message.UserMessage // Message is used to display a message on the CLI; A pointer is used to allow for nil values for evaluation
 	Module    uuid.UUID
 	Prompt    string
 }

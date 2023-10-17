@@ -24,20 +24,18 @@ import (
 	// Standard
 	"fmt"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -80,13 +78,7 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
+
 	return readline.PcItem(c.name,
 		readline.PcItemDynamic(agentListCompleter()),
 	)
@@ -98,24 +90,12 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()))
 		return
 	}
 
@@ -123,11 +103,7 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 			return
 		}
 	}
@@ -135,30 +111,15 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	// Convert the first argument to a UUID
 	id, err := uuid.FromString(args[1])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error converting '%s' to a UUID: %s\n%s", args[1], err, c.help.Usage()),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error converting '%s' to a UUID: %s\n%s", args[1], err, c.help.Usage()))
 		return
 	}
-	// Remove the agent
-	message := agentAPI.Remove(id)
-	response.Message = &message
-
+	response.Message = rpc.Remove(id)
 	return
 }
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 
@@ -186,7 +147,11 @@ func (c *Command) String() string {
 func agentListCompleter() func(string) []string {
 	return func(line string) []string {
 		a := make([]string, 0)
-		agentList := agentAPI.GetAgents()
+		agentList, err := rpc.GetAgents()
+		// If there is an error, return empty so this doesn't break the CLI
+		if err != nil {
+			return a
+		}
 		for _, id := range agentList {
 			a = append(a, id.String())
 		}

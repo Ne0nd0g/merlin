@@ -18,10 +18,13 @@
 package http
 
 import (
+	"context"
 	// Standard
 	"crypto/sha256"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -29,15 +32,15 @@ import (
 	// 3rd Party
 	uuid "github.com/satori/go.uuid"
 
-	// Merlin
-	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
+	// Internal
+	"github.com/Ne0nd0g/merlin/pkg/client/message"
+	"github.com/Ne0nd0g/merlin/pkg/client/message/memory"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	message2 "github.com/Ne0nd0g/merlin/pkg/services/message"
 )
 
-// handler contains contextual information and methods to process HTTP traffic for Agents
-type handler struct {
+// Handler contains contextual information and methods to process HTTP traffic for Agents
+type Handler struct {
 	jwtKey    []byte        // The password used by the server to create JWTs
 	jwtLeeway time.Duration // The amount of flexibility in validating the JWT's expiration time. Less than 0 will disable the expiration check
 	listener  uuid.UUID
@@ -47,30 +50,30 @@ type handler struct {
 // agentHandler implements the HTTP Handler interface and processes HTTP traffic for agents
 // HTTP validation checks are performed here such as JSON Web Token authentication, HTTP headers, HTTP methods, and User-Agent
 // The actual HTTP payload data that contains the Agent message is not handled here. It is sent to the listener service to process
-func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
-	if core.Verbose {
-		m := fmt.Sprintf("Received %s %s connection from %s", r.Proto, r.Method, r.RemoteAddr)
-		message("warn", m)
-		logging.Server(m)
-	}
+func (h *Handler) agentHandler(w http.ResponseWriter, r *http.Request) {
+	slog.Debug("New HTTP connection", "protocol", r.Proto, "method", r.Method, "remote address", r.RemoteAddr)
 
-	if core.Debug {
-		var m string
-		m += "HTTP Connection Details:\r\n"
-		m += fmt.Sprintf("Host: %s\r\n", r.Host)
-		m += fmt.Sprintf("URI: %s\r\n", r.RequestURI)
-		m += fmt.Sprintf("Method: %s\r\n", r.Method)
-		m += fmt.Sprintf("Protocol: %s\r\n", r.Proto)
-		m += fmt.Sprintf("Headers: %s\r\n", r.Header)
-		if r.TLS != nil {
-			m += fmt.Sprintf("TLS Negotiated Protocol: %s\r\n", r.TLS.NegotiatedProtocol)
-			m += fmt.Sprintf("TLS Cipher Suite: %d\r\n", r.TLS.CipherSuite)
-			m += fmt.Sprintf("TLS Server Name: %s\r\n", r.TLS.ServerName)
-		}
-		m += fmt.Sprintf("Content Length: %d", r.ContentLength)
-
-		message("debug", m)
-		logging.Server(m)
+	if r.TLS != nil {
+		slog.Log(context.Background(), logging.LevelExtraDebug, "HTTP Connection Details",
+			"host", r.Host,
+			"uri", r.RequestURI,
+			"method", r.Method,
+			"protocol", r.Proto,
+			"headers", r.Header,
+			"content length", r.ContentLength,
+			"tls negotiated protocol", r.TLS.NegotiatedProtocol,
+			"tls cipher suite", r.TLS.CipherSuite,
+			"tls server name", r.TLS.ServerName,
+		)
+	} else {
+		slog.Log(context.Background(), logging.LevelExtraDebug, "HTTP Connection Details",
+			"host", r.Host,
+			"uri", r.RequestURI,
+			"method", r.Method,
+			"protocol", r.Proto,
+			"headers", r.Header,
+			"content length", r.ContentLength,
+		)
 	}
 
 	// Merlin only accepts/handles HTTP POST messages
@@ -81,17 +84,15 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check for Merlin PRISM activity
 	if r.UserAgent() == "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 " {
-		m := fmt.Sprintf("Someone from %s is attempting to fingerprint this Merlin server", r.RemoteAddr)
-		message("warn", m)
-		logging.Server(m)
+		msg := fmt.Sprintf("Someone from %s is attempting to fingerprint this Merlin server", r.RemoteAddr)
+		slog.Warn(msg)
 	}
 
 	// Make sure the content type is: application/octet-stream; charset=utf-8
 	if r.Header.Get("Content-Type") != "application/octet-stream; charset=utf-8" {
 		if core.Verbose {
-			m := "incoming request did not contain a Content-Type header of: application/octet-stream; charset=utf-8"
-			message("warn", m)
-			logging.Server(m)
+			msg := "incoming request did not contain a Content-Type header of: application/octet-stream; charset=utf-8"
+			slog.Warn(msg)
 		}
 		w.WriteHeader(404)
 		return
@@ -107,18 +108,14 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 	//Read the request message until EOF
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
-		m := fmt.Sprintf("There was an error reading a POST message sent by an agent:\r\n%s", err)
-		message("warn", m)
-		logging.Server(m)
+		slog.Error(fmt.Sprintf("There was an error reading a POST message sent by an agent: %s", err))
 		return
 	}
 
 	// Get service to handle Agent Base messages
 	ms, err := message2.NewMessageService(h.listener)
 	if err != nil {
-		m := fmt.Sprintf("There was an error getting a new Base message service: %s", err)
-		message("warn", m)
-		logging.Server(m)
+		slog.Error(fmt.Sprintf("There was an error getting a new Base message service: %s", err))
 		w.WriteHeader(500)
 		return
 	}
@@ -126,9 +123,7 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 	// Handle the incoming data
 	rdata, err := ms.Handle(agentID, data)
 	if err != nil {
-		m := fmt.Sprintf("There was an error handling the incoming data: %s", err)
-		message("warn", m)
-		logging.Server(m)
+		slog.Error(fmt.Sprintf("There was an error handling the incoming data: %s", err))
 		w.WriteHeader(500)
 		return
 	}
@@ -137,34 +132,28 @@ func (h *handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	n, err := w.Write(rdata)
 	if err != nil {
-		m := fmt.Sprintf("there was an error writing the HTTP response bytes: %s", err)
-		message("warn", m)
-		logging.Server(m)
+		slog.Error(fmt.Sprintf("There was an error writing the HTTP response bytes: %s", err))
 		return
 	}
-	if core.Debug {
-		message("debug", fmt.Sprintf("Wrote %d bytes to HTTP response", n))
-	}
-
+	slog.Debug(fmt.Sprintf("Wrote %d bytes to HTTP response", n))
 }
 
 // checkJWT ensures that the incoming message has an Authorization header with a Bearer token.
 // It then tries to decrypt the incoming JWT with the HTTP interface's key used only with authenticated agents.
 // If that fails, it will try to decrypt the incoming JWT with the HTTP interface's PSK used only with unauthenticated agents.
 // After the JWT is decrypted, its claims are validated.
-func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) {
-	if core.Debug {
-		message("debug", fmt.Sprintf("pkg/servers/http/handler.checkJWT(): entering into function with request: %+v\n", request))
-	}
-
+func (h *Handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) {
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "request", fmt.Sprintf("%+v", request))
+	defer slog.Log(context.Background(), logging.LevelTrace, "exiting from function", "agentID", agentID, "HTTP Status Code", code)
+	messageRepo := memory.NewRepository()
 	// Make sure the message has a JWT
 	token := request.Header.Get("Authorization")
 	if token == "" {
 		code = 404
 		if core.Verbose {
-			m := "incoming request did not contain an Authorization header"
-			message("warn", m)
-			logging.Server(m)
+			msg := "incoming request did not contain an Authorization header"
+			slog.Warn(msg)
+			messageRepo.Add(message.NewMessage(message.Warn, msg))
 		}
 		return
 	}
@@ -173,9 +162,7 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 	if !strings.Contains(token, "Bearer eyJ") {
 		code = 404
 		if core.Verbose {
-			m := "incoming request did not contain a Bearer token"
-			message("warn", m)
-			logging.Server(m)
+			slog.Warn("incoming request did not contain a Bearer token")
 		}
 		return
 	}
@@ -184,23 +171,25 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 
 	// Validate JWT using HTTP interface JWT key; Given to authenticated agents by server
 	if core.Verbose {
-		message("note", "Checking to see if authorization JWT was signed by server's interface key...")
+		slog.Info("Checking to see if authorization JWT was signed by server's interface key...")
 	}
 
 	var err error
 	agentID, err = ValidateJWT(jwt, h.jwtLeeway, h.jwtKey)
 	if err != nil {
-		// If agentID was returned, then message contained a JWT encrypted with the HTTP interface key and the claims were likely invalid
+		// If agentID was returned, then the message contained a JWT encrypted with the HTTP interface key and the claims were likely invalid
 		if agentID != uuid.Nil {
-			m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the HTTP interface key. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
-			message("warn", m)
-			logging.Server(m)
+			m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the HTTP interface key. Returning 401 instructing the Agent to generate a self-signed JWT and try again. Error: %s", agentID, err)
+			slog.Warn(m)
+			messageRepo.Add(message.NewMessage(message.Warn, m))
 			code = 401
 			return
 		} else {
 			if core.Verbose {
-				message("warn", err.Error())
-				message("note", "Authorization JWT not signed with server's interface key, trying again with PSK...")
+				slog.Error(err.Error())
+				msg := "Authorization JWT not signed with server's interface key, trying again with PSK..."
+				slog.Info(msg)
+				messageRepo.Add(message.NewMessage(message.Info, msg))
 			}
 			// Validate JWT using interface PSK; Used by unauthenticated agents
 			hashedKey := sha256.Sum256(h.psk)
@@ -213,41 +202,19 @@ func (h *handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 				} else {
 					m = fmt.Sprintf("There was an error validating the JWT for Agent %s using the listener's PSK. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
 				}
-				message("warn", m)
-				logging.Server(m)
+				slog.Warn(m)
+				messageRepo.Add(message.NewMessage(message.Warn, m))
 				code = 401
 				return
 			}
 			if agentID != uuid.Nil {
 				if core.Debug {
-					message("info", fmt.Sprintf("UnAuthenticated JWT from %s", agentID))
+					msg := fmt.Sprintf("UnAuthenticated JWT from %s", agentID)
+					slog.Debug(msg)
+					messageRepo.Add(message.NewMessage(message.Debug, msg))
 				}
 			}
 		}
 	}
 	return
-}
-
-// message is used to send a broadcast message to all connected clients
-func message(level string, message string) {
-	m := messageAPI.UserMessage{
-		Message: message,
-		Time:    time.Now().UTC(),
-		Error:   false,
-	}
-	switch level {
-	case "info":
-		m.Level = messageAPI.Info
-	case "note":
-		m.Level = messageAPI.Note
-	case "warn":
-		m.Level = messageAPI.Warn
-	case "debug":
-		m.Level = messageAPI.Debug
-	case "success":
-		m.Level = messageAPI.Success
-	default:
-		m.Level = messageAPI.Plain
-	}
-	messageAPI.SendBroadcastMessage(m)
 }

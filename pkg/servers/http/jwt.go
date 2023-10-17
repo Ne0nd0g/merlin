@@ -19,7 +19,9 @@ package http
 
 import (
 	// Standard
+	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	// 3rd Party
@@ -28,14 +30,13 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
 // ValidateJWT validates the provided JSON Web Token
 func ValidateJWT(agentJWT string, leeway time.Duration, key []byte) (agentID uuid.UUID, err error) {
-	if core.Debug {
-		message("debug", fmt.Sprintf("pkg/servers/http.ValidateJWT(): entering into function with JWT: %s, key: %x", agentJWT, key))
-		defer message("debug", fmt.Sprintf("pkg/servers/http.ValidateJWT(): exiting function with agentID %s and error: %s", agentID, err))
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "JWT", agentJWT, "Leeway", leeway, "Key", key)
+	defer slog.Log(context.Background(), logging.LevelTrace, "exiting the function", "Agent", agentID, "Error", err)
 
 	claims := jwt.Claims{}
 
@@ -66,17 +67,13 @@ func ValidateJWT(agentJWT string, leeway time.Duration, key []byte) (agentID uui
 	if leeway >= 0 {
 		err = claims.ValidateWithLeeway(jwt.Expected{Time: time.Now()}, leeway)
 		if err != nil {
-			err = fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an validating the JWT claims with a leeway of %s: %s", leeway, errClaims)
-			if core.Verbose {
-				message("warn", fmt.Sprintf("The JWT claims were not valid for %s: %s", agentID, err))
-				message("note", fmt.Sprintf("JWT Claim Expiry: %s", claims.Expiry.Time()))
-				message("note", fmt.Sprintf("JWT Claim Issued: %s", claims.IssuedAt.Time()))
-			}
+			err = fmt.Errorf("pkg/servers/http.ValidateJWT(): there was an validating the JWT claims with a leeway of %s: %s", leeway, err)
+			slog.Warn(fmt.Sprintf("The JWT claims were not valid for %s: %s", agentID, err), "JWT Claim Expiry", claims.Expiry.Time(), "JWT Claim Issued", claims.IssuedAt.Time())
 			return
 		}
 	} else {
 		if core.Verbose {
-			message("note", fmt.Sprintf("JWT leeway is %s and is less than 0, skipping validation for Agent %s", leeway, agentID))
+			slog.Info(fmt.Sprintf("JWT leeway is %s and is less than 0, skipping validation for Agent %s", leeway, agentID))
 		}
 	}
 	// TODO I need to validate other things like token age/expiry

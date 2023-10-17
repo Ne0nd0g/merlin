@@ -49,6 +49,7 @@ type ServerInterface interface {
 	ConfiguredOptions() map[string]string
 	ID() uuid.UUID
 	Interface() string
+	Listen() error
 	Protocol() int
 	ProtocolString() string
 	Port() int

@@ -23,24 +23,23 @@ package set
 import (
 	// Standard
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	mmemory "github.com/Ne0nd0g/merlin/pkg/cli/message/memory"
 	moduleMemory "github.com/Ne0nd0g/merlin/pkg/cli/module/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -106,11 +105,10 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 	var options map[string]string
 	switch m {
 	case menu.LISTENER:
-		var msg messages.UserMessage
-		msg, options = listenerAPI.GetListenerConfiguredOptions(id)
-		if msg.Error {
-			msg.Level = messages.Debug
-			core.MessageChannel <- msg
+		var msg *message.UserMessage
+		msg, options = rpc.ListenerGetConfiguredOptions(id)
+		if msg.Error() {
+			mmemory.NewRepository().Add(msg)
 			return
 		}
 	case menu.LISTENERSETUP:
@@ -118,13 +116,7 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 		repo := memory.NewRepository()
 		listener, err := repo.Get(id)
 		if err != nil {
-			msg := messages.UserMessage{
-				Level:   messages.Debug,
-				Message: fmt.Sprintf("there was an error getting the listener for ID %s: %s", id, err),
-				Time:    time.Now().UTC(),
-				Error:   true,
-			}
-			core.MessageChannel <- msg
+			mmemory.NewRepository().Add(message.NewErrorMessage(fmt.Errorf("there was an error getting the listener for ID %s: %s", id, err)))
 			return
 		}
 		options = listener.Options()
@@ -132,16 +124,10 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 		repo := moduleMemory.NewRepository()
 		module, err := repo.Get(id)
 		if err != nil {
-			msg := messages.UserMessage{
-				Level:   messages.Debug,
-				Message: fmt.Sprintf("there was an error getting the module for ID %s: %s", id, err),
-				Time:    time.Now().UTC(),
-				Error:   true,
-			}
-			core.MessageChannel <- msg
+			mmemory.NewRepository().Add(message.NewErrorMessage(fmt.Errorf("there was an error getting the module for ID %s: %s", id, err)))
 			return
 		}
-		options = module.GetMapFromOptions()
+		options = module.OptionsMap()
 	}
 
 	// Add the options to a slice
@@ -172,14 +158,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	switch m {
 	case menu.LISTENER:
 		return c.DoListener(id, arguments)
@@ -201,26 +179,17 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 
 	// Make sure there are at least 2 arguments (key and value)
 	if len(args) < 3 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: h.Usage(),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, h.Usage())
 		return
 	}
-	msg := listenerAPI.SetOption(id, args)
-	response.Message = &msg
+	response.Message = rpc.ListenerSetOption(id, args[1:])
 	return
 }
 
@@ -234,22 +203,14 @@ func (c *Command) DoListenerSetup(id uuid.UUID, arguments string) (response comm
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 
 	// Make sure there are at least 2 arguments (key and value)
 	if len(args) < 3 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: h.Usage(),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, h.Usage())
 		return
 	}
 
@@ -257,41 +218,23 @@ func (c *Command) DoListenerSetup(id uuid.UUID, arguments string) (response comm
 	repo := memory.NewRepository()
 	listener, err := repo.Get(id)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error getting the listener for ID %s: %s", id, err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error getting the listener for ID %s: %s", id, err))
 		return
 	}
 	options := listener.Options()
 
 	if _, ok := options[args[1]]; !ok {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("'%s' is not a valid option for this listener", args[1]),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Warn, fmt.Sprintf("'%s' is not a valid option for this listener", args[1]))
 		return
 	}
 
 	options[args[1]] = args[2]
 	err = repo.Update(id, options)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error updating the '%s' option for listener ID %s: %s", args[1], id, err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error updating the '%s' option for listener ID %s: %s", args[1], id, err))
 		return
 	}
-	response.Message = &messages.UserMessage{
-		Level:   messages.Success,
-		Message: fmt.Sprintf("set '%s' to: %s", args[1], args[2]),
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Success, fmt.Sprintf("set '%s' to: %s", args[1], args[2]))
 	return
 }
 
@@ -305,11 +248,7 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -317,62 +256,16 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 	// Make sure there are at least 2 arguments (key and value)
 	// 0. set, 1. key, 2. value
 	if len(args) < 3 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: h.Usage(),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, h.Usage())
 		return
 	}
 
-	// Get options from the local repository
-	repo := moduleMemory.NewRepository()
-	m, err := repo.Get(id)
+	err := moduleMemory.NewRepository().UpdateOption(id, args[1], args[2])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("pkg/cli/commands/info.DoModule(): there was an error getting module ID %s from the repository", err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-		err = nil
+		response.Message = message.NewErrorMessage(fmt.Errorf("pkg/cli/commands/set.DoModule(): there was an error setting the '%s' to '%s': %s", args[1], args[2:], err))
 		return
 	}
-
-	var message string
-	if strings.ToLower(args[1]) == "agent" {
-		message, err = m.SetAgent(args[2])
-	} else {
-		// Update the value
-		message, err = m.SetOption(args[1], args[2:])
-	}
-	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("pkg/cli/commands/set.DoModule(): there was an error setting the '%s' to '%s': %s", args[1], args[2:], err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-		err = nil
-		return
-	}
-	// Store the updated module
-	err = repo.Update(id, m)
-	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("pkg/cli/commands/set.DoModule(): there was an error storing the updated module: %s", err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-		err = nil
-		return
-	}
-	response.Message = &messages.UserMessage{
-		Level:   messages.Success,
-		Message: message,
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Success, fmt.Sprintf("set '%s' to: %s", args[1], args[2]))
 	return
 }
 

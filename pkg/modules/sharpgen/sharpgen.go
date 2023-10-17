@@ -32,8 +32,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
 )
 
@@ -87,9 +85,13 @@ func Parse(options map[string]string) ([]string, error) {
 	}
 
 	// Output file flag
+	current, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get current working directory: %s", err)
+	}
 	dir, _ := filepath.Split(options["file"])
 	if dir == "" {
-		sharpGenConfig.OutputFile = filepath.Join(core.CurrentDir, options["file"])
+		sharpGenConfig.OutputFile = filepath.Join(current, options["file"])
 	} else {
 		sharpGenConfig.OutputFile = options["file"]
 	}
@@ -104,7 +106,7 @@ func Parse(options map[string]string) ([]string, error) {
 	sharpGenConfig.DotNetBin = options["dotnetbin"]        // Location of the `dotnet` Core 2.1 SDK executable
 
 	// Compile application and get bytes
-	err := Generate(&sharpGenConfig)
+	err = Generate(&sharpGenConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +155,11 @@ func Generate(config *Config) error {
 			return fmt.Errorf("the provided SharpGen filepath does not exist: %s\r\n%s\r\nBuild SharpGen from it's source directory with: dotnet build -c release", config.SharpGenBin, errA)
 		}
 	} else {
+		dll, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("unable to get current working directory: %s", err)
+		}
 		// Check Merlin's root directory
-		dll := core.CurrentDir
 		p := path.Join(dll, config.SharpGenBin)
 		_, errDLL := os.Stat(p)
 		if os.IsNotExist(errDLL) {

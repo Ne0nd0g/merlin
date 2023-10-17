@@ -24,21 +24,19 @@ import (
 	// Standard
 	"fmt"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -83,13 +81,7 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixCompleterInterface) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
+
 	switch m {
 	case menu.LISTENERS:
 		comp = readline.PcItem(c.name,
@@ -109,14 +101,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	switch m {
 	case menu.LISTENERS:
 		return c.DoListener(arguments)
@@ -132,51 +116,33 @@ func (c *Command) DoAgent(arguments string) (response commands.Response) {
 	h := c.help[menu.ALLMENUS]
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, h.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, h.Usage()))
 		return
 	}
 	// Check for help first
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 	// Parse the UUID
 	id, err := uuid.FromString(args[1])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error parsing '%s' as a UUID: %s\nUsage: %s", args[1], err, h.Usage()),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing '%s' as a UUID: %s\nUsage: %s", args[1], err, h.Usage()))
 		return
 	}
 	// Request Agent information
-	_, agentOS, err := agentAPI.GetAgent(id)
+	a, err := rpc.GetAgent(id)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error retrieving Agent information: %s", err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error retrieving Agent information: %s", err))
 		err = nil
 		return
 	}
 	// Build the Response
 	response.Agent = id
-	response.AgentOS = os.FromString(agentOS)
+	response.AgentOS = os.FromString(a.Host().Platform)
 	response.Menu = menu.AGENT
 	response.Prompt = fmt.Sprintf("\033[31mMerlin[\033[32magent\033[31m][\033[33m%s\033[31m]»\033[0m ", id)
 	return
@@ -189,34 +155,21 @@ func (c *Command) DoListener(arguments string) (response commands.Response) {
 	h := c.help[menu.LISTENERS]
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, h.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, h.Usage()))
 		return
 	}
 	// Check for help first
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 	// Parse the UUID
 	id, err := uuid.FromString(args[1])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error parsing '%s' as a UUID: %s\nUsage: %s", args[1], err, h.Usage()),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing '%s' as a UUID: %s\nUsage: %s", args[1], err, h.Usage()))
 		return
 	}
 	// Build the Response

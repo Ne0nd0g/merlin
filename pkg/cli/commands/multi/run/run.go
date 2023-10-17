@@ -23,9 +23,7 @@ package run
 import (
 	// Standard
 	"fmt"
-
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
@@ -33,17 +31,15 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	moduleAPI "github.com/Ne0nd0g/merlin/pkg/api/modules"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	mmemory "github.com/Ne0nd0g/merlin/pkg/cli/message/memory"
 	moduleMemory "github.com/Ne0nd0g/merlin/pkg/cli/module/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -139,13 +135,6 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return readline.PcItem(c.name)
 }
 
@@ -155,14 +144,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	switch m {
 	case menu.AGENT:
 		return c.DoAgent(id, arguments)
@@ -171,12 +152,7 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	case menu.MODULE:
 		return c.DoModule(id, arguments)
 	default:
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("'%s' is an unhandled menu option for the %s command", m, c.name),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("'%s' is an unhandled menu option for the %s command", m, c.name))
 		return
 	}
 }
@@ -186,12 +162,7 @@ func (c *Command) DoAgent(id uuid.UUID, arguments string) (response commands.Res
 	// Parse the arguments
 	args, err := shellwords.Parse(arguments)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Error:   true,
-			Message: fmt.Sprintf("there was an error parsing the arguments: %s", err),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the arguments: %s", err))
 		err = nil
 		return
 	}
@@ -199,11 +170,7 @@ func (c *Command) DoAgent(id uuid.UUID, arguments string) (response commands.Res
 	h := c.help[menu.AGENT]
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\nUsage: %s", c, h.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\nUsage: %s", c, h.Usage()))
 		return
 	}
 
@@ -211,16 +178,11 @@ func (c *Command) DoAgent(id uuid.UUID, arguments string) (response commands.Res
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
-	msg := agentAPI.CMD(id, args)
-	response.Message = &msg
+	response.Message = rpc.CMD(id, args)
 	return
 }
 
@@ -234,17 +196,9 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 		h := c.help[menu.LISTENERSETUP]
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 		default:
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("Usage: %s", h),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("Usage: %s", h))
 		}
 		return
 	}
@@ -253,33 +207,44 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 	repo := memory.NewRepository()
 	listener, err := repo.Get(id)
 	if err != nil {
-		msg := messages.ErrorMessage(fmt.Sprintf("there was an error getting the listener for ID %s: %s", id, err))
-		response.Message = &msg
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error getting the listener for ID %s: %s", id, err))
 		return
 	}
 
 	// Validate the listener options contains a "Name" key
 	if _, ok := listener.Options()["Name"]; !ok {
-		msg := messages.ErrorMessage(fmt.Sprintf("the listener options for ID %s does not contain a 'Name' key", id))
-		response.Message = &msg
+		response.Message = message.NewErrorMessage(fmt.Errorf("the listener options for ID %s does not contain a 'Name' key", id))
 		return
 	}
 
 	// Use the API to create a new listener
-	msg, serverID := listenerAPI.NewListener(listener.Options())
-	if msg.Error {
-		response.Message = &msg
+	msg := rpc.CreateListener(listener.Options())
+	if msg.Error() {
+		response.Message = msg
+		return
+	}
+
+	// Convert the UUID from a string
+	serverID, err := uuid.FromString(msg.Message())
+	if err != nil {
+		err = fmt.Errorf("there was an error converting the Listener ID returned from the CreateListner RPC call "+
+			"from '%s' to a UUID: %s", response.Message.Message(), err)
+		response.Message = message.NewErrorMessage(err)
 		return
 	}
 
 	// Finish building the Response
 	response.Listener = serverID
-	response.Message = &msg
 	response.Menu = menu.LISTENER
 	response.Prompt = fmt.Sprintf("\033[31mMerlin[\033[32mlisteners\033[31m][\033[33m%s\033[31m]»\033[0m ", serverID)
 
 	// Use the API to start the listener
-	msg = listenerAPI.Start(serverID)
+	response.Message = rpc.StartListener(serverID)
+	if msg.Error() {
+		err = fmt.Errorf("the %s listener was created but there was an error starting it: %s", serverID, msg.Message)
+		response.Message = message.NewErrorMessage(err)
+		return
+	}
 
 	// Remove it from the repo
 	repo.Remove(id)
@@ -296,11 +261,7 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 		h := c.help[menu.MODULE]
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -309,23 +270,19 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 	repo := moduleMemory.NewRepository()
 	m, err := repo.Get(id)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("pkg/cli/commands/info.DoModule(): there was an error getting module ID %s from the repository", err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-		err = nil
+		response.Message = message.NewErrorMessage(fmt.Errorf("pkg/cli/commands/info.DoModule(): there was an error getting module ID %s from the repository", err))
 		return
 	}
-	returnMessages := moduleAPI.RunModule(m)
+	returnMessages := rpc.RunModule(m)
+	// Modules can be run against "all" Agents, returning multiple messages
 	if len(returnMessages) > 1 {
-		for _, message := range returnMessages {
-			core.MessageChannel <- message
+		for _, msg := range returnMessages {
+			mmemory.NewRepository().Add(msg)
 		}
-	} else {
-		response.Message = &returnMessages[0]
+	} else if len(returnMessages) == 1 {
+		response.Message = returnMessages[0]
 	}
+
 	return
 }
 

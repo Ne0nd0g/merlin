@@ -24,20 +24,18 @@ import (
 	// Standard
 	"fmt"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -90,13 +88,6 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return readline.PcItem(c.name,
 		readline.PcItemDynamic(completer.AgentListCompleter()),
 		readline.PcItemDynamic(completer.GroupListCompleter()),
@@ -109,14 +100,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
@@ -124,22 +107,14 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 			return
 		}
 	}
 	// Check for the correct number of arguments
 	// 0. queue, 1. AgentID/Group, 2. command, 3. [args]
 	if len(args) < 3 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least two arguments\n%s", c.name, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least two arguments\n%s", c.name, c.help.Usage()))
 		return
 	}
 
@@ -150,13 +125,6 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 

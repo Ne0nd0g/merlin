@@ -18,8 +18,11 @@
 package opaque
 
 import (
+	"context"
 	// Standard
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -31,7 +34,6 @@ import (
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
@@ -66,17 +68,14 @@ func NewAuthenticator() (*Authenticator, error) {
 // Authenticate is an OPAQUE message handler and the entry point function to authenticate an Agent
 // Accepts incoming Opaque Registration or Authentication messages and processes them
 func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messages.Base, err error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/authenticaters/opaque.Authenticate() entering into function for agent %s with data type: %T", id, data))
-	}
-	if core.Verbose {
-		logging.Message("note", fmt.Sprintf("Received OPAQUE message type: %T:%+v for agent %s", data, data, id))
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "ID", id, "data type", fmt.Sprintf("%T", data))
+	defer slog.Log(context.Background(), logging.LevelTrace, "leaving function", "msg", msg, "Error", err)
 
 	// Verify the data interface is the opaque.Opaque type
 	switch data.(type) {
 	case opaque.Opaque:
 		// Do nothing
+		slog.Debug("Received OPAQUE message", "OPAQUE type", data.(opaque.Opaque).Type, "Agent", id)
 	default:
 		// If no Opaque data is passed in, assume the Agent needs to re-authenticate
 		data = opaque.Opaque{
@@ -103,7 +102,7 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 		// Add AgentInfo job
 		_, err = a.jobService.Add(id, "agentInfo", []string{})
 		if err != nil {
-			logging.Message("warn", fmt.Sprintf("there was an error adding the agentInfo job:\r\n%s", err))
+			slog.Warn(fmt.Sprintf("there was an error adding the agentInfo job:\r\n%s", err))
 		}
 		// Remove from the map
 		out.Delete(id)
@@ -124,11 +123,9 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 
 // registrationInit is used to register an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol
 func (a *Authenticator) registrationInit(agentID uuid.UUID, o opaque.Opaque, opaqueServerKey kyber.Scalar) (opaque.Opaque, error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("Entering into opaque.registrationInit() function for agent %s...", agentID))
-	}
-
-	logging.Server(fmt.Sprintf("Received new agent OPAQUE user registration initialization from %s", agentID))
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "ID", agentID, "opaque", o, "opaqueServerKey", opaqueServerKey)
+	defer slog.Log(context.Background(), logging.LevelTrace, "leaving function")
+	slog.Debug(fmt.Sprintf("Received new agent OPAQUE user registration initialization from %s", agentID))
 
 	returnMessage, opaqueServer, err := opaque.ServerRegisterInit(agentID, o, opaqueServerKey)
 	if err != nil {
@@ -138,7 +135,7 @@ func (a *Authenticator) registrationInit(agentID uuid.UUID, o opaque.Opaque, opa
 	servers.Store(agentID, opaqueServer)
 
 	if core.Debug {
-		logging.Message("debug", "Leaving opaque.registrationInit() function without error")
+		slog.Debug("Leaving opaque.registrationInit() function without error")
 	}
 
 	return returnMessage, nil
@@ -147,7 +144,7 @@ func (a *Authenticator) registrationInit(agentID uuid.UUID, o opaque.Opaque, opa
 // registrationComplete is used to complete OPAQUE user registration and store the encrypted envelope EnvU
 func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque) (opaque.Opaque, error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("Entering into opaque.registrationComplete function for agent %s...", agentID))
+		slog.Debug(fmt.Sprintf("Entering into opaque.registrationComplete function for agent %s...", agentID))
 	}
 
 	opaqueServer, ok := servers.LoadAndDelete(agentID)
@@ -171,7 +168,7 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 		}
 		err = agent.Log("OPAQUE registration complete")
 		if err != nil {
-			fmt.Printf("pkg/authenticaters/opaque.registrationComplete(): there was an error writting a log message for agent %s: %s\n", agentID, err)
+			slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
 		}
 		return returnMessage, nil
 	}
@@ -190,11 +187,11 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 
 	err = newAgent.Log("OPAQUE registration complete")
 	if err != nil {
-		fmt.Printf("pkg/authenticaters/opaque.registrationComplete(): there was an error writting a log message for agent %s: %s\n", agentID, err)
+		slog.Error(fmt.Sprintf("pkg/authenticaters/opaque.registrationComplete(): there was an error writting a log message for agent %s: %s\n", agentID, err))
 	}
 
 	if core.Debug {
-		logging.Message("debug", "Leaving opaque.registrationComplete function without error")
+		slog.Debug("Leaving opaque.registrationComplete function without error")
 	}
 
 	return returnMessage, nil
@@ -203,18 +200,16 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 // authenticateInit is used to authenticate an agent leveraging the OPAQUE Password Authenticated Key Exchange (PAKE) protocol and pre-shared key
 func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (opaque.Opaque, error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("Entering into opaque.authenticateInit function for agent %s...", agentID))
+		slog.Debug(fmt.Sprintf("Entering into opaque.authenticateInit function for agent %s...", agentID))
 	}
 
 	agent, err := a.agentService.Agent(agentID)
 	if err != nil {
 		// Agent does not exist and must re-register itself
-		m := fmt.Sprintf("Un-Registered agent %s sent OPAQUE authentication, instructing agent to OPAQUE register", agentID)
-		logging.Message("note", m) // TODO Should use messages API
+		slog.Warn(fmt.Sprintf("Un-Registered agent %s sent OPAQUE authentication, instructing agent to OPAQUE register", agentID))
 		return opaque.Opaque{Type: opaque.ReRegister}, nil
 	} else if agent.OPAQUE() == nil {
-		m := fmt.Sprintf("registration information for Agent %s is empty, instructing agent to OPAQUE register", agentID)
-		logging.Message("note", m) // TODO Should use messages API
+		slog.Warn(fmt.Sprintf("registration information for Agent %s is empty, instructing agent to OPAQUE register", agentID))
 		return opaque.Opaque{Type: opaque.ReRegister}, nil
 	}
 
@@ -237,13 +232,13 @@ func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (op
 
 	err = agent.Log("Received new agent OPAQUE authentication initialization message")
 	if err != nil {
-		fmt.Printf("pkg/authenticaters/opaque.authenticateInit(): there was an error writting a log message for agent %s: %s\n", agentID, err)
+		slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
 	}
 
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("Received new agent OPAQUE authentication for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)))
-		logging.Message("debug", "Leaving opaque.authenticateInit function without error")
-		logging.Message("debug", fmt.Sprintf("Server OPAQUE key exchange shared secret: %x", keys))
+		slog.Debug(fmt.Sprintf("Received new agent OPAQUE authentication for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)))
+		slog.Debug("Leaving opaque.authenticateInit function without error")
+		slog.Debug(fmt.Sprintf("Server OPAQUE key exchange shared secret: %x", keys))
 	}
 	return returnMessage, nil
 }
@@ -251,7 +246,7 @@ func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (op
 // authenticateComplete is used to receive the OPAQUE UserAuthComplete
 func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque) error {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("Entering into opaque.authenticateComplete() function for agent %s...", agentID))
+		slog.Debug(fmt.Sprintf("Entering into opaque.authenticateComplete() function for agent %s...", agentID))
 	}
 
 	// check to see if this agent is already known to the server
@@ -262,7 +257,7 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 
 	err = agent.Log("Received agent OPAQUE authentication complete message")
 	if err != nil {
-		fmt.Printf("pkg/authenticaters/opaque.authenticateComplete(): there was an error writting a log message for agent %s: %s\n", agentID, err)
+		slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
 	}
 	err = a.agentService.UpdateAuthenticated(agentID, true)
 	if err != nil {
@@ -274,11 +269,10 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 		return err
 	}
 
-	m := fmt.Sprintf(" New authenticated agent checkin for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339))
-	logging.Message("success", m)
+	slog.Info(fmt.Sprintf("New authenticated agent checkin for %s", agentID))
 
 	if core.Debug {
-		logging.Message("debug", "Leaving opaque.authenticateComplete() function without error")
+		slog.Debug("Leaving opaque.authenticateComplete() function without error")
 	}
 
 	return opaque.ServerAuthenticateComplete(o, agent.OPAQUE())
@@ -287,7 +281,7 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 // reAuthenticate is used when an agent has previously completed OPAQUE registration but needs to re-authenticate
 func (a *Authenticator) reAuthenticate(agentID uuid.UUID) (opaque.Opaque, error) {
 	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("Entering into opaque.reAuthenticate function for agent %s...", agentID))
+		slog.Debug(fmt.Sprintf("Entering into opaque.reAuthenticate function for agent %s...", agentID))
 	}
 	returnMessage := opaque.Opaque{
 		Type: opaque.ReAuthenticate,
@@ -306,11 +300,11 @@ func (a *Authenticator) reAuthenticate(agentID uuid.UUID) (opaque.Opaque, error)
 
 	err = agent.Log("Instructing agent to re-authenticate with OPAQUE protocol")
 	if err != nil {
-		fmt.Printf("pkg/authenticaters/opaque.reAuthenticate(): there was an error writting a log message for agent %s: %s\n", agentID, err)
+		slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
 	}
 
 	if core.Debug {
-		logging.Message("debug", "Leaving opaque.reAuthenticate function without error")
+		slog.Debug("Leaving opaque.reAuthenticate function without error")
 	}
 
 	return returnMessage, nil

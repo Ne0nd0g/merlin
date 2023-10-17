@@ -21,6 +21,7 @@ package none
 import (
 	// Standard
 	"fmt"
+	"log/slog"
 	"time"
 
 	// 3rd Party
@@ -28,7 +29,6 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/services/job"
@@ -69,14 +69,12 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 	if err != nil {
 		fmt.Printf("pkg/authenticaters/none.Authenticate(): there was an error writting a log message for agent %s: %s\n", id, err)
 	}
-
-	m := fmt.Sprintf(" New unauthenticated agent checkin for %s at %s", id, time.Now().UTC().Format(time.RFC3339))
-	logging.Message("success", m)
+	slog.Info(fmt.Sprintf("New unauthenticated agent checkin for %s", id))
 
 	// Add AgentInfo job
 	_, err = a.jobService.Add(id, "agentInfo", []string{})
 	if err != nil {
-		logging.Message("warn", fmt.Sprintf("there was an error adding the agentInfo job:\r\n%s", err))
+		slog.Error(fmt.Sprintf("there was an error adding the agentInfo job for agent %s: %s", id, err))
 	}
 
 	msg.ID = id

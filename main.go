@@ -38,5 +38,5 @@ func main() {
 
 	// Start Merlin Command Line Interface
 	cliService := cli.NewCLIService()
-	cliService.Run()
+	cliService.Run("127.0.0.1:50051")
 }

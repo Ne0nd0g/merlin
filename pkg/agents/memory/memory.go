@@ -76,7 +76,7 @@ func (r *Repository) AddLinkedAgent(id uuid.UUID, link uuid.UUID) error {
 
 // Exists check's to see if the Agent is in the repository
 func (r *Repository) Exists(id uuid.UUID) bool {
-	for a, _ := range r.agents {
+	for a := range r.agents {
 		if a == id {
 			return true
 		}

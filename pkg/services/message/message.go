@@ -19,9 +19,12 @@
 package message
 
 import (
+	"context"
 	// Standard
 	"encoding/base64"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"log/slog"
 	"math/rand"
 	"strings"
 	"time"
@@ -31,7 +34,8 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
-	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
+	"github.com/Ne0nd0g/merlin/pkg/client/message"
+	messageMemory "github.com/Ne0nd0g/merlin/pkg/client/message/memory"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/delegate"
 	delegateMemory "github.com/Ne0nd0g/merlin/pkg/delegate/memory"
@@ -45,7 +49,6 @@ import (
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
 	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/services/job"
@@ -53,10 +56,11 @@ import (
 
 // Service is a structure with methods that execute the service functions for Agent messages
 type Service struct {
-	agentService *agent.Service
-	jobService   *job.Service
-	listener     listeners.Listener
-	delegates    delegate.Repository
+	agentService  *agent.Service
+	jobService    *job.Service
+	listener      listeners.Listener
+	delegates     delegate.Repository
+	clientMsgRepo message.Repository
 }
 
 // NewMessageService is a factory to create and return a ListenerService
@@ -66,10 +70,11 @@ func NewMessageService(id uuid.UUID) (*Service, error) {
 		return nil, fmt.Errorf("pkg/service/message.NewMessageService(): %s", err)
 	}
 	lhs := &Service{
-		listener:     l,
-		agentService: agent.NewAgentService(),
-		jobService:   job.NewJobService(),
-		delegates:    withDelegateMemoryRepository(),
+		listener:      l,
+		agentService:  agent.NewAgentService(),
+		jobService:    job.NewJobService(),
+		delegates:     withDelegateMemoryRepository(),
+		clientMsgRepo: withClientMessageMemoryRepository(),
 	}
 	return lhs, nil
 }
@@ -101,6 +106,10 @@ func listener(id uuid.UUID) (listeners.Listener, error) {
 		return &udpListener, err
 	}
 	return nil, fmt.Errorf("pkg/services/message.listener(): %s", err)
+}
+
+func withClientMessageMemoryRepository() message.Repository {
+	return messageMemory.NewRepository()
 }
 
 // withHTTPMemoryListenerRepository retrieves an in-memory HTTP Listener repository interface used to manage Listener object
@@ -169,19 +178,16 @@ func (s *Service) Construct(msg messages.Base) (data []byte, err error) {
 // Delegate messages are handled here. Once completed, this function checks for return messages that belong to the input
 // Agent and returns them along with any delegate messages.
 func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/service/message.Handle(): entering into function with ID: %s, Data length %d", id, len(data)))
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "ID", id, "Data Length", len(data))
+	defer slog.Log(context.Background(), logging.LevelTrace, "exiting from function", "Return Data Length", len(rdata), "error", err)
 	//fmt.Printf("pkg/service/message.Handle(): entering into function with ID: %s, Data length %d\n", id, len(data))
 
 	agent, err := s.agentService.Agent(id)
 	if err != nil {
-		if core.Debug {
-			logging.Message("debug", fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
-		}
+		slog.Debug(fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
 	}
 
-	// If the agent exists then get its encryption key
+	// If the agent exists, then get its encryption key
 	// If the agent does not exist, leave the key blank and then the listener's key will be used
 	var key []byte
 	if err == nil {
@@ -207,14 +213,10 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 			//logging.Message("debug", fmt.Sprintf("pkg/services/message.Handle(): there was an error deconstructing the message for agent %s: %s", id, err))
 			// If there is an orphaned agent, we can try to send back a message to re-accomplish authentication
 			// Unable to deconstruct because the message wasn't encrypted with the PSK; likely encrypted with the Agent's session key established during authentication
-			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-				Level:   messageAPI.Note,
-				Time:    time.Now().UTC(),
-				Error:   false,
-				Message: fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id),
-			})
+			s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("Orphaned agent request from %s detected, instructing agent to re-authenticate", id)))
+
 			// Unable to deconstruct because this listener's transforms don't match what the Agent used
-			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("Ensure listener %s is configured the exact same way as the agent. If not create a new listener with the correct configuration and try again.", s.listener.ID())))
+			s.clientMsgRepo.Add(message.NewMessage(message.Warn, fmt.Sprintf("Ensure listener %s is configured the exact same way as the agent. If not create a new listener with the correct configuration and try again.", s.listener.ID())))
 			msg.ID = id
 			// If the agent previously authenticated, connected to a different server, and then connected back to this one, it will need to re-authenticate
 			if s.agentService.Exist(id) && s.agentService.Authenticated(id) {
@@ -222,24 +224,24 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 				key = nil
 				err = s.agentService.ResetAuthentication(id)
 				if err != nil {
-					messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-						Level:   messageAPI.Warn,
-						Time:    time.Now().UTC(),
-						Error:   false,
-						Message: fmt.Sprintf("there was an error resetting the authentication status for orphaned agent %s: %s", id, err),
-					})
+					s.clientMsgRepo.Add(message.NewErrorMessage(fmt.Errorf("there was an error resetting the authentication status for orphaned agent %s: %s", id, err)))
 				}
 			}
 		}
 	} else if !agent.Authenticated() {
 		msg.ID = id
 		msg.Type = messages.CHECKIN
-		messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-			Level:   messageAPI.Note,
-			Time:    time.Now().UTC(),
-			Error:   false,
-			Message: fmt.Sprintf("Orphaned peer-to-peer agent %s detected due an empty payload, instructing agent to re-authenticate", id),
-		})
+		s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("Orphaned peer-to-peer agent %s detected due an empty payload, instructing agent to re-authenticate", id)))
+	}
+
+	// The "link refresh" command causes the parent Agent to send back an empty Base message for the child
+	// The parent can't construct a Base message for the child because it doesn't know the child Agent's configuration
+	// If the server already knows about the child Agent, then it isn't orphaned and will not trigger the orphaned logic above
+	if msg.ID == uuid.Nil {
+		msg.ID = agent.ID()
+		if msg.Type == 0 {
+			msg.Type = messages.CHECKIN
+		}
 	}
 
 	var returnMessage messages.Base
@@ -257,10 +259,11 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 			// It doesn't matter if an error is returned because we'll send in an empty key and the listener's key will be used
 			agent, err = s.agentService.Agent(id)
 			if err != nil {
-				if core.Debug {
-					logging.Message("debug", fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
-				}
+				slog.Debug(fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
 			} else {
+				// Send a message to all connected CLI clients a new authenticated agent has connected
+				m := message.NewMessage(message.Success, fmt.Sprintf("New authenticated Agent checkin for %s at %s", agent.ID(), agent.Initial().UTC().Format(time.RFC3339)))
+				s.clientMsgRepo.Add(m)
 				key = agent.Secret()
 			}
 		}
@@ -285,22 +288,22 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	// Update the Agent's status checkin time
 	err = s.agentService.UpdateStatusCheckin(agent.ID(), time.Now().UTC())
 	if err != nil {
-		messageAPI.ErrorMessage(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
+		slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 	}
 
-	// Handle incoming message type
+	// Handle the incoming message type
 	switch msg.Type {
 	case messages.CHECKIN:
 		// Nothing to do
 	case messages.JOBS:
 		err = s.jobService.Handler(msg.Payload.([]jobs.Job))
 		if err != nil {
-			messageAPI.ErrorMessage(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
+			slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 			return
 		}
 	default:
 		err = fmt.Errorf("unhandled authenticated messages.Base type %s", messages.String(msg.Type))
-		messageAPI.ErrorMessage(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
+		slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 		return
 	}
 
@@ -379,30 +382,18 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 		lhService, err = NewMessageService(delegate.Listener)
 		if err != nil {
 			if core.Verbose {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Warn,
-					Time:    time.Now().UTC(),
-					Error:   true,
-					Message: fmt.Sprintf("pkg/services/message.delegate(): %s", err),
-				})
+				slog.Error(fmt.Sprintf("pkg/services/message.delegate(): %s", err))
 			}
-			messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("A delegate message was received from %s for the non-existent listener %s.", delegate.Agent, delegate.Listener)))
-			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-				Level:   messageAPI.Info,
-				Time:    time.Now().UTC(),
-				Message: "Brute forcing all available listeners as a last resort to see if one of them can handle this message...",
-			})
+			s.clientMsgRepo.Add(message.NewErrorMessage(fmt.Errorf("a delegate message was received from %s for the non-existent listener %s", delegate.Agent, delegate.Listener)))
+			s.clientMsgRepo.Add(message.NewMessage(message.Info, "Brute forcing all available listeners as a last resort to see if one of them can handle this message..."))
+
 			lhService, rdata, err = bruteForceListener(delegate.Agent, delegate.Payload)
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level: messageAPI.Warn,
-					Time:  time.Now().UTC(),
-					Error: true,
-					Message: fmt.Sprintf("A delegate message was received from %s for the non-existent listener %s.\n"+
-						"Attempts to brute force all existing Listeners to find one configure to handle the message failed.\n"+
-						"Create a listener that matches the Agent's configuration before it reaches the maximum failed of login\n "+
-						"attempts, or try to re-link the agent, to recover control of it. %s", delegate.Agent, delegate.Listener, time.Now().UTC()),
-				})
+				msg := fmt.Sprintf("A delegate message was received from %s for the non-existent listener %s.\n"+
+					"Attempts to brute force all existing Listeners to find one configure to handle the message failed.\n"+
+					"Create a listener that matches the Agent's configuration before it reaches the maximum failed of login\n "+
+					"attempts, or try to re-link the agent, to recover control of it. %s", delegate.Agent, delegate.Listener, time.Now().UTC())
+				s.clientMsgRepo.Add(message.NewMessage(message.Warn, msg))
 				break
 			}
 			bruteforced = true
@@ -412,34 +403,21 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 					return fmt.Errorf("pkg/services/message.delegate(): %s", err)
 				}
 			}
-			messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-				Level:   messageAPI.Success,
-				Time:    time.Now().UTC(),
-				Message: fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from Agent %s. Instructing Agent to use this Listener ID", lhService.listener.ID(), delegate.Agent),
-			})
+			s.clientMsgRepo.Add(message.NewMessage(message.Success, fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from Agent %s. Instructing Agent to use this Listener ID", lhService.listener.ID(), delegate.Agent)))
 
-			// Add an Agent Control job for the Agent to change it's associated listener
+			// Add an Agent Control job for the Agent to change its associated listener
 			var job string
 			job, err = s.jobService.Add(delegate.Agent, "changelistener", []string{"listener", lhService.listener.ID().String()})
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(err.Error()))
+				s.clientMsgRepo.Add(message.NewErrorMessage(err))
 			} else {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Note,
-					Time:    time.Now().UTC(),
-					Message: fmt.Sprintf("%s", job),
-				})
+				s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("%s", job)))
 			}
 		} else {
 			// Send in the delegate message
 			rdata, err = lhService.Handle(delegate.Agent, delegate.Payload)
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Warn,
-					Time:    time.Now().UTC(),
-					Error:   true,
-					Message: fmt.Sprintf("there was an error handling delegate message from %s: %s\n", delegate.Agent, err),
-				})
+				slog.Error(fmt.Sprintf("there was an error handling delegate message from %s: %s\n", delegate.Agent, err))
 				break
 			}
 		}
@@ -519,7 +497,7 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 				if strings.ToLower(cmd.Command) == "unlink" {
 					job.Payload, err = s.unlink(id, cmd)
 					if err != nil {
-						messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.getBase(): %s", err)))
+						slog.Error(fmt.Sprintf("pkg/services/message.getBase(): %s", err))
 						break
 					}
 					returnJobs[i] = job
@@ -527,13 +505,18 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 			}
 		}
 		returnMessage.Payload = returnJobs
+	} else if agent.Authenticated() && !agent.Alive() {
+		// If the Agent is authenticated, has no return jobs, and is not alive return nothing
+		// Happens when child p2p agents are instructed to exit, but the server is still tracking the agent
+		// The Agent will NOT be alive, but still needs to send the exit message
+		return nil, nil
 	}
 
 	// Get delegate messages
 	returnMessage.Delegates, err = s.getDelegates(id)
 	if err != nil {
 		// Do not return an error because it will cause the Parent Agent to quit functioning
-		messageAPI.SendBroadcastMessage(messageAPI.ErrorMessage(fmt.Sprintf("pkg/services/message.getBase(): %s", err)))
+		slog.Error(fmt.Sprintf("pkg/services/message.getBase(): %s", err))
 	}
 
 	// Muted Agents that have nothing to say should not return an IDLE message
@@ -617,12 +600,7 @@ func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata
 		for _, listener := range tcpListeners {
 			lhService, err = NewMessageService(listener.ID())
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Warn,
-					Time:    time.Now().UTC(),
-					Error:   true,
-					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
-				})
+				slog.Error(fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err))
 				break
 			}
 			rdata, err = lhService.Handle(id, payload)
@@ -640,12 +618,7 @@ func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata
 		for _, listener := range udpListeners {
 			lhService, err = NewMessageService(listener.ID())
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Warn,
-					Time:    time.Now().UTC(),
-					Error:   true,
-					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
-				})
+				slog.Error(fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err))
 				break
 			}
 			rdata, err = lhService.Handle(id, payload)
@@ -663,12 +636,7 @@ func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata
 		for _, listener := range smbListeners {
 			lhService, err = NewMessageService(listener.ID())
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Warn,
-					Time:    time.Now().UTC(),
-					Error:   true,
-					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
-				})
+				slog.Error(fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err))
 				break
 			}
 			rdata, err = lhService.Handle(id, payload)
@@ -686,12 +654,7 @@ func bruteForceListener(id uuid.UUID, payload []byte) (lhService *Service, rdata
 		for _, listener := range httpListeners {
 			lhService, err = NewMessageService(listener.ID())
 			if err != nil {
-				messageAPI.SendBroadcastMessage(messageAPI.UserMessage{
-					Level:   messageAPI.Warn,
-					Time:    time.Now().UTC(),
-					Error:   true,
-					Message: fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err),
-				})
+				slog.Error(fmt.Sprintf("pkg/services/message.bruteForceListener(): %s", err))
 				break
 			}
 			rdata, err = lhService.Handle(id, payload)

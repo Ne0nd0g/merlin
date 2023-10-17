@@ -19,10 +19,13 @@
 package http
 
 import (
+	"context"
 	// Standard
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"log/slog"
 	"strings"
 
 	// 3rd Party
@@ -32,9 +35,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/authenticators"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/none"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/opaque"
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
@@ -195,9 +196,8 @@ func (l *Listener) ConfiguredOptions() map[string]string {
 // Construct takes in a messages.Base structure that is ready to be sent to an agent and runs all the data transforms
 // on it to encode and encrypt it. If an empty key is passed in, then the listener's interface encryption key will be used.
 func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners/http.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "message", fmt.Sprintf("%+v", msg), "key", fmt.Sprintf("%x", key))
+	defer slog.Log(context.Background(), logging.LevelTrace, "exiting from function", "data", fmt.Sprintf("%X", data), "error", err)
 
 	//fmt.Printf("pkg/listeners/http.Construct(): entering into function with Base message: %+v and key: %x\n", msg, key)
 	// Get a JWT and add it to the message
@@ -236,9 +236,7 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 // a messages.Base structure is returned. The key is used for decryption transforms. If an empty key is passed in, then
 // the listener's interface encryption key will be used.
 func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners/http.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "data length", len(data), "key", fmt.Sprintf("%x", key))
 
 	// Get the listener's interface encryption key
 	if len(key) == 0 {
@@ -258,6 +256,7 @@ func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 			data = []byte(ret.(string)) // Probably not what I should be doing
 		case messages.Base:
 			//fmt.Printf("pkg/listeners/http.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
+			slog.Log(context.Background(), logging.LevelTrace, "returning Base message", "message", fmt.Sprintf("%+v", ret.(messages.Base)))
 			return ret.(messages.Base), nil
 		default:
 			return messages.Base{}, fmt.Errorf("pkg/listeners/http.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)

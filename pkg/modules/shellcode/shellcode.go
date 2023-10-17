@@ -25,7 +25,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -151,7 +150,7 @@ func parseHex(str []string) ([]byte, error) {
 // parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
 func parseShellcodeFile(filePath string) ([]byte, error) {
 
-	fileContents, err := ioutil.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
+	fileContents, err := os.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
 	if err != nil {
 		return nil, err
 	}

@@ -25,6 +25,7 @@ import (
 	// Standard
 	"errors"
 	"fmt"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/multi/use"
 	"sync"
 
 	// Internal
@@ -106,11 +107,10 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/restart"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/start"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/stop"
-	"github.com/Ne0nd0g/merlin/pkg/cli/commands/listeners/use"
-
 	// Main Menu
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/mainMenu/group"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/mainMenu/queue"
+	"github.com/Ne0nd0g/merlin/pkg/cli/commands/mainMenu/reconnect"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/mainMenu/remove"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands/mainMenu/version"
 
@@ -213,6 +213,7 @@ func (r *Repository) load() {
 	// Main menu
 	r.Add(group.NewCommand())
 	r.Add(queue.NewCommand())
+	r.Add(reconnect.NewCommand())
 	r.Add(remove.NewCommand())
 	r.Add(version.NewCommand())
 

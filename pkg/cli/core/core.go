@@ -18,19 +18,8 @@
 package core
 
 import (
-	// Standard
-	"bufio"
-	"fmt"
 	"os"
-	"strings"
 	"sync"
-	"time"
-
-	"github.com/fatih/color"
-
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
 // STDOUT is a global mutex to prevent concurrent writes to STDOUT
@@ -44,43 +33,3 @@ var Verbose = false
 
 // CurrentDir is the current directory where Merlin was executed from
 var CurrentDir, _ = os.Getwd()
-
-// MessageChannel is used to input user messages that are eventually written to STDOUT on the CLI application
-var MessageChannel = make(chan messages.UserMessage)
-
-// Confirm reads in a string and returns true if the string is y or yes but does not provide the prompt question
-func Confirm(question string) bool {
-	reader := bufio.NewReader(os.Stdin)
-	MessageChannel <- messages.UserMessage{
-		Level:   messages.Plain,
-		Message: color.RedString(fmt.Sprintf("%s [yes/NO]: ", question)),
-		Time:    time.Now().UTC(),
-		Error:   false,
-	}
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		MessageChannel <- messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("There was an error reading the input:\r\n%s", err.Error()),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-	}
-	response = strings.ToLower(response)
-	response = strings.Trim(response, "\r\n")
-	yes := []string{"y", "yes", "-y", "-Y"}
-
-	for _, match := range yes {
-		if response == match {
-			return true
-		}
-	}
-	return false
-}
-
-// Exit will prompt the user to confirm if they want to exit
-func Exit() {
-	color.Red("[!]Quitting...")
-	logging.Server("Shutting down Merlin due to user input")
-	os.Exit(0)
-}

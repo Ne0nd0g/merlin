@@ -24,6 +24,6 @@ import uuid "github.com/satori/go.uuid"
 type Repository interface {
 	AddAgent(group string, id uuid.UUID) error
 	Groups() (groups []string)
-	Members() (members [][]string)
+	Members() (members map[string][]uuid.UUID)
 	RemoveAgent(group string, id uuid.UUID) error
 }

@@ -21,6 +21,7 @@ package listeners
 import (
 	// Standard
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -37,7 +38,6 @@ import (
 	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
 	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
 	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	httpServer "github.com/Ne0nd0g/merlin/pkg/servers/http"
 	httpServerRepo "github.com/Ne0nd0g/merlin/pkg/servers/http/memory"
@@ -115,7 +115,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
-		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID %s, Authenticator: %s, Transforms: %s", hServer.ProtocolString(), hServer.Addr(), hListener.Name(), hListener.ID(), hListener.Authenticator(), hListener.Transformers()))
+		slog.Info("Create new listener", "protocol", hServer.ProtocolString(), "address", hServer.Addr(), "name", hListener.Name(), "id", hListener.ID(), "authenticator", hListener.Authenticator().String(), "transforms", fmt.Sprintf("%+v", hListener.Transformers()))
 		listener = &hListener
 		return
 	case "smb":
@@ -129,7 +129,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
-		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], sListener.Addr(), sListener.Name(), sListener.ID(), sListener.Authenticator(), sListener.Transformers()))
+		slog.Info("Create new listener", "protocol", options["Protocol"], "address", sListener.Addr(), "name", sListener.Name(), "id", sListener.ID(), "authenticator", sListener.Authenticator().String(), "transforms", fmt.Sprintf("%+v", sListener.Transformers()))
 		listener = &sListener
 		return
 	case "tcp":
@@ -143,7 +143,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
-		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], tListener.Addr(), tListener.Name(), tListener.ID(), tListener.Authenticator(), tListener.Transformers()))
+		slog.Info("Create new listener", "protocol", options["Protocol"], "address", tListener.Addr(), "name", tListener.Name(), "id", tListener.ID(), "authenticator", tListener.Authenticator().String(), "transforms", fmt.Sprintf("%+v", tListener.Transformers()))
 		listener = &tListener
 		return
 	case "udp":
@@ -156,7 +156,7 @@ func (ls *ListenerService) NewListener(options map[string]string) (listener list
 		if err != nil {
 			return nil, fmt.Errorf("pkg/services/listeners.NewListener(): %s", err)
 		}
-		logging.Server(fmt.Sprintf("Created %s listener on %s with name: %s, ID: %s, Authenticator: %s, Transforms: %s", options["Protocol"], uListener.Addr(), uListener.Name(), uListener.ID(), uListener.Authenticator(), uListener.Transformers()))
+		slog.Info("Create new listener", "protocol", options["Protocol"], "address", uListener.Addr(), "name", uListener.Name(), "id", uListener.ID(), "authenticator", uListener.Authenticator().String(), "transforms", fmt.Sprintf("%+v", uListener.Transformers()))
 		listener = &uListener
 		return
 	default:
@@ -436,6 +436,10 @@ func (ls *ListenerService) Start(id uuid.UUID) error {
 	switch listener.Protocol() {
 	case listeners.HTTP:
 		server := *listener.Server()
+		err = server.Listen()
+		if err != nil {
+			return err
+		}
 		// Start() does not return until the transport server is killed and therefore must be run in a go routine
 		go server.Start()
 		return nil

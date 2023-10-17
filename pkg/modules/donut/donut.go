@@ -262,3 +262,13 @@ func BytesFromConfig(srcFile string, config *donut.DonutConfig) (*bytes.Buffer, 
 	}
 	return donut.ShellcodeFromFile(srcFile, config)
 }
+
+// BytesFromString takes a base64 encoded .NET assembly and a donut configuration as inputs and returns the donut payload as a bytes buffer
+func BytesFromString(assembly string, config *donut.DonutConfig) (*bytes.Buffer, error) {
+	// Base64 decode assembly
+	data, err := base64.StdEncoding.DecodeString(assembly)
+	if err != nil {
+		return nil, fmt.Errorf("there was an error base64 decoding the donut assembly:\n%s", err)
+	}
+	return donut.ShellcodeFromBytes(bytes.NewBuffer(data), config)
+}

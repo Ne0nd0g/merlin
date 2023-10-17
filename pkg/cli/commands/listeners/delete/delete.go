@@ -22,23 +22,24 @@ package delete
 
 import (
 	// Standard
+	"bufio"
 	"fmt"
+	os2 "os"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
+	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
 
-	// Internal
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
 	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -74,13 +75,7 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
+
 	return readline.PcItem(c.name,
 		readline.PcItemDynamic(completer.ListenerListCompleter()),
 	)
@@ -92,14 +87,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
@@ -107,42 +94,28 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 			return
 		}
 	}
 	switch m {
 	case menu.LISTENERS:
 		if len(args) < 2 {
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()))
 			return
 		}
 		// Parse the UUID
 		var err error
 		id, err = uuid.FromString(args[1])
 		if err != nil {
-			response.Message = &messages.UserMessage{
-				Level:   messages.Warn,
-				Message: fmt.Sprintf("invalid UUID: %s\n%s", args[1], c.help.Usage()),
-				Time:    time.Now().UTC(),
-				Error:   true,
-			}
+			response.Message = message.NewErrorMessage(fmt.Errorf("invalid UUID: %s\n%s", args[1], c.help.Usage()))
 			return
 		}
 	}
 
-	if core.Confirm(fmt.Sprintf("Are you sure you want to delete the %s listener?", id)) {
-		msg := listenerAPI.RemoveID(id)
-		response.Message = &msg
-		if !msg.Error {
+	if confirm(fmt.Sprintf("Are you sure you want to delete the %s listener?", id)) {
+		response.Message = rpc.RemoveListener(id)
+		if !response.Message.Error() {
 			response.Menu = menu.LISTENERS
 			response.Prompt = "\033[31mMerlin[\033[32mlisteners\033[31m]»\033[0m "
 		}
@@ -152,13 +125,6 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 
@@ -180,4 +146,30 @@ func (c *Command) OS() os.OS {
 // String returns the unique name of the command as a string
 func (c *Command) String() string {
 	return c.name
+}
+
+// confirm reads in a string and returns true if the string is y or yes but does not provide the prompt question
+func confirm(question string) bool {
+	reader := bufio.NewReader(os2.Stdin)
+	core.STDOUT.Lock()
+	defer core.STDOUT.Unlock()
+
+	fmt.Println(color.RedString(fmt.Sprintf("%s [yes/NO]: ", question)))
+
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println(color.RedString("Error reading input: %s", err))
+		return false
+	}
+
+	response = strings.ToLower(response)
+	response = strings.Trim(response, "\r\n")
+	yes := []string{"y", "yes", "-y", "-Y"}
+
+	for _, match := range yes {
+		if response == match {
+			return true
+		}
+	}
+	return false
 }

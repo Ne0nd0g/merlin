@@ -21,9 +21,13 @@
 package tcp
 
 import (
+	"context"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
+
 	// Standard
 	"crypto/sha256"
 	"fmt"
+	"log/slog"
 	"net"
 	"strconv"
 	"strings"
@@ -35,9 +39,7 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/authenticators"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/none"
 	"github.com/Ne0nd0g/merlin/pkg/authenticators/opaque"
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
@@ -232,9 +234,7 @@ func (l *Listener) ConfiguredOptions() (options map[string]string) {
 // Construct takes in a messages.Base structure that is ready to be sent to an agent and runs all the data transforms
 // on it to encode and encrypt it. If an empty key is passed in, then the listener's interface encryption key will be used.
 func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners.Construct(): entering into function with Base message: %+v and key: %x", msg, key))
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "msg", msg, "key", key)
 
 	if len(key) == 0 {
 		key = l.psk
@@ -264,9 +264,7 @@ func (l *Listener) Construct(msg messages.Base, key []byte) (data []byte, err er
 // a messages.Base structure is returned. The key is used for decryption transforms. If an empty key is passed in, then
 // the listener's interface encryption key will be used.
 func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
-	if core.Debug {
-		logging.Message("debug", fmt.Sprintf("pkg/listeners/tcp.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
-	}
+	slog.Debug(fmt.Sprintf("pkg/listeners/tcp.Deconstruct(): entering into function with Data length %d and key: %x", len(data), key))
 	//fmt.Printf("pkg/listeners/tcp.Deconstruct(): entering into function with Data length %d and key: %x\n", len(data), key)
 
 	// Get the listener's interface encryption key

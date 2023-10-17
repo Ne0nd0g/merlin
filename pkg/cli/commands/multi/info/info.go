@@ -33,17 +33,15 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
 	moduleMemory "github.com/Ne0nd0g/merlin/pkg/cli/module/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -195,13 +193,6 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixCompleterInterface) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	switch m {
 	case menu.LISTENERS:
 		comp = readline.PcItem(c.name,
@@ -219,14 +210,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	switch m {
 	case menu.AGENT:
 		return c.DoAgent(id, arguments)
@@ -254,26 +237,64 @@ func (c *Command) DoAgent(id uuid.UUID, arguments string) (response commands.Res
 			var h help.Help
 			_, ok := c.help[menu.AGENT]
 			if !ok {
-				response.Message = &messages.UserMessage{
-					Level:   messages.Warn,
-					Message: fmt.Sprintf("the Help structure for the 'info' command was not found for the '%s' menu", menu.AGENT),
-					Time:    time.Now().UTC(),
-					Error:   true,
-				}
+				response.Message = message.NewErrorMessage(fmt.Errorf("the Help structure for the 'info' command was not found for the '%s' menu", menu.AGENT))
 				return
 			}
 			h = c.help[menu.AGENT]
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
-	rows, msg := agentAPI.GetAgentInfo(id)
-	if msg.Error {
-		response.Message = &msg
+
+	a, err := rpc.GetAgent(id)
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("pkg/cli/commands/info.DoAgent(): %s", err))
+		return
+	}
+
+	// Calculate the last checkin time
+	t, err := time.Parse(time.RFC3339, a.StatusCheckin())
+	if err != nil {
+		// DO NOTHING
+	}
+	lastTime := time.Since(t)
+	lastTimeStr := fmt.Sprintf("%d:%02d:%02d ago",
+		int(lastTime.Hours()),
+		int(lastTime.Minutes())%60,
+		int(lastTime.Seconds())%60)
+
+	build := a.Build()
+	host := a.Host()
+	comms := a.Comms()
+	process := a.Process()
+	rows := [][]string{
+		{"ID", a.ID().String()},
+		{"Alive", fmt.Sprintf("%v", a.Alive())},
+		{"Status", a.Status()},
+		{"Platform", fmt.Sprintf("%s/%s", host.Platform, host.Architecture)},
+		{"User Name", process.UserName},
+		{"User GUID", process.UserGUID},
+		{"Integrity Level", fmt.Sprintf("%d", process.Integrity)},
+		{"Hostname", host.Name},
+		{"Process Name", process.Name},
+		{"Process ID", fmt.Sprintf("%d", process.ID)},
+		{"IP", strings.Join(host.IPs, "\n")},
+		{"Initial Check In", a.Initial()},
+		{"Last Check In", fmt.Sprintf("%s (%s)", a.StatusCheckin(), lastTimeStr)},
+		{"Linked Agents", fmt.Sprintf("%+v", a.Links())},
+		{"Groups", fmt.Sprintf("%+v", a.Groups())},
+		{"Note", a.Note()},
+		{"", ""},
+		{"Agent Version", build.Version},
+		{"Agent Build", build.Build},
+		{"Agent Wait Time", comms.Wait},
+		{"Agent Wait Time Skew", strconv.FormatInt(comms.Skew, 10)},
+		{"Agent Message Padding Max", fmt.Sprintf("%d", comms.Padding)},
+		{"Agent Max Retries", fmt.Sprintf("%d", comms.Retry)},
+		{"Agent Failed Check In", fmt.Sprintf("%d", comms.Failed)},
+		{"Agent Kill Date", time.Unix(comms.Kill, 0).UTC().Format(time.RFC3339)},
+		{"Agent Communication Protocol", comms.Proto},
+		{"Agent JA3 TLS Client Signature", comms.JA3},
 	}
 
 	// Build the table
@@ -284,11 +305,7 @@ func (c *Command) DoAgent(id uuid.UUID, arguments string) (response commands.Res
 	table.AppendBulk(rows)
 	table.Render()
 
-	response.Message = &messages.UserMessage{
-		Level:   messages.Plain,
-		Message: tableString.String(),
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Plain, fmt.Sprintf("\n%s", tableString.String()))
 
 	return
 }
@@ -305,32 +322,24 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 			var h help.Help
 			_, ok := c.help[menu.LISTENER]
 			if !ok {
-				response.Message = &messages.UserMessage{
-					Level:   messages.Warn,
-					Message: fmt.Sprintf("the Help structure for the 'info' command was not found for the '%s' menu", menu.LISTENER),
-					Time:    time.Now().UTC(),
-					Error:   true,
-				}
+				response.Message = message.NewErrorMessage(fmt.Errorf("the Help structure for the 'info' command was not found for the '%s' menu", menu.LISTENER))
+
 				return
 			}
 			h = c.help[menu.LISTENER]
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 
-	msg, options := listenerAPI.GetListenerConfiguredOptions(id)
-	if msg.Error {
-		response.Message = &msg
+	msg, options := rpc.ListenerGetConfiguredOptions(id)
+	if msg.Error() {
+		response.Message = msg
 		return
 	}
-	msg = listenerAPI.GetListenerStatus(id)
-	if msg.Error {
-		response.Message = &msg
+
+	response.Message = rpc.ListenerStatus(id)
+	if response.Message.Error() {
 		return
 	}
 
@@ -345,14 +354,10 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 		for k, v := range options {
 			table.Append([]string{k, v})
 		}
-		table.Append([]string{"Status", msg.Message})
+		table.Append([]string{"Status", response.Message.Message()})
 		table.Render()
 
-		response.Message = &messages.UserMessage{
-			Level:   messages.Plain,
-			Message: tableString.String(),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Plain, fmt.Sprintf("\n%s", tableString.String()))
 	}
 	return
 }
@@ -364,23 +369,14 @@ func (c *Command) DoListeners(id uuid.UUID, arguments string) (response commands
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument from this menu\ninfo listenerID", c),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument from this menu\ninfo listenerID", c))
 		return
 	}
 
 	var h help.Help
 	_, ok := c.help[menu.LISTENERS]
 	if !ok {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("the Help structure for the 'info' command was not found for the '%s' menu", menu.LISTENERS),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("the Help structure for the 'info' command was not found for the '%s' menu", menu.LISTENERS))
 		return
 	}
 	h = c.help[menu.LISTENERS]
@@ -389,11 +385,7 @@ func (c *Command) DoListeners(id uuid.UUID, arguments string) (response commands
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -401,12 +393,7 @@ func (c *Command) DoListeners(id uuid.UUID, arguments string) (response commands
 	var err error
 	id, err = uuid.FromString(args[1])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error parsing UUID '%s': %s\n%s", args[1], err, h.Usage()),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing UUID '%s': %s\n%s", args[1], err, h.Usage()))
 		return
 	}
 	return c.DoListener(id, arguments)
@@ -424,20 +411,11 @@ func (c *Command) DoListenerSetup(id uuid.UUID, arguments string) (response comm
 			var h help.Help
 			_, ok := c.help[menu.LISTENERSETUP]
 			if !ok {
-				response.Message = &messages.UserMessage{
-					Level:   messages.Warn,
-					Message: fmt.Sprintf("the Help structure for the 'info' command was not found for the '%s' menu", menu.LISTENERSETUP),
-					Time:    time.Now().UTC(),
-					Error:   true,
-				}
+				response.Message = message.NewErrorMessage(fmt.Errorf("the Help structure for the 'info' command was not found for the '%s' menu", menu.LISTENERSETUP))
 				return
 			}
 			h = c.help[menu.LISTENERSETUP]
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -461,11 +439,7 @@ func (c *Command) DoListenerSetup(id uuid.UUID, arguments string) (response comm
 	}
 	table.Render()
 
-	response.Message = &messages.UserMessage{
-		Level:   messages.Plain,
-		Message: tableString.String(),
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Plain, fmt.Sprintf("\n%s", tableString.String()))
 
 	return
 }
@@ -482,20 +456,11 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 			var h help.Help
 			_, ok := c.help[menu.MODULE]
 			if !ok {
-				response.Message = &messages.UserMessage{
-					Level:   messages.Warn,
-					Message: fmt.Sprintf("the Help structure for the 'info' command was not found for the '%s' menu", menu.MODULE),
-					Time:    time.Now().UTC(),
-					Error:   true,
-				}
+				response.Message = message.NewErrorMessage(fmt.Errorf("the Help structure for the 'info' command was not found for the '%s' menu", menu.MODULE))
 				return
 			}
 			h = c.help[menu.MODULE]
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -504,49 +469,39 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 	repo := moduleMemory.NewRepository()
 	m, err := repo.Get(id)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("pkg/cli/commands/info.DoModule(): there was an error getting module ID %s from the repository", err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-		err = nil
+		response.Message = message.NewErrorMessage(fmt.Errorf("pkg/cli/commands/info.DoModule(): there was an error getting module ID %s from the repository", err))
 		return
 	}
 
 	// Build the response message to display
-	var message string
-	message += fmt.Sprintf("\n'%s' module information\n", m.Name)
-	message += fmt.Sprintf("\nPlatform:\n\t%s\\%s\\%s\n", m.Platform, m.Arch, m.Lang)
-	message += "Module Authors:\n"
-	for a := range m.Author {
-		message += fmt.Sprintf("\t%s\n", m.Author[a])
+	var msg string
+	msg += fmt.Sprintf("\n'%s' module information\n", m.Name())
+	msg += fmt.Sprintf("\nPlatform:\n\t%s\\%s\\%s\n", m.Platform(), m.Arch(), m.Lang())
+	msg += "Module Authors:\n"
+	for _, a := range m.Author() {
+		msg += fmt.Sprintf("\t%s\n", a)
 	}
-	message += "Credits:\n"
-	for credit := range m.Credits {
-		message += fmt.Sprintf("\t%s\n", m.Credits[credit])
+	msg += "Credits:\n"
+	for _, credit := range m.Credits() {
+		msg += fmt.Sprintf("\t%s\n", credit)
 	}
-	message += fmt.Sprintf("Description:\n\t%s\n", m.Description)
+	msg += fmt.Sprintf("Description:\n\t%s\n", m.Description())
 
 	// Build the options' table
-	message += "Options:\n\n"
+	msg += "Options:\n\n"
 	builder := &strings.Builder{}
 	table := tablewriter.NewWriter(builder)
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	table.SetBorder(false)
-	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name})
-	for _, v := range m.Options {
+	table.Append([]string{"Agent", m.Agent(), "true", "Agent on which to run module " + m.Name()})
+	for _, v := range m.Options() {
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
 	table.Render()
-	message += builder.String()
-	message += fmt.Sprintf("Notes:\n\t%s", m.Notes)
+	msg += builder.String()
+	msg += fmt.Sprintf("Notes:\n\t%s", m.Notes())
 
-	response.Message = &messages.UserMessage{
-		Level:   messages.Info,
-		Message: message,
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Info, msg)
 	return
 }
 

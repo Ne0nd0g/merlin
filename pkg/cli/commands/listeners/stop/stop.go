@@ -24,21 +24,19 @@ import (
 	// Standard
 	"fmt"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -72,13 +70,7 @@ func NewCommand() *Command {
 }
 
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixCompleterInterface) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
+
 	switch m {
 	case menu.LISTENER:
 		comp = readline.PcItem(c.name)
@@ -98,14 +90,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
@@ -113,11 +97,7 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 			return
 		}
 	}
@@ -125,39 +105,23 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	switch m {
 	case menu.LISTENERS:
 		if len(args) < 2 {
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command requires at least one argument from this menu\nstop listenerID", c),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument from this menu\nstop listenerID", c))
 			return
 		}
 		// Parse the UUID
 		var err error
 		id, err = uuid.FromString(args[1])
 		if err != nil {
-			response.Message = &messages.UserMessage{
-				Level:   messages.Warn,
-				Message: fmt.Sprintf("there was an error parsing the UUID '%s': %s\n%s", args[1], err, c.help.Usage()),
-			}
+			response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the UUID '%s': %s\n%s", args[1], err, c.help.Usage()))
 			return
 		}
 	}
-
-	msg := listenerAPI.Stop(id)
-	response.Message = &msg
+	response.Message = rpc.ListenerStop(id)
 	return
 }
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 

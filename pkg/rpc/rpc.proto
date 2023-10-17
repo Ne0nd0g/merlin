@@ -1,0 +1,273 @@
+syntax = "proto3";
+
+option go_package = "github.com/Ne0nd0g/merlin/pkg/rpc";
+import "google/protobuf/empty.proto";
+//import "google/protobuf/struct.proto";
+package rpc;
+
+service Merlin {
+  rpc Authenticate()
+  rpc Reconnect(ID) returns (ID) {}
+  rpc Register(google.protobuf.Empty) returns (ID) {}
+  rpc Listen(ID) returns (stream Message) {}
+
+  // Agent Commands
+  rpc Any(AgentCMD) returns (Message) {}
+  rpc CD(AgentCMD) returns (Message) {}
+  rpc CheckIn(ID) returns (Message) {}
+  rpc ClearJobs(ID) returns (Message) {}
+  rpc ClearJobsCreated(google.protobuf.Empty) returns (Message) {}
+  rpc CMD(AgentCMD) returns (Message) {}
+  rpc Connect(AgentCMD) returns (Message) {}
+  rpc Download(AgentCMD) returns (Message) {}
+  rpc ENV(AgentCMD) returns (Message) {}
+  rpc ExecuteAssembly(AgentCMD) returns (Message) {}
+  rpc ExecutePE(AgentCMD) returns (Message) {}
+  rpc ExecuteShellcode(AgentCMD) returns (Message) {}
+  rpc Exit(ID) returns (Message) {}
+  rpc IFConfig(ID) returns (Message) {}
+  rpc InvokeAssembly(AgentCMD) returns (Message) {}
+  rpc JA3(AgentCMD) returns (Message) {}
+  rpc KillDate(AgentCMD) returns (Message) {}
+  rpc KillProcess(AgentCMD) returns (Message) {}
+  rpc LinkAgent(AgentCMD) returns (Message) {}
+  rpc ListAssemblies(ID) returns (Message) {}
+  rpc Listener(AgentCMD) returns (Message) {}
+  rpc LoadAssembly(AgentCMD) returns (Message) {}
+  rpc LoadCLR(AgentCMD) returns (Message) {}
+  rpc LS(AgentCMD) returns (Message) {}
+  rpc MaxRetry(AgentCMD) returns (Message) {}
+  rpc Memory(AgentCMD) returns (Message) {}
+  rpc MEMFD(AgentCMD) returns (Message) {}
+  rpc Netstat(AgentCMD) returns (Message) {}
+  rpc Note(AgentCMD) returns (Message) {}
+  rpc Nslookup(AgentCMD) returns (Message) {}
+  rpc Padding(AgentCMD) returns (Message) {}
+  rpc Pipes(ID) returns (Message) {}
+  rpc PS(ID) returns (Message) {}
+  rpc PWD(ID) returns (Message) {}
+  rpc RM(AgentCMD) returns (Message) {}
+  rpc RunAs(AgentCMD) returns (Message) {}
+  rpc SecureDelete(AgentCMD) returns (Message) {}
+  rpc SharpGen(AgentCMD) returns (Message) {}
+  rpc Skew(AgentCMD) returns (Message) {}
+  rpc Sleep(AgentCMD) returns (Message) {}
+  rpc Socks(AgentCMD) returns (Message) {}
+  rpc SSH(AgentCMD) returns (Message) {}
+  rpc Token(AgentCMD) returns (Message) {}
+  rpc Touch(AgentCMD) returns (Message) {}
+  rpc UnlinkAgent(AgentCMD) returns (Message) {}
+  rpc Upload(AgentCMD) returns (Message) {}
+  rpc Uptime(ID) returns (Message) {}
+
+  // Agent Service
+  rpc Groups(google.protobuf.Empty) returns (Slice) {}
+  rpc GroupAdd(Group) returns (Message) {}
+  rpc GroupList(ID) returns (Slice) {}
+  rpc GroupListAll(google.protobuf.Empty) returns (GroupMembers) {}
+  rpc GroupRemove(Group) returns (Message) {}
+  rpc GetAgent(ID) returns (AgentInfo) {}
+  rpc GetAgents(google.protobuf.Empty) returns (Slice) {}
+  rpc GetAgentLinks(ID) returns (Slice) {}
+  rpc GetAgentStatus(ID) returns (Message) {}
+  rpc GetAgentRows(google.protobuf.Empty) returns (TableData) {}
+  rpc Remove(ID) returns (Message) {}
+
+  // Job Service
+  rpc GetAllJobs(google.protobuf.Empty) returns (Jobs) {}
+  rpc GetAllActiveJobs(google.protobuf.Empty) returns (Jobs) {}
+  rpc GetAgentJobs(ID) returns (Jobs) {}
+  rpc GetAgentActiveJobs(ID) returns (Jobs) {}
+
+  // Listener
+  rpc CreateListener(Options) returns (Message) {}
+  rpc GetListenerIDs(google.protobuf.Empty) returns (Slice) {}
+  rpc GetListeners(google.protobuf.Empty) returns (TableData) {}
+  rpc GetListenerOptions(ID) returns (Options) {}
+  rpc GetListenerDefaultOptions(String) returns (Options) {}
+  rpc GetListenerTypes(google.protobuf.Empty) returns (Slice) {}
+  rpc GetListenerStatus(ID) returns (Message) {}
+  rpc RemoveListener(ID) returns (Message) {}
+  rpc RestartListener(ID) returns (Message) {}
+  rpc SetListenerOption(AgentCMD) returns (Message) {}
+  rpc StartListener(ID) returns (Message) {}
+  rpc StopListener(ID) returns (Message) {}
+  rpc Servers(google.protobuf.Empty) returns (Slice){}
+
+  rpc GetModule(String) returns (Module) {}
+  rpc GetModuleList(google.protobuf.Empty) returns (Slice) {}
+  rpc RunModule(ModuleRun) returns (Messages) {}
+
+}
+
+message ID {
+  string id = 1;
+}
+
+message AgentInfo {
+  string ID = 1;
+  bool Alive = 2;
+  bool Authenticated = 3;
+  Build Build = 4;
+  Host Host = 5;
+  Process Process = 6;
+  Comms Comms = 7;
+  string InitialCheckin = 8;
+  string LastCheckin = 9;
+  repeated string Links = 10;
+  string Listener = 11;
+  string Note = 12;
+  string Status = 13;
+  repeated string Groups = 14;
+}
+
+message Build {
+  string Build  = 1;
+  string Version  = 2;
+}
+
+message Comms {
+  int32 Failed = 1;
+  string JA3 = 2;
+  int64 KillDate = 3;
+  int32 Padding = 4;
+  string Protocol = 5;
+  int32 Retry = 6;
+  int64 Skew = 7;
+  string Wait = 8;
+}
+
+message Host {
+  string Architecture = 1;
+  string Name = 2;
+  string Platform = 3;
+  repeated string IPs = 4;
+}
+
+message Process {
+  int32 ID = 1;
+  int32 IntegrityLevel = 2;
+  string Name = 3;
+  string UserGUID = 4;
+  string Username = 5;
+  string Domain = 6;
+}
+
+message AgentCMD {
+  string ID = 1;
+  repeated string arguments = 2;
+}
+
+message Job {
+  string ID = 1;
+  string AgentID = 2;
+  string Command = 3;
+  string Created = 4;
+  string Completed = 5;
+  string Status = 6;
+  string Sent = 7;
+}
+
+message Jobs {
+  repeated Job jobs = 1;
+}
+
+enum MessageLevel {
+  UNDEFINED = 0;
+  INFO = 1;
+  NOTE = 2;
+  WARN = 3;
+  DEBUG = 4;
+  SUCCESS = 5;
+  PLAIN = 6;
+}
+
+message Message {
+  MessageLevel level = 1;
+  string message = 2;
+  string timestamp = 3;
+  bool error = 4;
+}
+
+message Messages {
+  repeated Message messages = 1;
+}
+
+message Options {
+  map<string, string> options = 1;
+}
+
+message TableRows {
+  // A list/slice of strings
+  repeated string row = 1;
+}
+
+message TableData {
+  repeated string header = 1;
+  // A list of lists of strings
+  repeated TableRows rows = 2;
+}
+
+message Slice {
+  repeated string data = 1;
+}
+
+message Group {
+  string Group = 1;
+  string AgentID = 2;
+}
+
+message GroupMember {
+  string Group = 1;
+  repeated string Members = 2;
+}
+
+message GroupMembers {
+  repeated GroupMember members = 1;
+}
+
+message String {
+  string data = 1;
+}
+
+message ModuleOption {
+  string Name = 1;
+  string Value = 2;
+  bool Required = 3;
+  string Flag = 4;
+  string Description = 5;
+}
+
+message Module {
+  string ID = 1;
+  string Agent = 2;
+  string Name = 3;
+  bool Extended = 4;
+  repeated string Author = 5;
+  repeated string Credits = 6;
+  repeated string Path = 7;
+  string Platform = 8;
+  string Arch = 9;
+  string Lang = 10;
+  bool Priv = 11;
+  string Description = 12;
+  string Notes = 13;
+  repeated string Commands = 14;
+  string SourceRemote = 15;
+  repeated string SourceLocal = 16;
+  repeated ModuleOption Options = 17;
+}
+
+message ModuleRun{
+  string Name = 1;
+  string Agent = 2;
+  string Platform = 3;
+  repeated ModuleOption Options = 4;
+  bool Extended = 5;
+  repeated string Commands = 6;
+}
+
+message Login{
+  string username = 1;
+  string password = 2;
+}

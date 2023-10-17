@@ -20,6 +20,7 @@ package agents
 import (
 	// Standard
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,7 +29,6 @@ import (
 	"github.com/satori/go.uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/opaque"
 )
 
@@ -45,7 +45,7 @@ type Agent struct {
 	checkin       time.Time      // The last time the agent has checked in
 	linkedAgents  []uuid.UUID    // linkedAgents contains a list of first-order peer-to-peer connected agents
 	listener      uuid.UUID      // The listener associated with the agent
-	log           *os.File       // The log used by the agent ; Contains a mutex locker and is causing problems
+	log           *os.File       // The log used by the agent; Contains a mutex locker and is causing problems
 	secret        []byte         // secret is used to perform symmetric encryption operations
 	opaque        *opaque.Server // Holds information about opaque Registration and Authentication
 	note          string         // Operator notes for an agent
@@ -69,7 +69,12 @@ func NewAgent(id uuid.UUID, secret []byte, opaque *opaque.Server, initial time.T
 // TODO Move this to a repository that uses flat files for now but potentially a database in the future
 // createLogFile makes a new log file for the provided Agent ID for future log messages
 func createLogFile(id uuid.UUID) (agentLog *os.File, err error) {
-	dir := filepath.Join(core.CurrentDir, "data", "agents")
+	current, err := os.Getwd()
+	if err != nil {
+		slog.Error(err.Error())
+		return nil, fmt.Errorf("there was an error getting the current working directory: %s", err)
+	}
+	dir := filepath.Join(current, "data", "agents")
 
 	// Create a directory for the new agent's files
 	if _, err = os.Stat(filepath.Join(dir, id.String())); os.IsNotExist(err) {

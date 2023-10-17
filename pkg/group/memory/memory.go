@@ -94,13 +94,9 @@ func (r *Repository) RemoveAgent(group string, id uuid.UUID) error {
 }
 
 // Members returns a list of lists that contains all created groups and their Agent members
-func (r *Repository) Members() (members [][]string) {
+func (r *Repository) Members() (members map[string][]uuid.UUID) {
 	r.Lock()
-	for group, agents := range r.groups {
-		for _, agent := range agents {
-			members = append(members, []string{group, agent.String()})
-		}
-	}
+	members = r.groups
 	r.Unlock()
 	return
 }

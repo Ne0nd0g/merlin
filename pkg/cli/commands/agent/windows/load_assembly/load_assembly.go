@@ -22,22 +22,27 @@ package load_assembly
 
 import (
 	// Standard
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"io"
+	"log/slog"
+	os2 "os"
+	"path/filepath"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -79,13 +84,7 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
+
 	return readline.PcItem(c.name)
 }
 
@@ -95,51 +94,59 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()))
 		return
 	}
 
 	// Check for help first
 	switch strings.ToLower(args[1]) {
 	case "help", "-h", "--help", "?", "/?":
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 		return
 	}
-	msg := agentAPI.LoadAssembly(id, args)
-	response.Message = &msg
+	// 0. load-assembly
+	// 1. assemblyPath
+	// 2. alias
+
+	// Validate that file path exists
+	_, err := os2.Stat(args[1])
+	if os2.IsNotExist(err) {
+		response.Message = message.NewErrorMessage(fmt.Errorf("the file path does not exist: %s", args[1]))
+		return
+	}
+	// Read in the file
+	data, err := os2.ReadFile(args[1])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error reading the file at %s: %s", args[1], err))
+		return
+	}
+	var name string
+	if len(args) > 2 {
+		name = args[2]
+	} else {
+		name = filepath.Base(args[1])
+	}
+
+	// Generate and log filepath and hash
+	fileHash := sha256.New() // #nosec G401 // Use SHA1 because it is what many Blue Team tools use
+	_, err = io.WriteString(fileHash, string(data))
+	if err != nil {
+		slog.Error(fmt.Sprintf("there was an error generating tha SHA256 file hash for %s: %s", args[1], err))
+	} else {
+		slog.Info("Uploading file from the 'load-assembly' command", "filepath", args[1], "SHA256", hex.EncodeToString(fileHash.Sum(nil)))
+	}
+
+	response.Message = rpc.LoadAssembly(id, []string{base64.StdEncoding.EncodeToString(data), name, hex.EncodeToString(fileHash.Sum(nil))})
 	return
 }
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 

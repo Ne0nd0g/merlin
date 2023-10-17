@@ -22,7 +22,11 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"log/slog"
+	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -36,8 +40,9 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
+	// Internal
+	"github.com/Ne0nd0g/merlin/pkg/client/message"
+	"github.com/Ne0nd0g/merlin/pkg/client/message/memory"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/servers"
 )
@@ -64,15 +69,17 @@ const (
 	Closed int = 3
 )
 
-// Server is a structure for an HTTP server that impelents the Server interface
+// Server is a structure for an HTTP server that implements the Server interface
 type Server struct {
 	id        uuid.UUID // Unique identifier for the Server object
 	iface     string    // The network adapter interface the server will listen on
-	handler   *handler
+	handler   *Handler
 	port      int // The port the server will listen on
-	protocol  int // The protocol (i.e. HTTP/2 or HTTP/3) the server will use from the servers package
+	protocol  int // The protocol (i.e., HTTP/2 or HTTP/3) the server will use from the servers' package
 	state     int
 	transport interface{} // The server, or transport, that will be used to send and receive traffic
+	listener  net.Listener
+	udpConn   *net.UDPConn
 	x509Cert  string
 	x509Key   string
 	urls      []string
@@ -219,13 +226,45 @@ func (s *Server) ConfiguredOptions() map[string]string {
 }
 
 // Handler returns the Server's current context information such as encryption keys
-func (s *Server) Handler() *handler {
+func (s *Server) Handler() *Handler {
 	return s.handler
 }
 
 // Interface function returns the interface that the server is bound to
 func (s *Server) Interface() string {
 	return s.iface
+}
+
+// Listen creates a TCP network listener on the server's network interface and port
+func (s *Server) Listen() (err error) {
+	err = s.generateServer()
+	if err != nil {
+		err = fmt.Errorf("there was an error generating a new %s server: %s", s, err)
+		slog.Error(err.Error())
+		return
+	}
+
+	if s.protocol != servers.HTTP3 {
+		s.listener, err = net.Listen("tcp", fmt.Sprintf("%s:%d", s.iface, s.port))
+		if err != nil {
+			err = fmt.Errorf("there was an error creating a listener for the %s server: %s", s, err)
+			slog.Error(err.Error())
+			return
+		}
+	} else {
+		s.udpConn, err = net.ListenUDP("udp", &net.UDPAddr{
+			IP:   net.ParseIP(s.iface),
+			Port: s.port,
+			Zone: "",
+		})
+		if err != nil {
+			err = fmt.Errorf("there was an error creating a listener for the %s server: %s", s, err)
+			slog.Error(err.Error())
+			return
+		}
+	}
+
+	return
 }
 
 // Port function returns the port that the server is bound to
@@ -300,32 +339,22 @@ func (s *Server) Start() {
 	// Catch Panic
 	defer func() {
 		if r := recover(); r != nil {
-			m := fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", s.Protocol(), s.iface, s.port, r.(error))
-			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.Warn,
-				Message: m,
-				Time:    time.Now().UTC(),
-				Error:   true,
-			})
+			slog.Error(fmt.Sprintf("The %s server on %s:%d paniced:\r\n%v+\r\n", s.ProtocolString(), s.iface, s.port, r.(error)))
 		}
 	}()
 
 	g.Go(func() error {
-		err := s.generateServer()
-		if err != nil {
-			return fmt.Errorf("pkg/servers/http.Start(): there was an error generating a new HTTP1 server: %s", err)
-		}
 		s.state = Running
 		switch s.protocol {
 		case servers.HTTP, servers.H2C:
-			return s.transport.(*http.Server).ListenAndServe()
+			return s.transport.(*http.Server).Serve(s.listener)
 		case servers.HTTPS, servers.HTTP2:
-			return s.transport.(*http.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+			return s.transport.(*http.Server).ServeTLS(s.listener, s.x509Cert, s.x509Key)
 		case servers.HTTP3:
-			if s.x509Key != "" && s.x509Cert != "" {
-				return s.transport.(*http3.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
-			}
-			return s.transport.(*http3.Server).ListenAndServe()
+			//if s.x509Key != "" && s.x509Cert != "" {
+			//	return s.transport.(*http3.Server).ListenAndServeTLS(s.x509Cert, s.x509Key)
+			//}
+			return s.transport.(*http3.Server).Serve(s.udpConn)
 		default:
 			return fmt.Errorf("could not start HTTP server, invalid protocol %d, %s", s.protocol, State(s.protocol))
 		}
@@ -334,7 +363,7 @@ func (s *Server) Start() {
 	if err := g.Wait(); err != nil {
 		if err != http.ErrServerClosed && err != quic.ErrServerClosed {
 			s.state = Error
-			messages.SendBroadcastMessage(messages.ErrorMessage(fmt.Sprintf("there was an error with the %s server on %s:%d %s", s.ProtocolString(), s.iface, s.port, err.Error())))
+			slog.Error(fmt.Sprintf("there was an error with the %s server on %s:%d %s", s.ProtocolString(), s.iface, s.port, err.Error()))
 		}
 	}
 }
@@ -346,6 +375,15 @@ func (s *Server) Status() string {
 
 // Stop function stops the server
 func (s *Server) Stop() (err error) {
+	// If the server isn't running, return
+	if s.state != Running {
+		return nil
+	}
+
+	if s.transport == nil {
+		return fmt.Errorf("the %s server on %s:%d was never started", s.ProtocolString(), s.iface, s.port)
+	}
+
 	switch s.protocol {
 	case servers.HTTP3:
 		// The http3 Close() sends a QUIC CONNECTION_CLOSE frame
@@ -362,6 +400,12 @@ func (s *Server) Stop() (err error) {
 	}
 	s.state = Closed
 	return
+}
+
+// String function returns the server's protocol as a string
+// (e.g., HTTP, HTTPS, HTTP2, H2C, HTTP3)
+func (s *Server) String() string {
+	return s.ProtocolString()
 }
 
 // State is used to transform a server state constant into a string for use in written messages or logs
@@ -394,8 +438,12 @@ func GetDefaultOptions(protocol int) map[string]string {
 	options["URLS"] = "/"
 
 	if protocol != servers.HTTP && protocol != servers.H2C {
-		options["X509Cert"] = filepath.Join(string(core.CurrentDir), "data", "x509", "server.crt")
-		options["X509Key"] = filepath.Join(string(core.CurrentDir), "data", "x509", "server.key")
+		current, err := os.Getwd()
+		if err != nil {
+			slog.Error(fmt.Sprintf("there was an error getting the current working directory: %s", err))
+		}
+		options["X509Cert"] = filepath.Join(current, "data", "x509", "server.crt")
+		options["X509Key"] = filepath.Join(current, "data", "x509", "server.key")
 	}
 
 	switch protocol {
@@ -417,7 +465,7 @@ func GetDefaultOptions(protocol int) map[string]string {
 }
 
 // Renew generates a new Server object and retains original encryption keys
-func Renew(ctx handler, options map[string]string) (Server, error) {
+func Renew(ctx Handler, options map[string]string) (Server, error) {
 	tempServer, err := New(options)
 	if err != nil {
 		return tempServer, err
@@ -438,7 +486,7 @@ func (s *Server) generateServer() error {
 	}
 
 	// Handler
-	s.handler = &handler{
+	s.handler = &Handler{
 		// Used to sign and encrypt JWT
 		listener:  s.id,
 		jwtKey:    jwt,
@@ -462,6 +510,7 @@ func (s *Server) generateServer() error {
 			WriteTimeout:      30 * time.Second,
 			ReadHeaderTimeout: 30 * time.Second,
 			MaxHeaderBytes:    1 << 20,
+			ErrorLog:          log.Default(),
 		}
 	case servers.H2C:
 		h2s := &http2.Server{}
@@ -472,8 +521,10 @@ func (s *Server) generateServer() error {
 			WriteTimeout:      10 * time.Second,
 			ReadHeaderTimeout: 30 * time.Second,
 			MaxHeaderBytes:    1 << 20,
+			ErrorLog:          log.Default(),
 		}
 	case servers.HTTP3:
+
 		s.transport = &http3.Server{
 			Addr:           fmt.Sprintf("%s:%d", s.iface, s.port),
 			Port:           s.port,
@@ -481,7 +532,7 @@ func (s *Server) generateServer() error {
 			MaxHeaderBytes: 1 << 20,
 			//TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}, MinVersion: tls.VersionTLS12},
 			QuicConfig: &quic.Config{
-				// Opted for a long timeout to prevent the client from sending a HTTP/2 PING Frame
+				// Opted for a long timeout to prevent the client from sending an HTTP/2 PING Frame
 				MaxIdleTimeout:  time.Until(time.Now().AddDate(0, 42, 0)),
 				KeepAlivePeriod: time.Second * 0,
 			},
@@ -496,12 +547,8 @@ func (s *Server) generateServer() error {
 		if err != nil {
 			m := fmt.Sprintf("Certificate was not found at: \"%s\"\n", s.x509Cert)
 			m += "Creating in-memory x.509 certificate used for this session only"
-			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.Note,
-				Message: m,
-				Time:    time.Now().UTC(),
-				Error:   false,
-			})
+			slog.Info(fmt.Sprintf("Certificate was not found at: %s. Creating in-memory x.509 certificate used for this session only", s.x509Cert))
+			memory.NewRepository().Add(message.NewMessage(message.Note, m))
 			// Set to blank to force the HTTP server to use its TLS config. ListenAndServeTLS will fail with invalid file paths
 			s.x509Key = ""
 			s.x509Cert = ""
@@ -520,18 +567,14 @@ func (s *Server) generateServer() error {
 		if insecure {
 			m := fmt.Sprintf("Insecure publicly distributed Merlin x.509 testing certificate in use for %s server on %s:%d\n", s.ProtocolString(), s.iface, s.port)
 			m += "Additional details: https://merlin-c2.readthedocs.io/en/latest/server/x509.html"
-			messages.SendBroadcastMessage(messages.UserMessage{
-				Level:   messages.Warn,
-				Message: m,
-				Time:    time.Now().UTC(),
-				Error:   false,
-			})
+			slog.Info(m)
+			memory.NewRepository().Add(message.NewMessage(message.Note, m))
 		}
 		switch s.protocol {
 		case servers.HTTPS, servers.HTTP2:
 			s.transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
 		case servers.HTTP3:
-			s.transport.(*http3.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+			s.transport.(*http3.Server).TLSConfig = http3.ConfigureTLSConfig(&tls.Config{Certificates: []tls.Certificate{*certificates}}) // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
 		}
 	}
 	return nil

@@ -21,12 +21,13 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package module
 
 import (
-	"github.com/Ne0nd0g/merlin/pkg/modules"
 	uuid "github.com/satori/go.uuid"
 )
 
 type Repository interface {
-	Add(module modules.Module) error
-	Get(id uuid.UUID) (module modules.Module, err error)
-	Update(id uuid.UUID, module modules.Module) error
+	Add(module *Module) error
+	Get(id uuid.UUID) (module *Module, err error)
+	Reload(id uuid.UUID)
+	Update(id uuid.UUID, module *Module) error
+	UpdateOption(id uuid.UUID, key, value string)
 }

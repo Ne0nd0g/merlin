@@ -24,25 +24,22 @@ import (
 	// Standard
 	"fmt"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	moduleAPI "github.com/Ne0nd0g/merlin/pkg/api/modules"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
+	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	listenerEntity "github.com/Ne0nd0g/merlin/pkg/cli/entity/listener"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
 	moduleMemory "github.com/Ne0nd0g/merlin/pkg/cli/module/memory"
-	"github.com/Ne0nd0g/merlin/pkg/services/listeners"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -69,22 +66,14 @@ func NewCommand() *Command {
 }
 
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixCompleterInterface) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	switch m {
 	case menu.LISTENERS:
-		listenerService := listeners.NewListenerService()
 		comp = readline.PcItem(c.name,
-			readline.PcItemDynamic(listenerService.CLICompleter()),
+			readline.PcItemDynamic(completer.ListenerTypesCompleter()),
 		)
 	case menu.MODULES:
 		comp = readline.PcItem(c.name,
-			readline.PcItemDynamic(moduleAPI.GetModuleListCompleter()),
+			readline.PcItemDynamic(completer.ModuleCompleter()),
 		)
 	}
 	return
@@ -96,26 +85,13 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) (comp readline.PrefixComp
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	switch m {
 	case menu.LISTENERS:
 		return c.DoListeners(arguments)
 	case menu.MODULES:
 		return c.DoModules(arguments)
 	default:
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("'%s' is not a valid menu for the '%s' command", m, c),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewUserMessage(message.Warn, fmt.Sprintf("'%s' is not a valid menu for the '%s' command", m, c))
 	}
 	return
 }
@@ -132,11 +108,7 @@ func (c *Command) DoListeners(arguments string) (response commands.Response) {
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, h.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, h.Usage()))
 		return
 	}
 
@@ -144,28 +116,24 @@ func (c *Command) DoListeners(arguments string) (response commands.Response) {
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 
 	// Get a list of all Listener types the server supports
-	types := listenerAPI.GetListenerTypes()
+	m, types := rpc.ListenerGetTypes()
+	if m.Error() {
+		response.Message = m
+		return
+	}
+
 	// Loop through the types and check if the user provided type is supported
 	for _, t := range types {
 		if strings.ToLower(t) == strings.ToLower(args[1]) {
-			options, err := listenerAPI.GetDefaultOptions(t)
-			if err != nil {
-				response.Message = &messages.UserMessage{
-					Level:   messages.Warn,
-					Message: fmt.Sprintf("there was an getting default options for listener type '%s': %s", t, err),
-					Time:    time.Now().UTC(),
-					Error:   true,
-				}
+			msg, options := rpc.ListenerGetDefaultOptions(t)
+			if msg.Error() {
+				response.Message = msg
 				return
 			}
 			// Build a new Listener structure
@@ -181,12 +149,7 @@ func (c *Command) DoListeners(arguments string) (response commands.Response) {
 		}
 	}
 	// If we get here, the user provided type is not supported
-	response.Message = &messages.UserMessage{
-		Level:   messages.Warn,
-		Message: fmt.Sprintf("'%s' is not a supported listener type\n%s", args[1], c.help.Usage()),
-		Time:    time.Now().UTC(),
-	}
-
+	response.Message = message.NewUserMessage(message.Warn, fmt.Sprintf("'%s' is not a supported listener type\n%s", args[1], c.help.Usage()))
 	return
 }
 
@@ -203,11 +166,7 @@ func (c *Command) DoModules(arguments string) (response commands.Response) {
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires one argument\n%s", c, h.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires one argument\n%s", c, h.Usage()))
 		return
 	}
 
@@ -215,20 +174,16 @@ func (c *Command) DoModules(arguments string) (response commands.Response) {
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 
 	// Get the module options from the API based on the selected string
 	// The module's absolute path is built on the server side
-	message, m := moduleAPI.GetModule(args[1])
-	if message.Error {
-		response.Message = &message
+	msg, m := rpc.GetModule(args[1])
+	if msg.Error() {
+		response.Message = msg
 		return
 	}
 
@@ -236,12 +191,7 @@ func (c *Command) DoModules(arguments string) (response commands.Response) {
 	repo := moduleMemory.NewRepository()
 	err := repo.Add(m)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Error:   true,
-			Message: fmt.Sprintf("there was an error adding the %s module to the repository: %s", m, err),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error adding the %s module to the repository: %s", m, err))
 		return
 	}
 
@@ -254,13 +204,6 @@ func (c *Command) DoModules(arguments string) (response commands.Response) {
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 

@@ -211,6 +211,26 @@ func (i *Info) Status() int {
 	return i.status
 }
 
+// StatusString returns the Job's status as a string
+func (i *Info) StatusString() string {
+	switch i.status {
+	case CREATED:
+		return "Created"
+	case SENT:
+		return "Sent"
+	case RETURNED:
+		return "Returned"
+	case COMPLETE:
+		return "Complete"
+	case CANCELED:
+		return "Canceled"
+	case ACTIVE:
+		return "Active"
+	default:
+		return "Unknown"
+	}
+}
+
 // Token returns the Job's token
 func (i *Info) Token() uuid.UUID {
 	return i.token

@@ -21,6 +21,7 @@ package agent
 import (
 	// Standard
 	"fmt"
+	"log/slog"
 	"time"
 
 	// 3rd Party
@@ -31,7 +32,6 @@ import (
 	"github.com/Ne0nd0g/merlin/pkg/agents/memory"
 	"github.com/Ne0nd0g/merlin/pkg/group"
 	groupMemory "github.com/Ne0nd0g/merlin/pkg/group/memory"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/messages"
 )
 
@@ -73,7 +73,7 @@ func (s *Service) Add(agent agents.Agent) (err error) {
 	if err != nil {
 		return err
 	}
-	logging.Server(fmt.Sprintf("Added Agent %s to the repository", agent.ID()))
+	slog.Debug(fmt.Sprintf("Added Agent %s to the repository", agent.ID()))
 	return
 }
 
@@ -199,7 +199,7 @@ func (s *Service) Remove(id uuid.UUID) (err error) {
 	if err != nil {
 		return
 	}
-	logging.Server(fmt.Sprintf("Added removed %s to the repository", id))
+	slog.Info(fmt.Sprintf("Removed Agent %s from the repository", id))
 	return
 }
 
@@ -214,6 +214,34 @@ func (s *Service) ResetAuthentication(id uuid.UUID) (err error) {
 	agent.SetSecret([]byte{})
 	agent.ResetOPAQUE()
 	return s.Update(agent)
+}
+
+// Status determines if the agent is active, delayed, or dead based on its last checkin time and retry settings
+func (s *Service) Status(id uuid.UUID) (status string, err error) {
+	var agent agents.Agent
+	agent, err = s.Agent(id)
+	if err != nil {
+		return "", err
+	}
+
+	var d time.Duration
+	d, err = time.ParseDuration(agent.Comms().Wait)
+
+	if err != nil && agent.Comms().Wait != "" {
+		err = fmt.Errorf("there was an error converting %s to a time duration: %s", agent.Comms().Wait, err)
+	}
+	// Clear the error
+	err = nil
+	if agent.Comms().Wait == "" {
+		status = "Init"
+	} else if agent.StatusCheckin().Add(d).After(time.Now()) {
+		status = "Active"
+	} else if agent.StatusCheckin().Add(d * time.Duration(agent.Comms().Retry+1)).After(time.Now()) { // +1 to account for skew
+		status = "Delayed"
+	} else {
+		status = "Dead"
+	}
+	return
 }
 
 // Unlink removes a child Agent link from the parent Agent id
@@ -335,8 +363,15 @@ func (s *Service) Groups() []string {
 }
 
 // GroupMembers returns a list of lists that contain all groups and their members
-func (s *Service) GroupMembers() [][]string {
-	return s.groupRepo.Members()
+func (s *Service) GroupMembers() map[string][]uuid.UUID {
+	members := s.groupRepo.Members()
+	// Update the "all" group
+	members["all"] = []uuid.UUID{}
+	allAgents := s.Agents()
+	for _, agent := range allAgents {
+		members["all"] = append(members["all"], agent.ID())
+	}
+	return members
 }
 
 // RemoveAgentFromGroup removes an Agent ID from a group

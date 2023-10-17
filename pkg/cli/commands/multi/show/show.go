@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
@@ -33,15 +32,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	listenerAPI "github.com/Ne0nd0g/merlin/pkg/api/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
 	"github.com/Ne0nd0g/merlin/pkg/cli/listener/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
 	moduleMemory "github.com/Ne0nd0g/merlin/pkg/cli/module/memory"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -128,13 +126,6 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return readline.PcItem(c.name)
 }
 
@@ -144,14 +135,6 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	switch m {
 	case menu.LISTENER:
 		return c.DoListener(id, arguments)
@@ -173,23 +156,18 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 
-	msg, options := listenerAPI.GetListenerConfiguredOptions(id)
-	if msg.Error {
-		response.Message = &msg
+	msg, options := rpc.ListenerGetConfiguredOptions(id)
+	if msg.Error() {
+		response.Message = msg
 		return
 	}
-	msg = listenerAPI.GetListenerStatus(id)
-	if msg.Error {
-		response.Message = &msg
+	response.Message = rpc.ListenerStatus(id)
+	if response.Message.Error() {
 		return
 	}
 
@@ -204,14 +182,10 @@ func (c *Command) DoListener(id uuid.UUID, arguments string) (response commands.
 		for k, v := range options {
 			table.Append([]string{k, v})
 		}
-		table.Append([]string{"Status", msg.Message})
+		table.Append([]string{"Status", response.Message.Message()})
 		table.Render()
 
-		response.Message = &messages.UserMessage{
-			Level:   messages.Plain,
-			Message: tableString.String(),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Plain, fmt.Sprintf("\n%s", tableString.String()))
 	}
 	return
 }
@@ -226,11 +200,7 @@ func (c *Command) DoListenerSetup(id uuid.UUID, arguments string) (response comm
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -254,11 +224,7 @@ func (c *Command) DoListenerSetup(id uuid.UUID, arguments string) (response comm
 	}
 	table.Render()
 
-	response.Message = &messages.UserMessage{
-		Level:   messages.Plain,
-		Message: tableString.String(),
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Plain, fmt.Sprintf("\n%s", tableString.String()))
 	return
 }
 
@@ -271,11 +237,7 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 		h := c.help[menu.MODULE]
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\nDescription: %s\n\nUsage: %s\n\nExample: %s\n\nNotes: %s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -284,34 +246,23 @@ func (c *Command) DoModule(id uuid.UUID, arguments string) (response commands.Re
 	repo := moduleMemory.NewRepository()
 	m, err := repo.Get(id)
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("pkg/cli/commands/show.DoModule(): there was an error getting module ID %s from the repository", err),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
-		err = nil
+		response.Message = message.NewErrorMessage(fmt.Errorf("pkg/cli/commands/show.DoModule(): there was an error getting module ID %s from the repository", err))
 		return
 	}
 
-	message := fmt.Sprintf("\n'%s' module options\n\n", m.Name)
+	msg := fmt.Sprintf("\n'%s' module options\n\n", m.Name)
 	// Build the table of options
 	builder := &strings.Builder{}
 	table := tablewriter.NewWriter(builder)
 	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
 	table.SetBorder(false)
-	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name})
-	for _, v := range m.Options {
+	table.Append([]string{"Agent", m.Agent(), "true", "Agent on which to run module " + m.Name()})
+	for _, v := range m.Options() {
 		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
 	}
 	table.Render()
-	message += builder.String()
-
-	response.Message = &messages.UserMessage{
-		Level:   messages.Info,
-		Message: message,
-		Time:    time.Now().UTC(),
-	}
+	msg += builder.String()
+	response.Message = message.NewUserMessage(message.Info, msg)
 
 	return
 }

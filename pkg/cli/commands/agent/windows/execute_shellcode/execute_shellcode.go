@@ -22,22 +22,24 @@ package execute_shellcode
 
 import (
 	// Standard
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	os2 "os"
+	"strconv"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -75,13 +77,6 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return readline.PcItem(c.name,
 		readline.PcItem("self"),
 		readline.PcItem("remote"),
@@ -96,24 +91,12 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 2 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command requires at least one argument\n%s", c, c.help.Usage()))
 		return
 	}
 
@@ -127,18 +110,10 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 	case "userapc":
 		return c.userAPC(id, arguments)
 	case "help", "-h", "--help", "?", "/?":
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 		return
 	default:
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: c.help.Usage(),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, c.help.Usage())
 		return
 	}
 }
@@ -161,11 +136,7 @@ func (c *Command) self(id uuid.UUID, arguments string) (response commands.Respon
 
 	// Validate at least one argument, in addition to the command, was provided
 	if len(args) < 3 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s self' command requires at least one argument\n%s", c, h.Usage),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s self' command requires at least two arguments\n%s", c, h.Usage()))
 		return
 	}
 
@@ -173,16 +144,20 @@ func (c *Command) self(id uuid.UUID, arguments string) (response commands.Respon
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s self' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s self' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
-	msg := agentAPI.ExecuteShellcode(id, args)
-	response.Message = &msg
+
+	shellcode, err := parse(args[2])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the provided shellcode: %s", err))
+		return
+	}
+
+	// 0. Shellcode as base64 string
+	// 1. Method
+	response.Message = rpc.ExecuteShellcode(id, []string{shellcode, args[1]})
 	return
 }
 
@@ -207,30 +182,38 @@ func (c *Command) remote(id uuid.UUID, arguments string) (response commands.Resp
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
-	// Validate at least one argument, in addition to the command, was provided
-	if len(args) < 4 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s remote' command requires at least two argument\n%s", c, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
-		return
-	}
-
 	// Check for help first
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
+	if len(args) > 2 {
+		switch strings.ToLower(args[2]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s remote' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s remote' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
-	msg := agentAPI.ExecuteShellcode(id, args)
-	response.Message = &msg
+
+	// Validate at least one argument, in addition to the command, was provided
+	if len(args) < 4 {
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s remote' command requires at least two argument\n%s", c, c.help.Usage()))
+		return
+	}
+
+	// Validate the PID is an integer
+	_, err := strconv.Atoi(args[2])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error converting the PID to an integer: %s", err))
+		return
+	}
+
+	shellcode, err := parse(args[3])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the provided shellcode: %s", err))
+		return
+	}
+
+	// 0. Shellcode as base64 string
+	// 1. Method
+	// 2. PID
+	response.Message = rpc.ExecuteShellcode(id, []string{shellcode, args[1], args[2]})
 	return
 }
 
@@ -253,30 +236,38 @@ func (c *Command) rtlCreateUserThread(id uuid.UUID, arguments string) (response 
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
-	// Validate at least one argument, in addition to the command, was provided
-	if len(args) < 4 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s rtlcreateuserthread' command requires at least two arguments\n%s", c, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
-		return
-	}
-
 	// Check for help first
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
+	if len(args) > 2 {
+		switch strings.ToLower(args[2]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s rtlcreateuserthread' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s rtlcreateuserthread' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
-	msg := agentAPI.ExecuteShellcode(id, args)
-	response.Message = &msg
+
+	// Validate at least one argument, in addition to the command, was provided
+	if len(args) < 4 {
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s rtlcreateuserthread' command requires at least two arguments\n%s", c, c.help.Usage()))
+		return
+	}
+
+	// Validate the PID is an integer
+	_, err := strconv.Atoi(args[2])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error converting the PID to an integer: %s", err))
+		return
+	}
+
+	shellcode, err := parse(args[3])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the provided shellcode: %s", err))
+		return
+	}
+
+	// 0. Shellcode as base64 string
+	// 1. Method
+	// 2. PID
+	response.Message = rpc.ExecuteShellcode(id, []string{shellcode, args[1], args[2]})
 	return
 }
 
@@ -299,42 +290,43 @@ func (c *Command) userAPC(id uuid.UUID, arguments string) (response commands.Res
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
-	// Validate at least one argument, in addition to the command, was provided
-	if len(args) < 4 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s userapc' command requires at least two arguments\n%s", c, c.help.Usage()),
-			Time:    time.Now().UTC(),
-		}
-		return
-	}
-
 	// Check for help first
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
+	if len(args) > 2 {
+		switch strings.ToLower(args[2]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
-	msg := agentAPI.ExecuteShellcode(id, args)
-	response.Message = &msg
+
+	// Validate at least one argument, in addition to the command, was provided
+	if len(args) < 4 {
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s userapc' command requires at least two arguments\n%s", c, c.help.Usage()))
+		return
+	}
+
+	// Validate the PID is an integer
+	_, err := strconv.Atoi(args[2])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error converting the PID to an integer: %s", err))
+		return
+	}
+
+	shellcode, err := parse(args[3])
+	if err != nil {
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the provided shellcode: %s", err))
+		return
+	}
+
+	// 0. Shellcode as base64 string
+	// 1. Method
+	// 2. PID
+	response.Message = rpc.ExecuteShellcode(id, []string{shellcode, args[1], args[2]})
 	return
 }
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 
@@ -356,4 +348,79 @@ func (c *Command) OS() os.OS {
 // String returns the unique name of the command as a string
 func (c *Command) String() string {
 	return c.name
+}
+
+// parse determines if a file path was provided OR if shellcode in hex, byte, or base64 format was provided
+func parse(input string) (string, error) {
+	var data []byte
+
+	// Check if shellcode argument is a file path
+	f, err := os2.Stat(input)
+	if err != nil {
+		// If it is not a file path, see if it is data in base64 or hex format
+		data, err = parseData([]string{input})
+		if err != nil {
+			return "", fmt.Errorf("there was an error parsing '%s' because is not a file path or hex data", input)
+		}
+	} else {
+		if f.IsDir() {
+			return "", fmt.Errorf("a directory was provided instead of a file: %s", input)
+		}
+		data, err = parseShellcodeFile(input)
+		if err != nil {
+			return "", fmt.Errorf("there was an error parsing the shellcode file: %s", err)
+		}
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+// parseData evaluates a string array to determine its format and returns a byte array of the hex
+func parseData(str []string) ([]byte, error) {
+	hexString := strings.Join(str, "")
+
+	// see if it is Base64 encoded
+	data, err := base64.StdEncoding.DecodeString(hexString)
+	if err == nil {
+		return data, err
+	}
+
+	// see if string is prefixed with 0x
+	if hexString[0:2] == "0x" {
+		hexString = strings.Replace(hexString, "0x", "", -1)
+		hexString = strings.Replace(hexString, ",", "", -1)
+		hexString = strings.Replace(hexString, " ", "", -1)
+	}
+
+	// see if string is prefixed with \x
+	if hexString[0:2] == "\\x" {
+		hexString = strings.Replace(hexString, "\\x", "", -1)
+		hexString = strings.Replace(hexString, ",", "", -1)
+		hexString = strings.Replace(hexString, " ", "", -1)
+	}
+
+	return hex.DecodeString(hexString)
+}
+
+// parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
+func parseShellcodeFile(filePath string) ([]byte, error) {
+
+	fileContents, err := os2.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
+	if err != nil {
+		return nil, err
+	}
+
+	hexBytes, errHex := parseData([]string{string(fileContents)})
+
+	// If there was an error parsing the bytes, then it probably wasn't ASCII hex, therefore, continue on
+	if errHex == nil {
+		return hexBytes, nil
+	}
+
+	// See if it is Base64 encoded binary blob
+	base64Data, errB64 := base64.StdEncoding.DecodeString(string(fileContents))
+	if errB64 == nil {
+		return base64Data, nil
+	}
+
+	return fileContents, nil
 }

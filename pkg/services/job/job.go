@@ -19,11 +19,8 @@
 package job
 
 import (
-	// Standard
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -35,8 +32,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	messageAPI "github.com/Ne0nd0g/merlin/pkg/api/messages"
-	cli "github.com/Ne0nd0g/merlin/pkg/cli/core"
+	"github.com/Ne0nd0g/merlin/pkg/client/message"
+	memoryMessage "github.com/Ne0nd0g/merlin/pkg/client/message/memory"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/jobs"
 	"github.com/Ne0nd0g/merlin/pkg/jobs/memory"
@@ -48,6 +45,7 @@ import (
 // Service holds references to repositories to manage Job objects
 type Service struct {
 	jobRepo      jobs.Repository
+	messageRepo  message.Repository
 	agentService *agent.Service
 }
 
@@ -59,6 +57,7 @@ func NewJobService() *Service {
 	if memoryService == nil {
 		memoryService = &Service{
 			jobRepo:      WithJobMemoryRepository(),
+			messageRepo:  withMemoryClientMessageRepository(),
 			agentService: agent.NewAgentService(),
 		}
 	}
@@ -69,6 +68,10 @@ func NewJobService() *Service {
 
 func WithJobMemoryRepository() jobs.Repository {
 	return memory.NewRepository()
+}
+
+func withMemoryClientMessageRepository() message.Repository {
+	return memoryMessage.NewRepository()
 }
 
 func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (string, error) {
@@ -129,7 +132,7 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 	case "exit":
 		job.Type = jobs.CONTROL
 		p := jobs.Command{
-			Command: jobArgs[0], // TODO, this should be in jobType position
+			Command: jobType,
 		}
 		job.Payload = p
 	case "ifconfig":
@@ -199,33 +202,16 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 			Args:    []string{"list-assemblies"},
 		}
 	case "load-assembly":
-		// jobArgs[0] - server-side source file location
+		// jobArgs[0] - base64 encoded assembly
 		// jobArgs[1] - Assembly name
 		// jobArgs[2] - calculated SHA256 hash
-		if len(jobArgs) < 1 {
-			return "", fmt.Errorf("exected 1 argument for the load-assembly command, received: %+v", jobArgs)
+		if len(jobArgs) < 3 {
+			return "", fmt.Errorf("the load-assembly command requires three agruments, have %d", len(jobArgs))
 		}
 		job.Type = jobs.MODULE
-		assembly, err := ioutil.ReadFile(jobArgs[0])
-		if err != nil {
-			return "", fmt.Errorf("there was an error reading the assembly at %s:\n%s", jobArgs[0], err)
-		}
-
-		name := filepath.Base(jobArgs[0])
-		if len(jobArgs) > 1 {
-			name = jobArgs[1]
-		}
-
-		fileHash := sha256.New()
-		_, err = io.WriteString(fileHash, string(assembly))
-		if err != nil {
-			return "", fmt.Errorf("there was an error generating a file hash: %s", err)
-		}
-		jobArgs = append(jobArgs, fmt.Sprintf("%s", fileHash.Sum(nil)))
-
 		job.Payload = jobs.Command{
 			Command: "clr",
-			Args:    []string{jobType, base64.StdEncoding.EncodeToString([]byte(assembly)), name},
+			Args:    []string{jobType, jobArgs[0], jobArgs[1]},
 		}
 	case "load-clr":
 		if len(jobArgs) < 1 {
@@ -251,11 +237,8 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 	case "maxretry":
 		job.Type = jobs.CONTROL
 		p := jobs.Command{
-			Command: jobArgs[0], // TODO This should be in the jobType position
-		}
-
-		if len(jobArgs) == 2 {
-			p.Args = jobArgs[1:]
+			Command: jobType,
+			Args:    jobArgs,
 		}
 		job.Payload = p
 	case "memory":
@@ -268,20 +251,10 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 		if len(jobArgs) < 1 {
 			return "", fmt.Errorf("expected 1 argument for the memfd command, received %d", len(jobArgs))
 		}
-		executable, err := ioutil.ReadFile(jobArgs[0])
-		if err != nil {
-			return "", fmt.Errorf("there was an error reading %s: %v", jobArgs[0], err)
-		}
-		fileHash := sha256.New()
-		_, err = io.WriteString(fileHash, string(executable))
-		if err != nil {
-			return "", fmt.Errorf("there was an error generating file hash: %s", err)
-		}
-		b := base64.StdEncoding.EncodeToString(executable)
 		job.Type = jobs.MODULE
 		job.Payload = jobs.Command{
 			Command: jobType,
-			Args:    append([]string{b}, jobArgs[1:]...),
+			Args:    jobArgs,
 		}
 	case "Minidump":
 		job.Type = jobs.MODULE
@@ -306,11 +279,8 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 	case "padding":
 		job.Type = jobs.CONTROL
 		p := jobs.Command{
-			Command: jobArgs[0],
-		}
-
-		if len(jobArgs) == 2 {
-			p.Args = jobArgs[1:]
+			Command: jobType,
+			Args:    jobArgs,
 		}
 		job.Payload = p
 	case "pipes":
@@ -328,7 +298,7 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 	case "pwd":
 		job.Type = jobs.NATIVE
 		p := jobs.Command{
-			Command: jobArgs[0], // TODO This should be in the jobType position
+			Command: "pwd",
 		}
 		job.Payload = p
 	case "rm":
@@ -366,40 +336,40 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 		}
 		job.Payload = payload
 	case "shellcode":
+		// jobArgs[0] - base64 encoded shellcode
+		// jobArgs[1] - method
+		// jobArgs[2] - PID
 		job.Type = jobs.SHELLCODE
 		payload := jobs.Shellcode{
-			Method: jobArgs[0],
+			Method: strings.ToLower(jobArgs[1]),
 		}
 
 		if payload.Method == "self" {
-			payload.Bytes = jobArgs[1]
+			payload.Bytes = jobArgs[0]
 		} else if payload.Method == "remote" || payload.Method == "rtlcreateuserthread" || payload.Method == "userapc" {
-			i, err := strconv.Atoi(jobArgs[1])
+			if len(jobArgs) < 3 {
+				return "", fmt.Errorf("the '%s' shellcode command requires three agruments, have %d", payload.Method, len(jobArgs))
+			}
+			i, err := strconv.Atoi(jobArgs[2])
 			if err != nil {
 				return "", err
 			}
 			payload.PID = uint32(i)
-			payload.Bytes = jobArgs[2]
+			payload.Bytes = jobArgs[0]
 		}
 		job.Payload = payload
 	case "skew":
 		job.Type = jobs.CONTROL
 		p := jobs.Command{
-			Command: jobArgs[0],
-		}
-
-		if len(jobArgs) == 2 {
-			p.Args = jobArgs[1:]
+			Command: jobType,
+			Args:    jobArgs,
 		}
 		job.Payload = p
 	case "sleep":
 		job.Type = jobs.CONTROL
 		p := jobs.Command{
-			Command: jobArgs[0],
-		}
-
-		if len(jobArgs) == 2 {
-			p.Args = jobArgs[1:]
+			Command: jobType,
+			Args:    jobArgs,
 		}
 		job.Payload = p
 	case "ssh":
@@ -428,39 +398,10 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 		}
 		job.Payload = p
 	case "upload":
-		// jobArgs[0] - server-side source file location
-		// jobArgs[1] - agent-side file write location
-		// jobArgs[2] - calculated SHA256 hash
-		// jobArgs[3] - file size
 		job.Type = jobs.FILETRANSFER
-		if len(jobArgs) < 2 {
-			return "", fmt.Errorf("expected 2 arguments for upload command, received %d", len(jobArgs))
-		}
-		uploadFile, uploadFileErr := ioutil.ReadFile(jobArgs[0])
-		if uploadFileErr != nil {
-			// TODO send "ServerOK"
-			return "", fmt.Errorf("there was an error reading %s: %v", jobs.String(job.Type), uploadFileErr)
-		}
-		fileHash := sha256.New()
-		_, err := io.WriteString(fileHash, string(uploadFile))
-		if err != nil {
-			return "", fmt.Errorf("there was an error generating file hash: %s", err)
-		}
-		if len(jobArgs) > 2 {
-			jobArgs[2] = fmt.Sprintf("%s", fileHash.Sum(nil))
-		} else {
-			jobArgs = append(jobArgs, fmt.Sprintf("%s", fileHash.Sum(nil)))
-		}
-
-		if len(jobArgs) > 3 {
-			jobArgs[3] = fmt.Sprintf("%d", len(uploadFile))
-		} else {
-			jobArgs = append(jobArgs, fmt.Sprintf("%d", len(uploadFile)))
-		}
-
 		p := jobs.FileTransfer{
 			FileLocation: jobArgs[1],
-			FileBlob:     base64.StdEncoding.EncodeToString([]byte(uploadFile)),
+			FileBlob:     jobArgs[0],
 			IsDownload:   true,
 		}
 		job.Payload = p
@@ -651,27 +592,27 @@ func (s *Service) fileTransfer(agentID uuid.UUID, p jobs.FileTransfer) error {
 	}
 
 	if p.IsDownload {
-		agentsDir := filepath.Join(core.CurrentDir, "data", "agents")
+		current, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("there was an error getting the current working directory: %s", err)
+		}
+		agentsDir := filepath.Join(current, "data", "agents")
 		_, f := filepath.Split(p.FileLocation) // We don't need the directory part for anything
 		if _, errD := os.Stat(agentsDir); os.IsNotExist(errD) {
 			errorMessage := fmt.Errorf("there was an error locating the agent's directory:\r\n%s", errD.Error())
-			err := s.agentService.Log(agentID, errorMessage.Error())
+			err = s.agentService.Log(agentID, errorMessage.Error())
 			if err != nil {
 				return fmt.Errorf("there were to errors:\n\t%s\n\t%s", errorMessage, err)
 			}
 			return errorMessage
 		}
-		userMessage := messageAPI.UserMessage{
-			Level:   messageAPI.Success,
-			Time:    time.Now().UTC(),
-			Message: fmt.Sprintf("Results for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)),
-		}
-		messageAPI.SendBroadcastMessage(userMessage)
+		userMessage := message.NewMessage(message.Success, fmt.Sprintf("Results for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)))
+		s.messageRepo.Add(userMessage)
 		downloadBlob, downloadBlobErr := base64.StdEncoding.DecodeString(p.FileBlob)
 
 		if downloadBlobErr != nil {
 			errorMessage := fmt.Errorf("there was an error decoding the fileBlob:\r\n%s", downloadBlobErr.Error())
-			err := s.agentService.Log(agentID, errorMessage.Error())
+			err = s.agentService.Log(agentID, errorMessage.Error())
 			if err != nil {
 				return fmt.Errorf("there were to errors:\n\t%s\n\t%s", errorMessage, err)
 			}
@@ -681,7 +622,7 @@ func (s *Service) fileTransfer(agentID uuid.UUID, p jobs.FileTransfer) error {
 		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0600)
 		if writingErr != nil {
 			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
-			err := s.agentService.Log(agentID, errorMessage.Error())
+			err = s.agentService.Log(agentID, errorMessage.Error())
 			if err != nil {
 				return fmt.Errorf("there were to errors:\n\t%s\n\t%s", errorMessage, err)
 			}
@@ -693,14 +634,10 @@ func (s *Service) fileTransfer(agentID uuid.UUID, p jobs.FileTransfer) error {
 			agentID.String(),
 			downloadFile)
 
-		userMessage = messageAPI.UserMessage{
-			Level:   messageAPI.Success,
-			Time:    time.Now().UTC(),
-			Message: successMessage,
-		}
-		messageAPI.SendBroadcastMessage(userMessage)
+		userMessage = message.NewMessage(message.Success, successMessage)
+		s.messageRepo.Add(userMessage)
 
-		err := s.agentService.Log(agentID, successMessage)
+		err = s.agentService.Log(agentID, successMessage)
 		if err != nil {
 			return err
 		}
@@ -712,6 +649,42 @@ func (s *Service) fileTransfer(agentID uuid.UUID, p jobs.FileTransfer) error {
 // Get returns a list of jobs that need to be sent to the agent
 func (s *Service) Get(agentID uuid.UUID) ([]jobs.Job, error) {
 	return s.jobRepo.GetJobs(agentID)
+}
+
+// GetAll returns a map of all jobs in the job repository
+func (s *Service) GetAll() []jobs.Info {
+	var returnJobs []jobs.Info
+	for _, job := range s.jobRepo.GetAll() {
+		returnJobs = append(returnJobs, job)
+	}
+	return returnJobs
+}
+
+// GetAllActive returns a list of all jobs that are not complete or canceled
+func (s *Service) GetAllActive() []jobs.Info {
+	var returnJobs []jobs.Info
+	for _, job := range s.jobRepo.GetAll() {
+		if job.Status() != jobs.COMPLETE && job.Status() != jobs.CANCELED {
+			returnJobs = append(returnJobs, job)
+		}
+	}
+	return returnJobs
+}
+
+func (s *Service) GetAgentActive(agentID uuid.UUID) ([]jobs.Info, error) {
+	var returnJobs []jobs.Info
+	if !s.agentService.Exist(agentID) {
+		return returnJobs, fmt.Errorf("%s is not a valid agent", agentID)
+	}
+
+	for _, job := range s.jobRepo.GetAll() {
+		if job.AgentID() == agentID {
+			if job.Status() != jobs.COMPLETE && job.Status() != jobs.CANCELED && job.AgentID() == agentID {
+				returnJobs = append(returnJobs, job)
+			}
+		}
+	}
+	return returnJobs, nil
 }
 
 // GetTableActive returns a list of rows that contain information about active jobs
@@ -828,30 +801,19 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 			case jobs.RESULT:
 				agent.Log(fmt.Sprintf("Results for job: %s", job.ID))
 
-				userMessage := messageAPI.UserMessage{
-					Level:   messageAPI.Note,
-					Time:    time.Now().UTC(),
-					Message: fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339)),
-				}
-				messageAPI.SendBroadcastMessage(userMessage)
+				userMessage := message.NewMessage(message.Note, fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339)))
+				s.messageRepo.Add(userMessage)
+
 				result := job.Payload.(jobs.Results)
 				if len(result.Stdout) > 0 {
 					agent.Log(fmt.Sprintf("Command Results (stdout):\r\n%s", result.Stdout))
-					userMessage = messageAPI.UserMessage{
-						Level:   messageAPI.Success,
-						Time:    time.Now().UTC(),
-						Message: result.Stdout,
-					}
-					messageAPI.SendBroadcastMessage(userMessage)
+					userMessage = message.NewMessage(message.Success, result.Stdout)
+					s.messageRepo.Add(userMessage)
 				}
 				if len(result.Stderr) > 0 {
 					agent.Log(fmt.Sprintf("Command Results (stderr):\r\n%s", result.Stderr))
-					userMessage = messageAPI.UserMessage{
-						Level:   messageAPI.Warn,
-						Time:    time.Now().UTC(),
-						Message: result.Stderr,
-					}
-					messageAPI.SendBroadcastMessage(userMessage)
+					userMessage = message.NewMessage(message.Warn, result.Stderr)
+					s.messageRepo.Add(userMessage)
 				}
 			case jobs.AGENTINFO:
 				err = s.agentService.UpdateAgentInfo(job.AgentID, job.Payload.(messages.AgentInfo))
@@ -860,12 +822,8 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				}
 				msg := fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339))
 				msg += fmt.Sprintf("\n\tConfiguration data received for Agent %s and updated. Issue the \"info\" command to view it.", job.AgentID)
-				userMessage := messageAPI.UserMessage{
-					Level:   messageAPI.Note,
-					Time:    time.Now().UTC(),
-					Message: msg,
-				}
-				messageAPI.SendBroadcastMessage(userMessage)
+				userMessage := message.NewMessage(message.Note, msg)
+				s.messageRepo.Add(userMessage)
 			case jobs.FILETRANSFER:
 				err = s.fileTransfer(job.AgentID, job.Payload.(jobs.FileTransfer))
 				if err != nil {
@@ -891,12 +849,8 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				return fmt.Errorf("pkg/services/job.Handler(): %s", err)
 			}
 		} else {
-			userMessage := messageAPI.UserMessage{
-				Level:   messageAPI.Warn,
-				Time:    time.Now().UTC(),
-				Message: fmt.Sprintf("Job %s was for an invalid agent %s", job.ID, job.AgentID),
-			}
-			messageAPI.SendBroadcastMessage(userMessage)
+			userMessage := message.NewMessage(message.Warn, fmt.Sprintf("Job %s was for an invalid agent %s", job.ID, job.AgentID))
+			s.messageRepo.Add(userMessage)
 		}
 	}
 	return nil
@@ -909,9 +863,8 @@ func (s *Service) socksJobs() {
 		err := s.buildJob(job.AgentID, &job, nil)
 
 		if err != nil {
-			msg := messageAPI.ErrorMessage(fmt.Sprintf("there was an error creating a job for SOCKS traffic to the agent: %s", err))
-			cli.MessageChannel <- msg
+			msg := message.NewMessage(message.Warn, fmt.Sprintf("there was an error creating a job for SOCKS traffic to the agent: %s", err))
+			s.messageRepo.Add(msg)
 		}
 	}
-
 }

@@ -45,7 +45,7 @@ func NewRepository() *Repository {
 // Add data to the in-memory map for the provided Agent ID
 func (r *Repository) Add(id uuid.UUID, data []byte) {
 	var exists bool
-	for k, _ := range r.messages {
+	for k := range r.messages {
 		if id == k {
 			exists = true
 		}

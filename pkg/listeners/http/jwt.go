@@ -19,24 +19,23 @@ package http
 
 import (
 	// Standard
+	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	// 3rd Party
-	"github.com/fatih/color"
 	uuid "github.com/satori/go.uuid"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
+	// Internal
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 )
 
 // GetJWT returns a JSON Web Token for the provided agent using the interface JWT Key
 func GetJWT(agentID uuid.UUID, lifetime time.Duration, key []byte) (string, error) {
-	if core.Debug {
-		message("debug", "pkg/listeners/http.GetJWT(): entering into function")
-	}
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "agentID", agentID, "lifetime", lifetime, "key", key)
 
 	encrypter, encErr := jose.NewEncrypter(jose.A256GCM,
 		jose.Recipient{
@@ -79,28 +78,6 @@ func GetJWT(agentID uuid.UUID, lifetime time.Duration, key []byte) (string, erro
 		return "", fmt.Errorf("there was an error parsing the encrypted JWT:\r\n%s", errParse.Error())
 	}
 	//logging.Server(fmt.Sprintf("Created authenticated JWT for %s", agentID))
-	if core.Debug {
-		message("debug", fmt.Sprintf("Sending agent %s an authenticated JWT with a lifetime of %v:\r\n%v",
-			agentID.String(), lifetime, agentJWT))
-	}
-
+	slog.Debug(fmt.Sprintf("Sending agent %s an authenticated JWT with a lifetime of %v:\r\n%v", agentID.String(), lifetime, agentJWT))
 	return agentJWT, nil
-}
-
-// message is used to print a message to the command line
-func message(level string, message string) {
-	switch level {
-	case "info":
-		color.Cyan("[i]" + message)
-	case "note":
-		color.Yellow("[-]" + message)
-	case "warn":
-		color.Red("[!]" + message)
-	case "debug":
-		color.Red("[DEBUG]" + message)
-	case "success":
-		color.Green("[+]" + message)
-	default:
-		color.Red("[_-_]Invalid message level: " + message)
-	}
 }

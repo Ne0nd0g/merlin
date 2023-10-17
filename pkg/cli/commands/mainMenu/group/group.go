@@ -24,7 +24,6 @@ import (
 	// Standard
 	"fmt"
 	"strings"
-	"time"
 
 	// 3rd Party
 	"github.com/chzyer/readline"
@@ -32,14 +31,13 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	// Internal
-	agentAPI "github.com/Ne0nd0g/merlin/pkg/api/agents"
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
 	"github.com/Ne0nd0g/merlin/pkg/cli/commands"
 	"github.com/Ne0nd0g/merlin/pkg/cli/completer"
-	"github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/help"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/menu"
 	"github.com/Ne0nd0g/merlin/pkg/cli/entity/os"
+	"github.com/Ne0nd0g/merlin/pkg/cli/message"
+	"github.com/Ne0nd0g/merlin/pkg/cli/services/rpc"
 )
 
 // Command is an aggregate structure for a command executed on the command line interface
@@ -71,13 +69,6 @@ func NewCommand() *Command {
 // Errors are not returned to ensure the CLI is not interrupted.
 // Errors are logged and can be viewed by enabling debug output in the CLI
 func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterInterface {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Completer() for the '%s' command with Menu: %s, and id: %s", c, m, id),
-			Time:    time.Now().UTC(),
-		}
-	}
 	comp := readline.PcItem("group",
 		readline.PcItem("list",
 			readline.PcItemDynamic(completer.GroupListCompleter()),
@@ -102,25 +93,13 @@ func (c *Command) Completer(m menu.Menu, id uuid.UUID) readline.PrefixCompleterI
 // arguments, and optional, parameter, is the full unparsed string entered on the command line to include the
 // command itself passed into command for processing
 func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response commands.Response) {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Do() for the '%s' command with Menu: %s, id: %s, and arguments: %s", c, m, id, arguments),
-			Time:    time.Now().UTC(),
-		}
-	}
-
 	// Parse the arguments
 	args := strings.Split(arguments, " ")
 
 	if len(args) > 1 {
 		switch strings.ToLower(args[1]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s' command help\n\nDescription:\n\t%s\nUsage:\n\t%s\nExample:\n\t%s\nNotes:\n\t%s", c, c.help.Description(), c.help.Usage(), c.help.Example(), c.help.Notes()))
 			return
 		case "add":
 			return c.Add(id, arguments)
@@ -130,11 +109,7 @@ func (c *Command) Do(m menu.Menu, id uuid.UUID, arguments string) (response comm
 			return c.Remove(id, arguments)
 		}
 	}
-	response.Message = &messages.UserMessage{
-		Level:   messages.Info,
-		Message: c.help.Usage(),
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Info, c.help.Usage())
 	return
 }
 
@@ -158,11 +133,7 @@ func (c *Command) Add(id uuid.UUID, arguments string) (response commands.Respons
 	if len(args) > 2 {
 		switch strings.ToLower(args[2]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s %s' command help\nDescription:\n\t%s\n\nUsage:\n\t%s\n\nExample:\n\t%s\n\nNotes:\n\t%s", c, sub, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s %s' command help\nDescription:\n\t%s\n\nUsage:\n\t%s\n\nExample:\n\t%s\n\nNotes:\n\t%s", c, sub, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -170,28 +141,24 @@ func (c *Command) Add(id uuid.UUID, arguments string) (response commands.Respons
 	// Validate at least one argument, in addition to the command, was provided
 	// 0. group, 1. add, 2. agent, 3. group
 	if len(args) < 4 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s %s' command requires two arguments\n%s", c, sub, h.Usage),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s %s' command requires two arguments\n%s", c, sub, h.Usage()))
+		return
+	}
+
+	// Group name can't be "all" because it is reserved
+	if strings.ToLower(args[3]) == "all" {
+		response.Message = message.NewUserMessage(message.Warn, "'all' is a reserved group name and cannot be used")
 		return
 	}
 
 	var err error
 	id, err = uuid.FromString(args[2])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error parsing the agent ID '%s': %s\n%s", args[2], err, h.Usage),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the agent ID '%s': %s\n%s", args[2], err, h.Usage()))
 		return
 	}
 
-	msg := agentAPI.GroupAdd(id, args[3])
-	response.Message = &msg
+	response.Message = rpc.GroupAdd(id, args[3])
 	return
 }
 
@@ -217,22 +184,21 @@ func (c *Command) List(arguments string) (response commands.Response) {
 	if len(args) > 2 {
 		switch strings.ToLower(args[2]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s list' command help\nDescription:\n\t%s\n\nUsage:\n\t%s\n\nExample:\n\t%s\n\nNotes:\n\t%s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s list' command help\nDescription:\n\t%s\n\nUsage:\n\t%s\n\nExample:\n\t%s\n\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
 	var data [][]string
 	if len(args) >= 3 {
-		agents := agentAPI.GroupList(args[2])
+		agents := rpc.GroupList(args[2])
 		for _, a := range agents {
 			data = append(data, []string{args[2], a})
 		}
 	} else {
-		data = agentAPI.GroupListAll()
+		groups := rpc.GroupListAll()
+		for g, m := range groups {
+			data = append(data, []string{g, strings.Join(m, " ")})
+		}
 	}
 
 	tableString := &strings.Builder{}
@@ -244,11 +210,7 @@ func (c *Command) List(arguments string) (response commands.Response) {
 	table.AppendBulk(data)
 	table.Render()
 
-	response.Message = &messages.UserMessage{
-		Level:   messages.Plain,
-		Message: tableString.String(),
-		Time:    time.Now().UTC(),
-	}
+	response.Message = message.NewUserMessage(message.Plain, fmt.Sprintf("\n%s", tableString.String()))
 	return
 }
 
@@ -269,11 +231,7 @@ func (c *Command) Remove(id uuid.UUID, arguments string) (response commands.Resp
 	if len(args) > 2 {
 		switch strings.ToLower(args[2]) {
 		case "help", "-h", "--help", "?", "/?":
-			response.Message = &messages.UserMessage{
-				Level:   messages.Info,
-				Message: fmt.Sprintf("'%s remove' command help\nDescription:\n\t%s\n\nUsage:\n\t%s\n\nExample:\n\t%s\n\nNotes:\n\t%s", c, h.Description, h.Usage, h.Example, h.Notes),
-				Time:    time.Now().UTC(),
-			}
+			response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s remove' command help\nDescription:\n\t%s\n\nUsage:\n\t%s\n\nExample:\n\t%s\n\nNotes:\n\t%s", c, h.Description(), h.Usage(), h.Example(), h.Notes()))
 			return
 		}
 	}
@@ -281,40 +239,29 @@ func (c *Command) Remove(id uuid.UUID, arguments string) (response commands.Resp
 	// Validate at least one argument, in addition to the command, was provided
 	// 0. group, 1. remove, 2. <agent>, 3. <group>
 	if len(args) < 4 {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Info,
-			Message: fmt.Sprintf("'%s remove' command requires two arguments\n%s", c, h.Usage),
-			Time:    time.Now().UTC(),
-		}
+		response.Message = message.NewUserMessage(message.Info, fmt.Sprintf("'%s remove' command requires two arguments\n%s", c, h.Usage()))
+		return
+	}
+
+	// Group name can't be "all" because it is reserved
+	if strings.ToLower(args[3]) == "all" {
+		response.Message = message.NewUserMessage(message.Warn, "'all' is a reserved group name and cannot be used")
 		return
 	}
 
 	var err error
 	id, err = uuid.FromString(args[2])
 	if err != nil {
-		response.Message = &messages.UserMessage{
-			Level:   messages.Warn,
-			Message: fmt.Sprintf("there was an error parsing the agent ID '%s': %s\n%s", args[2], err, h.Usage),
-			Time:    time.Now().UTC(),
-			Error:   true,
-		}
+		response.Message = message.NewErrorMessage(fmt.Errorf("there was an error parsing the agent ID '%s': %s\n%s", args[2], err, h.Usage()))
 		return
 	}
 
-	msg := agentAPI.GroupRemove(id, args[3])
-	response.Message = &msg
+	response.Message = rpc.GroupRemove(id, args[3])
 	return
 }
 
 // Help returns a help.Help structure that can be used to view a command's Description, Notes, Usage, and an example
 func (c *Command) Help(m menu.Menu) help.Help {
-	if core.Debug {
-		core.MessageChannel <- messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("entering into Help() for the '%s' command with Menu: %s", c, m),
-			Time:    time.Now().UTC(),
-		}
-	}
 	return c.help
 }
 
