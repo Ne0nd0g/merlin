@@ -2,7 +2,7 @@
 Merlin is a post-exploitation command and control framework.
 
 This file is part of Merlin.
-Copyright (C) 2023  Russel Van Tuyl
+Copyright (C) 2023 Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,8 +22,11 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package message
 
 import (
-	"github.com/google/uuid"
+	// Standard
 	"time"
+
+	// 3rd Party
+	"github.com/google/uuid"
 )
 
 type Level int32
@@ -61,18 +64,6 @@ func NewMessage(level Level, message string) *Message {
 		message:   message,
 		timestamp: time.Now().UTC(),
 		isError:   false,
-	}
-}
-
-// NewMessageFull is a factory that builds and returns a Message structure
-// with a specified timestamp and error flag for converting protobuf messages
-func NewMessageFull(level Level, message string, timestamp time.Time, isError bool) *Message {
-	return &Message{
-		id:        uuid.New(),
-		level:     level,
-		message:   message,
-		timestamp: timestamp,
-		isError:   isError,
 	}
 }
 

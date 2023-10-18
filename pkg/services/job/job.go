@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 // Package job is a service used to interact with Agent Jobs
 package job
@@ -22,7 +25,6 @@ import (
 	// Standard
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -457,7 +459,7 @@ func (s *Service) AddJobChannel(agentID uuid.UUID, job *jobs.Job, jobArgs []stri
 // A server-side job tracking structure is also added to track job status.
 // The job is also added to the server-side agent log file
 func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) error {
-	agent, err := s.agentService.Agent(agentID)
+	a, err := s.agentService.Agent(agentID)
 
 	if err != nil {
 		return fmt.Errorf("pkg/server/jobs.buildJob(): there was an error adding a job because %s is an unknown agent", agentID)
@@ -473,7 +475,7 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 			if strings.ToLower(cmd.Command) == "clr" && strings.ToLower(cmd.Args[0]) == "load-assembly" {
 				if len(jobArgs) > 2 {
 					msg := fmt.Sprintf("loading assembly from %s with a SHA256: %s to agent", jobArgs[0], jobArgs[2])
-					agent.Log(msg)
+					a.Log(msg)
 				}
 			}
 		}
@@ -507,14 +509,14 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 					jobArgs[2],
 					jobArgs[1],
 				)
-				agent.Log(msg)
+				a.Log(msg)
 				command = fmt.Sprintf("upload %s %s", jobArgs[0], jobArgs[1])
 			}
 		} else {
 			// Download from agent (the server is download a file to the agent is uploading a file to the server)
 			if len(jobArgs) > 0 {
 				command = fmt.Sprintf("download %s", jobArgs[0])
-				agent.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
+				a.Log(fmt.Sprintf("Downloading file from agent at %s\n", jobArgs[0]))
 			}
 		}
 	case jobs.SHELLCODE:
@@ -551,7 +553,7 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 		"Created",
 		command,
 	)
-	agent.Log(msg)
+	a.Log(msg)
 	return nil
 }
 
@@ -623,7 +625,7 @@ func (s *Service) fileTransfer(agentID uuid.UUID, p jobs.FileTransfer) error {
 			return errorMessage
 		}
 		downloadFile := filepath.Join(agentsDir, agentID.String(), f)
-		writingErr := ioutil.WriteFile(downloadFile, downloadBlob, 0600)
+		writingErr := os.WriteFile(downloadFile, downloadBlob, 0600)
 		if writingErr != nil {
 			errorMessage := fmt.Errorf("there was an error writing to -> %s:\r\n%s", p.FileLocation, writingErr.Error())
 			err = s.agentService.Log(agentID, errorMessage.Error())
@@ -778,7 +780,7 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 	for _, job := range agentJobs {
 		// Make sure the Agent is known to the server
 		if s.agentService.Exist(job.AgentID) {
-			agent, err := s.agentService.Agent(job.AgentID)
+			a, err := s.agentService.Agent(job.AgentID)
 			if err != nil {
 				return err
 			}
@@ -803,19 +805,19 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 			}
 			switch job.Type {
 			case jobs.RESULT:
-				agent.Log(fmt.Sprintf("Results for job: %s", job.ID))
+				a.Log(fmt.Sprintf("Results for job: %s", job.ID))
 
 				userMessage := message.NewMessage(message.Note, fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339)))
 				s.messageRepo.Add(userMessage)
 
 				result := job.Payload.(jobs.Results)
 				if len(result.Stdout) > 0 {
-					agent.Log(fmt.Sprintf("Command Results (stdout):\r\n%s", result.Stdout))
+					a.Log(fmt.Sprintf("Command Results (stdout):\r\n%s", result.Stdout))
 					userMessage = message.NewMessage(message.Success, result.Stdout)
 					s.messageRepo.Add(userMessage)
 				}
 				if len(result.Stderr) > 0 {
-					agent.Log(fmt.Sprintf("Command Results (stderr):\r\n%s", result.Stderr))
+					a.Log(fmt.Sprintf("Command Results (stderr):\r\n%s", result.Stderr))
 					userMessage = message.NewMessage(message.Warn, result.Stderr)
 					s.messageRepo.Add(userMessage)
 				}

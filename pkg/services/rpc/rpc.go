@@ -2,7 +2,7 @@
 Merlin is a post-exploitation command and control framework.
 
 This file is part of Merlin.
-Copyright (C) 2023  Russel Van Tuyl
+Copyright (C) 2023 Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ type Service struct {
 // services in the instantiated Service structure for this CLI service
 var service *Service
 
-// newServer is a factory to create a new Server structure the holds references to server-side repositories and services
+// newServer is a factory to create a new Server structure that holds references to server-side repositories and services
 func newServer() *Server {
 	return &Server{
 		messageChan:  make(map[uuid.UUID]chan *pb.Message),
@@ -126,6 +126,7 @@ func withMemoryClientMessageRepository() message.Repository {
 
 // Listen provides a stream of messages for a CLI client
 func (s *Server) Listen(in *pb.ID, stream pb.Merlin_ListenServer) error {
+	slog.Log(context.Background(), logging.LevelTrace, "in", in)
 	// Parse the UUID from the request
 	id, err := uuid.Parse(in.Id)
 	if err != nil {
@@ -160,6 +161,7 @@ func (s *Server) ListenForClientMessages() {
 
 // Reconnect is used by RPC client's to re-establish a connection to the RPC server
 func (s *Server) Reconnect(ctx context.Context, id *pb.ID) (*pb.ID, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Parse the UUID from the request
 	clientID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -181,6 +183,7 @@ func (s *Server) Reconnect(ctx context.Context, id *pb.ID) (*pb.ID, error) {
 
 // Register is used by CLI clients to register with the RPC server
 func (s *Server) Register(ctx context.Context, e *emptypb.Empty) (*pb.ID, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	cliClient := client.NewClient()
 	s.clientRepo.Add(cliClient)
 	s.messageChan[cliClient.ID()] = make(chan *pb.Message, 100)
@@ -193,6 +196,7 @@ func (s *Server) Register(ctx context.Context, e *emptypb.Empty) (*pb.ID, error)
 // in.Arguments[1] = interface:port
 // in.Arguments[2] = agent ID
 func (s *Server) Socks(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the Socks RPC call requires at least one argument, have (%d): %s", len(in.Arguments), in.Arguments)
 		slog.Error(err.Error())
@@ -216,13 +220,13 @@ func (s *Server) Socks(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 
 	switch strings.ToLower(in.Arguments[0]) {
 	case "list":
-		listeners := socks.GetListeners()
+		socksListeners := socks.GetListeners()
 		var data string
 		header := "\n\tAgent\t\t\t\tInterface:Port\n"
 		header += "==========================================================\n"
-		if len(listeners) > 0 {
+		if len(socksListeners) > 0 {
 			data += header
-			for _, v := range listeners {
+			for _, v := range socksListeners {
 				data += fmt.Sprintf("%s\t%s\n", v[0], v[1])
 			}
 		} else {
@@ -266,64 +270,65 @@ func (s *Server) Socks(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 
 // authentication is a gRPC interceptor that checks the incoming connection for the correct password
 func (s *Service) authentication(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	var client string
+	var rpcClient string
 	peerClient, k := peer.FromContext(ctx)
 	if !k {
 		slog.Warn("unable to get the peer from the request context", "Method", info.FullMethod)
 	} else {
-		client = peerClient.Addr.String()
+		rpcClient = peerClient.Addr.String()
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		slog.Warn("incoming connection did not contain metadata", "Method", info.FullMethod, "Client", client)
+		slog.Warn("incoming connection did not contain metadata", "Method", info.FullMethod, "Client", rpcClient)
 		return nil, fmt.Errorf("access denied")
 	}
 	auth := md["authorization"]
 	if len(auth) < 1 {
-		slog.Warn("incoming connection context did not contain 'authorization' metadata", "Method", info.FullMethod, "Client", client)
+		slog.Warn("incoming connection context did not contain 'authorization' metadata", "Method", info.FullMethod, "Client", rpcClient)
 		return nil, fmt.Errorf("access denied")
 	}
 	if strings.Join(auth, "") != s.password {
-		slog.Debug("incoming connection context contained the wrong password", "password", auth, "Method", info.FullMethod, "Client", client)
-		slog.Warn("incoming connection context did not contain the correct password", "Method", info.FullMethod, "Client", client)
+		slog.Debug("incoming connection context contained the wrong password", "password", auth, "Method", info.FullMethod, "Client", rpcClient)
+		slog.Warn("incoming connection context did not contain the correct password", "Method", info.FullMethod, "Client", rpcClient)
 		return nil, fmt.Errorf("access denied")
 	}
-	slog.Debug("authentication successful", "Method", info.FullMethod, "Client", client)
+	slog.Debug("authentication successful", "Method", info.FullMethod, "Client", rpcClient)
 	return handler(ctx, req)
 }
 
 // authenticationStream is a gRPC interceptor that checks the incoming stream for the correct password
 func (s *Service) authenticationStream(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	var client string
+	var rpcClient string
 	peerClient, k := peer.FromContext(stream.Context())
 	if !k {
-		slog.Warn("unable to get the peer from the request context", "Method", info.FullMethod, "Client", client)
+		slog.Warn("unable to get the peer from the request context", "Method", info.FullMethod, "Client", rpcClient)
 	} else {
-		client = peerClient.Addr.String()
+		rpcClient = peerClient.Addr.String()
 	}
 
 	md, ok := metadata.FromIncomingContext(stream.Context())
 	if !ok {
-		slog.Warn("incoming connection did not contain metadata", "Method", info.FullMethod, "Client", client)
+		slog.Warn("incoming connection did not contain metadata", "Method", info.FullMethod, "Client", rpcClient)
 		return fmt.Errorf("access denied")
 	}
 	auth := md["authorization"]
 	if len(auth) < 1 {
-		slog.Warn("incoming connection context did not contain 'authorization' metadata", "Method", info.FullMethod, "Client", client)
+		slog.Warn("incoming connection context did not contain 'authorization' metadata", "Method", info.FullMethod, "Client", rpcClient)
 		return fmt.Errorf("access denied")
 	}
 	if strings.Join(auth, "") != s.password {
-		slog.Debug("incoming connection context contained the wrong password", "password", auth, "Method", info.FullMethod, "Client", client)
-		slog.Warn("incoming connection context did not contain the correct password", "Method", info.FullMethod, "Client", client)
+		slog.Debug("incoming connection context contained the wrong password", "password", auth, "Method", info.FullMethod, "Client", rpcClient)
+		slog.Warn("incoming connection context did not contain the correct password", "Method", info.FullMethod, "Client", rpcClient)
 		return fmt.Errorf("access denied")
 	}
-	slog.Debug("authentication successful", "Method", info.FullMethod, "Client", client)
+	slog.Debug("authentication successful", "Method", info.FullMethod, "Client", rpcClient)
 	return handler(srv, stream)
 }
 
 // Run is the primary entry point for start and run this RPC service
 func (s *Service) Run(addr string) error {
+	slog.Log(context.Background(), logging.LevelTrace, "addr", addr)
 	// Setup network listener
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -445,6 +450,7 @@ func getTLSConfig(secure bool, tlsKey, tlsCert, tlsCA string) (*tls.Config, erro
 	slog.Debug("entering into function", "secure", secure, "tlsKey", tlsKey, "tlsCert", tlsCert)
 	tlsConfig := &tls.Config{
 		ClientAuth: tls.NoClientCert,
+		MinVersion: tls.VersionTLS12,
 	}
 	if secure {
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
@@ -459,7 +465,7 @@ func getTLSConfig(secure bool, tlsKey, tlsCert, tlsCA string) (*tls.Config, erro
 		}
 
 		// Read the TLS CA file in as bytes
-		caBytes, err := os.ReadFile(tlsCA)
+		caBytes, err := os.ReadFile(tlsCA) // #nosec G304 Users can include any file they want
 		if err != nil {
 			return nil, fmt.Errorf("there was an error reading the TLS CA file at '%s': %s", tlsCA, err)
 		}
@@ -519,7 +525,7 @@ func getTLSConfig(secure bool, tlsKey, tlsCert, tlsCA string) (*tls.Config, erro
 		}
 
 		// Read the TLS certificate file in as bytes
-		certBytes, err := os.ReadFile(tlsCert)
+		certBytes, err := os.ReadFile(tlsCert) // #nosec G304 Users can include any file they want
 		if err != nil {
 			return nil, fmt.Errorf("there was an error reading the TLS certificate file at '%s': %s", tlsCert, err)
 		}

@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package agents
 
@@ -83,7 +86,7 @@ func createLogFile(id uuid.UUID) (agentLog *os.File, err error) {
 			return nil, fmt.Errorf("pkg/agents.createLogFile(): there was an error creating a directory for agent %s: %s", id, err)
 		}
 		// Create the agent's log file
-		agentLog, err = os.Create(filepath.Join(dir, id.String(), "log.txt"))
+		agentLog, err = os.Create(filepath.Join(dir, id.String(), "log.txt")) // #nosec G304 Users can include any file they want
 		if err != nil {
 			return nil, fmt.Errorf("pkg/agents.createLogFile(): there was an error creating the log.txt file for agent %s: %s", id, err)
 		}
@@ -184,9 +187,12 @@ func (a *Agent) Padding() int {
 }
 
 // Log write the provided message to the Agent's log file
-func (a *Agent) Log(message string) (err error) {
-	_, err = a.log.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), message))
-	return err
+func (a *Agent) Log(message string) {
+	_, err := a.log.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), message))
+	if err != nil {
+		slog.Error("there was an error writing to the agent's log file", "agent", a.id, "error", err)
+	}
+	return
 }
 
 // UpdateAlive updates the Agent's alive status to the provided value

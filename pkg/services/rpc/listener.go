@@ -2,7 +2,7 @@
 Merlin is a post-exploitation command and control framework.
 
 This file is part of Merlin.
-Copyright (C) 2023  Russel Van Tuyl
+Copyright (C) 2023 Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ import (
 
 	// Internal
 	l2 "github.com/Ne0nd0g/merlin/pkg/listeners"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
 )
 
@@ -40,6 +41,7 @@ import (
 
 // CreateListener instantiates a new Listener on the RPC server
 func (s *Server) CreateListener(ctx context.Context, in *pb.Options) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
 	// Create the listener
 	listener, err := s.ls.NewListener(in.Options)
 	if err != nil {
@@ -54,6 +56,7 @@ func (s *Server) CreateListener(ctx context.Context, in *pb.Options) (msg *pb.Me
 
 // GetListenerDefaultOptions returns all the available options for a listener type, not for a previously instantiated listener
 func (s *Server) GetListenerDefaultOptions(ctx context.Context, in *pb.String) (options *pb.Options, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
 	o, err := s.ls.DefaultOptions(in.Data)
 	if err != nil {
 		err = fmt.Errorf("there was an error getting the default options for listener '%s': %s", in.Data, err)
@@ -68,6 +71,7 @@ func (s *Server) GetListenerDefaultOptions(ctx context.Context, in *pb.String) (
 
 // GetListenerIDs returns a list of all the previously instantiated listeners on the RPC server
 func (s *Server) GetListenerIDs(ctx context.Context, e *emptypb.Empty) (*pb.Slice, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	var listenerIDs []string
 	for _, l := range s.ls.Listeners() {
 		listenerIDs = append(listenerIDs, l.ID().String())
@@ -77,6 +81,7 @@ func (s *Server) GetListenerIDs(ctx context.Context, e *emptypb.Empty) (*pb.Slic
 
 // GetListenerOptions returns a previously instantiated listener's options
 func (s *Server) GetListenerOptions(ctx context.Context, id *pb.ID) (options *pb.Options, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Parse the UUID
 	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -100,6 +105,7 @@ func (s *Server) GetListenerOptions(ctx context.Context, id *pb.ID) (options *pb
 
 // GetListeners returns a list of all instantiated Listeners
 func (s *Server) GetListeners(ctx context.Context, e *emptypb.Empty) (table *pb.TableData, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	table = &pb.TableData{
 		Header: []string{"ID", "NAME", "INTERFACE", "PROTOCOL", "STATUS", "DESCRIPTION"},
 	}
@@ -134,6 +140,7 @@ func (s *Server) GetListeners(ctx context.Context, e *emptypb.Empty) (table *pb.
 
 // GetListenerStatus returns the status of a previously instantiated listener
 func (s *Server) GetListenerStatus(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Parse the UUID
 	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -153,11 +160,13 @@ func (s *Server) GetListenerStatus(ctx context.Context, id *pb.ID) (msg *pb.Mess
 
 // GetListenerTypes returns a list of all available Listener types (e.g. http, tcp, etc.)
 func (s *Server) GetListenerTypes(ctx context.Context, e *emptypb.Empty) (*pb.Slice, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	return &pb.Slice{Data: s.ls.ListenerTypes()}, nil
 }
 
 // RemoveListener deletes an instantiated Listener on the RPC server
 func (s *Server) RemoveListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Parse the UUID from the request
 	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -177,6 +186,7 @@ func (s *Server) RemoveListener(ctx context.Context, id *pb.ID) (msg *pb.Message
 
 // RestartListener restarts a listener on the RPC server
 func (s *Server) RestartListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Parse the UUID from the request
 	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -196,12 +206,14 @@ func (s *Server) RestartListener(ctx context.Context, id *pb.ID) (msg *pb.Messag
 
 // Servers return a list of supported listener types
 func (s *Server) Servers(ctx context.Context, e *emptypb.Empty) (*pb.Slice, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	servers := s.ls.ListenerTypes()
 	return &pb.Slice{Data: servers}, nil
 }
 
 // SetListenerOption modifies a configurable listener option on the RPC server
 func (s *Server) SetListenerOption(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
 	if len(in.Arguments) < 2 {
 		err = fmt.Errorf("the SetListenerOption RPC call requires at least two arguments, have (%d): %s", len(in.Arguments), in.Arguments)
 		slog.Error(err.Error())
@@ -228,6 +240,7 @@ func (s *Server) SetListenerOption(ctx context.Context, in *pb.AgentCMD) (msg *p
 
 // StartListener starts a previously instantiated listener on the RPC server
 func (s *Server) StartListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Validate id is a UUID
 	var listenerID uuid.UUID
 	listenerID, err = uuid.Parse(id.Id)
@@ -276,6 +289,7 @@ func (s *Server) StartListener(ctx context.Context, id *pb.ID) (msg *pb.Message,
 
 // StopListener stops a previously instantiated listener on the RPC server
 func (s *Server) StopListener(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	// Parse the UUID
 	listenerID, err := uuid.Parse(id.Id)
 	if err != nil {

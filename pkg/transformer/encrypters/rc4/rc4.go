@@ -1,25 +1,28 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 // Package rc4 encrypts/decrypts Agent messages
 package rc4
 
 import (
-	"crypto/rc4"
+	"crypto/rc4" // #nosec G503 Intentionally using RC4 knowing it is insecure
 	"fmt"
 )
 
@@ -49,7 +52,7 @@ func (e *Encrypter) Deconstruct(data, key []byte) (any, error) {
 
 func xor(data, key []byte) (retData []byte, err error) {
 	retData = make([]byte, len(data))
-	cipher, err := rc4.NewCipher(key)
+	cipher, err := rc4.NewCipher(key) // #nosec G401 Intentionally using RC4 knowing it is insecure
 	if err != nil {
 		return []byte{}, fmt.Errorf("pkg/transformer/encrypters/rc4.Construct(): there was an error getting an RC4 cipher: %s", err)
 	}

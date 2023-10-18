@@ -2,7 +2,7 @@
 Merlin is a post-exploitation command and control framework.
 
 This file is part of Merlin.
-Copyright (C) 2023  Russel Van Tuyl
+Copyright (C) 2023 Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,9 +23,11 @@ package main
 import (
 	// Standard
 	"flag"
+	"fmt"
 	"log"
 
 	// Internal
+	"github.com/Ne0nd0g/merlin/pkg"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
 	"github.com/Ne0nd0g/merlin/pkg/services/rpc"
 )
@@ -40,7 +42,13 @@ func main() {
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	trace := flag.Bool("trace", false, "Enable trace logging")
 	extra := flag.Bool("extra", false, "Enable extra debug logging")
+	v := flag.Bool("version", false, "Print the version number and exit")
 	flag.Parse()
+
+	if *v {
+		fmt.Printf("Merlin Version: %s, Build: %s\n", merlin.Version, merlin.Build)
+		return
+	}
 
 	// Set the logging level
 	if *extra {

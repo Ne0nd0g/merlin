@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 // Package message is a service to process and return Agent Base messages
 package message
@@ -155,10 +158,10 @@ func (s *Service) Construct(msg messages.Base) (data []byte, err error) {
 	padding := a.Padding()
 
 	if padding > 0 {
-		padding = rand.Intn(padding)
+		padding = rand.Intn(padding) // #nosec G404 the random number is not used for secrets
 	} else if a.Comms() == (agents.Comms{}) {
 		// If we don't know what the Agent's padding configuration is, use this default number
-		padding = rand.Intn(4096)
+		padding = rand.Intn(4096) // #nosec G404 the random number is not used for secrets
 	}
 	msg.Padding = core.RandStringBytesMaskImprSrc(padding)
 
@@ -184,7 +187,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	defer slog.Log(context.Background(), logging.LevelTrace, "exiting from function", "Return Data Length", len(rdata), "error", err)
 	//fmt.Printf("pkg/service/message.Handle(): entering into function with ID: %s, Data length %d\n", id, len(data))
 
-	agent, err := s.agentService.Agent(id)
+	a, err := s.agentService.Agent(id)
 	if err != nil {
 		slog.Debug(fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
 	}
@@ -193,13 +196,13 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	// If the agent does not exist, leave the key blank and then the listener's key will be used
 	var key []byte
 	if err == nil {
-		key = agent.Secret()
+		key = a.Secret()
 	}
 
 	// If the Agent exists, and it's Listener ID is empty, set it
 	if err == nil {
 		//if agent.Listener() == uuid.Nil
-		if agent.Listener() != s.listener.ID() {
+		if a.Listener() != s.listener.ID() {
 			err = s.agentService.UpdateListener(id, s.listener.ID())
 			if err != nil {
 				err = fmt.Errorf("pkg/service/message.Handle(): %s", err)
@@ -232,7 +235,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 				}
 			}
 		}
-	} else if !agent.Authenticated() {
+	} else if !a.Authenticated() {
 		msg.ID = id
 		msg.Type = messages.CHECKIN
 		s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("Orphaned peer-to-peer agent %s detected due an empty payload, instructing agent to re-authenticate", id)))
@@ -242,7 +245,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	// The parent can't construct a Base message for the child because it doesn't know the child Agent's configuration
 	// If the server already knows about the child Agent, then it isn't orphaned and will not trigger the orphaned logic above
 	if msg.ID == uuid.Nil {
-		msg.ID = agent.ID()
+		msg.ID = a.ID()
 		if msg.Type == 0 {
 			msg.Type = messages.CHECKIN
 		}
@@ -255,20 +258,20 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 		if err != nil {
 			return nil, err
 		}
-		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(4096))
+		returnMessage.Padding = core.RandStringBytesMaskImprSrc(rand.Intn(4096)) // #nosec G404 the random number is not used for secrets
 		// The Authentication process does not return jobs
 		// Unauthenticated messages use the interface PSK, not the agent PSK
 		// the agent could be authenticated after processing the message
 		if s.agentService.Authenticated(msg.ID) {
 			// It doesn't matter if an error is returned because we'll send in an empty key and the listener's key will be used
-			agent, err = s.agentService.Agent(id)
+			a, err = s.agentService.Agent(id)
 			if err != nil {
 				slog.Debug(fmt.Sprintf("pkg/service/message.Handle(): there was an error getting the agent %s (this is OK): %s", id, err))
 			} else {
 				// Send a message to all connected CLI clients a new authenticated agent has connected
-				m := message.NewMessage(message.Success, fmt.Sprintf("New authenticated Agent checkin for %s at %s", agent.ID(), agent.Initial().UTC().Format(time.RFC3339)))
+				m := message.NewMessage(message.Success, fmt.Sprintf("New authenticated Agent checkin for %s at %s", a.ID(), a.Initial().UTC().Format(time.RFC3339)))
 				s.clientMsgRepo.Add(m)
-				key = agent.Secret()
+				key = a.Secret()
 			}
 		}
 		return s.listener.Construct(returnMessage, key)
@@ -290,7 +293,7 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	}
 
 	// Update the Agent's status checkin time
-	err = s.agentService.UpdateStatusCheckin(agent.ID(), time.Now().UTC())
+	err = s.agentService.UpdateStatusCheckin(a.ID(), time.Now().UTC())
 	if err != nil {
 		slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 	}
@@ -374,7 +377,7 @@ func (s *Service) childDisconnect(id uuid.UUID) (payload string, err error) {
 // associated Listener configuration.
 func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) error {
 	//fmt.Printf("pkg/service/message.delegate(): entered into function with %d delegate messages\n", len(delegates))
-	for _, delegate := range delegates {
+	for _, del := range delegates {
 		//fmt.Printf("Delegate message for agent: %s and listener: %s\n", delegate.Agent, delegate.Listener)
 
 		var lhService *Service
@@ -383,67 +386,67 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 		var bruteforced bool
 
 		// Get a new Listener Handler Service
-		lhService, err = NewMessageService(delegate.Listener)
+		lhService, err = NewMessageService(del.Listener)
 		if err != nil {
 			if core.Verbose {
 				slog.Error(fmt.Sprintf("pkg/services/message.delegate(): %s", err))
 			}
-			s.clientMsgRepo.Add(message.NewErrorMessage(fmt.Errorf("a delegate message was received from %s for the non-existent listener %s", delegate.Agent, delegate.Listener)))
+			s.clientMsgRepo.Add(message.NewErrorMessage(fmt.Errorf("a delegate message was received from %s for the non-existent listener %s", del.Agent, del.Listener)))
 			s.clientMsgRepo.Add(message.NewMessage(message.Info, "Brute forcing all available listeners as a last resort to see if one of them can handle this message..."))
 
-			lhService, rdata, err = bruteForceListener(delegate.Agent, delegate.Payload)
+			lhService, rdata, err = bruteForceListener(del.Agent, del.Payload)
 			if err != nil {
 				msg := fmt.Sprintf("A delegate message was received from %s for the non-existent listener %s.\n"+
 					"Attempts to brute force all existing Listeners to find one configure to handle the message failed.\n"+
 					"Create a listener that matches the Agent's configuration before it reaches the maximum failed of login\n "+
-					"attempts, or try to re-link the agent, to recover control of it. %s", delegate.Agent, delegate.Listener, time.Now().UTC())
+					"attempts, or try to re-link the agent, to recover control of it. %s", del.Agent, del.Listener, time.Now().UTC())
 				s.clientMsgRepo.Add(message.NewMessage(message.Warn, msg))
 				break
 			}
 			bruteforced = true
-			if s.agentService.Authenticated(delegate.Agent) {
-				err = s.agentService.UpdateListener(delegate.Agent, lhService.listener.ID())
+			if s.agentService.Authenticated(del.Agent) {
+				err = s.agentService.UpdateListener(del.Agent, lhService.listener.ID())
 				if err != nil {
 					return fmt.Errorf("pkg/services/message.delegate(): %s", err)
 				}
 			}
-			s.clientMsgRepo.Add(message.NewMessage(message.Success, fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from Agent %s. Instructing Agent to use this Listener ID", lhService.listener.ID(), delegate.Agent)))
+			s.clientMsgRepo.Add(message.NewMessage(message.Success, fmt.Sprintf("Brute force attempt was successful. Listener %s can handle messages from Agent %s. Instructing Agent to use this Listener ID", lhService.listener.ID(), del.Agent)))
 
 			// Add an Agent Control job for the Agent to change its associated listener
-			var job string
-			job, err = s.jobService.Add(delegate.Agent, "changelistener", []string{"listener", lhService.listener.ID().String()})
+			var j string
+			j, err = s.jobService.Add(del.Agent, "changelistener", []string{"listener", lhService.listener.ID().String()})
 			if err != nil {
 				s.clientMsgRepo.Add(message.NewErrorMessage(err))
 			} else {
-				s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("%s", job)))
+				s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("%s", j)))
 			}
 		} else {
 			// Send in the delegate message
-			rdata, err = lhService.Handle(delegate.Agent, delegate.Payload)
+			rdata, err = lhService.Handle(del.Agent, del.Payload)
 			if err != nil {
-				slog.Error(fmt.Sprintf("there was an error handling delegate message from %s: %s\n", delegate.Agent, err))
+				slog.Error(fmt.Sprintf("there was an error handling delegate message from %s: %s\n", del.Agent, err))
 				break
 			}
 		}
 
 		// Add the parent/child link if it doesn't already exist
-		linked, err := s.agentService.Linked(parent, delegate.Agent)
+		linked, err := s.agentService.Linked(parent, del.Agent)
 		if err != nil {
 			return err
 		}
 		if !linked {
 			//fmt.Printf("Adding child link %s to parent %s\n", delegate.Agent, parent)
-			err = s.agentService.Link(parent, delegate.Agent)
+			err = s.agentService.Link(parent, del.Agent)
 			if err != nil {
 				return err
 			}
 		}
 
-		if s.agentService.Authenticated(delegate.Agent) {
+		if s.agentService.Authenticated(del.Agent) {
 			// Set the child Agent's listener
 			// If the listener had to be bruteforced, then the Agent's listener has already been updated
 			if !bruteforced {
-				err = s.agentService.UpdateListener(delegate.Agent, delegate.Listener)
+				err = s.agentService.UpdateListener(del.Agent, del.Listener)
 				if err != nil {
 					return fmt.Errorf("pkg/services/message.delegate(): there was an error updating the delegate Agent's Listener ID: %s", err)
 				}
@@ -453,7 +456,7 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 		// Add encrypted/encoded return message Base structure (bytes) to the repository
 		//fmt.Printf("Storing return delegate message bytes(%d) for %s\n", len(rdata), delegate.Agent)
 		if len(rdata) > 0 {
-			s.delegates.Add(delegate.Agent, rdata)
+			s.delegates.Add(del.Agent, rdata)
 		}
 	}
 	//fmt.Printf("pkg/service/message.delegate(): returning nil\n")
@@ -465,8 +468,8 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 	//fmt.Printf("Getting Base messages for %s\n", id)
 	// Ensure the id is for a valid Agent
-	var agent agents.Agent
-	agent, err = s.agentService.Agent(id)
+	var a agents.Agent
+	a, err = s.agentService.Agent(id)
 	if err != nil {
 		err = fmt.Errorf("pkg/services/message.getBase(): %s", err)
 		return
@@ -492,23 +495,23 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 	if len(returnJobs) > 0 {
 		returnMessage.Type = messages.JOBS
 
-		// Check for unlink job
-		for i, job := range returnJobs {
+		// Check for an unlink job
+		for i, j := range returnJobs {
 			// Check to see if it is an unlink job
-			if job.Type == jobs.MODULE {
-				cmd := job.Payload.(jobs.Command)
+			if j.Type == jobs.MODULE {
+				cmd := j.Payload.(jobs.Command)
 				if strings.ToLower(cmd.Command) == "unlink" {
-					job.Payload, err = s.unlink(id, cmd)
+					j.Payload, err = s.unlink(id, cmd)
 					if err != nil {
 						slog.Error(fmt.Sprintf("pkg/services/message.getBase(): %s", err))
 						break
 					}
-					returnJobs[i] = job
+					returnJobs[i] = j
 				}
 			}
 		}
 		returnMessage.Payload = returnJobs
-	} else if agent.Authenticated() && !agent.Alive() {
+	} else if a.Authenticated() && !a.Alive() {
 		// If the Agent is authenticated, has no return jobs, and is not alive return nothing
 		// Happens when child p2p agents are instructed to exit, but the server is still tracking the agent
 		// The Agent will NOT be alive, but still needs to send the exit message
@@ -524,7 +527,7 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 
 	// Muted Agents that have nothing to say should not return an IDLE message
 	var sleep time.Duration
-	sleep, err = time.ParseDuration(agent.Comms().Wait)
+	sleep, err = time.ParseDuration(a.Comms().Wait)
 	if err == nil && sleep < 0 && len(returnMessage.Delegates) <= 0 && len(returnJobs) <= 0 {
 		return nil, nil
 	}

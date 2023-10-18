@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 // Package listeners is a service for creating and managing Listener objects
 package listeners
@@ -342,23 +345,23 @@ func (ls *ListenerService) ListenersByType(protocol int) (listenerList []listene
 	switch protocol {
 	case listeners.HTTP:
 		httpListeners := ls.httpRepo.Listeners()
-		for _, listener := range httpListeners {
-			listenerList = append(listenerList, &listener)
+		for i := range httpListeners {
+			listenerList = append(listenerList, &httpListeners[i])
 		}
 	case listeners.SMB:
 		smbListeners := ls.smbRepo.Listeners()
-		for _, listener := range smbListeners {
-			listenerList = append(listenerList, &listener)
+		for i := range smbListeners {
+			listenerList = append(listenerList, &smbListeners[i])
 		}
 	case listeners.TCP:
 		tcpListeners := ls.tcpRepo.Listeners()
-		for _, listener := range tcpListeners {
-			listenerList = append(listenerList, &listener)
+		for i := range tcpListeners {
+			listenerList = append(listenerList, &tcpListeners[i])
 		}
 	case listeners.UDP:
 		udpListeners := ls.udpRepo.Listeners()
-		for _, listener := range udpListeners {
-			listenerList = append(listenerList, &listener)
+		for i := range udpListeners {
+			listenerList = append(listenerList, &udpListeners[i])
 		}
 	}
 	return

@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package http
 
@@ -464,19 +467,6 @@ func GetDefaultOptions(protocol int) map[string]string {
 	return options
 }
 
-// Renew generates a new Server object and retains original encryption keys
-func Renew(ctx Handler, options map[string]string) (Server, error) {
-	tempServer, err := New(options)
-	if err != nil {
-		return tempServer, err
-	}
-
-	// Retain server's original JWT key used to sign and encrypt authorization JWT
-	tempServer.handler.jwtKey = ctx.jwtKey
-
-	return tempServer, nil
-}
-
 // generateServer creates a new http.Server structure based on the configuration and assigns it to this package's Server structure
 func (s *Server) generateServer() error {
 	// JWT
@@ -572,9 +562,11 @@ func (s *Server) generateServer() error {
 		}
 		switch s.protocol {
 		case servers.HTTPS, servers.HTTP2:
-			s.transport.(*http.Server).TLSConfig = &tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+			tlsConfig := tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+			s.transport.(*http.Server).TLSConfig = &tlsConfig
 		case servers.HTTP3:
-			s.transport.(*http3.Server).TLSConfig = http3.ConfigureTLSConfig(&tls.Config{Certificates: []tls.Certificate{*certificates}}) // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+			tlsConfig := tls.Config{Certificates: []tls.Certificate{*certificates}} // #nosec G402 TLS version is not configured to facilitate dynamic JA3 configurations
+			s.transport.(*http3.Server).TLSConfig = http3.ConfigureTLSConfig(&tlsConfig)
 		}
 	}
 	return nil

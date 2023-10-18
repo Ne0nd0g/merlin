@@ -2,7 +2,7 @@
 Merlin is a post-exploitation command and control framework.
 
 This file is part of Merlin.
-Copyright (C) 2023  Russel Van Tuyl
+Copyright (C) 2023 Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ import (
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/pkg/jobs"
+	"github.com/Ne0nd0g/merlin/pkg/logging"
 	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
 )
 
@@ -62,6 +63,7 @@ func addJob(agentID string, jobType string, jobArgs []string) (msg *pb.Message, 
 
 // ClearJobs removes any jobs the queue for a specific Agent that have been created, but NOT sent to the agent
 func (s *Server) ClearJobs(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	msg = &pb.Message{}
 	// Parse the UUID from the request
 	agentUUID, err := uuid.Parse(id.Id)
@@ -78,6 +80,7 @@ func (s *Server) ClearJobs(ctx context.Context, id *pb.ID) (msg *pb.Message, err
 
 // ClearJobsCreated clears all created (but unsent) jobs for all agents
 func (s *Server) ClearJobsCreated(ctx context.Context, e *emptypb.Empty) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	msg = &pb.Message{}
 	err = s.jobService.ClearAll()
 	if err == nil {
@@ -88,6 +91,7 @@ func (s *Server) ClearJobsCreated(ctx context.Context, e *emptypb.Empty) (msg *p
 
 // GetAgentActiveJobs returns all jobs that have not completed for the specified Agent
 func (s *Server) GetAgentActiveJobs(ctx context.Context, id *pb.ID) (*pb.Jobs, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
 	returnJobs := &pb.Jobs{}
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(id.Id)
@@ -111,6 +115,7 @@ func (s *Server) GetAgentActiveJobs(ctx context.Context, id *pb.ID) (*pb.Jobs, e
 
 // GetAllActiveJobs returns all Agent jobs that have not completed
 func (s *Server) GetAllActiveJobs(ctx context.Context, e *emptypb.Empty) (*pb.Jobs, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	returnJobs := &pb.Jobs{}
 	for _, jobInfo := range s.jobService.GetAllActive() {
 		j := s.jobToJobInfo(jobInfo)
@@ -121,6 +126,7 @@ func (s *Server) GetAllActiveJobs(ctx context.Context, e *emptypb.Empty) (*pb.Jo
 
 // GetAllJobs returns all Agent jobs from the server
 func (s *Server) GetAllJobs(ctx context.Context, e *emptypb.Empty) (*pb.Jobs, error) {
+	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
 	returnJobs := &pb.Jobs{}
 	for _, jobInfo := range s.jobService.GetAll() {
 		j := s.jobToJobInfo(jobInfo)
@@ -131,7 +137,7 @@ func (s *Server) GetAllJobs(ctx context.Context, e *emptypb.Empty) (*pb.Jobs, er
 
 // jobToJobInfo converts a server-side Job Info structure into a protobuf Job structure
 func (s *Server) jobToJobInfo(job jobs.Info) *pb.Job {
-
+	slog.Log(context.Background(), logging.LevelTrace, "job info", job)
 	j := &pb.Job{
 		ID:      job.ID(),
 		AgentID: job.AgentID().String(),

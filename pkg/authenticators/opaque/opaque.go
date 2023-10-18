@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2023  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package opaque
 
@@ -159,20 +162,17 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 		return opaque.Opaque{}, err
 	}
 
-	agent, err := a.agentService.Agent(agentID)
+	thisAgent, err := a.agentService.Agent(agentID)
 	// If the error is not nil, continue on and create a new agent
 	if err == nil {
 		// if the error is nil, the agent already exists and likely re-registering and the Agent doesn't need to be created
-		agent.UpdateOPAQUE(opaqueServer.(*opaque2.Server))
-		agent.UpdateStatusCheckin(time.Now().UTC())
-		err = a.agentService.Update(agent)
+		thisAgent.UpdateOPAQUE(opaqueServer.(*opaque2.Server))
+		thisAgent.UpdateStatusCheckin(time.Now().UTC())
+		err = a.agentService.Update(thisAgent)
 		if err != nil {
 			return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.registrationComplete(): error updating agent %s: %s", agentID, err)
 		}
-		err = agent.Log("OPAQUE registration complete")
-		if err != nil {
-			slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
-		}
+		thisAgent.Log("OPAQUE registration complete")
 		return returnMessage, nil
 	}
 
@@ -188,10 +188,7 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 		return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.registrationComplete(): error storing agent %s: %s", agentID, err)
 	}
 
-	err = newAgent.Log("OPAQUE registration complete")
-	if err != nil {
-		slog.Error(fmt.Sprintf("pkg/authenticaters/opaque.registrationComplete(): there was an error writting a log message for agent %s: %s\n", agentID, err))
-	}
+	newAgent.Log("OPAQUE registration complete")
 
 	if core.Debug {
 		slog.Debug("Leaving opaque.registrationComplete function without error")
@@ -206,24 +203,24 @@ func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (op
 		slog.Debug(fmt.Sprintf("Entering into opaque.authenticateInit function for agent %s...", agentID))
 	}
 
-	agent, err := a.agentService.Agent(agentID)
+	thisAgent, err := a.agentService.Agent(agentID)
 	if err != nil {
 		// Agent does not exist and must re-register itself
 		slog.Warn(fmt.Sprintf("Un-Registered agent %s sent OPAQUE authentication, instructing agent to OPAQUE register", agentID))
 		return opaque.Opaque{Type: opaque.ReRegister}, nil
-	} else if agent.OPAQUE() == nil {
+	} else if thisAgent.OPAQUE() == nil {
 		slog.Warn(fmt.Sprintf("registration information for Agent %s is empty, instructing agent to OPAQUE register", agentID))
 		return opaque.Opaque{Type: opaque.ReRegister}, nil
 	}
 
-	returnMessage, err := opaque2.ServerAuthenticateInit(o, agent.OPAQUE())
+	returnMessage, err := opaque2.ServerAuthenticateInit(o, thisAgent.OPAQUE())
 	if err != nil {
 		return opaque.Opaque{}, err
 	}
 
-	keys := []byte(agent.OPAQUE().Kex.SharedSecret.String())
+	keys := []byte(thisAgent.OPAQUE().Kex.SharedSecret.String())
 
-	newAgent, err := agents.NewAgent(agentID, keys, agent.OPAQUE(), agent.Initial())
+	newAgent, err := agents.NewAgent(agentID, keys, thisAgent.OPAQUE(), thisAgent.Initial())
 	if err != nil {
 		return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.authenticateInit(): unable to create a new agent for %s: %s", agentID, err)
 	}
@@ -233,10 +230,7 @@ func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (op
 		return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.authenticateInit(): error storing agent %s: %s", agentID, err)
 	}
 
-	err = agent.Log("Received new agent OPAQUE authentication initialization message")
-	if err != nil {
-		slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
-	}
+	thisAgent.Log("Received new agent OPAQUE authentication initialization message")
 
 	if core.Debug {
 		slog.Debug(fmt.Sprintf("Received new agent OPAQUE authentication for %s at %s", agentID, time.Now().UTC().Format(time.RFC3339)))
@@ -253,15 +247,12 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 	}
 
 	// check to see if this agent is already known to the server
-	agent, err := a.agentService.Agent(agentID)
+	thisAgent, err := a.agentService.Agent(agentID)
 	if err != nil {
 		return fmt.Errorf("pkg/authenticaters/opaque.authenticateComplete(): %s", err)
 	}
 
-	err = agent.Log("Received agent OPAQUE authentication complete message")
-	if err != nil {
-		slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
-	}
+	thisAgent.Log("Received agent OPAQUE authentication complete message")
 	err = a.agentService.UpdateAuthenticated(agentID, true)
 	if err != nil {
 		return err
@@ -278,7 +269,7 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 		slog.Debug("Leaving opaque.authenticateComplete() function without error")
 	}
 
-	return opaque2.ServerAuthenticateComplete(o, agent.OPAQUE())
+	return opaque2.ServerAuthenticateComplete(o, thisAgent.OPAQUE())
 }
 
 // reAuthenticate is used when an agent has previously completed OPAQUE registration but needs to re-authenticate
@@ -290,21 +281,18 @@ func (a *Authenticator) reAuthenticate(agentID uuid.UUID) (opaque.Opaque, error)
 		Type: opaque.ReAuthenticate,
 	}
 
-	agent, err := a.agentService.Agent(agentID)
+	thisAgent, err := a.agentService.Agent(agentID)
 	if err != nil {
 		// Agent does not exist and must re-register itself
 		returnMessage.Type = opaque.ReRegister
 		return returnMessage, nil
-	} else if agent.OPAQUE() == nil {
+	} else if thisAgent.OPAQUE() == nil {
 		// Agent's OPAQUE registration information is empty or reset and must re-register itself
 		returnMessage.Type = opaque.ReRegister
 		return returnMessage, nil
 	}
 
-	err = agent.Log("Instructing agent to re-authenticate with OPAQUE protocol")
-	if err != nil {
-		slog.Error(fmt.Sprintf("there was an error writting a log message for agent %s: %s\n", agentID, err))
-	}
+	thisAgent.Log("Instructing agent to re-authenticate with OPAQUE protocol")
 
 	if core.Debug {
 		slog.Debug("Leaving opaque.reAuthenticate function without error")
