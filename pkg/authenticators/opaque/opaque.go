@@ -32,12 +32,13 @@ import (
 
 	// Merlin Message
 	"github.com/Ne0nd0g/merlin-message"
+	"github.com/Ne0nd0g/merlin-message/opaque"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/pkg/agents"
 	"github.com/Ne0nd0g/merlin/pkg/core"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/opaque"
+	opaque2 "github.com/Ne0nd0g/merlin/pkg/opaque"
 	"github.com/Ne0nd0g/merlin/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/pkg/services/job"
 )
@@ -129,7 +130,7 @@ func (a *Authenticator) registrationInit(agentID uuid.UUID, o opaque.Opaque, opa
 	defer slog.Log(context.Background(), logging.LevelTrace, "leaving function")
 	slog.Debug(fmt.Sprintf("Received new agent OPAQUE user registration initialization from %s", agentID))
 
-	returnMessage, opaqueServer, err := opaque.ServerRegisterInit(agentID, o, opaqueServerKey)
+	returnMessage, opaqueServer, err := opaque2.ServerRegisterInit(agentID, o, opaqueServerKey)
 	if err != nil {
 		return opaque.Opaque{}, err
 	}
@@ -153,7 +154,7 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 	if !ok {
 		return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.registrationComplete(): unable to find Opaque Server structure for agent %s", agentID)
 	}
-	returnMessage, err := opaque.ServerRegisterComplete(agentID, o, opaqueServer.(*opaque.Server))
+	returnMessage, err := opaque2.ServerRegisterComplete(agentID, o, opaqueServer.(*opaque2.Server))
 	if err != nil {
 		return opaque.Opaque{}, err
 	}
@@ -162,7 +163,7 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 	// If the error is not nil, continue on and create a new agent
 	if err == nil {
 		// if the error is nil, the agent already exists and likely re-registering and the Agent doesn't need to be created
-		agent.UpdateOPAQUE(opaqueServer.(*opaque.Server))
+		agent.UpdateOPAQUE(opaqueServer.(*opaque2.Server))
 		agent.UpdateStatusCheckin(time.Now().UTC())
 		err = a.agentService.Update(agent)
 		if err != nil {
@@ -177,7 +178,7 @@ func (a *Authenticator) registrationComplete(agentID uuid.UUID, o opaque.Opaque)
 
 	// After successful registration, create the agent
 	// Want to add it now for future support when the agent doesn't need to register and the registration data is already in a database
-	newAgent, err := agents.NewAgent(agentID, []byte{}, opaqueServer.(*opaque.Server), time.Now().UTC())
+	newAgent, err := agents.NewAgent(agentID, []byte{}, opaqueServer.(*opaque2.Server), time.Now().UTC())
 	if err != nil {
 		return opaque.Opaque{}, fmt.Errorf("pkg/authenticaters/opaque.registrationComplete(): unable to create a new agent for %s: %s", agentID, err)
 	}
@@ -215,7 +216,7 @@ func (a *Authenticator) authenticateInit(agentID uuid.UUID, o opaque.Opaque) (op
 		return opaque.Opaque{Type: opaque.ReRegister}, nil
 	}
 
-	returnMessage, err := opaque.ServerAuthenticateInit(o, agent.OPAQUE())
+	returnMessage, err := opaque2.ServerAuthenticateInit(o, agent.OPAQUE())
 	if err != nil {
 		return opaque.Opaque{}, err
 	}
@@ -277,7 +278,7 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 		slog.Debug("Leaving opaque.authenticateComplete() function without error")
 	}
 
-	return opaque.ServerAuthenticateComplete(o, agent.OPAQUE())
+	return opaque2.ServerAuthenticateComplete(o, agent.OPAQUE())
 }
 
 // reAuthenticate is used when an agent has previously completed OPAQUE registration but needs to re-authenticate
