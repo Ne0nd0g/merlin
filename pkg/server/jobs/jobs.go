@@ -860,7 +860,7 @@ func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
 				}
 			}
 		}
-		args := fmt.Sprintf("%s", strings.Join(cmd.Args, " "))
+		args := strings.Join(cmd.Args, " ")
 		// Truncate to 30 characters
 		if len(args) > 30 {
 			args = fmt.Sprintf("%s...", args[:30])
@@ -868,7 +868,7 @@ func buildJob(agentID uuid.UUID, job *merlinJob.Job, jobArgs []string) error {
 		jobInfo.Command = fmt.Sprintf("%s %s", cmd.Command, args)
 	case merlinJob.CMD:
 		cmd := job.Payload.(merlinJob.Command)
-		args := fmt.Sprintf("%s", strings.Join(cmd.Args, " "))
+		args := strings.Join(cmd.Args, " ")
 		// Truncate to 30 characters
 		if len(args) > 30 {
 			args = fmt.Sprintf("%s...", args[:30])
