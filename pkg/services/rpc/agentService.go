@@ -105,7 +105,7 @@ func (s *Server) agentToAgentInfo(a agents.Agent) *pb.AgentInfo {
 
 // GetAgent returns Agent configuration information for the provided id
 func (s *Server) GetAgent(ctx context.Context, id *pb.ID) (agentInfo *pb.AgentInfo, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	agentInfo = &pb.AgentInfo{}
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(id.Id)
@@ -126,7 +126,7 @@ func (s *Server) GetAgent(ctx context.Context, id *pb.ID) (agentInfo *pb.AgentIn
 
 // GetAgentLinks returns a list of linked child Agent IDs
 func (s *Server) GetAgentLinks(ctx context.Context, id *pb.ID) (*pb.Slice, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -149,7 +149,7 @@ func (s *Server) GetAgentLinks(ctx context.Context, id *pb.ID) (*pb.Slice, error
 
 // GetAgentRows returns certain pieces of information for all Agents that can later be displayed in a table on the client
 func (s *Server) GetAgentRows(ctx context.Context, e *emptypb.Empty) (*pb.TableData, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "empty", e)
 	data := &pb.TableData{}
 	data.Header = []string{"Agent GUID", "Transport", "Platform", "Host", "User", "Process", "Status", "Last Checkin", "Note"}
 	var rows []*pb.TableRows
@@ -191,7 +191,7 @@ func (s *Server) GetAgentRows(ctx context.Context, e *emptypb.Empty) (*pb.TableD
 
 // GetAgents returns a list of existing Agent UUID values
 func (s *Server) GetAgents(ctx context.Context, e *emptypb.Empty) (*pb.Slice, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "empty", e)
 	var agentIDs []string
 	for _, a := range s.agentService.Agents() {
 		if a.Alive() {
@@ -203,7 +203,7 @@ func (s *Server) GetAgents(ctx context.Context, e *emptypb.Empty) (*pb.Slice, er
 
 // GetAgentStatus returns the status of an Agent (e.g., alive, dead, or delayed)
 func (s *Server) GetAgentStatus(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	msg = &pb.Message{}
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(id.Id)
@@ -237,7 +237,7 @@ func (s *Server) GetAgentStatus(ctx context.Context, id *pb.ID) (msg *pb.Message
 
 // GroupAdd adds an Agent to the provided group
 func (s *Server) GroupAdd(ctx context.Context, in *pb.Group) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	msg = &pb.Message{}
 	// Parse the UUID from the request
 	agentUUID, err := uuid.Parse(in.AgentID)
@@ -260,7 +260,7 @@ func (s *Server) GroupAdd(ctx context.Context, in *pb.Group) (msg *pb.Message, e
 // GroupList lists Agents that are part of a specific group
 // id.Id contains the group name as a string
 func (s *Server) GroupList(ctx context.Context, id *pb.ID) (*pb.Slice, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	out := &pb.Slice{}
 	if _, ok := s.agentService.GroupMembers()[id.Id]; ok {
 		for _, member := range s.agentService.GroupMembers()[id.Id] {
@@ -272,7 +272,7 @@ func (s *Server) GroupList(ctx context.Context, id *pb.ID) (*pb.Slice, error) {
 
 // GroupListAll returns all existing Agent groups and their members
 func (s *Server) GroupListAll(ctx context.Context, e *emptypb.Empty) (*pb.GroupMembers, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "empty", e)
 	groups := &pb.GroupMembers{}
 	for group, members := range s.agentService.GroupMembers() {
 		var memberIDs []string
@@ -286,7 +286,7 @@ func (s *Server) GroupListAll(ctx context.Context, e *emptypb.Empty) (*pb.GroupM
 
 // GroupRemove removes an Agent from an Agent group
 func (s *Server) GroupRemove(ctx context.Context, in *pb.Group) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	msg = &pb.Message{}
 	// Parse the UUID from the request
 	agentUUID, err := uuid.Parse(in.AgentID)
@@ -308,7 +308,7 @@ func (s *Server) GroupRemove(ctx context.Context, in *pb.Group) (msg *pb.Message
 
 // Groups return a list of all Agent groups on the RPC server
 func (s *Server) Groups(ctx context.Context, e *emptypb.Empty) (*pb.Slice, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "empty", e)
 	out := &pb.Slice{}
 	out.Data = s.agentService.Groups()
 	return out, nil
@@ -327,7 +327,7 @@ func lastCheckin(t time.Time) string {
 // Note sets a note on the Agent's Note field
 // args[0:] = the note to set
 func (s *Server) Note(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
@@ -348,7 +348,7 @@ func (s *Server) Note(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, er
 
 // Remove deletes the agent from the server
 func (s *Server) Remove(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	msg = &pb.Message{}
 	// Parse the UUID from the request
 	agentUUID, err := uuid.Parse(id.Id)

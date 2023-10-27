@@ -74,7 +74,7 @@ func getExtendedCommand(name string, options map[string]string) ([]string, error
 
 // GetModule returns all the information needed to instantiate a module object on the RPC client from the RPC server
 func (s *Server) GetModule(ctx context.Context, in *pb.String) (data *pb.Module, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Get the absolute path to the module
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -123,13 +123,13 @@ func (s *Server) GetModule(ctx context.Context, in *pb.String) (data *pb.Module,
 
 // GetModuleList returns a list of all modules from the RPC server
 func (s *Server) GetModuleList(ctx context.Context, e *emptypb.Empty) (data *pb.Slice, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "empty", e)
 	return &pb.Slice{Data: modules.GetModuleList()}, nil
 }
 
 // RunModule executes the provided module
 func (s *Server) RunModule(ctx context.Context, m *pb.ModuleRun) (msgs *pb.Messages, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "module run", m)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "module run", m)
 	msgs = &pb.Messages{}
 
 	// Parse Agent UUID

@@ -126,7 +126,7 @@ func withMemoryClientMessageRepository() message.Repository {
 
 // Listen provides a stream of messages for a CLI client
 func (s *Server) Listen(in *pb.ID, stream pb.Merlin_ListenServer) error {
-	slog.Log(context.Background(), logging.LevelTrace, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "in", in)
 	// Parse the UUID from the request
 	id, err := uuid.Parse(in.Id)
 	if err != nil {
@@ -161,7 +161,7 @@ func (s *Server) ListenForClientMessages() {
 
 // Reconnect is used by RPC client's to re-establish a connection to the RPC server
 func (s *Server) Reconnect(ctx context.Context, id *pb.ID) (*pb.ID, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	// Parse the UUID from the request
 	clientID, err := uuid.Parse(id.Id)
 	if err != nil {
@@ -183,7 +183,7 @@ func (s *Server) Reconnect(ctx context.Context, id *pb.ID) (*pb.ID, error) {
 
 // Register is used by CLI clients to register with the RPC server
 func (s *Server) Register(ctx context.Context, e *emptypb.Empty) (*pb.ID, error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "empty", e)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "empty", e)
 	cliClient := client.NewClient()
 	s.clientRepo.Add(cliClient)
 	s.messageChan[cliClient.ID()] = make(chan *pb.Message, 100)
@@ -196,7 +196,7 @@ func (s *Server) Register(ctx context.Context, e *emptypb.Empty) (*pb.ID, error)
 // in.Arguments[1] = interface:port
 // in.Arguments[2] = agent ID
 func (s *Server) Socks(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the Socks RPC call requires at least one argument, have (%d): %s", len(in.Arguments), in.Arguments)
 		slog.Error(err.Error())
@@ -328,7 +328,7 @@ func (s *Service) authenticationStream(srv interface{}, stream grpc.ServerStream
 
 // Run is the primary entry point for start and run this RPC service
 func (s *Service) Run(addr string) error {
-	slog.Log(context.Background(), logging.LevelTrace, "addr", addr)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "addr", addr)
 	// Setup network listener
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {

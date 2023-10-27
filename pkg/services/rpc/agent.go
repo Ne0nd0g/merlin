@@ -50,7 +50,7 @@ import (
 // in.Arguments[0] = command to execute (e.g., connect, download)
 // in.Arguments[1:] = arguments to pass to the command
 func (s *Server) Any(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that an argument was provided
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the Any RPC call requires an argument, have (%d): %s", len(in.Arguments), in.Arguments)
@@ -67,7 +67,7 @@ func (s *Server) Any(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err
 // CD is used to change the agent's current working directory
 // in.Arguments[0] = the directory path to change to
 func (s *Server) CD(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that an argument was provided
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the 'cd' command requires an argument")
@@ -79,7 +79,7 @@ func (s *Server) CD(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err 
 
 // CheckIn creates an AgentInfo job that forces the Agent to send data back to the server
 func (s *Server) CheckIn(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "agentInfo", []string{})
 }
 
@@ -88,7 +88,7 @@ func (s *Server) CheckIn(ctx context.Context, id *pb.ID) (msg *pb.Message, err e
 // in.Arguments[1:] = program and arguments to be executed on the host OS of the running agent
 // Used with `cmd` and `shell` commands as well as through "standard" modules
 func (s *Server) CMD(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that at least two arguments were provided
 	if len(in.Arguments) <= 1 {
 		err = fmt.Errorf("the CMD RPC call requires at least two arguments, have: %+v", in.Arguments)
@@ -101,7 +101,7 @@ func (s *Server) CMD(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err
 // Connect instructs an Agent to disconnect from its current server and connect to the new provided target
 // in.Arguments[0] = the target address or URI to connect to
 func (s *Server) Connect(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that at least two arguments were provided
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the Connect RPC call requires at least one argument, have (%d): %+v", len(in.Arguments), in.Arguments)
@@ -114,7 +114,7 @@ func (s *Server) Connect(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message,
 // Download is used to download the file through the corresponding agent from the provided input file path
 // in.Arguments[0] = the file path to download
 func (s *Server) Download(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that an argument was provided
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the Download RPC call requires an argument, have (%d): %s", len(in.Arguments), in.Arguments)
@@ -129,7 +129,7 @@ func (s *Server) Download(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message
 // in.Arguments[1] = the name of the environment variable to modify
 // in.Arguments[2] = the value to set the environment variable to
 func (s *Server) ENV(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that at least one argument was provided
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the ENV RPC call requires at least one argument, have (%d): %s", len(in.Arguments), in.Arguments)
@@ -146,7 +146,7 @@ func (s *Server) ENV(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err
 // in.Arguments[2] SpawnTo path
 // in.Arguments[3] SpawnTo arguments
 func (s *Server) ExecuteAssembly(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	msg = &pb.Message{}
 	// Validate that four arguments were provided
 	if len(in.Arguments) < 4 {
@@ -200,7 +200,7 @@ func (s *Server) ExecuteAssembly(ctx context.Context, in *pb.AgentCMD) (msg *pb.
 // in.Arguments[2] SpawnTo path
 // in.Arguments[3] SpawnTo arguments
 func (s *Server) ExecutePE(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	msg = &pb.Message{}
 	// Validate that four arguments were provided
 	if len(in.Arguments) < 4 {
@@ -250,7 +250,7 @@ func (s *Server) ExecutePE(ctx context.Context, in *pb.AgentCMD) (msg *pb.Messag
 // in.Arguments[1] shellcode execution method (e.g., self|remote|RtlCreateUserThread|UserAPC)
 // in.Arguments[2] PID to inject shellcode into (not used with the "self" method)
 func (s *Server) ExecuteShellcode(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that at least one argument was provided
 	if len(in.Arguments) < 2 {
 		err = fmt.Errorf("the ExecuteShellcode RPC call requires at least two arguments, have (%d): %s", len(in.Arguments), in.Arguments)
@@ -262,7 +262,7 @@ func (s *Server) ExecuteShellcode(ctx context.Context, in *pb.AgentCMD) (msg *pb
 
 // Exit instructs the agent to quit running
 func (s *Server) Exit(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	msg, err = addJob(id.Id, "exit", []string{})
 	if err != nil {
 		return
@@ -288,7 +288,7 @@ func (s *Server) Exit(ctx context.Context, id *pb.ID) (msg *pb.Message, err erro
 }
 
 func (s *Server) IFConfig(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "ifconfig", []string{})
 }
 
@@ -296,7 +296,7 @@ func (s *Server) IFConfig(ctx context.Context, id *pb.ID) (msg *pb.Message, err 
 // in.Arguments[0] = the assembly name
 // in.Arguments[1:] = arguments to pass to the assembly
 func (s *Server) InvokeAssembly(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Validate that at least one argument was provided
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the InvokeAssembly RPC call requires at least one argument, have (%d): %s", len(in.Arguments), in.Arguments)
@@ -309,21 +309,21 @@ func (s *Server) InvokeAssembly(ctx context.Context, in *pb.AgentCMD) (msg *pb.M
 // JA3 is used to change the Agent's JA3 signature
 // in.Arguments[0] = the JA3 string to change to the TLS client to
 func (s *Server) JA3(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "ja3", in.Arguments)
 }
 
 // KillDate configures the date and time that the agent will stop running
 // in.Arguments[0] = Unix epoch date and time the Agent should stop running
 func (s *Server) KillDate(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "killdate", in.Arguments)
 }
 
 // KillProcess tasks an agent to kill a process by its number identifier
 // in.Arguments[0] = the process ID to kill
 func (s *Server) KillProcess(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "killprocess", in.Arguments)
 }
 
@@ -331,7 +331,7 @@ func (s *Server) KillProcess(ctx context.Context, in *pb.AgentCMD) (msg *pb.Mess
 // in.Arguments[0] = the link method (e.g., add|list|remove|refresh|tcp|udp|smb)
 // in.Arguments[1] = method arguments
 func (s *Server) LinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the LinkAgent RPC call requires at least one argument, have (%d): %s", len(in.Arguments), in.Arguments)
 		slog.Error(err.Error())
@@ -377,7 +377,7 @@ func (s *Server) LinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Messag
 // ListAssemblies instructs the agent to list the .NET assemblies that are currently loaded into the agent's process
 // .NET assemblies are loaded with the LoadAssembly call
 func (s *Server) ListAssemblies(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "list-assemblies", []string{})
 }
 
@@ -385,7 +385,7 @@ func (s *Server) ListAssemblies(ctx context.Context, id *pb.ID) (msg *pb.Message
 // in.Arguments[0] = the listener method (e.g., list|start|stop)
 // in.Arguments[1] = method arguments
 func (s *Server) Listener(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "listener", in.Arguments)
 }
 
@@ -394,7 +394,7 @@ func (s *Server) Listener(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message
 // in.Arguments[1] = the assembly name
 // in.Arguments[2] = calculated SHA256 hash of the assembly
 func (s *Server) LoadAssembly(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "load-assembly", in.Arguments)
 }
 
@@ -402,20 +402,20 @@ func (s *Server) LoadAssembly(ctx context.Context, in *pb.AgentCMD) (msg *pb.Mes
 // .NET assemblies can subsequently be loaded with the LoadAssembly call and executed with the InvokeAssembly call
 // in.Arguments[0] = the .NET CLR version to load (e.g., v2.0.50727, v4.0.30319, or v4.0)
 func (s *Server) LoadCLR(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "load-clr", in.Arguments)
 }
 
 // LS uses native Go to list the directory contents of the provided path
 // in.Arguments[0] = the directory path to list
 func (s *Server) LS(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "ls", in.Arguments)
 }
 
 // MaxRetry configures the amount of times an Agent will try to check in before it quits
 func (s *Server) MaxRetry(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	if len(in.Arguments) < 1 {
 		err = fmt.Errorf("the MaxRetry RPC call requires at least one argument, have (%d): %s", len(in.Arguments), in.Arguments)
 		slog.Error(err.Error())
@@ -459,7 +459,7 @@ func (s *Server) MaxRetry(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message
 // in.Arguments[0] = the memory method (e.g., read|write|patch)
 // in.Arguments[1:] = method arguments
 func (s *Server) Memory(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "memory", in.Arguments)
 }
 
@@ -467,7 +467,7 @@ func (s *Server) Memory(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, 
 // in.Arguments[0] = the executable as a base64 encoded string
 // in.Arguments[1:] = arguments to pass to the executable
 func (s *Server) MEMFD(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "memfd", in.Arguments)
 }
 
@@ -475,46 +475,46 @@ func (s *Server) MEMFD(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 // in.Arguments[0] = -p OPTIONAL
 // in.Arguments[1] = the protocol to filter on (e.g., tcp or udp) OPTIONAL
 func (s *Server) Netstat(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "netstat", in.Arguments)
 }
 
 // Nslookup instructs the agent to perform a DNS query on the input
 // in.Arguments[0: ] = the host name or IP address to query
 func (s *Server) Nslookup(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "nslookup", in.Arguments)
 }
 
 // Padding configures the maximum size for the random amount of padding added to each message
 // in.Arguments[0] = the maximum size of the padding
 func (s *Server) Padding(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "padding", in.Arguments)
 }
 
 // Pipes enumerates and displays named pipes on Windows hosts only
 func (s *Server) Pipes(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "pipes", []string{})
 }
 
 // PS displays running processes
 func (s *Server) PS(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "ps", []string{})
 }
 
 // PWD is used to print the Agent's current working directory
 func (s *Server) PWD(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "pwd", []string{})
 }
 
 // RM removes or deletes a file
 // in.Arguments[0] = the file path to remove
 func (s *Server) RM(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "rm", in.Arguments)
 }
 
@@ -524,14 +524,14 @@ func (s *Server) RM(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err 
 // in.Arguments[2] = the program to run
 // in.Arguments[3:] = the arguments to pass to the program
 func (s *Server) RunAs(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "runas", in.Arguments)
 }
 
 // SecureDelete securely deletes supplied file
 // in.Arguments[0] = the file path to securely delete
 func (s *Server) SecureDelete(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "sdelete", in.Arguments)
 }
 
@@ -540,7 +540,7 @@ func (s *Server) SecureDelete(ctx context.Context, in *pb.AgentCMD) (msg *pb.Mes
 // in.Arguments[1] = the SpawnTo process to inject the shellcode into
 // in.Arguments[2] = the arguments to pass to the SpawnTo process (optional)
 func (s *Server) SharpGen(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Set the assembly filepath
 	options := make(map[string]string)
 
@@ -606,14 +606,14 @@ func (s *Server) SharpGen(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message
 // Skew configures the amount of skew an Agent uses to randomize checkin times
 // in.Arguments[0] = the amount of skew to use
 func (s *Server) Skew(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "skew", in.Arguments)
 }
 
 // Sleep configures the Agent's sleep time between checkins
 // in.Arguments[0] = the amount of time to sleep between checkins
 func (s *Server) Sleep(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
@@ -652,7 +652,7 @@ func (s *Server) Sleep(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 // in.Arguments[3] = the program to execute
 // in.Arguments[4] = program arguments (optional)
 func (s *Server) SSH(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "ssh", in.Arguments)
 }
 
@@ -660,7 +660,7 @@ func (s *Server) SSH(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err
 // args[0] = the token method (e.g., make|privs|rev2self|steal|whoami)
 // args[1:] = method arguments
 func (s *Server) Token(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "token", in.Arguments)
 }
 
@@ -668,14 +668,14 @@ func (s *Server) Token(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 // in.Arguments[0] = the source file
 // in.Arguments[1] = the destination file
 func (s *Server) Touch(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "touch", in.Arguments)
 }
 
 // UnlinkAgent instructs the parent Agent to close, or unlink, the connection with the child Agent
 // in.Arguments[0] = the child Agent's UUID
 func (s *Server) UnlinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	// Parse the UUID from the request
 	agentID, err := uuid.Parse(in.ID)
 	if err != nil {
@@ -706,12 +706,12 @@ func (s *Server) UnlinkAgent(ctx context.Context, in *pb.AgentCMD) (msg *pb.Mess
 // in.Arguments[0] = the source file as a base64 encoded string
 // in.Arguments[1] = the destination file path
 func (s *Server) Upload(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "in", in)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
 	return addJob(in.ID, "upload", in.Arguments)
 }
 
 // Uptime retrieves the target host's uptime. Windows only
 func (s *Server) Uptime(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
-	slog.Log(context.Background(), logging.LevelTrace, "context", ctx, "id", id)
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)
 	return addJob(id.Id, "uptime", []string{})
 }
