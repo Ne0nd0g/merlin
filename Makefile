@@ -30,7 +30,7 @@ windows-garble:
 
 # Compile Server - Linux x64
 linux:
-	export GOOS=linux;export GOARCH=amd64;/home/john/go/bin/go1.20.7 build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-x64 main.go
+	export GOOS=linux;export GOARCH=amd64;go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-x64 main.go
 
 # The SEED must be the exact same that was used when compiling the agent
 # Garble version 0.5.2 or later must be installed and accessible in the PATH environment variable
