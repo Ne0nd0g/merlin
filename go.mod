@@ -7,7 +7,7 @@ require (
 	github.com/Ne0nd0g/merlin-message v1.1.0
 	github.com/cretz/gopaque v0.1.0
 	github.com/go-jose/go-jose/v3 v3.0.0
-	github.com/google/uuid v1.3.1
+	github.com/google/uuid v1.4.0
 	github.com/quic-go/quic-go v0.39.1
 	go.dedis.ch/kyber/v3 v3.1.0
 	golang.org/x/net v0.17.0
