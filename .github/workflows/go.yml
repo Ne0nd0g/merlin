@@ -1,0 +1,63 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: "Merlin Server Build & Test"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  build:
+    name: 'Build Job'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        id: checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: 'Build Merlin Server'
+        id: build
+        run: 'make distro'
+
+      - name: 'Test Merlin Server'
+        id: test
+        run: 'go test ./...'
+
+      - name: GoVulnCheck
+        id: govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: '1.21'
+          go-package: './...'
+
+      - name: Gosec Security Scanner
+        id: gosec
+        uses: securego/gosec@master
+        with:
+          args: '-fmt sarif -out gosec.sarif ./...'
+
+      - name: Upload Gosec SARIF file
+        id: gosec_upload_sarif
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gosec.sarif
+
+      - name: Go Report Card - Install
+        id: goreportcard_install
+        working-directory: /tmp
+        run: |
+          git clone https://github.com/gojp/goreportcard.git
+          cd goreportcard
+          make install
+          go install ./cmd/goreportcard-cli
+
+      - name: Go Report Card - Run
+        id: goreportcard_run
+        run: 'goreportcard-cli -v' # This renames the files in the ./rpc directory to *.grc.bak causing builds to fail

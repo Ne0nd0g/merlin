@@ -6,7 +6,6 @@ import "google/protobuf/empty.proto";
 package rpc;
 
 service Merlin {
-  rpc Authenticate()
   rpc Reconnect(ID) returns (ID) {}
   rpc Register(google.protobuf.Empty) returns (ID) {}
   rpc Listen(ID) returns (stream Message) {}
@@ -43,6 +42,7 @@ service Merlin {
   rpc Note(AgentCMD) returns (Message) {}
   rpc Nslookup(AgentCMD) returns (Message) {}
   rpc Padding(AgentCMD) returns (Message) {}
+  rpc Parrot(AgentCMD) returns (Message) {}
   rpc Pipes(ID) returns (Message) {}
   rpc PS(ID) returns (Message) {}
   rpc PWD(ID) returns (Message) {}

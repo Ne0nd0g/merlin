@@ -8,7 +8,7 @@ require (
 	github.com/cretz/gopaque v0.1.0
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/google/uuid v1.4.0
-	github.com/quic-go/quic-go v0.39.3
+	github.com/quic-go/quic-go v0.40.0
 	go.dedis.ch/kyber/v3 v3.1.0
 	golang.org/x/net v0.17.0
 	golang.org/x/sync v0.4.0

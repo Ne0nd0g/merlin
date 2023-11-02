@@ -289,6 +289,13 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 			Args:    jobArgs,
 		}
 		job.Payload = p
+	case "parrot":
+		job.Type = jobs.CONTROL
+		p := jobs.Command{
+			Command: jobType,
+			Args:    jobArgs,
+		}
+		job.Payload = p
 	case "pipes":
 		job.Type = jobs.MODULE
 		p := jobs.Command{

@@ -54,6 +54,7 @@ type MerlinClient interface {
 	Note(ctx context.Context, in *AgentCMD, opts ...grpc.CallOption) (*Message, error)
 	Nslookup(ctx context.Context, in *AgentCMD, opts ...grpc.CallOption) (*Message, error)
 	Padding(ctx context.Context, in *AgentCMD, opts ...grpc.CallOption) (*Message, error)
+	Parrot(ctx context.Context, in *AgentCMD, opts ...grpc.CallOption) (*Message, error)
 	Pipes(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Message, error)
 	PS(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Message, error)
 	PWD(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Message, error)
@@ -437,6 +438,15 @@ func (c *merlinClient) Nslookup(ctx context.Context, in *AgentCMD, opts ...grpc.
 func (c *merlinClient) Padding(ctx context.Context, in *AgentCMD, opts ...grpc.CallOption) (*Message, error) {
 	out := new(Message)
 	err := c.cc.Invoke(ctx, "/rpc.Merlin/Padding", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *merlinClient) Parrot(ctx context.Context, in *AgentCMD, opts ...grpc.CallOption) (*Message, error) {
+	out := new(Message)
+	err := c.cc.Invoke(ctx, "/rpc.Merlin/Parrot", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -905,6 +915,7 @@ type MerlinServer interface {
 	Note(context.Context, *AgentCMD) (*Message, error)
 	Nslookup(context.Context, *AgentCMD) (*Message, error)
 	Padding(context.Context, *AgentCMD) (*Message, error)
+	Parrot(context.Context, *AgentCMD) (*Message, error)
 	Pipes(context.Context, *ID) (*Message, error)
 	PS(context.Context, *ID) (*Message, error)
 	PWD(context.Context, *ID) (*Message, error)
@@ -1063,6 +1074,9 @@ func (UnimplementedMerlinServer) Nslookup(context.Context, *AgentCMD) (*Message,
 }
 func (UnimplementedMerlinServer) Padding(context.Context, *AgentCMD) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Padding not implemented")
+}
+func (UnimplementedMerlinServer) Parrot(context.Context, *AgentCMD) (*Message, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Parrot not implemented")
 }
 func (UnimplementedMerlinServer) Pipes(context.Context, *ID) (*Message, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Pipes not implemented")
@@ -1829,6 +1843,24 @@ func _Merlin_Padding_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MerlinServer).Padding(ctx, req.(*AgentCMD))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Merlin_Parrot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AgentCMD)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MerlinServer).Parrot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rpc.Merlin/Parrot",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MerlinServer).Parrot(ctx, req.(*AgentCMD))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2817,6 +2849,10 @@ var Merlin_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Padding",
 			Handler:    _Merlin_Padding_Handler,
+		},
+		{
+			MethodName: "Parrot",
+			Handler:    _Merlin_Parrot_Handler,
 		},
 		{
 			MethodName: "Pipes",

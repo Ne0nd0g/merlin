@@ -493,6 +493,13 @@ func (s *Server) Padding(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message,
 	return addJob(in.ID, "padding", in.Arguments)
 }
 
+// Parrot configures the Agent's HTTP connection to mimic a specific browser
+// in.Arguments[0] = the browser to mimic (e.g., HelloChrome_Auto)
+func (s *Server) Parrot(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, err error) {
+	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "in", in)
+	return addJob(in.ID, "parrot", in.Arguments)
+}
+
 // Pipes enumerates and displays named pipes on Windows hosts only
 func (s *Server) Pipes(ctx context.Context, id *pb.ID) (msg *pb.Message, err error) {
 	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "context", ctx, "id", id)

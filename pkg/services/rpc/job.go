@@ -53,7 +53,7 @@ func addJob(agentID string, jobType string, jobArgs []string) (msg *pb.Message, 
 	var result string
 	result, err = service.rpcServer.jobService.Add(agentUUID, jobType, jobArgs)
 	if err != nil {
-		err = fmt.Errorf("there was an error adding the job: %s", err)
+		err = fmt.Errorf("there was an error adding the '%s' job: %s", jobType, err)
 		slog.Error(err.Error())
 		return
 	}
