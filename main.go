@@ -1,68 +1,72 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2022  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package main
 
 import (
 	// Standard
 	"flag"
-	"os"
+	"fmt"
+	"log"
 
-	// 3rd Party
-	"github.com/fatih/color"
-
-	// Merlin
+	// Internal
 	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/cli"
-	"github.com/Ne0nd0g/merlin/pkg/cli/banner"
 	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/pwnboard"
+	"github.com/Ne0nd0g/merlin/pkg/services/rpc"
 )
 
-// Global Variables
-var build = "nonRelease"
-
 func main() {
-	logging.Server("Starting Merlin Server version " + merlin.Version + " build " + merlin.Build)
-
-	flag.Usage = func() {
-		color.Blue("#################################################")
-		color.Blue("#\t\tMERLIN SERVER\t\t\t#")
-		color.Blue("#################################################")
-		color.Blue("Version: " + merlin.Version)
-		color.Blue("Build: " + build)
-		color.Yellow("Merlin Server does not take any command line arguments")
-		color.Yellow("Visit the Merlin wiki for additional information: https://merlin-c2.readthedocs.io/en/latest/")
-		flag.PrintDefaults()
-		os.Exit(0)
-	}
-
-	ip := flag.String("pwn", "", "The IP address / hostname of pwnboard server")
-
+	addr := flag.String("addr", "127.0.0.1:50051", "The address to listen on for client connections")
+	password := flag.String("password", "merlin", "the password to for CLI RPC clients to connect to this server")
+	secure := flag.Bool("secure", false, "Require client TLS certificate verification")
+	tlsKey := flag.String("tlsKey", "", "TLS private key file path")
+	tlsCert := flag.String("tlsCert", "", "TLS certificate file path")
+	tlsCA := flag.String("tlsCA", "", "TLS Certificate Authority file path to verify client certificates")
+	debug := flag.Bool("debug", false, "Enable debug logging")
+	trace := flag.Bool("trace", false, "Enable trace logging")
+	extra := flag.Bool("extra", false, "Enable extra debug logging")
+	v := flag.Bool("version", false, "Print the version number and exit")
 	flag.Parse()
 
-	color.Blue(banner.MerlinBanner1)
-	color.Blue("\t\t   Version: %s", merlin.Version)
-	color.Blue("\t\t   Build: %s", build)
-
-	if *ip != "" {
-		go pwnboard.Updateserver(*ip)
+	if *v {
+		fmt.Printf("Merlin Version: %s, Build: %s\n", merlin.Version, merlin.Build)
+		return
 	}
 
-	// Start Merlin Command Line Interface
-	cli.Shell()
+	// Set the logging level
+	if *extra {
+		logging.SetLevel(logging.LevelExtraDebug)
+	} else if *trace {
+		logging.SetLevel(logging.LevelTrace)
+	} else if *debug {
+		logging.SetLevel(logging.LevelDebug)
+	}
+
+	// Get the RPC service
+	service, err := rpc.NewRPCService(*password, *secure, *tlsCert, *tlsKey, *tlsCA)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = service.Run(*addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Exiting without error")
 }

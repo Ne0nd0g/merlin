@@ -1,7 +1,7 @@
 /*
 Merlin is a post-exploitation command and control framework.
 This file is part of Merlin.
-Copyright (C) 2022  Russel Van Tuyl
+Copyright (C) 2023  Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -151,7 +150,7 @@ func parseHex(str []string) ([]byte, error) {
 // parseShellcodeFile parses a path, evaluates the file's contents, and returns a byte array of shellcode
 func parseShellcodeFile(filePath string) ([]byte, error) {
 
-	fileContents, err := ioutil.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
+	fileContents, err := os.ReadFile(filePath) // #nosec G304 Users can include any file from anywhere
 	if err != nil {
 		return nil, err
 	}

@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2022  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package modules
 
@@ -22,51 +25,38 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 
-	// 3rd Party
-	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
-	"github.com/satori/go.uuid"
-
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-
-	// Merlin Modules
-	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
-	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
-	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
-	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
-	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
-	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
+	// Third-Party
+	"github.com/google/uuid"
 )
 
 // Module is a structure containing the base information or template for modules
 type Module struct {
-	Agent        uuid.UUID   // The Agent that will later be associated with this module prior to execution
-	Name         string      `json:"name"`                 // Name of the module
-	Type         string      `json:"type"`                 // Type of module (i.e. standard or extended)
-	Author       []string    `json:"author"`               // A list of module authors
-	Credits      []string    `json:"credits"`              // A list of people to credit for underlying tool or techniques
-	Path         []string    `json:"path"`                 // Path to the module (i.e. data/modules/powershell/powerview)
-	Platform     string      `json:"platform"`             // Platform the module can run on (i.e. Windows, Linux, Darwin, or ALL)
-	Arch         string      `json:"arch"`                 // The Architecture the module can run on (i.e. x86, x64, MIPS, ARM, or ALL)
-	Lang         string      `json:"lang"`                 // What language does the module execute in (i.e. PowerShell, Python, or Perl)
-	Priv         bool        `json:"privilege"`            // Does this module required a privileged level account like root or SYSTEM?
-	Description  string      `json:"description"`          // A description of what the module does
-	Notes        string      `json:"notes"`                // Additional information or notes about the module
-	Commands     []string    `json:"commands"`             // A list of commands to be run on the agent
-	SourceRemote string      `json:"remote"`               // Online or remote source code for a module
-	SourceLocal  []string    `json:"local"`                // The local file path to the script or payload
-	Options      []Option    `json:"options"`              // A list of configurable options/arguments for the module
-	Powershell   interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
+	id              uuid.UUID   // id the unique identifier for this instance of the module
+	Agent           uuid.UUID   // The Agent that will later be associated with this module prior to execution
+	Name            string      `json:"name"`        // Name of the module
+	Type            string      `json:"type"`        // Type of module (i.e., standard or extended)
+	Author          []string    `json:"author"`      // A list of module authors
+	Credits         []string    `json:"credits"`     // A list of people to credit for underlying tool or techniques
+	Path            []string    `json:"path"`        // Path to the module (i.e., data/modules/powershell/powerview)
+	Platform        string      `json:"platform"`    // Platform that the module can run on (i.e., Windows, Linux, Darwin, or ALL)
+	Arch            string      `json:"arch"`        // The Architecture the module can run on (i.e., x86, x64, MIPS, ARM, or ALL)
+	Lang            string      `json:"lang"`        // What language does the module execute in (i.e., PowerShell, Python, or Perl)
+	Priv            bool        `json:"privilege"`   // Does this module require a privileged level account like root or SYSTEM?
+	Description     string      `json:"description"` // A description of what the module does
+	Notes           string      `json:"notes"`       // Additional information or notes about the module
+	Commands        []string    `json:"commands"`    // A list of commands to be run on the agent
+	SourceRemote    string      `json:"remote"`      // Online or remote source code for a module
+	SourceLocal     []string    `json:"local"`       // The local file path to the script or payload
+	Options         []Option    `json:"options"`     // A list of configurable options/arguments for the module
+	originalOptions []Option    // An original and unmodified list of configurable options/arguments for the module
+	Powershell      interface{} `json:"powershell,omitempty"` // An option json object containing commands and configuration items specific to PowerShell
+	IsExtended      bool        // Is this an extended module?
 }
 
 // Option is a structure containing the keys for the object
@@ -85,193 +75,23 @@ type PowerShell struct {
 	Base64      bool // Base64 encode the powershell command?
 }
 
-// Run function returns an array of commands to execute the module on an agent
-func Run(m Module) ([]string, error) {
-	if m.Agent == uuid.FromStringOrNil("00000000-0000-0000-0000-000000000000") {
-		return nil, errors.New("agent not set for module")
+// NewModule is a factory to instantiate a module object using the provided file path to a module's json file
+func NewModule(modulePath string) (Module, error) {
+	m := Module{
+		id: uuid.New(),
 	}
-
-	if strings.ToLower(m.Agent.String()) != "ffffffff-ffff-ffff-ffff-ffffffffffff" {
-		platform, platformError := agents.GetAgentFieldValue(m.Agent, "platform")
-		if platformError != nil {
-			return nil, platformError
-		}
-
-		if !strings.EqualFold(m.Platform, platform) {
-			return nil, fmt.Errorf("the %s module is only compatible with %s platform. The agent's platform is %s", m.Name, m.Platform, platform)
-		}
-	}
-
-	// Check every 'required' option to make sure it isn't null
-	for _, v := range m.Options {
-		if v.Required {
-			if v.Value == "" {
-				return nil, errors.New(v.Name + " is required")
-			}
-		}
-	}
-
-	if strings.ToLower(m.Type) == "extended" {
-		extendedCommand, err := getExtendedCommand(&m)
-		if err != nil {
-			return nil, err
-		}
-		return extendedCommand, nil
-	}
-
-	// Fill in or remove options values
-	command := make([]string, len(m.Commands))
-	copy(command, m.Commands)
-
-	for _, o := range m.Options {
-		for k := len(command) - 1; k >= 0; k-- {
-			reName := regexp.MustCompile(`(?iU)({{2}` + o.Name + `}{2})`)
-			reFlag := regexp.MustCompile(`(?iU)({{2}` + o.Name + `.Flag}{2})`)
-			reValue := regexp.MustCompile(`(?iU)({{2}` + o.Name + `.Value}{2})`)
-			// Check if an option was set WITHOUT the Flag or Value qualifiers
-			if reName.MatchString(command[k]) {
-				if o.Value != "" {
-					command[k] = reName.ReplaceAllString(command[k], o.Flag+" "+o.Value)
-				} else {
-					command = append(command[:k], command[k+1:]...)
-				}
-				// Check if an option was set WITH just the Flag qualifier
-			} else if reFlag.MatchString(command[k]) {
-				if strings.ToLower(o.Value) == "true" {
-					command[k] = reFlag.ReplaceAllString(command[k], o.Flag)
-				} else {
-					command = append(command[:k], command[k+1:]...)
-				}
-				// Check if an option was set WITH just the Value qualifier
-			} else if reValue.MatchString(command[k]) {
-				if o.Value != "" {
-					command[k] = reValue.ReplaceAllString(command[k], o.Value)
-				} else {
-					command = append(command[:k], command[k+1:]...)
-				}
-			}
-		}
-	}
-	return command, nil
-}
-
-// ShowOptions function is used to display only a module's configurable options
-func (m *Module) ShowOptions() {
-	color.Cyan(fmt.Sprintf("\r\nAgent: %s\r\n", m.Agent.String()))
-	color.Yellow("\r\nModule options(" + m.Name + ")\r\n\r\n")
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Name", "Value", "Required", "Description"})
-	// TODO update the tablewriter to the newest version and use the SetColMinWidth for the Description column
-	table.SetBorder(false)
-	// TODO add option for agent alias here
-	table.Append([]string{"Agent", m.Agent.String(), "true", "Agent on which to run module " + m.Name})
-	for _, v := range m.Options {
-		table.Append([]string{v.Name, v.Value, strconv.FormatBool(v.Required), v.Description})
-	}
-	table.Render()
-}
-
-// GetOptionsList generates and returns a list of the module's configurable options. Used with tab completion
-func (m *Module) GetOptionsList() func(string) []string {
-	return func(line string) []string {
-		o := make([]string, 0)
-		for _, v := range m.Options {
-			o = append(o, v.Name)
-		}
-		return o
-	}
-}
-
-// GetModuleList generates and returns a list of all modules in Merlin's "module" directory folder. Used with tab completion
-func GetModuleList() func(string) []string {
-	return func(line string) []string {
-		ModuleDir := path.Join(filepath.ToSlash(core.CurrentDir), "data", "modules")
-		o := make([]string, 0)
-
-		err := filepath.Walk(ModuleDir, func(path string, f os.FileInfo, err error) error {
-			if err != nil {
-				fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", ModuleDir, err)
-				return err
-			}
-			if strings.HasSuffix(f.Name(), ".json") {
-				d := strings.SplitAfter(filepath.ToSlash(path), ModuleDir)
-				if len(d) > 0 {
-					m := d[1]
-					m = strings.TrimLeft(m, "/")
-					m = strings.TrimSuffix(m, ".json")
-					if !strings.Contains(m, "templates") {
-						o = append(o, m)
-					}
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			fmt.Printf("error walking the path %q: %v\n", ModuleDir, err)
-		}
-		return o
-	}
-}
-
-// SetOption is used to change the passed in module option's value. Used when a user is configuring a module
-func (m *Module) SetOption(option string, value []string) (string, error) {
-	// Verify this option exists
-	for k, v := range m.Options {
-		if option == v.Name {
-			// Take in a slice of string for arguments that contain spaces; https://github.com/Ne0nd0g/merlin/issues/88
-			m.Options[k].Value = strings.Join(value, " ")
-			return fmt.Sprintf("%s set to %s", v.Name, m.Options[k].Value), nil
-		}
-	}
-	return "", fmt.Errorf("invalid module option: %s", option)
-}
-
-// SetAgent is used to set the agent associated with the module.
-func (m *Module) SetAgent(agentUUID string) (string, error) {
-	if strings.ToLower(agentUUID) == "all" {
-		agentUUID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
-	}
-	i, err := uuid.FromString(agentUUID)
-	if err != nil {
-		return "", fmt.Errorf("invalid UUID")
-	}
-	m.Agent = i
-	return fmt.Sprintf("agent set to %s", m.Agent.String()), nil
-}
-
-// ShowInfo function displays all of the information about a module to include items such as authors and options
-func (m *Module) ShowInfo() {
-	color.Yellow("Module:\r\n\t%s\r\n", m.Name)
-	color.Yellow("Platform:\r\n\t%s\\%s\\%s\r\n", m.Platform, m.Arch, m.Lang)
-	color.Yellow("Module Authors:")
-	for a := range m.Author {
-		color.Yellow("\t%s", m.Author[a])
-	}
-	color.Yellow("Credits:")
-	for c := range m.Credits {
-		color.Yellow("\t%s", m.Credits[c])
-	}
-	color.Yellow("Description:\r\n\t%s", m.Description)
-	m.ShowOptions()
-	fmt.Println()
-	color.Yellow("Notes: %s", m.Notes)
-}
-
-// Create is module function used to instantiate a module object using the provided file path to a module's json file
-func Create(modulePath string) (Module, error) {
-	var m Module
 
 	// Read in the module's JSON configuration file
-	f, err := ioutil.ReadFile(modulePath) // #nosec G304 - User should be able to read in any file
+	f, err := os.ReadFile(modulePath) // #nosec G304 - User should be able to read in any file
 	if err != nil {
 		return m, err
 	}
 
 	// Unmarshal module's JSON message
 	var moduleJSON map[string]*json.RawMessage
-	errModule := json.Unmarshal(f, &moduleJSON)
-	if errModule != nil {
-		return m, errModule
+	err = json.Unmarshal(f, &moduleJSON)
+	if err != nil {
+		return m, fmt.Errorf("there was an error unmarshaling the module's JSON file at %s: %s", modulePath, err)
 	}
 
 	// Determine all message types
@@ -292,9 +112,9 @@ func Create(modulePath string) (Module, error) {
 	if !containsBase {
 		return m, errors.New("the module's definition does not contain the 'BASE' message type")
 	}
-	errJSON := json.Unmarshal(*moduleJSON["base"], &m)
-	if errJSON != nil {
-		return m, errJSON
+	err = json.Unmarshal(*moduleJSON["base"], &m)
+	if err != nil {
+		return m, fmt.Errorf("there was an error unmarshaling the module's JSON file at %s: %s", modulePath, err)
 	}
 
 	// Check for PowerShell configuration options
@@ -302,33 +122,43 @@ func Create(modulePath string) (Module, error) {
 		switch keys[k] {
 		case "base":
 		case "powershell":
-			k := marshalMessage(*moduleJSON["powershell"])
-			m.Powershell = (*json.RawMessage)(&k)
-			var p PowerShell
-			err := json.Unmarshal(k, &p)
+			var powershellJSON []byte
+			powershellJSON, err = marshalMessage(*moduleJSON["powershell"])
 			if err != nil {
-				return m, errors.New("there was an error unmarshaling the powershell JSON object")
+				return m, err
+			}
+			m.Powershell = (*json.RawMessage)(&powershellJSON)
+			var p PowerShell
+			err = json.Unmarshal(powershellJSON, &p)
+			if err != nil {
+				return m, errors.New("there was an error unmarshalling the powershell JSON object")
 			}
 		}
 	}
 
-	_, errValidate := validateModule(m)
-	if errValidate != nil {
-		return m, errValidate
+	err = validateModule(m)
+	if err != nil {
+		return m, fmt.Errorf("there was an error validating the module's JSON file at %s: %s", modulePath, err)
+	}
+	m.originalOptions = m.Options
+	switch strings.ToLower(m.Type) {
+	case "extended":
+		m.IsExtended = true
+	default:
+		m.IsExtended = false
 	}
 	return m, nil
 }
 
 // validateModule function is used to check a module's configuration for errors
-func validateModule(m Module) (bool, error) {
-
+func validateModule(m Module) error {
 	// Validate Platform
 	switch strings.ToUpper(m.Platform) {
 	case "WINDOWS":
 	case "LINUX":
 	case "DARWIN":
 	default:
-		return false, errors.New("invalid or missing 'platform' value in the module's JSON file")
+		return errors.New("invalid or missing 'platform' value in the module's JSON file")
 	}
 
 	// Validate Architecture
@@ -336,7 +166,7 @@ func validateModule(m Module) (bool, error) {
 	case "X64":
 	case "X32":
 	default:
-		return false, errors.New("invalid or missing 'arch' value in the module's JSON file")
+		return errors.New("invalid or missing 'arch' value in the module's JSON file")
 	}
 
 	// Validate Type
@@ -344,52 +174,50 @@ func validateModule(m Module) (bool, error) {
 	case "STANDARD":
 	case "EXTENDED":
 	default:
-		return false, errors.New("invalid or missing `type` value in the module's JSON file")
+		return errors.New("invalid or missing `type` value in the module's JSON file")
 	}
-	return true, nil
+	return nil
 }
 
 // marshalMessage is a generic function used to marshal JSON messages
-func marshalMessage(m interface{}) []byte {
+func marshalMessage(m interface{}) ([]byte, error) {
 	k, err := json.Marshal(m)
 	if err != nil {
-		color.Red("There was an error marshaling the JSON object")
-		color.Red(err.Error())
+		err = fmt.Errorf("there was an error marshaling the JSON object type %T: %s", m, err)
 	}
-	return k
+	return k, err
 }
 
-// getExtendedCommand processes "extended" modules and returns the associated command by matching the extended module's
-// name to a the Parse function of its associated module package
-func getExtendedCommand(m *Module) ([]string, error) {
-	// TODO document that every extended module must have a parse function as its entry point
-	var extendedCommand []string
-	var err error
-	switch strings.ToLower(m.Name) {
-	case "createprocess":
-		extendedCommand, err = createprocess.Parse(m.getMapFromOptions())
-	case "donut":
-		extendedCommand, err = donut.Parse(m.getMapFromOptions())
-	case "minidump":
-		extendedCommand, err = minidump.Parse(m.getMapFromOptions())
-	case "sharpgen":
-		extendedCommand, err = sharpgen.Parse(m.getMapFromOptions())
-	case "shellcodeinjection":
-		extendedCommand, err = shellcode.Parse(m.getMapFromOptions())
-	case "srdi":
-		extendedCommand, err = srdi.Parse(m.getMapFromOptions())
-	default:
-		return nil, fmt.Errorf("the %s module's extended command function was not found", m.Name)
+// GetModuleList generates and returns a list of all modules in Merlin's "module" directory folder. Used with tab completion
+func GetModuleList() []string {
+	dir, err := os.Getwd()
+	if err != nil {
+		slog.Error(err.Error())
+		return []string{}
 	}
-	return extendedCommand, err
-}
+	ModuleDir := path.Join(filepath.ToSlash(dir), "data", "modules")
+	o := make([]string, 0)
 
-// getMapFromOptions is used to generate a map containing module option names and values to be used with other functions
-func (m *Module) getMapFromOptions() map[string]string {
-	optionsMap := make(map[string]string)
-
-	for _, v := range m.Options {
-		optionsMap[v.Name] = v.Value
+	err = filepath.Walk(ModuleDir, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", ModuleDir, err)
+			return err
+		}
+		if strings.HasSuffix(f.Name(), ".json") {
+			d := strings.SplitAfter(filepath.ToSlash(path), ModuleDir)
+			if len(d) > 0 {
+				m := d[1]
+				m = strings.TrimLeft(m, "/")
+				m = strings.TrimSuffix(m, ".json")
+				if !strings.Contains(m, "templates") {
+					o = append(o, m)
+				}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Printf("error walking the path %q: %v\n", ModuleDir, err)
 	}
-	return optionsMap
+	return o
 }

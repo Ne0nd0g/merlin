@@ -1,19 +1,22 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2022  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package donut
 
@@ -261,4 +264,14 @@ func BytesFromConfig(srcFile string, config *donut.DonutConfig) (*bytes.Buffer, 
 		return donut.ShellcodeFromURL(config.URL, config)
 	}
 	return donut.ShellcodeFromFile(srcFile, config)
+}
+
+// BytesFromString takes a base64 encoded .NET assembly and a donut configuration as inputs and returns the donut payload as a bytes buffer
+func BytesFromString(assembly string, config *donut.DonutConfig) (*bytes.Buffer, error) {
+	// Base64 decode assembly
+	data, err := base64.StdEncoding.DecodeString(assembly)
+	if err != nil {
+		return nil, fmt.Errorf("there was an error base64 decoding the donut assembly:\n%s", err)
+	}
+	return donut.ShellcodeFromBytes(bytes.NewBuffer(data), config)
 }

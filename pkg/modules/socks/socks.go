@@ -1,7 +1,7 @@
 /*
 Merlin is a post-exploitation command and control framework.
 This file is part of Merlin.
-Copyright (C) 2022  Russel Van Tuyl
+Copyright (C) 2023  Russel Van Tuyl
 
 Merlin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -23,19 +23,19 @@ import (
 	// Standard
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
-	"time"
 
 	// 3rd Party
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+
+	// Merlin Message
+	merlinJob "github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/api/messages"
-	cli "github.com/Ne0nd0g/merlin/pkg/cli/core"
 	"github.com/Ne0nd0g/merlin/pkg/core"
-	merlinJob "github.com/Ne0nd0g/merlin/pkg/jobs"
 )
 
 // listeners is a map of single TCP bound interfaces associated keyed to a specific agent ID
@@ -86,7 +86,7 @@ func Parse(options map[string]string) ([]string, error) {
 			return nil, fmt.Errorf("there was an error starting the SOCKS tcp listener on %s - %s", iface, err)
 		}
 		// Convert Agent UUID from string
-		agent, err := uuid.FromString(options["agent"])
+		agent, err := uuid.Parse(options["agent"])
 		if err != nil {
 			return nil, fmt.Errorf("there was an error converting the agent UUID from a string in the SOCKS module: %s", err)
 		}
@@ -108,7 +108,7 @@ func Parse(options map[string]string) ([]string, error) {
 		return []string{fmt.Sprintf("Started SOCKS listener for agent %s on %s", agent, iface)}, nil
 	case "stop":
 		// Convert Agent UUID from string
-		agent, err := uuid.FromString(options["agent"])
+		agent, err := uuid.Parse(options["agent"])
 		if err != nil {
 			return nil, fmt.Errorf("there was an error converting the agent UUID from a string in the SOCKS module: %s", err)
 		}
@@ -143,8 +143,7 @@ func start(agent uuid.UUID) {
 	for {
 		listener, ok := listeners.Load(agent)
 		if !ok {
-			msg := messages.ErrorMessage(fmt.Sprintf("there are no listeners for agent %s", agent))
-			cli.MessageChannel <- msg
+			slog.Error(fmt.Sprintf("there are no listeners for agent %s", agent))
 			break
 		}
 		// Listen for new connections (blocks)
@@ -153,8 +152,7 @@ func start(agent uuid.UUID) {
 		// Check to see if we are done with the connection. An error will be forced when the listener is closed
 		fin, ok := done.Load(agent)
 		if !ok {
-			msg := messages.ErrorMessage(fmt.Sprintf("could not find listener's done map for agent %s", agent))
-			cli.MessageChannel <- msg
+			slog.Error(fmt.Sprintf("could not find listener's done map for agent %s", agent))
 			break
 		}
 		if fin.(bool) {
@@ -162,19 +160,12 @@ func start(agent uuid.UUID) {
 			return
 		}
 		if err != nil {
-			msg := messages.ErrorMessage(fmt.Sprintf("there was an error accepting a SOCKS connection for agent %s: %s", agent, err))
-			cli.MessageChannel <- msg
+			slog.Error(fmt.Sprintf("there was an error accepting a SOCKS connection for agent %s: %s", agent, err))
 			break
 		}
-		id := uuid.NewV4()
-		if cli.Verbose {
-			msg := messages.UserMessage{
-				Level:   messages.Note,
-				Message: fmt.Sprintf("Received connection from %s to %s and assigned connection ID %s", conn.RemoteAddr(), conn.LocalAddr(), id),
-				Time:    time.Time{},
-				Error:   false,
-			}
-			messages.SendBroadcastMessage(msg)
+		id := uuid.New()
+		if core.Verbose {
+			slog.Info(fmt.Sprintf("Received connection from %s to %s and assigned connection ID %s", conn.RemoteAddr(), conn.LocalAddr(), id))
 		}
 		connection := &Connection{
 			AgentID: agent,
@@ -190,14 +181,13 @@ func start(agent uuid.UUID) {
 func readSOCKSClient(id uuid.UUID) {
 	connection, ok := connections.Load(id)
 	if !ok {
-		msg := messages.ErrorMessage(fmt.Sprintf("%s is not a known SOCKS connection ID", id))
-		cli.MessageChannel <- msg
+		slog.Error(fmt.Sprintf("%s is not a known SOCKS connection ID", id))
 		return
 	}
 
 	var index int
 	jobID := core.RandStringBytesMaskImprSrc(10)
-	token := uuid.NewV4()
+	token := uuid.New()
 	for {
 		// Create SOCKS payload
 		socks := merlinJob.Socks{
@@ -210,13 +200,7 @@ func readSOCKSClient(id uuid.UUID) {
 		data := make([]byte, 500000)
 		n, err := connection.(*Connection).Conn.Read(data)
 		if core.Debug {
-			msg := messages.UserMessage{
-				Level:   messages.Debug,
-				Message: fmt.Sprintf("Read %d bytes from connection ID %s for agent %s with error %s", n, id, connection.(Connection).AgentID, err),
-				Time:    time.Time{},
-				Error:   false,
-			}
-			cli.MessageChannel <- msg
+			slog.Debug(fmt.Sprintf("Read %d bytes from connection ID %s for agent %s with error %s", n, id, connection.(Connection).AgentID, err))
 		}
 
 		// If there is data, add it to the message
@@ -227,24 +211,12 @@ func readSOCKSClient(id uuid.UUID) {
 		// SOCKS Client is done
 		if err == io.EOF {
 			if core.Verbose {
-				msg := messages.UserMessage{
-					Level:   messages.Note,
-					Message: fmt.Sprintf("Received EOF from the SOCKS client, closing the %s connection", id),
-					Time:    time.Time{},
-					Error:   false,
-				}
-				cli.MessageChannel <- msg
+				slog.Info(fmt.Sprintf("Received EOF from the SOCKS client, closing the %s connection", id))
 			}
 
 			err = connection.(*Connection).Conn.Close()
 			if err != nil {
-				msg := messages.UserMessage{
-					Level:   messages.Warn,
-					Message: fmt.Sprintf("there was an error closing SOCKS client connection ID %s with %s", id, err),
-					Time:    time.Time{},
-					Error:   true,
-				}
-				cli.MessageChannel <- msg
+				slog.Error(fmt.Sprintf("there was an error closing SOCKS client connection ID %s with %s", id, err))
 				break
 			}
 			socks.Close = true
@@ -252,8 +224,7 @@ func readSOCKSClient(id uuid.UUID) {
 			connections.Delete(id)
 		}
 		if err != nil {
-			msg := messages.ErrorMessage(fmt.Sprintf("there was an error reading the SOCKS connection data to a buffer: %s", err))
-			cli.MessageChannel <- msg
+			slog.Error(fmt.Sprintf("there was an error reading the SOCKS connection data to a buffer: %s", err))
 			break
 		}
 
@@ -285,8 +256,7 @@ func processMessage() {
 		// Make sure the connection ID is known
 		conn, ok := connections.Load(socks.ID)
 		if !ok {
-			msg := messages.ErrorMessage(fmt.Sprintf("%s is not a known SOCKS connection ID", socks.ID))
-			cli.MessageChannel <- msg
+			slog.Error(fmt.Sprintf("%s is not a known SOCKS connection ID", socks.ID))
 			break
 		}
 
@@ -294,31 +264,18 @@ func processMessage() {
 		if conn.(*Connection).Index == socks.Index {
 			n, err := conn.(*Connection).Conn.Write(socks.Data)
 			if err != nil {
-				msg := messages.ErrorMessage(fmt.Sprintf("there was an error writing to the SOCKS client for agent %s connection ID %s: %s", agent, socks.ID, err))
-				cli.MessageChannel <- msg
+				slog.Error(fmt.Sprintf("there was an error writing to the SOCKS client for agent %s connection ID %s: %s", agent, socks.ID, err))
 				return
 			}
 
 			if core.Debug {
-				msg := messages.UserMessage{
-					Level:   messages.Debug,
-					Message: fmt.Sprintf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s with error %s", n, socks.Index, agent, socks.ID, err),
-					Time:    time.Time{},
-					Error:   false,
-				}
-				cli.MessageChannel <- msg
+				slog.Debug(fmt.Sprintf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s with error %s", n, socks.Index, agent, socks.ID, err))
 			}
 			//fmt.Printf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s with error %s\n", n, socks.Index, agent, socks.ID, err)
 			conn.(*Connection).Index++
 		} else {
 			if core.Debug {
-				msg := messages.UserMessage{
-					Level:   messages.Debug,
-					Message: fmt.Sprintf("Received job out of order for agent %s connection %s. Expected %d, got %d", agent, socks.ID, conn.(*Connection).Index, socks.Index),
-					Time:    time.Time{},
-					Error:   false,
-				}
-				cli.MessageChannel <- msg
+				slog.Debug(fmt.Sprintf("Received job out of order for agent %s connection %s. Expected %d, got %d", agent, socks.ID, conn.(*Connection).Index, socks.Index))
 			}
 			jobsIn <- job
 		}
@@ -328,13 +285,7 @@ func processMessage() {
 // In is the entrypoint for accepting SOCKS messages that came in from the agent and need to be sent to the SOCKS client
 func In(job merlinJob.Job) {
 	if core.Debug {
-		msg := messages.UserMessage{
-			Level:   messages.Debug,
-			Message: fmt.Sprintf("Entered into SOCKS module In() function with: %+v", job),
-			Time:    time.Time{},
-			Error:   false,
-		}
-		cli.MessageChannel <- msg
+		slog.Debug(fmt.Sprintf("Entered into SOCKS module In() function with: %+v", job))
 	}
 
 	socks := job.Payload.(merlinJob.Socks)
@@ -347,8 +298,7 @@ func In(job merlinJob.Job) {
 	// Make sure the connection ID is known
 	_, ok := connections.Load(socks.ID)
 	if !ok {
-		msg := messages.ErrorMessage(fmt.Sprintf("%s is not a known SOCKS connection ID", socks.ID))
-		cli.MessageChannel <- msg
+		slog.Error(fmt.Sprintf("%s is not a known SOCKS connection ID", socks.ID))
 		return
 	}
 

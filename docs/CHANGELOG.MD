@@ -4,20 +4,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-# 1.5.1 - 2023-03-08
+## 2.0.0 - 2023-11-02
+
+### Added
+
+- New TCP listener
+  - Used to configure how the listener process Agent traffic or to generate Agents
+  - TCP listener DOES NOT bind to interfaces/ports on the Merlin server, used for Agent configuration/generation ONLY
+- Delegate message type and functions for processing them
+- Configurable listener authentication methods for Agent communications: OPAQUE & none
+- Configurable listener transforms for Agent communications: gob-base, base64, hex, aes, jwe, rc4, and xor
+- `link` command for the Agent to initiate a peer-to-peer connection with a listening bind agent
+  - Example: `link tcp 192.168.1.72:4444`
+- `listener` command for the Agent to start a listener to receive a connection from a reverse peer-to-peer connection
+  - `list` to return a list of instantiated on the Agent (e.g., `listener list`)
+  - `start` to start a listener based on the passed in type and interface
+    - Example: `listener start tcp 0.0.0.0:4444`
+  - `stop` to stop an already created listener
+    - Example: `listener stop tcp [::]:4444`
+- Help is available for all commands using `-h` after the command
+
+### Changed
+
+- Refactored _some_ areas to align with DDD and SOLID to alleviate circular dependencies implementing peer-to-peer comms
+  - Implemented base "entity" structures and "aggregates"
+  - Implemented the "Repository" pattern for Agents, Delegates, Groups, Listeners, Servers
+  - Implemented the "Services" patter for interacting with Agents, Listeners, & Base messages
+- Configurable JWT key value for HTTP listeners
+- Removed util package and relocated function to appropriate packages
+- Upgraded [quic-go](https://github.com/quic-go/quic-go) to v0.34.0
+- The Minimum supported Go version is now 1.19
+- Added support for Go version 1.20
+- Refactored the `pkg/cli` package to be more modular
+- Listeners are now handled by a UUID and no longer by a name as a string
+- Changed CLI commands:
+- Replaced `use module <module name>` with `modules` command to switch to the modules menu
+- Removed the `agents` command from the main menu. Use `sessions` instead
+- Replaces `set verbose` & `set debug` (to enable verbose & debug output) with `verbose` & `debug` switch commands
+- Moved the `build` string out of `main.go` and into `pkg/merlin.go`
+- Removed PWNBoard from `main.go`
+- Removed wiki documentation from `docs` to a new repository at https://github.com/Ne0nd0g/merlin-documentation
+
+## 1.5.1 - 2023-03-08
 
 ### Added
 
 - Documentation for proxying Agent DLL provided by @HuskyHacks in [PR 136](https://github.com/Ne0nd0g/merlin/pull/136)
 
-## Security
+### Security
 
 - [PR 137](https://github.com/Ne0nd0g/merlin/pull/137) - Bump golang.org/x/text from 0.3.7 to 0.3.8 by dependabot
 - [PR 138](https://github.com/Ne0nd0g/merlin/pull/138) - Bump golang.org/x/net from 0.0.0-20220708220712-1185a9018129 to 0.7.0 by dependabot
 - [PR 139](https://github.com/Ne0nd0g/merlin/pull/139) - Bump golang.org/x/crypto from 0.0.0-20200709230013-948cd5f35899 to 0.1.0 by dependabot
 - [PR 140](https://github.com/Ne0nd0g/merlin/pull/140) - Bump golang.org/x/net from 0.1.0 to 0.7.0 by dependabot
 
-# 1.5.0 - 2022-07-20
+## 1.5.0 - 2022-07-20
 
 ### Added
 
@@ -32,26 +73,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Reduced the default PBES2 count for payload JWE encryption from 500,000 to 3,000
   - https://datatracker.ietf.org/doc/html/rfc7518#section-4.8.1.2
 
-# 1.4.3 - 2022-07-09
+## 1.4.3 - 2022-07-09
 
 ### Fixed
 
 - [Issue 129](https://github.com/Ne0nd0g/merlin/issues/129) - Added references to Docker image source
 
-# 1.4.2 - 2022-04-14
+## 1.4.2 - 2022-04-14
 
 ### Added
 
 - Server shows error when BOTH the agent and the server were not obfuscated with the SAME seed
   - [merlin-agent/15](https://github.com/Ne0nd0g/merlin-agent/issues/15)
 
-# 1.4.1 - 2022-04-12
+## 1.4.1 - 2022-04-12
 
 ### Fixed
 
 - [Issue 126](https://github.com/Ne0nd0g/merlin/issues/126) - Upgraded [quic-go](https://github.com/lucas-clemente/quic-go/) to v0.27.0 for Go 1.18 support
 
-# 1.4.0 - 2022-04-02
+## 1.4.0 - 2022-04-02
 
 ### Added
 
@@ -60,7 +101,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - The `write` command will just write the specified bytes without reading them first
   - The `patch` command will find a specified function, read the existing bytes, and then overwrite it with the provided bytes
 
-# 1.3.1 - 2022-03-22
+## 1.3.1 - 2022-03-22
 
 ### Added
 

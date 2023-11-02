@@ -1,0 +1,105 @@
+name: "Merlin Server Release"
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+defaults:
+  run:
+    working-directory: ~/
+
+jobs:
+  release:
+    name: 'Release Job'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Merlin
+        id: checkout_merlin
+        uses: actions/checkout@v4
+
+      - name: Checkout Merlin-Agent
+        id: checkout_merlin_agent
+        uses: actions/checkout@v4
+        with:
+          repository: 'Ne0nd0g/merlin-agent'
+          path: 'merlin-agent'
+
+      - name: Checkout Merlin-Agent-DLL
+        id: checkout_merlin_agent_dll
+        uses: actions/checkout@v4
+        with:
+          repository: 'Ne0nd0g/merlin-agent-dll'
+          path: 'merlin-agent-dll'
+
+      - name: Checkout Merlin CLI
+        id: checkout_merlin_cli
+        uses: actions/checkout@v4
+        with:
+          repository: 'Ne0nd0g/merlin-cli'
+          path: 'merlin-cli'
+
+      - name: Set up Go
+        id: setup_go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+        # Need 7zip installed to package up the release
+      - name: Install 7zip
+        id: install_7zip
+        run: apt-get install p7zip-full
+
+        # Need MingGW installed to build the Agent DLL
+      - name: Install MingGW
+        id: install_mingw
+        run: apt-get install -y -q mingw-w64
+
+      - name: Build Merlin Agents
+        id: build_agents
+        working-directory: merlin-agent
+        run: |
+          pwd
+          make distro
+
+      - name: Build Merlin Agent DLL
+        id: build_agent_dll
+        working-directory: merlin-agent-dll
+        run: make default
+
+      - name: Move Agents
+        id: move_agents
+        run: |
+          mkdir -p data/bin
+          cp ~/merlin-agent/merlinAgent-* ~/merlin/data/bin
+          cp ~/merlin-agent-dll/merlinAgent.dll ~/merlin/data/bin
+
+      - name: Build Merlin CLI
+        id: build_cli
+        working-directory: merlin-cli
+        run: make all
+
+      - name: Build Merlin Server
+        id: build_server
+        working-directory: merlin
+        run: make distro
+
+      - name: Package Release
+        id: package_release
+        working-directory: merlin
+        run: |
+          F="README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
+          7za a -pmerlin -mhe -mx=9 merlinServer-Linux-x64.7z $F merlinCLI-Linux-x64 merlinServer-Linux-x64
+
+      - name: Create Draft Release
+        id: create_draft_release
+        uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: true
+          prerelease: false
+          artifactErrorsFailBuild: true
+          artifacts: '*.7z'

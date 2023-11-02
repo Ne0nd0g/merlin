@@ -1,94 +1,131 @@
-// Merlin is a post-exploitation command and control framework.
-// This file is part of Merlin.
-// Copyright (C) 2022  Russel Van Tuyl
+/*
+Merlin is a post-exploitation command and control framework.
 
-// Merlin is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+This file is part of Merlin.
+Copyright (C) 2023 Russel Van Tuyl
 
-// Merlin is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+Merlin is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-// You should have received a copy of the GNU General Public License
-// along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+Merlin is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package logging
 
 import (
 	// Standard
 	"fmt"
+	"io"
+	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
-
-	// 3rd Party
-	"github.com/fatih/color"
-
-	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
 )
 
-var serverLog *os.File
+const (
+	LevelDebug = slog.LevelDebug
+	// LevelTrace is a custom log level for tracing every function call entry/exit
+	LevelTrace = slog.Level(-8)
+	// LevelExtraDebug is a custom log level for especially verbose debug message like HTTP request/response dumps
+	LevelExtraDebug = slog.Level(-12)
+)
 
-func init() {
+var level = slog.LevelInfo
+var mw io.Writer
 
-	// Server Logging
-	if _, err := os.Stat(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt")); os.IsNotExist(err) {
-		errM := os.MkdirAll(filepath.Join(core.CurrentDir, "data", "log"), 0750)
-		if errM != nil {
-			message("warn", "there was an error creating the log directory")
+// Run sets up the logging for the program
+// The default log file path is in Merlin's root directory at data/log/merlinServerLog.txt
+func Run() {
+	// Open the log file
+	var logFile *os.File
+	currentDir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(fmt.Sprintf("there was an error getting the current working directory: %s", err))
+	}
+	logFileDir := filepath.Join(currentDir, "data", "log")
+	logFilePath := filepath.Join(logFileDir, "merlinServerLog.txt")
+	_, err = os.Stat(logFilePath)
+
+	// If the log file doesn't exist, create it
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(logFileDir, 0750)
+		if err != nil {
+			log.Fatal(fmt.Sprintf("there was an error creating the log directory at %s: %s", logFileDir, err))
 		}
-		serverLog, errC := os.Create(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt"))
-		if errC != nil {
-			message("warn", "there was an error creating the merlinServerLog.txt file")
-			return
+		logFile, err = os.Create(logFilePath) // #nosec G304 Users can include any file they want
+		if err != nil {
+			log.Fatal(fmt.Sprintf("there was an error creating the log file at %s: %s", logFilePath, err))
 		}
 		// Change the file's permissions
-		errChmod := os.Chmod(serverLog.Name(), 0600)
-		if errChmod != nil {
-			message("warn", fmt.Sprintf("there was an error changing the file permissions for the agent log:\r\n%s", errChmod.Error()))
+		err = os.Chmod(logFile.Name(), 0600)
+		if err != nil {
+			log.Fatal(fmt.Sprintf("there was an error changing the log file permissions: %s", err))
 		}
-		if core.Debug {
-			message("debug", fmt.Sprintf("Created server log file at: %s\\data\\log\\merlinServerLog.txt", core.CurrentDir))
-		}
+	} else if err != nil {
+		log.Fatal(fmt.Sprintf("there was an getting information for the log file at %s: %s", logFilePath, err))
 	}
 
-	var errLog error
-	serverLog, errLog = os.OpenFile(filepath.Join(core.CurrentDir, "data", "log", "merlinServerLog.txt"), os.O_APPEND|os.O_WRONLY, 0600)
-	if errLog != nil {
-		message("warn", "there was an error with the Merlin Server log file")
-		message("warn", errLog.Error())
-	}
-}
-
-// Server writes a log entry into the server's log file
-func Server(logMessage string) {
-	_, err := serverLog.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), logMessage))
+	// File already exists, open it for appending
+	logFile, err = os.OpenFile(logFilePath, os.O_APPEND|os.O_WRONLY, 0600) // #nosec G304 Users can include any file they want
 	if err != nil {
-		message("warn", "there was an error writing to the Merlin Server log file")
-		message("warn", err.Error())
+		log.Fatal(fmt.Sprintf("there was an error opening the log file at %s: %s", logFilePath, err))
 	}
+
+	// Set up the program's logging
+	mw = io.MultiWriter(os.Stdout, logFile)
+	opts := &slog.HandlerOptions{
+		AddSource:   false,
+		Level:       level,
+		ReplaceAttr: nil,
+	}
+	if level < 0 {
+		opts.AddSource = true
+	}
+
+	logger := slog.New(slog.NewJSONHandler(mw, opts))
+	slog.SetDefault(logger)
 }
 
-// Message is used to print a message to the command line
-func message(level string, message string) {
-	switch level {
-	case "info":
-		color.Cyan("[i]" + message)
-	case "note":
-		color.Yellow("[-]" + message)
-	case "warn":
-		color.Red("[!]" + message)
-	case "debug":
-		color.Red("[DEBUG]" + message)
-	case "success":
-		color.Green("[+]" + message)
-	default:
-		color.Red("[_-_]Invalid message level: " + message)
-	}
+func SetLevel(newLevel slog.Level) {
+	level = newLevel
 }
 
-// TODO configure all message to be displayed on the CLI to be returned as errors and not written to the CLI here
+func GetLevel() slog.Level {
+	return level
+}
+
+func EnableDebug() {
+	level = slog.LevelDebug
+	updateLogger()
+}
+
+func EnableExtraDebug() {
+	level = LevelExtraDebug
+	updateLogger()
+}
+
+func EnableTrace() {
+	level = LevelTrace
+	updateLogger()
+}
+
+func updateLogger() {
+	opts := &slog.HandlerOptions{
+		AddSource:   false,
+		Level:       level,
+		ReplaceAttr: nil,
+	}
+	if level < 0 {
+		opts.AddSource = true
+	}
+	logger := slog.New(slog.NewJSONHandler(mw, opts))
+	slog.SetDefault(logger)
+}
