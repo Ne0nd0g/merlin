@@ -176,7 +176,7 @@ func (s *Server) Reconnect(ctx context.Context, id *pb.ID) (*pb.ID, error) {
 		cliClient := client.NewClientWithID(clientID)
 		s.clientRepo.Add(cliClient)
 		s.messageChan[cliClient.ID()] = make(chan *pb.Message, 100)
-		slog.Info(fmt.Sprintf("Re-registered new RPC client with ID %s", cliClient))
+		slog.Info(fmt.Sprintf("Re-registered new RPC client with ID %s", cliClient.ID()))
 	}
 	return &pb.ID{Id: clientID.String()}, nil
 }
