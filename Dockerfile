@@ -6,7 +6,7 @@ FROM ne0nd0g/merlin-base
 #  > sudo docker build -t merlin .
 
 # To start the Merlin Server and interact with it, run:
-#  > sudo docker run -it -p 443:443 -v ~/merlin:/opt/merlin/data merlin:latest
+#  > sudo docker run -it -p 50051:50051 -p 443:443 -v ~/merlin:/opt/merlin/data merlin:latest
 
 WORKDIR /opt/merlin
 

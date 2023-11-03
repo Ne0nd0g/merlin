@@ -4,25 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 2.0.0 - 2023-11-02
+## 2.0.0 - 2023-11-03
 
 ### Added
 
-- New TCP listener
-  - Used to configure how the listener process Agent traffic or to generate Agents
-  - TCP listener DOES NOT bind to interfaces/ports on the Merlin server, used for Agent configuration/generation ONLY
-- Delegate message type and functions for processing them
+- Peer-to-Peer Agent communications
+- gRPC Server for [Merlin CLI](https://github.com/Ne0nd0g/merlin-cli)
+  - Default interface/port is `127.0.0.1:50051` and default password is `merlin`
+  - `-addr` the address to listen for gRPC connections from the Merlin CLI
+  - `-password` the password for CLI RPC clients to connect to the Merlin server
+  - `-secure` require client TLS certificate verification
+  - `-tlsCA` TLS Certificate Authority file path to verify client certificates
+  - `-tlsCert` TLS certificate file path for the Merlin server
+  - `-tlsKey` TLS private key file path for the Merlin server
+- Structured logging in JSON format to STDOUT using [log/slog](https://pkg.go.dev/log/slog) package
+  - `-debug` enable debug output
+  - `-extra` enable extra debug output (e.g., HTTP requests/responses)
+  - `-trace` enable trace output to see stepping through functions
+- New SMB/UDP/TCP listeners
+  - Used to configure how the listener process Agent traffic
+  - Listeners DO NOT bind to interfaces/ports on the Merlin server, used for Agent configuration/generation ONLY
+- Delegate message types and functions for processing them
 - Configurable listener authentication methods for Agent communications: OPAQUE & none
-- Configurable listener transforms for Agent communications: gob-base, base64, hex, aes, jwe, rc4, and xor
-- `link` command for the Agent to initiate a peer-to-peer connection with a listening bind agent
-  - Example: `link tcp 192.168.1.72:4444`
-- `listener` command for the Agent to start a listener to receive a connection from a reverse peer-to-peer connection
-  - `list` to return a list of instantiated on the Agent (e.g., `listener list`)
-  - `start` to start a listener based on the passed in type and interface
-    - Example: `listener start tcp 0.0.0.0:4444`
-  - `stop` to stop an already created listener
-    - Example: `listener stop tcp [::]:4444`
-- Help is available for all commands using `-h` after the command
+- Configurable listener transforms for Agent communications: aes, base64-byte, base64-string, hex-byte, hex-string, gob-base, gob-string, jwe, rc4, and xor
+  - The last transform in the list **MUST** be `gob-base`
+- GitHub Actions for building and testing the Merlin Agent
 
 ### Changed
 
@@ -31,19 +37,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Implemented the "Repository" pattern for Agents, Delegates, Groups, Listeners, Servers
   - Implemented the "Services" patter for interacting with Agents, Listeners, & Base messages
 - Configurable JWT key value for HTTP listeners
-- Removed util package and relocated function to appropriate packages
-- Upgraded [quic-go](https://github.com/quic-go/quic-go) to v0.34.0
-- The Minimum supported Go version is now 1.19
-- Added support for Go version 1.20
-- Refactored the `pkg/cli` package to be more modular
+- Upgraded [quic-go](https://github.com/quic-go/quic-go) to v0.40.0
+- The Minimum supported Go version is now 1.21
 - Listeners are now handled by a UUID and no longer by a name as a string
-- Changed CLI commands:
-- Replaced `use module <module name>` with `modules` command to switch to the modules menu
-- Removed the `agents` command from the main menu. Use `sessions` instead
-- Replaces `set verbose` & `set debug` (to enable verbose & debug output) with `verbose` & `debug` switch commands
 - Moved the `build` string out of `main.go` and into `pkg/merlin.go`
 - Removed PWNBoard from `main.go`
 - Removed wiki documentation from `docs` to a new repository at https://github.com/Ne0nd0g/merlin-documentation
+- Replaced `github.com/satori/go.uuid` with `github.com/google/uuid`
+- Replaced `github.com/square/go-jose` with `github.com/go-jose/go-jose`
+- Replaced `github.com/Ne0nd0g/merlin/pkg/messages` with `github.com/Ne0nd0g/merlin-message`
+  - Removes the need to depend on or import the Merlin Server package
+
+### Removed
+
+- Removed the interactive CLI menu to [Merlin CLI](https://github.com/Ne0nd0g/merlin-cli)
+  - Uses gRPC to communicate with the Merlin server
 
 ## 1.5.1 - 2023-03-08
 

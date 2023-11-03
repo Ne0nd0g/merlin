@@ -137,7 +137,7 @@ func (s *Server) GetAllJobs(ctx context.Context, e *emptypb.Empty) (*pb.Jobs, er
 
 // jobToJobInfo converts a server-side Job Info structure into a protobuf Job structure
 func (s *Server) jobToJobInfo(job jobs.Info) *pb.Job {
-	slog.Log(context.Background(), logging.LevelTrace, "job info", fmt.Sprintf("%+v", job))
+	slog.Log(context.Background(), logging.LevelTrace, "job info", "Job", fmt.Sprintf("%+v", job))
 	j := &pb.Job{
 		ID:      job.ID(),
 		AgentID: job.AgentID().String(),
