@@ -48,7 +48,7 @@ jobs:
         # Need 7zip installed to package up the release
       - name: Install 7zip
         id: install_7zip
-        run: apt-get install p7zip-full
+        run: sudo apt-get install p7zip-full
 
         # Need MingGW installed to build the Agent DLL
       - name: Install MingGW
