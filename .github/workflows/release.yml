@@ -7,7 +7,7 @@ on:
 
 defaults:
   run:
-    working-directory: $HOME/
+    working-directory: /
 
 jobs:
   release:
@@ -57,31 +57,38 @@ jobs:
 
       - name: Build Merlin Agents
         id: build_agents
-        working-directory: merlin-agent
+        working-directory: /merlin-agent
         run: |
           pwd
           make distro
 
       - name: Build Merlin Agent DLL
         id: build_agent_dll
-        working-directory: merlin-agent-dll
+        working-directory: /merlin-agent-dll
         run: make default
 
       - name: Move Agents
         id: move_agents
+        working-directory: /merlin
         run: |
           mkdir -p data/bin
-          cp ~/merlin-agent/merlinAgent-* ~/merlin/data/bin
-          cp ~/merlin-agent-dll/merlinAgent.dll ~/merlin/data/bin
+          cp /merlin-agent/merlinAgent-* /merlin/data/bin
+          cp /merlin-agent-dll/merlinAgent.dll /merlin/data/bin
 
       - name: Build Merlin CLI
         id: build_cli
-        working-directory: merlin-cli
+        working-directory: /merlin-cli
         run: make all
+
+      - name: Move Agents
+        id: move_cli
+        working-directory: /merlin
+        run: |
+          cp /merlin-CLI/merlinCLI-* /merlin/data/bin
 
       - name: Build Merlin Server
         id: build_server
-        working-directory: merlin
+        working-directory: /merlin
         run: make distro
 
       - name: Package Release
