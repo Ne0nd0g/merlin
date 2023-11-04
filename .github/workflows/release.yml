@@ -14,36 +14,17 @@ jobs:
         id: checkout_merlin
         uses: actions/checkout@v4
 
-      - name: debug2
-        id: debug2
-        run: |
-          pwd
-          ls -la
-
       - name: Checkout Merlin-Agent
         id: checkout_merlin_agent
         run: git clone https://github.com/Ne0nd0g/merlin-agent.git /home/runner/work/merlin-agent
 
-      - name: debug3
-        id: debug3
-        run: |
-          pwd
-          ls -la
-          ls -lah /home/runner/work
-
       - name: Checkout Merlin-Agent-DLL
         id: checkout_merlin_agent_dll
-        uses: actions/checkout@v4
-        with:
-          repository: 'Ne0nd0g/merlin-agent-dll'
-          path: '/home/runner/work/merlin-agent-dll'
+        run: git clone https://github.com/Ne0nd0g/merlin-agent-dll.git /home/runner/work/merlin-agent-dll
 
       - name: Checkout Merlin CLI
         id: checkout_merlin_cli
-        uses: actions/checkout@v4
-        with:
-          repository: 'Ne0nd0g/merlin-cli'
-          path: '/home/runner/work/merlin-cli'
+        run: git clone https://github.com/Ne0nd0g/merlin-cli.git /home/runner/work/merlin-cli
 
       - name: Set up Go
         id: setup_go
@@ -86,11 +67,11 @@ jobs:
         working-directory: /homer/runner/work/merlin-cli
         run: make all
 
-      - name: Move Agents
+      - name: Move Merlin CLI
         id: move_cli
         working-directory: /home/runner/work/merlin/merlin
         run: |
-          cp /home/runner/work/merlin-CLI/merlinCLI-* ./data/bin
+          cp /home/runner/work/merlin-cli/merlinCLI-* ./data/bin
 
       - name: Build Merlin Server
         id: build_server
