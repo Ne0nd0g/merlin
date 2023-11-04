@@ -39,21 +39,21 @@ jobs:
         run: |
           pwd
           ls -la
-          ls -lah /
+          ls -lah /home/runner/work
 
       - name: Checkout Merlin-Agent-DLL
         id: checkout_merlin_agent_dll
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-agent-dll'
-          path: '/merlin-agent-dll'
+          path: 'merlin-agent-dll'
 
       - name: Checkout Merlin CLI
         id: checkout_merlin_cli
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-cli'
-          path: '/merlin-cli'
+          path: 'merlin-cli'
 
       - name: Set up Go
         id: setup_go
@@ -73,14 +73,14 @@ jobs:
 
       - name: Build Merlin Agents
         id: build_agents
-        working-directory: /merlin-agent
+        working-directory: /home/runner/work/merlin/merlin-agent
         run: |
           pwd
           make distro
 
       - name: Build Merlin Agent DLL
         id: build_agent_dll
-        working-directory: /merlin-agent-dll
+        working-directory: /home/runner/work/merlin/merlin-agent-dll
         run: make default
 
       - name: Move Agents
