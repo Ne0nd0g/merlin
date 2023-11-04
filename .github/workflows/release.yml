@@ -7,7 +7,7 @@ on:
 
 defaults:
   run:
-    working-directory: ~/
+    working-directory: $HOME/
 
 jobs:
   release:
