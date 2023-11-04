@@ -33,7 +33,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-agent'
-          path: '/merlin-agent'
 
       - name: debug3
         id: debug3
