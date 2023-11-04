@@ -53,7 +53,7 @@ jobs:
         # Need MingGW installed to build the Agent DLL
       - name: Install MingGW
         id: install_mingw
-        run: apt-get install -y -q mingw-w64
+        run: sudo apt-get install -y -q mingw-w64
 
       - name: Build Merlin Agents
         id: build_agents
