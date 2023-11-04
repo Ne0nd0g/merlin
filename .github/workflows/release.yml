@@ -17,27 +17,29 @@ jobs:
       - name: Checkout Merlin
         id: checkout_merlin
         uses: actions/checkout@v4
+        with:
+          path: '/merlin'
 
       - name: Checkout Merlin-Agent
         id: checkout_merlin_agent
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-agent'
-          path: 'merlin-agent'
+          path: '/merlin-agent'
 
       - name: Checkout Merlin-Agent-DLL
         id: checkout_merlin_agent_dll
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-agent-dll'
-          path: 'merlin-agent-dll'
+          path: '/merlin-agent-dll'
 
       - name: Checkout Merlin CLI
         id: checkout_merlin_cli
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-cli'
-          path: 'merlin-cli'
+          path: '/merlin-cli'
 
       - name: Set up Go
         id: setup_go
