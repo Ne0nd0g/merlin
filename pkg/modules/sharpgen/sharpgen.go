@@ -32,7 +32,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/donut"
 )
 
 // Parse is the initial entry point for all extended modules. All validation checks and processing will be performed here

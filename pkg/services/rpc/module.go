@@ -35,15 +35,15 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/modules"
-	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
-	"github.com/Ne0nd0g/merlin/pkg/modules/minidump"
-	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
-	"github.com/Ne0nd0g/merlin/pkg/modules/shellcode"
-	"github.com/Ne0nd0g/merlin/pkg/modules/srdi"
-	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
-	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/donut"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/minidump"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/sharpgen"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/shellcode"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/srdi"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/winapi/createprocess"
+	pb "github.com/Ne0nd0g/merlin/v2/pkg/rpc"
 )
 
 /* RPC METHODS TO INTERACT WITH MODULES */

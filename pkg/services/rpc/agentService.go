@@ -33,9 +33,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	pb "github.com/Ne0nd0g/merlin/v2/pkg/rpc"
 )
 
 /* RPC METHODS TO INTERACT WITH THE AGENT SERVICE */

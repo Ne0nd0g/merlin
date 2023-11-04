@@ -38,12 +38,12 @@ import (
 	"github.com/Ne0nd0g/merlin-message/opaque"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	opaque2 "github.com/Ne0nd0g/merlin/pkg/opaque"
-	"github.com/Ne0nd0g/merlin/pkg/services/agent"
-	"github.com/Ne0nd0g/merlin/pkg/services/job"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	opaque2 "github.com/Ne0nd0g/merlin/v2/pkg/opaque"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/job"
 )
 
 // key is the Opaque server-side key

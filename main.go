@@ -27,9 +27,9 @@ import (
 	"log"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/services/rpc"
+	merlin "github.com/Ne0nd0g/merlin/v2/pkg"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/rpc"
 )
 
 func main() {

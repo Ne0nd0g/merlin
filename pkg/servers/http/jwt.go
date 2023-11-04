@@ -32,8 +32,8 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
 )
 
 // ValidateJWT validates the provided JSON Web Token

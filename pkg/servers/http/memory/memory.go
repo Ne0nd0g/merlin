@@ -30,7 +30,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/servers/http"
+	"github.com/Ne0nd0g/merlin/v2/pkg/servers/http"
 )
 
 // Repository is a structure that implements the Repository interface to store & manage Server objects

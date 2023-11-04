@@ -40,20 +40,20 @@ import (
 
 	// Merlin
 
-	"github.com/Ne0nd0g/merlin/pkg/authenticators"
-	"github.com/Ne0nd0g/merlin/pkg/authenticators/none"
-	"github.com/Ne0nd0g/merlin/pkg/authenticators/opaque"
-	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/servers"
-	"github.com/Ne0nd0g/merlin/pkg/services/agent"
-	"github.com/Ne0nd0g/merlin/pkg/transformer"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/base64"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/gob"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encoders/hex"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/aes"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/jwe"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/rc4"
-	"github.com/Ne0nd0g/merlin/pkg/transformer/encrypters/xor"
+	"github.com/Ne0nd0g/merlin/v2/pkg/authenticators"
+	"github.com/Ne0nd0g/merlin/v2/pkg/authenticators/none"
+	"github.com/Ne0nd0g/merlin/v2/pkg/authenticators/opaque"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners"
+	"github.com/Ne0nd0g/merlin/v2/pkg/servers"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encoders/base64"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encoders/gob"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encoders/hex"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encrypters/aes"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encrypters/jwe"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encrypters/rc4"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer/encrypters/xor"
 )
 
 // Listener is an aggregate structure that implements the Listener interface

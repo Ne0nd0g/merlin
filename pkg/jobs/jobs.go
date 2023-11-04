@@ -29,7 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
 )
 
 type Status int

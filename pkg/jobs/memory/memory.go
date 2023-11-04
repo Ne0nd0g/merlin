@@ -33,7 +33,7 @@ import (
 	jobs2 "github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/jobs"
+	"github.com/Ne0nd0g/merlin/v2/pkg/jobs"
 )
 
 // Repository is the structure that implements the in-memory repository for interacting with Agent Jobs

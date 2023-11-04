@@ -33,7 +33,7 @@ import (
 	"github.com/google/uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
 )
 
 // GetJWT returns a JSON Web Token for the provided agent using the interface JWT Key

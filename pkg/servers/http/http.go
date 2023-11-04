@@ -44,10 +44,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/client/message"
-	"github.com/Ne0nd0g/merlin/pkg/client/message/memory"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/servers"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
+	"github.com/Ne0nd0g/merlin/v2/pkg/servers"
 )
 
 // init registers the server types with the root servers package for discovery

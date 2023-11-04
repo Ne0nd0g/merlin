@@ -30,7 +30,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents"
 )
 
 var (

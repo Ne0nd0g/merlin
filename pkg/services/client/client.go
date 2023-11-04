@@ -21,7 +21,7 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 // Package client provides a service for working with Merlin CLI clients
 package client
 
-import "github.com/Ne0nd0g/merlin/pkg/client/message"
+import "github.com/Ne0nd0g/merlin/v2/pkg/client/message"
 
 type Service struct {
 	messages message.Repository

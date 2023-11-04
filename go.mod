@@ -1,4 +1,4 @@
-module github.com/Ne0nd0g/merlin
+module github.com/Ne0nd0g/merlin/v2
 
 go 1.21
 

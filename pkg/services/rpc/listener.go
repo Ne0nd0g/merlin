@@ -32,9 +32,9 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
-	l2 "github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
+	l2 "github.com/Ne0nd0g/merlin/v2/pkg/listeners"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	pb "github.com/Ne0nd0g/merlin/v2/pkg/rpc"
 )
 
 /* RPC METHODS TO INTERACT WITH THE LISTENER SERVICE*/

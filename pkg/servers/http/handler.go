@@ -25,7 +25,7 @@ import (
 	// Standard
 	"crypto/sha256"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
 	"io"
 	"log/slog"
 	"net/http"
@@ -36,10 +36,10 @@ import (
 	"github.com/google/uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/client/message"
-	"github.com/Ne0nd0g/merlin/pkg/client/message/memory"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	message2 "github.com/Ne0nd0g/merlin/pkg/services/message"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
+	message2 "github.com/Ne0nd0g/merlin/v2/pkg/services/message"
 )
 
 // Handler contains contextual information and methods to process HTTP traffic for Agents

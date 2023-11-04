@@ -33,9 +33,9 @@ import (
 	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/authenticators"
-	"github.com/Ne0nd0g/merlin/pkg/servers"
-	"github.com/Ne0nd0g/merlin/pkg/transformer"
+	"github.com/Ne0nd0g/merlin/v2/pkg/authenticators"
+	"github.com/Ne0nd0g/merlin/v2/pkg/servers"
+	"github.com/Ne0nd0g/merlin/v2/pkg/transformer"
 )
 
 const (

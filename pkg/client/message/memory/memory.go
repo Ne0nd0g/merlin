@@ -30,7 +30,7 @@ import (
 	"github.com/google/uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/client/message"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message"
 )
 
 // Repository is the in-memory data structure to store messages

@@ -35,7 +35,7 @@ import (
 	merlinJob "github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/core"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
 )
 
 // listeners is a map of single TCP bound interfaces associated keyed to a specific agent ID

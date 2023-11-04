@@ -32,18 +32,18 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/listeners"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/http"
-	httpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/http/memory"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/smb"
-	smbMemory "github.com/Ne0nd0g/merlin/pkg/listeners/smb/memory"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/tcp"
-	tcpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/tcp/memory"
-	"github.com/Ne0nd0g/merlin/pkg/listeners/udp"
-	udpMemory "github.com/Ne0nd0g/merlin/pkg/listeners/udp/memory"
-	"github.com/Ne0nd0g/merlin/pkg/servers"
-	httpServer "github.com/Ne0nd0g/merlin/pkg/servers/http"
-	httpServerRepo "github.com/Ne0nd0g/merlin/pkg/servers/http/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners/http"
+	httpMemory "github.com/Ne0nd0g/merlin/v2/pkg/listeners/http/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners/smb"
+	smbMemory "github.com/Ne0nd0g/merlin/v2/pkg/listeners/smb/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners/tcp"
+	tcpMemory "github.com/Ne0nd0g/merlin/v2/pkg/listeners/tcp/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners/udp"
+	udpMemory "github.com/Ne0nd0g/merlin/v2/pkg/listeners/udp/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/servers"
+	httpServer "github.com/Ne0nd0g/merlin/v2/pkg/servers/http"
+	httpServerRepo "github.com/Ne0nd0g/merlin/v2/pkg/servers/http/memory"
 )
 
 // ListenerService is a structure that implements the service methods holding references to Listener & Server repositories

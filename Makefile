@@ -7,7 +7,7 @@ DIR=data/temp/v${VERSION}/${BUILD}
 $(shell mkdir -p ${DIR})
 
 # Go build flags
-LDFLAGS=-ldflags '-X github.com/Ne0nd0g/merlin/pkg.Build=${BUILD} -buildid='
+LDFLAGS=-ldflags '-X github.com/Ne0nd0g/merlin/v2/pkg.Build=${BUILD} -buildid='
 
 # Misc
 # GOGARBLE contains a list of all the packages to obfuscate

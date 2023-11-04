@@ -29,7 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/listeners/tcp"
+	"github.com/Ne0nd0g/merlin/v2/pkg/listeners/tcp"
 )
 
 // Repository is a structure that implements the Repository interface

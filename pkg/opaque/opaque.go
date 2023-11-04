@@ -38,7 +38,7 @@ import (
 	"github.com/Ne0nd0g/merlin-message/opaque"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
 )
 
 // Server is the structure that holds information for the various steps of the OPAQUE protocol as the server

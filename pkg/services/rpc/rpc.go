@@ -47,16 +47,16 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/client"
-	"github.com/Ne0nd0g/merlin/pkg/client/memory"
-	"github.com/Ne0nd0g/merlin/pkg/client/message"
-	memoryMessage "github.com/Ne0nd0g/merlin/pkg/client/message/memory"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
-	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
-	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
-	"github.com/Ne0nd0g/merlin/pkg/services/agent"
-	"github.com/Ne0nd0g/merlin/pkg/services/job"
-	"github.com/Ne0nd0g/merlin/pkg/services/listeners"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message"
+	memoryMessage "github.com/Ne0nd0g/merlin/v2/pkg/client/message/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/socks"
+	pb "github.com/Ne0nd0g/merlin/v2/pkg/rpc"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/job"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/listeners"
 )
 
 // Server is the structure used with the RPC service

@@ -25,7 +25,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -36,11 +36,11 @@ import (
 	"github.com/google/uuid"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	"github.com/Ne0nd0g/merlin/pkg/modules/donut"
-	"github.com/Ne0nd0g/merlin/pkg/modules/sharpgen"
-	"github.com/Ne0nd0g/merlin/pkg/modules/winapi/createprocess"
-	pb "github.com/Ne0nd0g/merlin/pkg/rpc"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/donut"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/sharpgen"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/winapi/createprocess"
+	pb "github.com/Ne0nd0g/merlin/v2/pkg/rpc"
 )
 
 /* RPC METHODS TO TASK AGENTS */

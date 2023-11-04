@@ -34,10 +34,10 @@ import (
 	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/agents/memory"
-	"github.com/Ne0nd0g/merlin/pkg/group"
-	groupMemory "github.com/Ne0nd0g/merlin/pkg/group/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/group"
+	groupMemory "github.com/Ne0nd0g/merlin/v2/pkg/group/memory"
 )
 
 // Service holds references to repositories to manage Agent objects or Group objects

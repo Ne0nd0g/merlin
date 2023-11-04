@@ -33,7 +33,7 @@ import (
 	"github.com/Ne0nd0g/merlin-message"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
 )
 
 const (

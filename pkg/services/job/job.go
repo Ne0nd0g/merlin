@@ -39,13 +39,13 @@ import (
 	"github.com/Ne0nd0g/merlin-message/jobs"
 
 	// Internal
-	"github.com/Ne0nd0g/merlin/pkg/client/message"
-	memoryMessage "github.com/Ne0nd0g/merlin/pkg/client/message/memory"
-	"github.com/Ne0nd0g/merlin/pkg/core"
-	infoJobs "github.com/Ne0nd0g/merlin/pkg/jobs"
-	"github.com/Ne0nd0g/merlin/pkg/jobs/memory"
-	"github.com/Ne0nd0g/merlin/pkg/modules/socks"
-	"github.com/Ne0nd0g/merlin/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/v2/pkg/client/message"
+	memoryMessage "github.com/Ne0nd0g/merlin/v2/pkg/client/message/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/core"
+	infoJobs "github.com/Ne0nd0g/merlin/v2/pkg/jobs"
+	"github.com/Ne0nd0g/merlin/v2/pkg/jobs/memory"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/socks"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/agent"
 )
 
 // Service holds references to repositories to manage Job objects

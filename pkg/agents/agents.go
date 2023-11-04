@@ -32,7 +32,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/opaque"
+	"github.com/Ne0nd0g/merlin/v2/pkg/opaque"
 )
 
 // Agent is an aggregate structure that holds information about Agent's the server is communicating with

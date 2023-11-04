@@ -34,9 +34,9 @@ import (
 	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
-	"github.com/Ne0nd0g/merlin/pkg/agents"
-	"github.com/Ne0nd0g/merlin/pkg/services/agent"
-	"github.com/Ne0nd0g/merlin/pkg/services/job"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/agent"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/job"
 )
 
 // Authenticator is a structure that holds an Agent service to add agents once they've completed authentication
