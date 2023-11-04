@@ -5,19 +5,11 @@ on:
     tags:
       - 'v*.*.*'
 
-
-
 jobs:
   release:
     name: 'Release Job'
     runs-on: ubuntu-latest
     steps:
-      - name: debug
-        id: debug
-        run: |
-          pwd
-          echo $HOME
-
       - name: Checkout Merlin
         id: checkout_merlin
         uses: actions/checkout@v4
@@ -30,9 +22,7 @@ jobs:
 
       - name: Checkout Merlin-Agent
         id: checkout_merlin_agent
-        uses: actions/checkout@v4
-        with:
-          repository: 'Ne0nd0g/merlin-agent'
+        run: git clone https://github.com/Ne0nd0g/merlin-agent.git /home/runner/work/merlin-agent
 
       - name: debug3
         id: debug3
@@ -46,14 +36,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-agent-dll'
-          path: 'merlin-agent-dll'
+          path: '/home/runner/work/merlin-agent-dll'
 
       - name: Checkout Merlin CLI
         id: checkout_merlin_cli
         uses: actions/checkout@v4
         with:
           repository: 'Ne0nd0g/merlin-cli'
-          path: 'merlin-cli'
+          path: '/home/runner/work/merlin-cli'
 
       - name: Set up Go
         id: setup_go
@@ -73,38 +63,38 @@ jobs:
 
       - name: Build Merlin Agents
         id: build_agents
-        working-directory: /home/runner/work/merlin/merlin-agent
+        working-directory: /home/runner/work/merlin-agent
         run: |
           pwd
           make distro
 
       - name: Build Merlin Agent DLL
         id: build_agent_dll
-        working-directory: /home/runner/work/merlin/merlin-agent-dll
+        working-directory: /home/runner/work/merlin-agent-dll
         run: make default
 
       - name: Move Agents
         id: move_agents
-        working-directory: /merlin
+        working-directory: /home/runner/work/merlin/merlin
         run: |
           mkdir -p data/bin
-          cp /merlin-agent/merlinAgent-* /merlin/data/bin
-          cp /merlin-agent-dll/merlinAgent.dll /merlin/data/bin
+          cp /home/runner/work/merlin-agent/merlinAgent-* ./data/bin
+          cp /home/runner/work/merlin-agent-dll/merlinAgent.dll ./data/bin
 
       - name: Build Merlin CLI
         id: build_cli
-        working-directory: /merlin-cli
+        working-directory: /homer/runner/work/merlin-cli
         run: make all
 
       - name: Move Agents
         id: move_cli
-        working-directory: /merlin
+        working-directory: /home/runner/work/merlin/merlin
         run: |
-          cp /merlin-CLI/merlinCLI-* /merlin/data/bin
+          cp /home/runner/work/merlin-CLI/merlinCLI-* ./data/bin
 
       - name: Build Merlin Server
         id: build_server
-        working-directory: /merlin
+        working-directory: /home/runner/work/merlin/merlin
         run: make distro
 
       - name: Package Release
