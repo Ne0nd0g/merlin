@@ -5,20 +5,28 @@ on:
     tags:
       - 'v*.*.*'
 
-defaults:
-  run:
-    working-directory: /
+
 
 jobs:
   release:
     name: 'Release Job'
     runs-on: ubuntu-latest
     steps:
+      - name: debug
+        id: debug
+        run: |
+          pwd
+          echo $HOME
+
       - name: Checkout Merlin
         id: checkout_merlin
         uses: actions/checkout@v4
-        with:
-          path: '/merlin'
+
+      - name: debug2
+        id: debug2
+        run: |
+          pwd
+          ls -la
 
       - name: Checkout Merlin-Agent
         id: checkout_merlin_agent
@@ -26,6 +34,13 @@ jobs:
         with:
           repository: 'Ne0nd0g/merlin-agent'
           path: '/merlin-agent'
+
+      - name: debug3
+        id: debug3
+        run: |
+          pwd
+          ls -la
+          ls -lah /
 
       - name: Checkout Merlin-Agent-DLL
         id: checkout_merlin_agent_dll
