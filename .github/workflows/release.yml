@@ -90,7 +90,7 @@ jobs:
           DIR=data/temp/v${VERSION}/${BUILD}
           cp docs/CHANGELOG.MD .
           cp $DIR/merlinServer* .
-          F="README.MD LICENSE data/modules CHANGELOG.MD data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
+          F="LICENSE data/modules CHANGELOG.MD data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
           7za a -pmerlin -mhe -mx=9 merlinServer-Linux-x64.7z $F merlinServer-Linux-x64
           7za a -pmerlin -mhe -mx=9 merlinServer-Darwin-x64.7z $F merlinServer-Darwin-x64
           7za a -pmerlin -mhe -mx=9 merlinServer-Windows-x64.7z $F merlinServer-Windows-x64.exe
