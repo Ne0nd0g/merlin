@@ -67,7 +67,7 @@ jobs:
 
       - name: Build Merlin CLI
         id: build_cli
-        working-directory: /homer/runner/work/merlin-cli
+        working-directory: /homer/runner/work/merlin/merlin-cli
         run: make all
 
       - name: Move Merlin CLI
@@ -83,7 +83,7 @@ jobs:
 
       - name: Package Release
         id: package_release
-        working-directory: merlin
+        working-directory: /home/runner/work/merlin/merlin
         run: |
           F="README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
           7za a -pmerlin -mhe -mx=9 merlinServer-Linux-x64.7z $F merlinCLI-Linux-x64 merlinServer-Linux-x64
