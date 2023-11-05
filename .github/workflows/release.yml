@@ -48,8 +48,9 @@ jobs:
         run: |
           VERSION=$(cat ./core/core.go |grep "var Version ="|cut -d"\"" -f2)
           BUILD=$(git rev-parse HEAD)
+          DIR=bin/v${VERSION}/${BUILD}
           make all
-          mv ./bin/$VERSION/$BUILD/merlinAgent-* .
+          mv $DIR/merlinAgent-* .
 
       - name: Build Merlin Agent DLL
         id: build_agent_dll
@@ -86,6 +87,8 @@ jobs:
         run: |
           F="README.MD LICENSE data/modules docs data/README.MD data/agents/README.MD data/log/README.MD data/x509 data/src data/bin"
           7za a -pmerlin -mhe -mx=9 merlinServer-Linux-x64.7z $F merlinCLI-Linux-x64 merlinServer-Linux-x64
+          7za a -pmerlin -mhe -mx=9 $TEMP/merlinServer-Darwin-x64.7z $F $TEMP/merlinServer-Darwin-x64
+          7za a -pmerlin -mhe -mx=9 $TEMP/merlinServer-Windows-x64.7z $F $TEMP/merlinServer-Windows-x64.exe
 
       - name: Create Draft Release
         id: create_draft_release
