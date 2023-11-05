@@ -46,8 +46,10 @@ jobs:
         id: build_agents
         working-directory: /home/runner/work/merlin-agent
         run: |
-          pwd
-          make distro
+          VERSION=$(cat ./core/core.go |grep "var Version ="|cut -d"\"" -f2)
+          BUILD=$(git rev-parse HEAD)
+          make all
+          mv ./bin/$VERSION/$BUILD/merlinAgent-* .
 
       - name: Build Merlin Agent DLL
         id: build_agent_dll
@@ -60,7 +62,7 @@ jobs:
         run: |
           mkdir -p data/bin
           cp /home/runner/work/merlin-agent/merlinAgent-* ./data/bin
-          cp /home/runner/work/merlin-agent-dll/merlinAgent.dll ./data/bin
+          cp /home/runner/work/merlin-agent-dll/merlin.dll ./data/bin
 
       - name: Build Merlin CLI
         id: build_cli
