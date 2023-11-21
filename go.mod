@@ -6,7 +6,7 @@ require (
 	github.com/Binject/go-donut v0.0.0-20201215224200-d947cf4d090d
 	github.com/Ne0nd0g/merlin-message v1.2.0
 	github.com/cretz/gopaque v0.1.0
-	github.com/go-jose/go-jose/v3 v3.0.0
+	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/google/uuid v1.4.0
 	github.com/quic-go/quic-go v0.40.0
 	go.dedis.ch/kyber/v3 v3.1.0
