@@ -1,12 +1,21 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: "Merlin Server Build & Test: Main"
+name: "Merlin Server - Scan, Build, & Test: Main"
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '.github/**'
+      - 'data/**'
+      - 'docs/**'
+      - '.gitattributes'
+      - '.gitignore'
+      - '.gitmodules'
+      - 'LICENSE'
+      - 'README.MD'
 
 jobs:
 
