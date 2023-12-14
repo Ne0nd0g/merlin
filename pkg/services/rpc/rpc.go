@@ -37,6 +37,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	// 3rd Party
 	"github.com/google/uuid"
@@ -367,7 +368,7 @@ func (s *Service) SendClientMessage(msg *message.Message) {
 func NewPBErrorMessage(err error) *pb.Message {
 	return &pb.Message{
 		Level:     pb.MessageLevel_WARN,
-		Message:   err.Error(),
+		Message:   validUTF8(err.Error()),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Error:     true,
 	}
@@ -377,7 +378,7 @@ func NewPBErrorMessage(err error) *pb.Message {
 func NewPBSuccessMessage(msg string) *pb.Message {
 	return &pb.Message{
 		Level:     pb.MessageLevel_SUCCESS,
-		Message:   msg,
+		Message:   validUTF8(msg),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -386,7 +387,7 @@ func NewPBSuccessMessage(msg string) *pb.Message {
 func NewPBNoteMessage(msg string) *pb.Message {
 	return &pb.Message{
 		Level:     pb.MessageLevel_NOTE,
-		Message:   msg,
+		Message:   validUTF8(msg),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -395,7 +396,7 @@ func NewPBNoteMessage(msg string) *pb.Message {
 func NewPBInfoMessage(msg string) *pb.Message {
 	return &pb.Message{
 		Level:     pb.MessageLevel_INFO,
-		Message:   msg,
+		Message:   validUTF8(msg),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -404,7 +405,7 @@ func NewPBInfoMessage(msg string) *pb.Message {
 func NewPBPlainMessage(msg string) *pb.Message {
 	return &pb.Message{
 		Level:     pb.MessageLevel_PLAIN,
-		Message:   msg,
+		Message:   validUTF8(msg),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -413,7 +414,7 @@ func NewPBPlainMessage(msg string) *pb.Message {
 func NewPBWarnMessage(msg string) *pb.Message {
 	return &pb.Message{
 		Level:     pb.MessageLevel_WARN,
-		Message:   msg,
+		Message:   validUTF8(msg),
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -439,10 +440,23 @@ func NewPBMessageFromMessage(msg *message.Message) *pb.Message {
 	}
 	return &pb.Message{
 		Level:     level,
-		Message:   msg.Message(),
+		Message:   validUTF8(msg.Message()),
 		Timestamp: msg.Time().UTC().Format(time.RFC3339),
 		Error:     msg.Error(),
 	}
+}
+
+// validUTF8 ensures the string contains valid UTF-8 and replaces invalid characters with the '�' character
+// gRPC messages must be valid UTF-8
+func validUTF8(s string) string {
+	// Ensure the message is a valid UTF-8 string
+	if utf8.ValidString(s) {
+		return s
+	}
+	return fmt.Sprintf(
+		"\n*** The message contained invalid UTF-8 that was replaced with the '�' character ***\n\n%s",
+		strings.ToValidUTF8(s, "�"),
+	)
 }
 
 // getTLSConfig creates a new TLS configuration for the RPC service
