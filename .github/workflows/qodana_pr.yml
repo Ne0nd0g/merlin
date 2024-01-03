@@ -1,8 +1,8 @@
-name: "Qodana: Push"
+name: "Qodana: Pull Request"
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     paths-ignore:
       - '.github/**'
       - 'data/**'
@@ -10,11 +10,8 @@ on:
       - '.gitattributes'
       - '.gitignore'
       - '.gitmodules'
-      - 'qodana.yaml'
-      - 'qodana.sarif.json'
       - 'LICENSE'
       - 'README.MD'
-
 
 jobs:
   qodana:
@@ -32,6 +29,5 @@ jobs:
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2023.3
         with:
-          args: --baseline,.qodana/qodana.sarif.json
-        env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+          args: -l,jetbrains/qodana-go:2023.3-eap,--baseline,.qodana/qodana.sarif.json
+          pr-mode: false

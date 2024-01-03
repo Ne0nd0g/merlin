@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 2.1.1 - 2024-01-03
+
+### Added
+
+- Added Qodana baseline file
+
+### Changed
+
+- Upgraded packages
+ - `github.com/Ne0nd0g/merlin-message` to v1.3.0
+ - `github.com/quic-go/quic-go` to v0.40.1
+ - `google.golang.org/grpc` to v1.60.0
+- Modified Dockerfile
+  - Upgraded `ne0nd0g/merlin-base` v1.5.0 in Dockerfile
+  - Changed `ENTRYPOINT` to execute a compiled binary instead of `go run` 
+- Removed `GOGARBLE` environment variable from Makefile
+
 ## 2.1.0 - 2023-12-14
 
 ### Fixed
