@@ -28,9 +28,9 @@ Highlighted features:
   using 256-bit keys for the encryption scheme. ([PBES2_HS512_A256KW](https://tools.ietf.org/html/rfc7518#section-4.8))
 - Integrated [Donut](https://github.com/Binject/go-donut), [sRDI](https://github.com/monoxgas/sRDI), 
   and [SharpGen](https://github.com/cobbr/SharpGen) support
-- C2 traffic message [padding](https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html#padding) to combat 
+- C2 traffic message [padding](https://merlin-c2.readthedocs.io/en/latest/cli/menu/agents.html#padding) to combat 
   beaconing detections based on a fixed message size
-- Dynamically change the Agent's [JA3](https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html#ja3) hash 
+- Dynamically change the Agent's [JA3](https://merlin-c2.readthedocs.io/en/latest/cli/menu/agents.html#ja3) hash 
 - [Mythic](#mythic) support
 - [Documentation & Wiki](https://merlin-c2.readthedocs.io/en/latest/)
 
@@ -42,8 +42,8 @@ An introductory blog post can be found here: <https://medium.com/@Ne0nd0g/introd
    > The Server package contains a compiled Agent for all the major operating systems in the `data/bin` directory
 2. Extract the files with 7zip using the `x` function **The password is: `merlin`**
 3. Start Merlin
-4. Configure a [listener](https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html)   
-5. Deploy an agent. See [Agent Execution Quick Start Guide](https://merlin-c2.readthedocs.io/en/latest/quickStart/agent.html) for examples
+4. Configure a [listener](https://merlin-c2.readthedocs.io/en/latest/cli/listeners.html)   
+5. Deploy an agent. See [Agent Execution Quick Start Guide](https://merlin-c2.readthedocs.io/en/latest/quickStart/quickstart.html#merlin-agent) for examples
 6. Pwn, Pivot, Profit
 
    ```
@@ -80,11 +80,11 @@ Visit the [Merlin](https://github.com/MythicAgents/merlin) repository in the Myt
 * The latest development build of Merlin can be downloaded from [AppVeyor](https://ci.appveyor.com/project/Ne0nd0g/merlin-i9c58/build/artifacts)
 * To compile Merlin from source, view the [Custom Build](https://merlin-c2.readthedocs.io/en/latest/agent/custom.html) page
 * For a full list of available commands:
-   * [Main Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/main.html)
-   * [Listener Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/listeners.html)
-   * [Agent Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/agents.html)
-   * [Module Menu](https://merlin-c2.readthedocs.io/en/latest/server/menu/modules.html)
-* View the [Frequently Asked Questions](https://merlin-c2.readthedocs.io/en/latest/quickStart/faq.html) page
+   * [Main Menu](https://merlin-c2.readthedocs.io/en/latest/cli/menu/main.html)
+   * [Listener Menu](https://merlin-c2.readthedocs.io/en/latest/cli/listeners.html)
+   * [Agent Menu](https://merlin-c2.readthedocs.io/en/latest/cli/menu/agents.html)
+   * [Module Menu](https://merlin-c2.readthedocs.io/en/latest/cli/menu/agents.html#modules)
+* View the [Frequently Asked Questions](https://merlin-c2.readthedocs.io/en/latest/cli/faq.html) page
 * View the [Blog Posts](https://merlin-c2.readthedocs.io/en/latest/misc/blogs.html) page for additional information
 
 ## Slack
