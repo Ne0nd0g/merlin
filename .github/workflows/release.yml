@@ -68,7 +68,7 @@ jobs:
       - name: Build Merlin CLI
         id: build_cli
         working-directory: /home/runner/work/merlin-cli
-        run: make all
+        run: make release
 
       - name: Move Merlin CLI
         id: move_cli
