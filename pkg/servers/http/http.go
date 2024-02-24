@@ -112,8 +112,17 @@ type Template struct {
 func New(options map[string]string) (Server, error) {
 	var err error
 	var s Server
-	s.id = uuid.New()
 	s.state = Stopped
+
+	id, ok := options["ID"]
+	if ok {
+		s.id, err = uuid.Parse(id)
+		if err != nil {
+			return s, fmt.Errorf("the \"ID\" key UUID value (%s) was incorrect, please provide a correct one", id)
+		}
+	} else {
+		s.id = uuid.New()
+	}
 
 	// Protocol
 	proto, ok := options["Protocol"]

@@ -180,6 +180,12 @@ func (s *Server) RemoveListener(ctx context.Context, id *pb.ID) (msg *pb.Message
 		slog.Error(err.Error())
 		return
 	}
+	err = s.ls.RemoveFromPersist(listenerID)
+	if err != nil {
+		msg = NewPBErrorMessage(err)
+		err = nil
+		return
+	}
 	msg = NewPBSuccessMessage(fmt.Sprintf("Successfully removed listener %s", listenerID))
 	return
 }
@@ -234,6 +240,14 @@ func (s *Server) SetListenerOption(ctx context.Context, in *pb.AgentCMD) (msg *p
 		slog.Error(err.Error())
 		return
 	}
+
+	err = s.ls.UpdatePersistValue(listenerID, in.Arguments[0], in.Arguments[1])
+	if err != nil {
+		err = fmt.Errorf("there was an error setting the listener option: %s", err)
+		slog.Error(err.Error())
+		return
+	}
+
 	msg = NewPBSuccessMessage(fmt.Sprintf("set %s to: %s", in.Arguments[0], in.Arguments[1]))
 	return
 }
@@ -252,6 +266,13 @@ func (s *Server) StartListener(ctx context.Context, id *pb.ID) (msg *pb.Message,
 
 	// Start the listener
 	err = s.ls.Start(listenerID)
+	if err != nil {
+		msg = NewPBErrorMessage(err)
+		err = nil
+		return
+	}
+
+	err = s.ls.Persist(listenerID)
 	if err != nil {
 		msg = NewPBErrorMessage(err)
 		err = nil

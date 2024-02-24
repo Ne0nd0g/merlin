@@ -34,7 +34,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin Message
-	"github.com/Ne0nd0g/merlin-message"
+	messages "github.com/Ne0nd0g/merlin-message"
 
 	// Internal
 	"github.com/Ne0nd0g/merlin/v2/pkg/authenticators"
@@ -219,12 +219,17 @@ func (l *Listener) ConfiguredOptions() (options map[string]string) {
 	options["Name"] = l.name
 	options["Description"] = l.description
 	options["Authenticator"] = l.auth.String()
-	options["Transforms"] = ""
-	for _, transform := range l.transformers {
-		options["Transforms"] += fmt.Sprintf("%s,", transform)
-	}
+	options["Protocol"] = listeners.String(l.Protocol())
 	options["PSK"] = l.options["PSK"]
 	options["Pipe"] = l.pipe
+
+	transforms := make([]string, len(l.transformers))
+	options["Transforms"] = ""
+	for i, transform := range l.transformers {
+		transforms[i] = fmt.Sprintf("%s", transform)
+	}
+	options["Transforms"] = strings.Join(transforms, ",")
+
 	return options
 }
 

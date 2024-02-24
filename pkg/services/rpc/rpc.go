@@ -29,6 +29,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -328,7 +329,7 @@ func (s *Service) authenticationStream(srv interface{}, stream grpc.ServerStream
 }
 
 // Run is the primary entry point for start and run this RPC service
-func (s *Service) Run(addr string) error {
+func (s *Service) Run(addr string, listenersStorageFile string) error {
 	slog.Log(context.Background(), logging.LevelTrace, "entering into function", "addr", addr)
 	// Setup network listener
 	lis, err := net.Listen("tcp", addr)
@@ -347,6 +348,24 @@ func (s *Service) Run(addr string) error {
 	pb.RegisterMerlinServer(grpcServer, s.rpcServer)
 
 	go s.rpcServer.ListenForClientMessages()
+
+	if listenersStorageFile != "" {
+		service.rpcServer.ls.SetStorageFile(listenersStorageFile)
+		if _, err := os.Stat(listenersStorageFile); err == nil {
+			err = service.rpcServer.ls.LoadListenersFromFile(listenersStorageFile)
+			if err != nil {
+				return err
+			}
+		} else if errors.Is(err, os.ErrNotExist) {
+			slog.Debug(fmt.Sprintf("File %s does not exist, it will be created", listenersStorageFile))
+			f, err := os.Create(listenersStorageFile)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			slog.Debug(fmt.Sprintf("File %s, was created", listenersStorageFile))
+		}
+	}
 
 	// Start the gRPC server
 	log.Printf("Starting gRPC server on %s", addr)
