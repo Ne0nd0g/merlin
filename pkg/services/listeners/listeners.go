@@ -541,7 +541,7 @@ func (ls *ListenerService) RemoveFromPersist(id uuid.UUID) error {
 	return nil
 }
 
-// Update the embedded server object value of the listener (if applicable) so that it can be used again after a server restart.
+// UpdatePersistValue updates the embedded server object value of the listener (if applicable) so that it can be used again after a server restart.
 func (ls *ListenerService) UpdatePersistValue(id uuid.UUID, option, value string) error {
 	file, err := os.OpenFile(ls.storageFile, os.O_RDWR, 0640)
 	if err != nil {
