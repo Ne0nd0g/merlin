@@ -78,6 +78,19 @@ func NewInfo(agent uuid.UUID, jobType string, cmd string) Info {
 	return info
 }
 
+func NewInfoWithID(agent uuid.UUID, jobType string, cmd string, id string, token uuid.UUID) Info {
+	info := Info{
+		id:      id,
+		agentID: agent,
+		jobType: jobType,
+		token:   token,
+		status:  CREATED,
+		created: time.Now().UTC(),
+		command: cmd,
+	}
+	return info
+}
+
 // Active set's the Job Info status to "active"
 func (i *Info) Active() {
 	i.status = ACTIVE
