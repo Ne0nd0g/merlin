@@ -325,6 +325,13 @@ func (s *Server) StopListener(ctx context.Context, id *pb.ID) (msg *pb.Message, 
 		slog.Error(err.Error())
 		return
 	}
+
+	err = s.ls.RemoveFromPersist(listenerID)
+	if err != nil {
+		msg = NewPBErrorMessage(err)
+		err = nil
+		return
+	}
 	msg = NewPBSuccessMessage(fmt.Sprintf("Successfully stopped listener %s", listenerID))
 	return
 }

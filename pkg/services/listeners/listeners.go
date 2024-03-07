@@ -529,13 +529,15 @@ func (ls *ListenerService) RemoveFromPersist(id uuid.UUID) error {
 	file.Truncate(0)
 	file.Seek(0, 0)
 
-	persistData, err := yaml.Marshal(listenersData)
-	if err != nil {
-		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): unmarshal error on persist file: %s", err)
-	}
+	if len(listenersData) != 0 {
+		persistData, err := yaml.Marshal(listenersData)
+		if err != nil {
+			return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): unmarshal error on persist file: %s", err)
+		}
 
-	if _, err = file.Write(persistData); err != nil {
-		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): error on persist file: %s", err)
+		if _, err = file.Write(persistData); err != nil {
+			return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): error on persist file: %s", err)
+		}
 	}
 
 	return nil
