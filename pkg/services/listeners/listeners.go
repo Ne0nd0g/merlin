@@ -23,13 +23,16 @@ package listeners
 
 import (
 	// Standard
+	"bytes"
 	"fmt"
 	"log/slog"
+	"os"
 	"sort"
 	"strings"
 
 	// 3rd Party
 	"github.com/google/uuid"
+	"gopkg.in/yaml.v2"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/v2/pkg/listeners"
@@ -53,6 +56,7 @@ type ListenerService struct {
 	smbRepo        smb.Repository
 	tcpRepo        tcp.Repository
 	udpRepo        udp.Repository
+	storageFile    string // is used for listeners persistence
 }
 
 // NewListenerService is a factory to create and return a ListenerService
@@ -431,6 +435,7 @@ func (ls *ListenerService) SetOption(id uuid.UUID, option, value string) error {
 
 // Start initiates the Listener's embedded Server object (if applicable) to start listening and responding to Agent communications
 func (ls *ListenerService) Start(id uuid.UUID) error {
+
 	// Get the listener
 	listener, err := ls.Listener(id)
 	if err != nil {
@@ -470,4 +475,150 @@ func (ls *ListenerService) Stop(id uuid.UUID) error {
 		return server.Stop()
 	}
 	return nil
+}
+
+// Persist the embedded server object of the listener (if applicable) so that it can be used again after a server restart.
+func (ls *ListenerService) Persist(id uuid.UUID) error {
+	file, err := os.OpenFile(ls.storageFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.Persist(): error on create or append to file: %s", err)
+	}
+	defer file.Close()
+
+	listener, err := ls.Listener(id)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.Persist(): %s", err)
+	}
+
+	var listenersData = map[string]map[string]string{}
+	listenersData[listener.ID().String()] = listener.ConfiguredOptions()
+	persistData, err := yaml.Marshal(listenersData)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.Persist(): unmarshal error on persist file: %s", err)
+	}
+
+	if _, err = file.Write(persistData); err != nil {
+		return fmt.Errorf("pkg/services/listeners.Persist(): error on persist file: %s", err)
+	}
+
+	return nil
+}
+
+// RemoveFromPersist the embedded server object of the listener (if applicable) so that it cannot be used again after a server restart.
+func (ls *ListenerService) RemoveFromPersist(id uuid.UUID) error {
+	file, err := os.OpenFile(ls.storageFile, os.O_RDWR, 0640)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): error on open file: %s", err)
+	}
+	defer file.Close()
+
+	fb := bytes.Buffer{}
+	_, err = fb.ReadFrom(file)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): error on read file: %s", err)
+	}
+
+	var listenersData = map[string]map[string]string{}
+	err = yaml.Unmarshal(fb.Bytes(), listenersData)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): unmarshal error on persist file: %s", err)
+	}
+	delete(listenersData, id.String())
+
+	// Clean the file an write back the file
+	file.Truncate(0)
+	file.Seek(0, 0)
+
+	if len(listenersData) != 0 {
+		persistData, err := yaml.Marshal(listenersData)
+		if err != nil {
+			return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): unmarshal error on persist file: %s", err)
+		}
+
+		if _, err = file.Write(persistData); err != nil {
+			return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): error on persist file: %s", err)
+		}
+	}
+
+	return nil
+}
+
+// UpdatePersistValue updates the embedded server object value of the listener (if applicable) so that it can be used again after a server restart.
+func (ls *ListenerService) UpdatePersistValue(id uuid.UUID, option, value string) error {
+	file, err := os.OpenFile(ls.storageFile, os.O_RDWR, 0640)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.UpdatePersistValue(): error on open file: %s", err)
+	}
+	defer file.Close()
+
+	fb := bytes.Buffer{}
+	_, err = fb.ReadFrom(file)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.UpdatePersistValue(): error on read file: %s", err)
+	}
+
+	listener, err := ls.Listener(id)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.UpdatePersistValue(): %s", err)
+	}
+
+	var listenersData = map[string]map[string]string{}
+	err = yaml.Unmarshal(fb.Bytes(), listenersData)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.UpdatePersistValue(): unmarshal error on persist file: %s", err)
+	}
+
+	listenersData[listener.ID().String()][option] = value
+
+	file.Truncate(0)
+	file.Seek(0, 0)
+
+	persistData, err := yaml.Marshal(listenersData)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): unmarshal error on persist file: %s", err)
+	}
+
+	if _, err = file.Write(persistData); err != nil {
+		return fmt.Errorf("pkg/services/listeners.RemoveFromPersist(): error on persist file: %s", err)
+	}
+
+	return nil
+}
+
+// LoadListenersFromFile restores the listeners from a YAML file
+func (ls *ListenerService) LoadListenersFromFile(file string) error {
+	f, err := os.OpenFile(file, os.O_RDWR, 0640)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.LoadListenersFromFile(): error on open file: %s", err)
+	}
+	defer f.Close()
+
+	fb := bytes.Buffer{}
+	_, err = fb.ReadFrom(f)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.LoadListenersFromFile(): error on read file: %s", err)
+	}
+
+	var listenersData = map[string]map[string]string{}
+	err = yaml.Unmarshal(fb.Bytes(), listenersData)
+	if err != nil {
+		return fmt.Errorf("pkg/services/listeners.LoadListenersFromFile(): unmarshal error on persist file: %s", err)
+	}
+
+	for _, v := range listenersData {
+		l, err := ls.NewListener(v)
+		if err != nil {
+			return err
+		}
+		err = ls.Start(l.ID())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SetStorageFile set and returns the location of the persist listeners
+func (ls *ListenerService) SetStorageFile(storageFile string) {
+	ls.storageFile = storageFile
 }

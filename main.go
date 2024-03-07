@@ -43,6 +43,10 @@ func main() {
 	trace := flag.Bool("trace", false, "Enable trace logging")
 	extra := flag.Bool("extra", false, "Enable extra debug logging")
 	v := flag.Bool("version", false, "Print the version number and exit")
+
+	var listenersStorageFile string
+	flag.StringVar(&listenersStorageFile, "listenersFile", "", "YAML file, load listeners from it and saves to it.")
+
 	flag.Parse()
 
 	if *v {
@@ -64,7 +68,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = service.Run(*addr)
+	err = service.Run(*addr, listenersStorageFile)
 	if err != nil {
 		log.Fatal(err)
 	}

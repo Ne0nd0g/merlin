@@ -34,7 +34,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin Message
-	"github.com/Ne0nd0g/merlin-message"
+	messages "github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/v2/pkg/authenticators"
@@ -189,12 +189,16 @@ func (l *Listener) ConfiguredOptions() map[string]string {
 	options["Name"] = l.name
 	options["Description"] = l.description
 	options["Authenticator"] = l.auth.String()
-	options["Transforms"] = ""
-	for _, transform := range l.transformers {
-		options["Transforms"] += fmt.Sprintf("%s,", transform)
-	}
 	// PSK is stored in l.PSK as a sha256 hash of the passed in clear-text PSK
 	options["PSK"] = l.options["PSK"]
+
+	transforms := make([]string, len(l.transformers))
+	options["Transforms"] = ""
+	for i, transform := range l.transformers {
+		transforms[i] = fmt.Sprintf("%s", transform)
+	}
+	options["Transforms"] = strings.Join(transforms, ",")
+
 	return options
 }
 
