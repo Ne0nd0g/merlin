@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Increased SOCKS job in/out channel size from 100 to 1,000
   - Updated `readSOCKSClient()` function to close the connection on any connection read error
   - Updated `processMessage()` to drop SOCKS jobs when the connection was already closed
-  - Updated the SOCKS handler to require a pointer to the Jobs In channel so out of order jobs can be put back into the queue
   - Added `NewInfoWithID()` factory for SOCKS jobs information structures that keep the same Job ID for the connection lifetime
 
 ## 2.1.1 - 2024-01-04
