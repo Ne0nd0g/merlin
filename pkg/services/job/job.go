@@ -538,14 +538,18 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 	}
 
 	// Create Job info structure
-	jobInfo := infoJobs.NewInfo(agentID, job.Type.String(), command)
+	var jobInfo infoJobs.Info
+	if job.Type != jobs.SOCKS {
+		jobInfo = infoJobs.NewInfo(agentID, job.Type.String(), command)
+	} else {
+		// SOCKS jobs create their own job ID and token that are used through the lifetime of the connection
+		jobInfo = infoJobs.NewInfoWithID(agentID, job.Type.String(), command, job.ID, job.Token)
+	}
 
-	// SOCKS jobs create their own token that is used through the lifetime of the connection
 	if job.Token == uuid.Nil {
 		job.Token = jobInfo.Token()
 	}
 
-	// SOCKS jobs create their own job ID and use the same through to the end of the connection
 	if job.ID == "" {
 		job.ID = jobInfo.ID()
 	}
