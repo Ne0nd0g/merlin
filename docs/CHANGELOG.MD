@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Updated `processMessage()` to drop SOCKS jobs when the connection was already closed
   - Added `NewInfoWithID()` factory for SOCKS jobs information structures that keep the same Job ID for the connection lifetime
 
+### Changed
+
+- Upgraded the following libraries to their latest version
+  - upgraded github.com/google/uuid v1.5.0 => v1.6.0
+  - upgraded golang.org/x/net v0.21.0 => v0.22.0
+  - upgraded golang.org/x/sync v0.5.0 => v0.6.0
+  - upgraded google.golang.org/grpc v1.60.1 => v1.62.1
+  - upgraded github.com/quic-go/quic-go v0.40.1 => v0.42.0
+
+### Security
+
+- Upgraded go-jose/v3 to v3.0.3 to address CVE-2024-28180
+- Upgraded the protobuf library to v1.33.0 to address CVE-2024-24786
+
 ## 2.1.1 - 2024-01-04
 
 ### Added
