@@ -4,12 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## 2.1.2 - 2024-XX-XX
+## 2.1.2 - 2024-03-21
 
 ### Fixed
 
 - SOCKS listener was not properly handling data and connection status
   - Increased SOCKS job in/out channel size from 100 to 1,000
+  - Fixed a bug where multiple SOCKS go routines were created instead of one
   - Updated `readSOCKSClient()` function to close the connection on any connection read error
   - Updated `processMessage()` to drop SOCKS jobs when the connection was already closed
   - Added `NewInfoWithID()` factory for SOCKS jobs information structures that keep the same Job ID for the connection lifetime
