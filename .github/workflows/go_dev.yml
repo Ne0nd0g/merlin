@@ -51,6 +51,8 @@ jobs:
       - name: Gosec Security Scanner
         id: gosec
         uses: securego/gosec@master
+        with:
+          args: ./...
 
       - name: Go Report Card - Install
         id: goreportcard_install

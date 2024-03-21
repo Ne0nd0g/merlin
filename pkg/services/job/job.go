@@ -66,9 +66,9 @@ func NewJobService() *Service {
 			messageRepo:  withMemoryClientMessageRepository(),
 			agentService: agent.NewAgentService(),
 		}
+		// Start the SOCKS infinite loop
+		go memoryService.socksJobs()
 	}
-	// Start the SOCKS infinite loop
-	go memoryService.socksJobs()
 	return memoryService
 }
 
@@ -533,24 +533,27 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 		conn := job.Payload.(jobs.Socks)
 		command = fmt.Sprintf("SOCKS connection %s packet %d", conn.ID, conn.Index)
 	default:
-		fmt.Printf("DEFAULT\n")
 		command = fmt.Sprintf("%s %+v", job.Type, job.Payload)
 	}
 
 	// Create Job info structure
-	jobInfo := infoJobs.NewInfo(agentID, job.Type.String(), command)
+	var jobInfo infoJobs.Info
+	if job.Type != jobs.SOCKS {
+		jobInfo = infoJobs.NewInfo(agentID, job.Type.String(), command)
+	} else {
+		// SOCKS jobs create their own job ID and token that are used through the lifetime of the connection
+		jobInfo = infoJobs.NewInfoWithID(agentID, job.Type.String(), command, job.ID, job.Token)
+	}
 
-	// SOCKS jobs create their own token that is used through the lifetime of the connection
 	if job.Token == uuid.Nil {
 		job.Token = jobInfo.Token()
 	}
 
-	// SOCKS jobs create their own job ID and use the same through to the end of the connection
 	if job.ID == "" {
 		job.ID = jobInfo.ID()
 	}
 
-	// Add job to the server side job list
+	// Add the job to the server side job list
 	s.jobRepo.Add(*job, jobInfo)
 
 	// Log the job
@@ -564,7 +567,7 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 	return nil
 }
 
-// checkJob verifies that the input job message contains the expected token and was not already completed
+// checkJob verifies that the input job message contains the expected token and was not yet completed
 func (s *Service) checkJob(job jobs.Job) error {
 	// Check to make sure agent UUID is in dataset
 	if !s.agentService.Exist(job.AgentID) {
@@ -798,7 +801,7 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				return fmt.Errorf("pkg/services/job.Handler(): %s", err)
 			}
 
-			// Verify that the job contains the correct token and that it was not already completed
+			// Verify that the job contains the correct token and that it was not yet completed
 			err = s.checkJob(job)
 			if err != nil {
 

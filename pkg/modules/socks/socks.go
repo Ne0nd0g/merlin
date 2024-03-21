@@ -38,7 +38,7 @@ import (
 	"github.com/Ne0nd0g/merlin/v2/pkg/core"
 )
 
-// listeners is a map of single TCP bound interfaces associated keyed to a specific agent ID
+// listeners is a map of single TCP-bound interfaces associated keyed to a specific agent ID
 var listeners = sync.Map{}
 
 // connections is a map connections keyed to their own ID. There are multiple connections per listener
@@ -48,10 +48,10 @@ var connections = sync.Map{}
 var done = sync.Map{}
 
 // jobsIn is a channel used to queue new or out-of-order jobs that will be sent to the SOCKS client
-var jobsIn = make(chan merlinJob.Job, 100)
+var jobsIn = make(chan merlinJob.Job, 1000)
 
 // JobsOut is a channel used by the pkg/server/jobs/jobs.go to send data to the Merlin agent
-var JobsOut = make(chan merlinJob.Job, 100)
+var JobsOut = make(chan merlinJob.Job, 1000)
 
 // socksRoutine is a flag to indicate if the go routine used to read from the channel has been started
 // Don't want to start the go routine until SOCKS is in use
@@ -194,7 +194,6 @@ func readSOCKSClient(id uuid.UUID) {
 			ID:    id,
 			Index: index,
 		}
-		index++
 
 		// Read the connection data
 		data := make([]byte, 500000)
@@ -208,24 +207,14 @@ func readSOCKSClient(id uuid.UUID) {
 			socks.Data = data[:n]
 		}
 
-		// SOCKS Client is done
-		if err == io.EOF {
-			if core.Verbose {
-				slog.Info(fmt.Sprintf("Received EOF from the SOCKS client, closing the %s connection", id))
-			}
-
-			err = connection.(*Connection).Conn.Close()
-			if err != nil {
-				slog.Error(fmt.Sprintf("there was an error closing SOCKS client connection ID %s with %s", id, err))
-				break
-			}
-			socks.Close = true
-			// Delete the connection from the map
-			connections.Delete(id)
-		}
+		// If there is an error, close the connection
+		// Errors can occur when the SOCKS client is abruptly closed or the connection is finished
 		if err != nil {
-			slog.Error(fmt.Sprintf("there was an error reading the SOCKS connection data to a buffer: %s", err))
-			break
+			socks.Close = true
+			// EOF is not an error it just means the client closed the connection
+			if err != io.EOF {
+				slog.Error("there was an error reading from the SOCKS client connection", "ID", id, "Index", socks.Index, "Read Data", n, "Error", err)
+			}
 		}
 
 		// Create the jobs.Job
@@ -236,12 +225,22 @@ func readSOCKSClient(id uuid.UUID) {
 			ID:      jobID,
 			Token:   token,
 		}
-
+		index++
 		// Send the job to the agent
 		JobsOut <- job
-
+		// The connection is closed on the client side, exit the go routine
 		if socks.Close {
-			break
+			if err == io.EOF {
+				slog.Debug("received EOF from the SOCKS client, closing the connection", "Agent", job.AgentID, "ID", socks.ID)
+			}
+			err = connection.(*Connection).Conn.Close()
+			if err != nil {
+				slog.Error("there was an error closing SOCKS client connection", "ID", socks.ID, "Index", socks.Index, "Error", err)
+			}
+			// Delete the connection from the map
+			slog.Debug("deleting SOCKS connection", "Agent", job.AgentID, "ID", socks.ID, "Index", socks.Index, "Data Length", len(socks.Data))
+			connections.Delete(socks.ID)
+			return
 		}
 	}
 }
@@ -254,25 +253,25 @@ func processMessage() {
 		socks := job.Payload.(merlinJob.Socks)
 
 		// Make sure the connection ID is known
+		// The Agent can send back data for a connection that has been closed and deleted by the SOCKS client
+		// So drop the job
 		conn, ok := connections.Load(socks.ID)
 		if !ok {
-			slog.Error(fmt.Sprintf("%s is not a known SOCKS connection ID", socks.ID))
-			break
+			slog.Debug("Unknown SOCKS connection", "ID", socks.ID, "Index", socks.Index, "Data Length", len(socks.Data))
+			continue
 		}
 
 		// Ensure this is the right index
 		if conn.(*Connection).Index == socks.Index {
 			n, err := conn.(*Connection).Conn.Write(socks.Data)
+			conn.(*Connection).Index++
 			if err != nil {
-				slog.Error(fmt.Sprintf("there was an error writing to the SOCKS client for agent %s connection ID %s: %s", agent, socks.ID, err))
-				return
+				slog.Error("there was an error writing to the SOCKS client", "Agent", agent, "ID", socks.ID, "Index", socks.Index, "Close", socks.Close, "Data Length", len(socks.Data), "Error", err)
+				continue
 			}
-
 			if core.Debug {
 				slog.Debug(fmt.Sprintf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s with error %s", n, socks.Index, agent, socks.ID, err))
 			}
-			//fmt.Printf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s with error %s\n", n, socks.Index, agent, socks.ID, err)
-			conn.(*Connection).Index++
 		} else {
 			if core.Debug {
 				slog.Debug(fmt.Sprintf("Received job out of order for agent %s connection %s. Expected %d, got %d", agent, socks.ID, conn.(*Connection).Index, socks.Index))
@@ -290,15 +289,10 @@ func In(job merlinJob.Job) {
 
 	socks := job.Payload.(merlinJob.Socks)
 
-	// If the connection is close, no more processing is needed
-	if socks.Close {
-		return
-	}
-
 	// Make sure the connection ID is known
 	_, ok := connections.Load(socks.ID)
 	if !ok {
-		slog.Error(fmt.Sprintf("%s is not a known SOCKS connection ID", socks.ID))
+		slog.Debug("Unknown SOCKS connection, dropping SOCKS data", "ID", socks.ID, "Index", socks.Index, "Close", socks.Close, "Data Length", len(socks.Data))
 		return
 	}
 
