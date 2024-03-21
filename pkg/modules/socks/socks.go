@@ -38,7 +38,7 @@ import (
 	"github.com/Ne0nd0g/merlin/v2/pkg/core"
 )
 
-// listeners is a map of single TCP bound interfaces associated keyed to a specific agent ID
+// listeners is a map of single TCP-bound interfaces associated keyed to a specific agent ID
 var listeners = sync.Map{}
 
 // connections is a map connections keyed to their own ID. There are multiple connections per listener
