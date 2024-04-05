@@ -36,7 +36,7 @@ import (
 	"github.com/google/uuid"
 
 	// Merlin Message
-	messages "github.com/Ne0nd0g/merlin-message"
+	"github.com/Ne0nd0g/merlin-message"
 
 	// Merlin
 
