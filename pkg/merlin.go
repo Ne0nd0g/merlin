@@ -21,7 +21,7 @@ along with Merlin.  If not, see <http://www.gnu.org/licenses/>.
 package merlin
 
 // Version is a constant variable containing the version number for the Merlin package
-const Version = "2.1.2"
+const Version = "2.1.3"
 
 // Build is a hash off the git commit and is stamped it at compile time
 var Build = "nonRelease"

@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 2.1.3 - 2024-04-23
+
+### Changed
+
+- Upgraded golang.org/x/crypto v0.21.0 => v0.22.0
+- Upgraded golang.org/x/sys v0.18.0 => v0.19.0
+- Upgraded golang.org/x/sync v0.6.0 => v0.7.0
+- Upgraded google.golang.org/grpc v1.62.1 => v1.63.2
+- Upgraded golang.org/x/mod v0.16.0 => v0.17.0
+- Upgraded golang.org/x/tools v0.19.0 => v0.20.0
+- Upgraded golang.org/x/exp v0.0.0-20240318143956-a85f2c67cd81 => v0.0.0-20240416160154-fe59bbe5cc7f
+- Upgraded github.com/google/pprof v0.0.0-20240320155624-b11c3daa6f07 => v0.0.0-20240422182052-72c8669ad3e7
+- Upgraded github.com/onsi/ginkgo/v2 v2.17.0 => v2.17.1
+
+### Security
+
+- [CVE-2023-45288](https://nvd.nist.gov/vuln/detail/CVE-2023-45288) - Upgraded `golang.org/x/net` to v0.24.0 to address CVE-2023-45288
+
 ## 2.1.2 - 2024-03-25
 
 ### Fixed
