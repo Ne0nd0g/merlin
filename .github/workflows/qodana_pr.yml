@@ -29,5 +29,5 @@ jobs:
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2023.3
         with:
-          args: -l,jetbrains/qodana-go:2023.3-eap,--baseline,.qodana/qodana.sarif.json
+          args: --baseline,.qodana/qodana.sarif.json
           pr-mode: false
