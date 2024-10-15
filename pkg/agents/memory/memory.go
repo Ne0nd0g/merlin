@@ -40,7 +40,7 @@ var (
 
 // Repository structure implements an in-memory database that holds a map of agent's the server communicates with
 type Repository struct {
-	// Don't use pointers because this is map is the source and should only be modified here in the repository
+	// Don't use pointers because this is a map is the source and should only be modified here in the repository
 	agents map[uuid.UUID]agents.Agent
 	sync.Mutex
 }
@@ -64,7 +64,7 @@ func (r *Repository) Add(agent agents.Agent) error {
 	return ErrAgentExists
 }
 
-// AddLinkedAgent updates the Agent's linkedAgents list the contains all child agents for which it is the parent
+// AddLinkedAgent updates the Agent's linkedAgents list that contains all child agents for which it is the parent
 func (r *Repository) AddLinkedAgent(id uuid.UUID, link uuid.UUID) error {
 	agent, err := r.Get(id)
 	if err != nil {
@@ -79,6 +79,8 @@ func (r *Repository) AddLinkedAgent(id uuid.UUID, link uuid.UUID) error {
 
 // Exists check's to see if the Agent is in the repository
 func (r *Repository) Exists(id uuid.UUID) bool {
+	r.Lock()
+	defer r.Unlock()
 	for a := range r.agents {
 		if a == id {
 			return true
@@ -90,7 +92,9 @@ func (r *Repository) Exists(id uuid.UUID) bool {
 // Get returns a COPY of the Agent entity. The caller should not try to modify the copy as it won't be updated
 // in the repository
 func (r *Repository) Get(id uuid.UUID) (agents.Agent, error) {
+	r.Lock()
 	agent, ok := r.agents[id]
+	r.Unlock()
 	if ok {
 		return agent, nil
 	}
