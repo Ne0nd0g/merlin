@@ -30,7 +30,7 @@ jobs:
         id: setup_go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.24'
 
         # Need 7zip installed to package up the release
       - name: Install 7zip
@@ -40,7 +40,7 @@ jobs:
         # Need MingGW installed to build the Agent DLL
       - name: Install MingGW
         id: install_mingw
-        run: sudo apt-get install -y -q mingw-w64
+        run: sudo apt-get install -y -q mingw-w64 gcc-mingw-w64-i686
 
       - name: Build Merlin Agents
         id: build_agents
@@ -55,7 +55,7 @@ jobs:
       - name: Build Merlin Agent DLL
         id: build_agent_dll
         working-directory: /home/runner/work/merlin-agent-dll
-        run: make default
+        run: make default 386
 
       - name: Move Agents
         id: move_agents
@@ -63,7 +63,7 @@ jobs:
         run: |
           mkdir -p data/bin
           cp /home/runner/work/merlin-agent/merlinAgent-* ./data/bin
-          cp /home/runner/work/merlin-agent-dll/merlin.dll ./data/bin
+          cp /home/runner/work/merlin-agent-dll/merlin* ./data/bin
 
       - name: Build Merlin CLI
         id: build_cli

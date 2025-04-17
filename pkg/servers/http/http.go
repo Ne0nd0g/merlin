@@ -521,7 +521,7 @@ func (s *Server) generateServer() error {
 			Handler:        mux,
 			MaxHeaderBytes: 1 << 20,
 			//TLSConfig:      &tls.Config{Certificates: []tls.Certificate{*certificates}, MinVersion: tls.VersionTLS12},
-			QuicConfig: &quic.Config{
+			QUICConfig: &quic.Config{
 				// Opted for a long timeout to prevent the client from sending an HTTP/2 PING Frame
 				MaxIdleTimeout:  time.Until(time.Now().AddDate(0, 42, 0)),
 				KeepAlivePeriod: time.Second * 0,

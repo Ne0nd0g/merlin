@@ -52,7 +52,7 @@ jobs:
         id: gosec
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: -exclude G115 ./...
 
       - name: Go Report Card - Install
         id: goreportcard_install

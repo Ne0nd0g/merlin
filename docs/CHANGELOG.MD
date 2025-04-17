@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 2.1.4 - 2025-04-17
+
+### Changed
+
+- Upgraded the minimum version of go to v1.23
+- Upgreaded the following libraries:
+  - github.com/go-jose/go-jose/v3 v3.0.3 => v3.0.4
+  - golang.org/x/net v0.24.0 => v0.39.0
+  - golang.org/x/sync v0.7.0 => v0.13.0
+  - github.com/quic-go/quic-go v0.42.0 => v0.50.1
+  - google.golang.org/protobuf v1.33.0 => v1.36.5
+
 ## 2.1.3 - 2024-04-23
 
 ### Changed
