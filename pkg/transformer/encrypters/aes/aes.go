@@ -85,7 +85,7 @@ func encrypt(plaintext []byte, key []byte) ([]byte, error) {
 	}
 
 	// AES CBC Encrypt
-	cbc := cipher.NewCBCEncrypter(block, iv) //nosec G407
+	cbc := cipher.NewCBCEncrypter(block, iv) // #nosec G407
 	cbc.CryptBlocks(ciphertext[aes.BlockSize:], plaintext)
 
 	// HMAC
