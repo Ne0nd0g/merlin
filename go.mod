@@ -12,7 +12,7 @@ require (
 	go.dedis.ch/kyber/v3 v3.1.0
 	golang.org/x/net v0.59.0
 	golang.org/x/sync v0.23.0
-	google.golang.org/grpc v1.84.0
+	google.golang.org/grpc v1.83.2 // pinned <1.84: v1.84.0 regressed GO-2026-6443; next stable fix is v1.85.x
 	google.golang.org/protobuf v1.36.12
 )
 
