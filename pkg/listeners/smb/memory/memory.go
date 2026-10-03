@@ -103,7 +103,7 @@ func (r *Repository) Listeners() []smb.Listener {
 func (r *Repository) ListenerByID(id uuid.UUID) (smb.Listener, error) {
 	l, exists := r.listeners[id]
 	if !exists {
-		return smb.Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
+		return smb.Listener{}, fmt.Errorf("a listener with an ID of %s does not exist", id)
 	}
 	return l, nil
 }

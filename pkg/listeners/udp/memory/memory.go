@@ -103,7 +103,7 @@ func (r *Repository) Listeners() []udp.Listener {
 func (r *Repository) ListenerByID(id uuid.UUID) (udp.Listener, error) {
 	l, exists := r.listeners[id]
 	if !exists {
-		return udp.Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
+		return udp.Listener{}, fmt.Errorf("a listener with an ID of %s does not exist", id)
 	}
 	return l, nil
 }

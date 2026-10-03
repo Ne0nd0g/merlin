@@ -103,7 +103,7 @@ func (r *Repository) Listeners() []http.Listener {
 func (r *Repository) ListenerByID(id uuid.UUID) (http.Listener, error) {
 	l, exists := r.listeners[id]
 	if !exists {
-		return http.Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
+		return http.Listener{}, fmt.Errorf("a listener with an ID of %s does not exist", id)
 	}
 	return l, nil
 }

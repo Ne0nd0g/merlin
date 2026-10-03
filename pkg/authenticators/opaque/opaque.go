@@ -118,7 +118,7 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 	case opaque.ReAuthenticate:
 		opq, err = a.reAuthenticate(id)
 	default:
-		err = fmt.Errorf(fmt.Sprintf("invalid OPAQUE type for un authenticated handler: %d", o.Type))
+		err = fmt.Errorf("invalid OPAQUE type for un authenticated handler: %d", o.Type)
 	}
 
 	msg.ID = id

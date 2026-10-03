@@ -102,7 +102,7 @@ func (r *Repository) Listeners() []tcp.Listener {
 func (r *Repository) ListenerByID(id uuid.UUID) (tcp.Listener, error) {
 	l, exists := r.listeners[id]
 	if !exists {
-		return tcp.Listener{}, fmt.Errorf(fmt.Sprintf("a listener with an ID of %s does not exist", id))
+		return tcp.Listener{}, fmt.Errorf("a listener with an ID of %s does not exist", id)
 	}
 	return l, nil
 }
