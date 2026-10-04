@@ -22,7 +22,6 @@ package logging
 
 import (
 	// Standard
-	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -48,7 +47,7 @@ func Run() {
 	var logFile *os.File
 	currentDir, err := os.Getwd()
 	if err != nil {
-		log.Fatal(fmt.Sprintf("there was an error getting the current working directory: %s", err))
+		log.Fatalf("there was an error getting the current working directory: %s", err)
 	}
 	logFileDir := filepath.Join(currentDir, "data", "log")
 	logFilePath := filepath.Join(logFileDir, "merlinServerLog.txt")
@@ -58,25 +57,25 @@ func Run() {
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(logFileDir, 0750)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("there was an error creating the log directory at %s: %s", logFileDir, err))
+			log.Fatalf("there was an error creating the log directory at %s: %s", logFileDir, err)
 		}
 		logFile, err = os.Create(logFilePath) // #nosec G304 Users can include any file they want
 		if err != nil {
-			log.Fatal(fmt.Sprintf("there was an error creating the log file at %s: %s", logFilePath, err))
+			log.Fatalf("there was an error creating the log file at %s: %s", logFilePath, err)
 		}
 		// Change the file's permissions
 		err = os.Chmod(logFile.Name(), 0600)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("there was an error changing the log file permissions: %s", err))
+			log.Fatalf("there was an error changing the log file permissions: %s", err)
 		}
 	} else if err != nil {
-		log.Fatal(fmt.Sprintf("there was an getting information for the log file at %s: %s", logFilePath, err))
+		log.Fatalf("there was an getting information for the log file at %s: %s", logFilePath, err)
 	}
 
 	// File already exists, open it for appending
 	logFile, err = os.OpenFile(logFilePath, os.O_APPEND|os.O_WRONLY, 0600) // #nosec G304 Users can include any file they want
 	if err != nil {
-		log.Fatal(fmt.Sprintf("there was an error opening the log file at %s: %s", logFilePath, err))
+		log.Fatalf("there was an error opening the log file at %s: %s", logFilePath, err)
 	}
 
 	// Set up the program's logging

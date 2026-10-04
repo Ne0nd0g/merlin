@@ -220,7 +220,7 @@ func (s *Server) GetAgentStatus(ctx context.Context, id *pb.ID) (msg *pb.Message
 	comms := a.Comms()
 	dur, errDur := time.ParseDuration(comms.Wait)
 	if errDur != nil && comms.Wait != "" {
-		err = fmt.Errorf("Error converting %s to a time duration: %s", comms.Wait, errDur)
+		err = fmt.Errorf("error converting %s to a time duration: %s", comms.Wait, errDur)
 		return
 	}
 	if comms.Wait == "" {

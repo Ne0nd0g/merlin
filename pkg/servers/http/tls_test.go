@@ -84,8 +84,8 @@ func TestTLSCertGeneration(t *testing.T) {
 
 	//dnsNames
 	if len(x5certSetVals.DNSNames) < 1 || x5certSetVals.DNSNames[0] != dnsName {
-		t.Error(fmt.Sprintf("dnsnames failed assignment: should be a length 1 string slice with the only "+
-			"contents:\n%s\nbut is:\n%v", dnsName, x5certSetVals.DNSNames))
+		t.Errorf("dnsnames failed assignment: should be a length 1 string slice with the only "+
+			"contents:\n%s\nbut is:\n%v", dnsName, x5certSetVals.DNSNames)
 	}
 
 	//times

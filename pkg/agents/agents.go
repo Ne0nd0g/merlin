@@ -188,11 +188,10 @@ func (a *Agent) Padding() int {
 
 // Log write the provided message to the Agent's log file
 func (a *Agent) Log(message string) {
-	_, err := a.log.WriteString(fmt.Sprintf("[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), message))
+	_, err := fmt.Fprintf(a.log, "[%s]%s\r\n", time.Now().UTC().Format(time.RFC3339), message)
 	if err != nil {
 		slog.Error("there was an error writing to the agent's log file", "agent", a.id, "error", err)
 	}
-	return
 }
 
 // UpdateAlive updates the Agent's alive status to the provided value

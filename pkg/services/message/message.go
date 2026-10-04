@@ -418,7 +418,7 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 			if err != nil {
 				s.clientMsgRepo.Add(message.NewErrorMessage(err))
 			} else {
-				s.clientMsgRepo.Add(message.NewMessage(message.Note, fmt.Sprintf("%s", j)))
+				s.clientMsgRepo.Add(message.NewMessage(message.Note, j))
 			}
 		} else {
 			// Send in the delegate message

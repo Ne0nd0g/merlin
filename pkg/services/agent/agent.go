@@ -104,10 +104,7 @@ func (s *Service) Authenticated(id uuid.UUID) bool {
 // Exist determines if the Agent is known to the server or not
 func (s *Service) Exist(id uuid.UUID) bool {
 	_, err := s.Agent(id)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // Lifetime returns the amount an agent could live without successfully communicating with the server

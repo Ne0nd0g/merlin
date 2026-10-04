@@ -140,14 +140,12 @@ func (s *Server) Listen(in *pb.ID, stream pb.Merlin_ListenServer) error {
 		s.messageChan[id] = make(chan *pb.Message, 100)
 	}
 
-	for {
-		select {
-		case msg := <-s.messageChan[id]:
-			if err = stream.Send(msg); err != nil {
-				return err
-			}
+	for msg := range s.messageChan[id] {
+		if err = stream.Send(msg); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
 // ListenForClientMessages is an infinite routine listening for RPC client messages from the server to send to the client

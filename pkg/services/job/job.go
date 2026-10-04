@@ -357,9 +357,10 @@ func (s *Service) Add(agentID uuid.UUID, jobType string, jobArgs []string) (stri
 			Method: strings.ToLower(jobArgs[1]),
 		}
 
-		if payload.Method == "self" {
+		switch payload.Method {
+		case "self":
 			payload.Bytes = jobArgs[0]
-		} else if payload.Method == "remote" || payload.Method == "rtlcreateuserthread" || payload.Method == "userapc" {
+		case "remote", "rtlcreateuserthread", "userapc":
 			if len(jobArgs) < 3 {
 				return "", fmt.Errorf("the '%s' shellcode command requires three agruments, have %d", payload.Method, len(jobArgs))
 			}
@@ -486,7 +487,7 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 				}
 			}
 		}
-		args := fmt.Sprintf("%s", strings.Join(cmd.Args, " "))
+		args := strings.Join(cmd.Args, " ")
 		// Truncate to 30 characters
 		if len(args) > 30 {
 			args = fmt.Sprintf("%s...", args[:30])
@@ -494,7 +495,7 @@ func (s *Service) buildJob(agentID uuid.UUID, job *jobs.Job, jobArgs []string) e
 		command = fmt.Sprintf("%s %s", cmd.Command, args)
 	case jobs.CMD:
 		cmd := job.Payload.(jobs.Command)
-		args := fmt.Sprintf("%s", strings.Join(cmd.Args, " "))
+		args := strings.Join(cmd.Args, " ")
 		// Truncate to 30 characters
 		if len(args) > 30 {
 			args = fmt.Sprintf("%s...", args[:30])

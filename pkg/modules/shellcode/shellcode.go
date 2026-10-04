@@ -129,16 +129,16 @@ func parseHex(str []string) ([]byte, error) {
 
 	// see if string is prefixed with 0x
 	if hexString[0:2] == "0x" {
-		hexString = strings.Replace(hexString, "0x", "", -1)
-		hexString = strings.Replace(hexString, ",", "", -1)
-		hexString = strings.Replace(hexString, " ", "", -1)
+		hexString = strings.ReplaceAll(hexString, "0x", "")
+		hexString = strings.ReplaceAll(hexString, ",", "")
+		hexString = strings.ReplaceAll(hexString, " ", "")
 	}
 
 	// see if string is prefixed with \x
 	if hexString[0:2] == "\\x" {
-		hexString = strings.Replace(hexString, "\\x", "", -1)
-		hexString = strings.Replace(hexString, ",", "", -1)
-		hexString = strings.Replace(hexString, " ", "", -1)
+		hexString = strings.ReplaceAll(hexString, "\\x", "")
+		hexString = strings.ReplaceAll(hexString, ",", "")
+		hexString = strings.ReplaceAll(hexString, " ", "")
 	}
 
 	h, errH := hex.DecodeString(hexString)
