@@ -344,6 +344,9 @@ func (l *Listener) SetOption(option string, value string) error {
 		l.psk = psk[:]
 		// PSK needs to be set on the Server too
 		err = l.server.SetOption(option, value)
+		if err != nil {
+			return fmt.Errorf("pkg/listeners/http.SetOptions(): there was an error setting the PSK on the server: %s", err)
+		}
 		key = "PSK"
 	case "transforms":
 		var tl []transformer.Transformer

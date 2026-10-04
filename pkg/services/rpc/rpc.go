@@ -253,6 +253,8 @@ func (s *Server) Socks(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message, e
 		options["command"] = "stop"
 	default:
 		err = fmt.Errorf("unknown SOCKS command: %s", in.Arguments[0])
+		slog.Error(err.Error())
+		return
 	}
 
 	result, err := socks.Parse(options)

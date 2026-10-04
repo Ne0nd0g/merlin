@@ -227,13 +227,9 @@ func (s *Service) Status(id uuid.UUID) (status string, err error) {
 	}
 
 	var d time.Duration
-	d, err = time.ParseDuration(agent.Comms().Wait)
-
-	if err != nil && agent.Comms().Wait != "" {
-		err = fmt.Errorf("there was an error converting %s to a time duration: %s", agent.Comms().Wait, err)
-	}
-	// Clear the error
-	err = nil
+	// A malformed Wait value is intentionally ignored here: d stays 0 and the
+	// status logic below still resolves a status (an empty Wait is "Init").
+	d, _ = time.ParseDuration(agent.Comms().Wait)
 	if agent.Comms().Wait == "" {
 		status = "Init"
 	} else if agent.StatusCheckin().Add(d).After(time.Now()) {
