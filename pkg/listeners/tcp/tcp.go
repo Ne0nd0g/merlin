@@ -282,14 +282,14 @@ func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 		if err != nil {
 			return messages.Base{}, err
 		}
-		switch ret.(type) {
+		switch ret := ret.(type) {
 		case []uint8:
-			data = ret.([]byte)
+			data = ret
 		case string:
-			data = []byte(ret.(string)) // Probably not what I should be doing
+			data = []byte(ret) // Probably not what I should be doing
 		case messages.Base:
-			//fmt.Printf("pkg/listeners/tcp.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
-			return ret.(messages.Base), nil
+			//fmt.Printf("pkg/listeners/tcp.Deconstruct(): returning Base message: %+v\n", ret)
+			return ret, nil
 		default:
 			return messages.Base{}, fmt.Errorf("pkg/listeners.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)
 		}

@@ -43,9 +43,9 @@ func NewEncrypter() *Encrypter {
 // as bytes.
 // PBES2 uses Password-Based Key Derivation Function 2 (PBKDF2) with a hard-coded 3000 rounds (iterations)
 func (e *Encrypter) Construct(data any, key []byte) ([]byte, error) {
-	switch data.(type) {
+	switch data := data.(type) {
 	case []uint8:
-		return e.encrypt(data.([]byte), key)
+		return e.encrypt(data, key)
 	default:
 		return nil, fmt.Errorf("pkg/encrypters/jwe unhandled data type for Construct(): %T", data)
 	}

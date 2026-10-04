@@ -43,9 +43,9 @@ func NewEncrypter() *Encrypter {
 
 // Construct takes data in data, AES encrypts it with the provided key, and returns that data as bytes
 func (e *Encrypter) Construct(data any, key []byte) ([]byte, error) {
-	switch data.(type) {
+	switch data := data.(type) {
 	case []uint8:
-		return encrypt(data.([]byte), key)
+		return encrypt(data, key)
 	default:
 		return nil, fmt.Errorf("pkg/encrypters/aes unhandled data type for Construct(): %T", data)
 	}

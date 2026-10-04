@@ -255,15 +255,15 @@ func (l *Listener) Deconstruct(data, key []byte) (messages.Base, error) {
 		if err != nil {
 			return messages.Base{}, err
 		}
-		switch ret.(type) {
+		switch ret := ret.(type) {
 		case []uint8:
-			data = ret.([]byte)
+			data = ret
 		case string:
-			data = []byte(ret.(string)) // Probably not what I should be doing
+			data = []byte(ret) // Probably not what I should be doing
 		case messages.Base:
-			//fmt.Printf("pkg/listeners/http.Deconstruct(): returning Base message: %+v\n", ret.(messages.Base))
-			slog.Log(context.Background(), logging.LevelTrace, "returning Base message", "message", fmt.Sprintf("%+v", ret.(messages.Base)))
-			return ret.(messages.Base), nil
+			//fmt.Printf("pkg/listeners/http.Deconstruct(): returning Base message: %+v\n", ret)
+			slog.Log(context.Background(), logging.LevelTrace, "returning Base message", "message", fmt.Sprintf("%+v", ret))
+			return ret, nil
 		default:
 			return messages.Base{}, fmt.Errorf("pkg/listeners/http.Deconstruct(): unhandled data type for Deconstruct(): %T", ret)
 		}

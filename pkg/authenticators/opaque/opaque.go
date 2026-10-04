@@ -78,20 +78,18 @@ func (a *Authenticator) Authenticate(id uuid.UUID, data interface{}) (msg messag
 	defer slog.Log(context.Background(), logging.LevelTrace, "leaving function", "msg", msg, "Error", err)
 
 	// Verify the data interface is the opaque.Opaque type
-	switch data.(type) {
-	case opaque.Opaque:
-		// Do nothing
-		slog.Debug("Received OPAQUE message", "OPAQUE type", data.(opaque.Opaque).Type, "Agent", id)
-	default:
+	o, ok := data.(opaque.Opaque)
+	if ok {
+		slog.Debug("Received OPAQUE message", "OPAQUE type", o.Type, "Agent", id)
+	} else {
 		// If no Opaque data is passed in, assume the Agent needs to re-authenticate
-		data = opaque.Opaque{
+		o = opaque.Opaque{
 			Type:    opaque.ReAuthenticate,
 			Payload: nil,
 		}
 	}
 
 	var opq opaque.Opaque
-	o := data.(opaque.Opaque)
 	switch o.Type {
 	case opaque.RegInit:
 		opq, err = a.registrationInit(id, o, key)

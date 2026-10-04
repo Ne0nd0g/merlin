@@ -37,9 +37,9 @@ func NewEncrypter() *Encrypter {
 // Construct takes data in data, RC4 encrypts it with the provided key, and returns that data as bytes
 func (e *Encrypter) Construct(data any, key []byte) (retData []byte, err error) {
 
-	switch data.(type) {
+	switch data := data.(type) {
 	case []uint8:
-		return xor(data.([]byte), key)
+		return xor(data, key)
 	default:
 		return nil, fmt.Errorf("pkg/encrypters/rc4 unhandled data type for Construct(): %T", data)
 	}
