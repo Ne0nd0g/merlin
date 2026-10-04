@@ -39,8 +39,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
 	// Internal
@@ -503,10 +501,16 @@ func (s *Server) generateServer() error {
 			ErrorLog:          log.Default(),
 		}
 	case servers.H2C:
-		h2s := &http2.Server{}
+		// Serve cleartext HTTP/2 (H2C) natively via net/http (Go 1.24+), keeping
+		// HTTP/1.1 on the same listener. This replaces the deprecated
+		// golang.org/x/net/http2/h2c handler wrapper + http2.Server.
+		protocols := new(http.Protocols)
+		protocols.SetHTTP1(true)
+		protocols.SetUnencryptedHTTP2(true)
 		s.transport = &http.Server{
 			Addr:              fmt.Sprintf("%s:%d", s.iface, s.port),
-			Handler:           h2c.NewHandler(mux, h2s),
+			Handler:           mux,
+			Protocols:         protocols,
 			ReadTimeout:       10 * time.Second,
 			WriteTimeout:      10 * time.Second,
 			ReadHeaderTimeout: 30 * time.Second,
