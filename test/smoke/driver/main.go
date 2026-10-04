@@ -163,7 +163,7 @@ func runTransport(t transport, certPath, keyPath string) error {
 	preA := idSet(agentIDs(ctx))
 	url := fmt.Sprintf("%s://%s:%s/", t.scheme, lhost, t.port)
 	logPath := filepath.Join(workdir, "agent-"+strings.ToLower(t.name)+".log")
-	alog, _ := os.Create(logPath)
+	alog, _ := os.Create(logPath) // #nosec G304 - log path built under the test workdir
 	step("launching agent -> %s (log: %s)", url, logPath)
 	agent := exec.Command(agentBin, "-url", url, "-psk", psk, "-proto", t.agentProto, "-secure", "false", "-sleep", "1s") // #nosec G204 - local test binary
 	if alog != nil {
@@ -364,7 +364,7 @@ func genSelfSigned(dir string) (certPath, keyPath string, err error) {
 	}
 	certPath = filepath.Join(dir, "smoke.crt")
 	keyPath = filepath.Join(dir, "smoke.key")
-	certOut, err := os.Create(certPath)
+	certOut, err := os.Create(certPath) // #nosec G304 - cert path built under the test temp dir
 	if err != nil {
 		return "", "", err
 	}
@@ -376,7 +376,7 @@ func genSelfSigned(dir string) (certPath, keyPath string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 - key path built under the test temp dir
 	if err != nil {
 		return "", "", err
 	}

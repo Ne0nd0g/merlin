@@ -73,3 +73,23 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
+
+  gosec:
+    name: Security scan (gosec)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: gosec
+        # Run gosec with the toolchain selected above (mirrors the govulncheck step) so it can
+        # analyze this module's Go version; the securego/gosec Docker action can ship an older Go.
+        # G115 (integer overflow on conversion) is excluded repo-wide, matching the previous CI;
+        # individual findings are annotated inline with #nosec.
+        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -exclude G115 ./...

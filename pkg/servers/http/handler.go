@@ -87,8 +87,7 @@ func (h *Handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check for Merlin PRISM activity
 	if r.UserAgent() == "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.85 Safari/537.36 " {
-		msg := fmt.Sprintf("Someone from %s is attempting to fingerprint this Merlin server", r.RemoteAddr)
-		slog.Warn(msg)
+		slog.Warn("a client is attempting to fingerprint this Merlin server", "remoteAddr", r.RemoteAddr)
 	}
 
 	// Make sure the content type is: application/octet-stream; charset=utf-8
@@ -133,12 +132,12 @@ func (h *Handler) agentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set return headers
 	w.Header().Set("Content-Type", "application/octet-stream")
-	n, err := w.Write(rdata)
+	n, err := w.Write(rdata) // #nosec G705 - rdata is the octet-stream C2 payload returned to the agent, not browser-rendered HTML
 	if err != nil {
 		slog.Error(fmt.Sprintf("There was an error writing the HTTP response bytes: %s", err))
 		return
 	}
-	slog.Debug(fmt.Sprintf("Wrote %d bytes to HTTP response", n))
+	slog.Debug(fmt.Sprintf("Wrote %d bytes to HTTP response", n)) // #nosec G706 - logs only an int byte count; no tainted data
 }
 
 // checkJWT ensures that the incoming message has an Authorization header with a Bearer token.
@@ -183,13 +182,13 @@ func (h *Handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 		// If agentID was returned, then the message contained a JWT encrypted with the HTTP interface key and the claims were likely invalid
 		if agentID != uuid.Nil {
 			m := fmt.Sprintf("There was an error validating the JWT for Agent %s using the HTTP interface key. Returning 401 instructing the Agent to generate a self-signed JWT and try again. Error: %s", agentID, err)
-			slog.Warn(m)
+			slog.Warn("error validating the Agent JWT using the HTTP interface key; returning 401", "agentID", agentID, "error", err)
 			messageRepo.Add(message.NewMessage(message.Warn, m))
 			code = 401
 			return
 		} else {
 			if core.Verbose {
-				slog.Error(err.Error())
+				slog.Error("error validating the Agent JWT with the server interface key", "error", err)
 				msg := "Authorization JWT not signed with server's interface key, trying again with PSK..."
 				slog.Info(msg)
 				messageRepo.Add(message.NewMessage(message.Info, msg))
@@ -205,7 +204,7 @@ func (h *Handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 				} else {
 					m = fmt.Sprintf("There was an error validating the JWT for Agent %s using the listener's PSK. Returning 401 instructing the Agent to generate a self-signed JWT and try again.\n\tError: %s", agentID, err)
 				}
-				slog.Warn(m)
+				slog.Warn("error validating the Agent JWT using the listener's PSK; returning 401", "agentID", agentID, "error", err)
 				messageRepo.Add(message.NewMessage(message.Warn, m))
 				code = 401
 				return
@@ -213,7 +212,7 @@ func (h *Handler) checkJWT(request *http.Request) (agentID uuid.UUID, code int) 
 			if agentID != uuid.Nil {
 				if core.Debug {
 					msg := fmt.Sprintf("UnAuthenticated JWT from %s", agentID)
-					slog.Debug(msg)
+					slog.Debug("unauthenticated JWT", "agentID", agentID)
 					messageRepo.Add(message.NewMessage(message.Debug, msg))
 				}
 			}
