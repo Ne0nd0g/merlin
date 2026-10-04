@@ -1,0 +1,6 @@
+# golangci-lint v2 configuration.
+# Minimal on purpose: v2's default linters (errcheck, govet, ineffassign,
+# staticcheck, unused) plus its default "lax" exclusion of generated files
+# (e.g. *.pb.go) are a sensible baseline for the Merlin repos. Tighten per repo
+# as the code is cleaned up.
+version: "2"

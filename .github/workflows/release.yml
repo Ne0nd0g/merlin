@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Checkout Merlin
         id: checkout_merlin
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout Merlin-Agent
         id: checkout_merlin_agent
@@ -28,9 +28,9 @@ jobs:
 
       - name: Set up Go
         id: setup_go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
-          go-version: '1.24'
+          go-version-file: go.mod
 
         # Need 7zip installed to package up the release
       - name: Install 7zip
