@@ -4,7 +4,7 @@ go 1.27.0
 
 require (
 	github.com/Binject/go-donut v0.0.0-20220908180326-fcdcc35d591c
-	github.com/Ne0nd0g/merlin-message v1.3.0
+	github.com/Ne0nd0g/merlin-message v1.4.0-rc1
 	github.com/cretz/gopaque v0.1.0
 	github.com/go-jose/go-jose/v3 v3.0.5
 	github.com/google/uuid v1.6.0

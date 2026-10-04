@@ -3,8 +3,8 @@ github.com/Binject/debug v0.0.0-20260128230015-4e22595eaac6 h1:ifeU3Z7zc7C/hl0q8
 github.com/Binject/debug v0.0.0-20260128230015-4e22595eaac6/go.mod h1:QzgxDLY/qdKlvnbnb65eqTedhvQPbaSP2NqIbcuKvsQ=
 github.com/Binject/go-donut v0.0.0-20220908180326-fcdcc35d591c h1:cFMQKxryHZ3Sddca8nqJ1RDjaUTW/+79lRKs+7508nk=
 github.com/Binject/go-donut v0.0.0-20220908180326-fcdcc35d591c/go.mod h1:dc3mUnr4KTKcFKVq7BVbHGF0xAHrIyooQ+VTO7/bIZw=
-github.com/Ne0nd0g/merlin-message v1.3.0 h1:HelXwN6Gtk80C2ted0+PAprq+zRiQRGLG6s6phyFY5o=
-github.com/Ne0nd0g/merlin-message v1.3.0/go.mod h1:6eAh2KI4XrOAF+y4W2DN0qfRVWiAGzYlq148iKe3sSA=
+github.com/Ne0nd0g/merlin-message v1.4.0-rc1 h1:fSC3xCNrSB29Pyqr2oQR0SR0DtZ0wXFeCSA845zlid0=
+github.com/Ne0nd0g/merlin-message v1.4.0-rc1/go.mod h1:lGsAP7uYbC0AOmlVyi+ZtiAS1N57lqqqppgVRFvNgmA=
 github.com/akamensky/argparse v1.3.0/go.mod h1:S5kwC7IuDcEr5VeXtGPRVZ5o/FdhcMlQz4IZQuw64xA=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
