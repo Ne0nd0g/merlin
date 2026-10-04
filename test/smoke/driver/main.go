@@ -92,7 +92,7 @@ func main() {
 	if err != nil {
 		exit("dial %s: %s", *addr, err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	client = pb.NewMerlinClient(conn)
 
 	certPath, keyPath, err := genSelfSigned(workdir)
@@ -368,7 +368,11 @@ func genSelfSigned(dir string) (certPath, keyPath string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer certOut.Close()
+	defer func() {
+		if cerr := certOut.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	if err = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: der}); err != nil {
 		return "", "", err
 	}
@@ -380,7 +384,11 @@ func genSelfSigned(dir string) (certPath, keyPath string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer keyOut.Close()
+	defer func() {
+		if cerr := keyOut.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 	if err = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}); err != nil {
 		return "", "", err
 	}
