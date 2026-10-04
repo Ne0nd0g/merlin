@@ -89,7 +89,10 @@ func TestTLSCertGeneration(t *testing.T) {
 	}
 
 	//times
-	expectYear, expectMonth, expectDay := notBefore.Date()
+	// x509 stores certificate times in UTC, so ParseCertificate returns them in UTC.
+	// Compare the expected times in UTC too; otherwise a machine behind UTC can see the
+	// local and UTC calendar dates differ by a day (off-by-one).
+	expectYear, expectMonth, expectDay := notBefore.UTC().Date()
 	certYear, certMonth, certDay := x5certSetVals.NotBefore.Date()
 	if expectYear != certYear || expectMonth != certMonth || expectDay != certDay {
 		t.Error(fmt.Errorf(
@@ -102,7 +105,7 @@ func TestTLSCertGeneration(t *testing.T) {
 			expectDay,
 		))
 	}
-	expectYear, expectMonth, expectDay = notAfter.Date()
+	expectYear, expectMonth, expectDay = notAfter.UTC().Date()
 	certYear, certMonth, certDay = x5certSetVals.NotAfter.Date()
 	if expectYear != certYear || expectMonth != certMonth || expectDay != certDay {
 		t.Error(fmt.Errorf(
