@@ -57,7 +57,6 @@ type Info struct {
 	jobType   string    // Type of job
 	token     uuid.UUID // A unique token for each task that acts like a CSRF token to prevent multiple job messages
 	status    Status    // Use JOB_ constants
-	chunk     int       // The chunk number
 	created   time.Time // Time the job was created
 	sent      time.Time // Time the job was sent to the agent
 	completed time.Time // Time the job finished
