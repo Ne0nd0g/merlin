@@ -251,13 +251,20 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 	}
 
 	thisAgent.Log("Received agent OPAQUE authentication complete message")
-	err = a.agentService.UpdateAuthenticated(agentID, true)
-	if err != nil {
-		return err
+
+	// Verify the agent's OPAQUE authentication proof BEFORE marking the agent as
+	// authenticated. Previously the authenticated/alive flags were set first and
+	// were never rolled back when verification failed, so an agent could be treated
+	// as authenticated without a valid PAKE proof (GHSA-j4v3-8vg5-7p7g, finding S1).
+	if err = opaque2.ServerAuthenticateComplete(o, thisAgent.OPAQUE()); err != nil {
+		return fmt.Errorf("pkg/authenticaters/opaque.authenticateComplete(): %s", err)
 	}
 
-	err = a.agentService.UpdateAlive(agentID, true)
-	if err != nil {
+	// The proof is valid; only now is it safe to mark the agent authenticated and alive.
+	if err = a.agentService.UpdateAuthenticated(agentID, true); err != nil {
+		return err
+	}
+	if err = a.agentService.UpdateAlive(agentID, true); err != nil {
 		return err
 	}
 
@@ -267,7 +274,7 @@ func (a *Authenticator) authenticateComplete(agentID uuid.UUID, o opaque.Opaque)
 		slog.Debug("Leaving opaque.authenticateComplete() function without error")
 	}
 
-	return opaque2.ServerAuthenticateComplete(o, thisAgent.OPAQUE())
+	return nil
 }
 
 // reAuthenticate is used when an agent has previously completed OPAQUE registration but needs to re-authenticate
