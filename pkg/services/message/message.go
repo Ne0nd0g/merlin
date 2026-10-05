@@ -303,7 +303,13 @@ func (s *Service) Handle(id uuid.UUID, data []byte) (rdata []byte, err error) {
 	case messages.CHECKIN:
 		// Nothing to do
 	case messages.JOBS:
-		err = s.jobService.Handler(msg.Payload.([]jobs.Job))
+		agentJobs, ok := msg.Payload.([]jobs.Job)
+		if !ok {
+			err = fmt.Errorf("expected a []jobs.Job payload, received %T", msg.Payload)
+			slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
+			return
+		}
+		err = s.jobService.Handler(agentJobs)
 		if err != nil {
 			slog.Error(fmt.Sprintf("pkg/service/message.Handle(): %s", err))
 			return

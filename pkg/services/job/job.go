@@ -821,7 +821,10 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				userMessage := message.NewMessage(message.Note, fmt.Sprintf("Results of job %s for agent %s at %s", job.ID, job.AgentID, time.Now().UTC().Format(time.RFC3339)))
 				s.messageRepo.Add(userMessage)
 
-				result := job.Payload.(jobs.Results)
+				result, ok := job.Payload.(jobs.Results)
+				if !ok {
+					return fmt.Errorf("pkg/services/job.Handler(): expected a jobs.Results payload for job %s, received %T", job.ID, job.Payload)
+				}
 				if len(result.Stdout) > 0 {
 					a.Log(fmt.Sprintf("Command Results (stdout):\r\n%s", result.Stdout))
 					userMessage = message.NewMessage(message.Success, result.Stdout)
@@ -833,7 +836,11 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 					s.messageRepo.Add(userMessage)
 				}
 			case jobs.AGENTINFO:
-				err = s.agentService.UpdateAgentInfo(job.AgentID, job.Payload.(messages.AgentInfo))
+				agentInfo, ok := job.Payload.(messages.AgentInfo)
+				if !ok {
+					return fmt.Errorf("pkg/services/job.Handler(): expected a messages.AgentInfo payload for job %s, received %T", job.ID, job.Payload)
+				}
+				err = s.agentService.UpdateAgentInfo(job.AgentID, agentInfo)
 				if err != nil {
 					return err
 				}
@@ -842,7 +849,11 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 				userMessage := message.NewMessage(message.Note, msg)
 				s.messageRepo.Add(userMessage)
 			case jobs.FILETRANSFER:
-				err = s.fileTransfer(job.AgentID, job.Payload.(jobs.FileTransfer))
+				transfer, ok := job.Payload.(jobs.FileTransfer)
+				if !ok {
+					return fmt.Errorf("pkg/services/job.Handler(): expected a jobs.FileTransfer payload for job %s, received %T", job.ID, job.Payload)
+				}
+				err = s.fileTransfer(job.AgentID, transfer)
 				if err != nil {
 					return err
 				}
@@ -853,7 +864,11 @@ func (s *Service) Handler(agentJobs []jobs.Job) error {
 			// Update Jobs Info structure
 
 			if job.Type == jobs.SOCKS {
-				if job.Payload.(jobs.Socks).Close {
+				socksJob, ok := job.Payload.(jobs.Socks)
+				if !ok {
+					return fmt.Errorf("pkg/services/job.Handler(): expected a jobs.Socks payload for job %s, received %T", job.ID, job.Payload)
+				}
+				if socksJob.Close {
 					jobInfo.Complete()
 				} else {
 					jobInfo.Active()

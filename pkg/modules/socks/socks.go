@@ -250,7 +250,11 @@ func processMessage() {
 	for {
 		job := <-jobsIn
 		agent := job.AgentID
-		socks := job.Payload.(merlinJob.Socks)
+		socks, ok := job.Payload.(merlinJob.Socks)
+		if !ok {
+			slog.Error(fmt.Sprintf("the SOCKS processMessage() function received an unexpected payload type %T for job %s", job.Payload, job.ID))
+			continue
+		}
 
 		// Make sure the connection ID is known
 		// The Agent can send back data for a connection that has been closed and deleted by the SOCKS client
@@ -287,10 +291,14 @@ func In(job merlinJob.Job) {
 		slog.Debug(fmt.Sprintf("Entered into SOCKS module In() function with: %+v", job))
 	}
 
-	socks := job.Payload.(merlinJob.Socks)
+	socks, ok := job.Payload.(merlinJob.Socks)
+	if !ok {
+		slog.Error(fmt.Sprintf("the SOCKS In() function received an unexpected payload type %T for job %s", job.Payload, job.ID))
+		return
+	}
 
 	// Make sure the connection ID is known
-	_, ok := connections.Load(socks.ID)
+	_, ok = connections.Load(socks.ID)
 	if !ok {
 		slog.Debug("Unknown SOCKS connection, dropping SOCKS data", "ID", socks.ID, "Index", socks.Index, "Close", socks.Close, "Data Length", len(socks.Data))
 		return
