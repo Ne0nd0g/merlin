@@ -30,13 +30,13 @@ windows-garble:
 linux:
 	export GOOS=linux && export GOARCH=amd64 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-x64 main.go
 
-# Compile Server - Linux arm (armv7)
+# Compile Server - Linux arm (armv7, static/pure-Go: CGO disabled)
 linux-arm:
-	export GOOS=linux && export GOARCH=arm && export GOARM=7 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm main.go
+	export GOOS=linux && export GOARCH=arm && export GOARM=7 && export CGO_ENABLED=0 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm main.go
 
-# Compile Server - Linux arm64
+# Compile Server - Linux arm64 (static/pure-Go: CGO disabled)
 linux-arm64:
-	export GOOS=linux && export GOARCH=arm64 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm64 main.go
+	export GOOS=linux && export GOARCH=arm64 && export CGO_ENABLED=0 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm64 main.go
 
 # The SEED must be the exact same that was used when compiling the agent
 # Garble version 0.5.2 or later must be installed and accessible in the PATH environment variable
