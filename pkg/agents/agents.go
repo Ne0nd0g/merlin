@@ -264,8 +264,18 @@ func (a *Agent) Links() []uuid.UUID {
 	return a.linkedAgents
 }
 
-// AddLink adds a new child Agent to the list of linked Agents
+// AddLink adds a new child Agent to the list of linked Agents. A self-link or a
+// duplicate is ignored so an attacker-supplied delegate message cannot seed the
+// cyclic peer-to-peer link graph behind GHSA-j4v3-8vg5-7p7g.
 func (a *Agent) AddLink(link uuid.UUID) {
+	if link == a.id {
+		return
+	}
+	for _, l := range a.linkedAgents {
+		if l == link {
+			return
+		}
+	}
 	a.linkedAgents = append(a.linkedAgents, link)
 }
 

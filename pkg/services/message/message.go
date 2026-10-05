@@ -429,16 +429,20 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 			}
 		}
 
-		// Add the parent/child link if it doesn't already exist
-		linked, err := s.agentService.Linked(parent, del.Agent)
-		if err != nil {
-			return err
-		}
-		if !linked {
-			//fmt.Printf("Adding child link %s to parent %s\n", delegate.Agent, parent)
-			err = s.agentService.Link(parent, del.Agent)
+		// Add the parent/child link if it doesn't already exist. Never link an Agent
+		// to itself: del.Agent is attacker-controlled, and a self (or cyclic) link is
+		// the primitive that drives the unbounded link-graph walk in GHSA-j4v3-8vg5-7p7g.
+		if del.Agent != parent {
+			linked, err := s.agentService.Linked(parent, del.Agent)
 			if err != nil {
 				return err
+			}
+			if !linked {
+				//fmt.Printf("Adding child link %s to parent %s\n", delegate.Agent, parent)
+				err = s.agentService.Link(parent, del.Agent)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -466,6 +470,15 @@ func (s *Service) delegate(parent uuid.UUID, delegates []messages.Delegate) erro
 // getBase builds a return Base message for the Agent id, encodes/encrypts it, and returns it as bytes.
 // If there are any Jobs, they will be added to the Base message here
 func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
+	// Seed the visited set with the root Agent so the peer-to-peer link-graph walk
+	// cannot recurse forever on a cycle and crash the server (GHSA-j4v3-8vg5-7p7g).
+	return s.getBaseVisited(id, map[uuid.UUID]bool{id: true})
+}
+
+// getBaseVisited is the recursive core of getBase. seen holds the Agent IDs already
+// visited on the current walk of the peer-to-peer link graph so that a cyclic
+// parent/child link cannot drive unbounded recursion (GHSA-j4v3-8vg5-7p7g).
+func (s *Service) getBaseVisited(id uuid.UUID, seen map[uuid.UUID]bool) (data []byte, err error) {
 	//fmt.Printf("Getting Base messages for %s\n", id)
 	// Ensure the id is for a valid Agent
 	var a agents.Agent
@@ -519,7 +532,7 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 	}
 
 	// Get delegate messages
-	returnMessage.Delegates, err = s.getDelegates(id)
+	returnMessage.Delegates, err = s.getDelegatesVisited(id, seen)
 	if err != nil {
 		// Do not return an error because it will cause the Parent Agent to quit functioning
 		slog.Error(fmt.Sprintf("pkg/services/message.getBase(): %s", err))
@@ -537,6 +550,15 @@ func (s *Service) getBase(id uuid.UUID) (data []byte, err error) {
 
 // getDelegates retrieves messages stored in the delegates repository for the passed in Agent ID
 func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
+	// Seed the visited set with the root Agent so the walk below cannot recurse
+	// forever on a cyclic peer-to-peer link (GHSA-j4v3-8vg5-7p7g).
+	return s.getDelegatesVisited(id, map[uuid.UUID]bool{id: true})
+}
+
+// getDelegatesVisited is the recursive core of getDelegates. seen holds the Agent
+// IDs already visited on the current walk so that a cycle in the peer-to-peer link
+// graph cannot drive unbounded recursion and crash the server (GHSA-j4v3-8vg5-7p7g).
+func (s *Service) getDelegatesVisited(id uuid.UUID, seen map[uuid.UUID]bool) ([]messages.Delegate, error) {
 	//fmt.Printf("Getting delegate messages for %s\n", id)
 	var delegates []messages.Delegate
 
@@ -556,6 +578,14 @@ func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 	if len(links) > 0 {
 		// For each child Agent
 		for _, link := range links {
+			// Skip any child link already visited on this walk. Following it would
+			// mean the link graph contains a cycle, and recursing into it would grow
+			// the goroutine stack until the server crashes (GHSA-j4v3-8vg5-7p7g).
+			if seen[link] {
+				slog.Warn("skipping cyclic peer-to-peer agent link", "parent", id, "child", link)
+				continue
+			}
+			seen[link] = true
 			// Get messages from the Delegate repository
 			delegateMessages := s.delegates.Get(link)
 			// If any delegate messages were returned, add them to the list of return delegates
@@ -566,7 +596,7 @@ func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 						Payload: msg,
 					}
 					// Recursive Get
-					d.Delegates, err = s.getDelegates(link)
+					d.Delegates, err = s.getDelegatesVisited(link, seen)
 					if err != nil {
 						return delegates, err
 					}
@@ -576,7 +606,7 @@ func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
 			if s.agentService.Authenticated(link) {
 				// See if there are any Base messages (likely Jobs) for the delegate
 				var rdata []byte
-				rdata, err = s.getBase(link)
+				rdata, err = s.getBaseVisited(link, seen)
 				if err != nil {
 					err = fmt.Errorf("pkg/services/message/getDelegate(): %s", err)
 					return delegates, err
