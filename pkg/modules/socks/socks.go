@@ -47,8 +47,15 @@ var connections = sync.Map{}
 // done is a map keyed to a connection ID used to signal the go routine that we are done with the connection
 var done = sync.Map{}
 
-// jobsIn is a channel used to queue new or out-of-order jobs that will be sent to the SOCKS client
+// jobsIn is a channel used to queue SOCKS messages from the agent that will be sent to the SOCKS client
 var jobsIn = make(chan merlinJob.Job, 1000)
+
+// maxPendingSOCKSMessages bounds the per-connection reorder buffer. SOCKS messages
+// whose index arrives ahead of the expected index are buffered until the gap fills;
+// if more than this many messages are buffered the connection is treated as broken
+// and closed, so an index that never arrives cannot grow memory without bound
+// (GHSA-j4v3-8vg5-7p7g finding S4).
+const maxPendingSOCKSMessages = 1024
 
 // JobsOut is a channel used by the pkg/server/jobs/jobs.go to send data to the Merlin agent
 var JobsOut = make(chan merlinJob.Job, 1000)
@@ -64,6 +71,9 @@ type Connection struct {
 	Conn net.Conn
 	// Index is used to track and order data being sent to the SOCKS client
 	Index int
+	// pending buffers out-of-order messages keyed by their index until the missing
+	// indices arrive, so processMessage delivers data in order without requeuing
+	pending map[int]merlinJob.Socks
 }
 
 // Parse is the main entry point for the SOCKS module used to receive commands from operators
@@ -170,6 +180,7 @@ func start(agent uuid.UUID) {
 		connection := &Connection{
 			AgentID: agent,
 			Conn:    conn,
+			pending: make(map[int]merlinJob.Socks),
 		}
 
 		connections.Store(id, connection)
@@ -245,6 +256,22 @@ func readSOCKSClient(id uuid.UUID) {
 	}
 }
 
+// writeSOCKSMessage writes a single in-order SOCKS message to the SOCKS client and
+// advances the connection's expected index. The index is advanced even on a write
+// error so a failed write does not stall ordering for the rest of the connection.
+func writeSOCKSMessage(agent uuid.UUID, socks merlinJob.Socks, c *Connection) error {
+	n, err := c.Conn.Write(socks.Data)
+	c.Index++
+	if err != nil {
+		slog.Error("there was an error writing to the SOCKS client", "Agent", agent, "ID", socks.ID, "Index", socks.Index, "Close", socks.Close, "Data Length", len(socks.Data), "Error", err)
+		return err
+	}
+	if core.Debug {
+		slog.Debug(fmt.Sprintf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s", n, socks.Index, agent, socks.ID))
+	}
+	return nil
+}
+
 // processMessage is an infinite loop reading incoming socks connection data from the agent and sending it to the SOCKS client
 func processMessage() {
 	for {
@@ -265,22 +292,43 @@ func processMessage() {
 			continue
 		}
 
-		// Ensure this is the right index
-		if conn.(*Connection).Index == socks.Index {
-			n, err := conn.(*Connection).Conn.Write(socks.Data)
-			conn.(*Connection).Index++
-			if err != nil {
-				slog.Error("there was an error writing to the SOCKS client", "Agent", agent, "ID", socks.ID, "Index", socks.Index, "Close", socks.Close, "Data Length", len(socks.Data), "Error", err)
+		// Deliver the message to the SOCKS client in index order. Out-of-order
+		// messages are buffered (not requeued) so processMessage cannot spin on an
+		// index that will never match (GHSA-j4v3-8vg5-7p7g finding S4).
+		c := conn.(*Connection)
+		switch {
+		case socks.Index == c.Index:
+			// The expected message: write it, then flush any buffered messages that
+			// are now contiguous with the connection's index.
+			if err := writeSOCKSMessage(agent, socks, c); err != nil {
 				continue
 			}
-			if core.Debug {
-				slog.Debug(fmt.Sprintf("Wrote %d bytes with message index %d to the SOCKS client for agent %s connection ID %s with error %s", n, socks.Index, agent, socks.ID, err))
+			for {
+				next, buffered := c.pending[c.Index]
+				if !buffered {
+					break
+				}
+				delete(c.pending, c.Index)
+				if err := writeSOCKSMessage(agent, next, c); err != nil {
+					break
+				}
 			}
-		} else {
-			if core.Debug {
-				slog.Debug(fmt.Sprintf("Received job out of order for agent %s connection %s. Expected %d, got %d", agent, socks.ID, conn.(*Connection).Index, socks.Index))
+		case socks.Index > c.Index:
+			// A future message: buffer it until the missing indices arrive. Close the
+			// connection if the buffer grows past its bound so a never-arriving index
+			// cannot consume memory without limit.
+			if len(c.pending) >= maxPendingSOCKSMessages {
+				slog.Error("SOCKS reorder buffer limit exceeded; closing connection", "Agent", agent, "ID", socks.ID, "Expected", c.Index, "Got", socks.Index, "Buffered", len(c.pending))
+				_ = c.Conn.Close()
+				connections.Delete(socks.ID)
+				continue
 			}
-			jobsIn <- job
+			c.pending[socks.Index] = socks
+		default:
+			// socks.Index < c.Index: this index was already written; drop the stale message.
+			if core.Debug {
+				slog.Debug(fmt.Sprintf("Dropping stale SOCKS message for agent %s connection %s. Expected %d, got %d", agent, socks.ID, c.Index, socks.Index))
+			}
 		}
 	}
 }
