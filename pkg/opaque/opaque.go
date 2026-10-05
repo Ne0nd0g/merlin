@@ -162,6 +162,18 @@ func ServerAuthenticateInit(o opaque.Opaque, server *Server) (opaque.Opaque, err
 func ServerAuthenticateComplete(o opaque.Opaque, server *Server) error {
 	slog.Log(context.Background(), logging.LevelTrace, "entering into function")
 
+	// Ensure the server parameter is not nil
+	if server == nil {
+		return fmt.Errorf("pkg/opaque.ServerAuthenticateComplete(): the OPAQUE server parameter was nil")
+	}
+
+	// Ensure ServerAuthenticateInit ran first; server.auth is only set there. An
+	// agent that sends AuthComplete without a preceding AuthInit reaches this
+	// function with a nil server.auth (GHSA-j4v3-8vg5-7p7g, finding S2).
+	if server.auth == nil {
+		return fmt.Errorf("pkg/opaque.ServerAuthenticateComplete(): the OPAQUE server authentication was not initialized")
+	}
+
 	var userComplete gopaque.UserAuthComplete
 	errFromBytes := userComplete.FromBytes(gopaque.CryptoDefault, o.Payload)
 	if errFromBytes != nil {
