@@ -9,6 +9,11 @@ $(shell mkdir -p ${DIR})
 # Go build flags
 LDFLAGS=-ldflags '-X github.com/Ne0nd0g/merlin/v2/pkg.Build=${BUILD} -buildid='
 
+# Build fully static, pure-Go binaries for every target. The server uses no cgo,
+# so this only forces static linking + Go's native net/user resolvers and makes
+# builds deterministic regardless of which C toolchains exist on the build host.
+export CGO_ENABLED := 0
+
 # Misc
 # The Merlin server and agent MUST be built with the same seed value
 # Set during build with "make linux-garble SEED=<insert seed>
@@ -30,13 +35,13 @@ windows-garble:
 linux:
 	export GOOS=linux && export GOARCH=amd64 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-x64 main.go
 
-# Compile Server - Linux arm (armv7, static/pure-Go: CGO disabled)
+# Compile Server - Linux arm (armv7)
 linux-arm:
-	export GOOS=linux && export GOARCH=arm && export GOARM=7 && export CGO_ENABLED=0 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm main.go
+	export GOOS=linux && export GOARCH=arm && export GOARM=7 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm main.go
 
-# Compile Server - Linux arm64 (static/pure-Go: CGO disabled)
+# Compile Server - Linux arm64
 linux-arm64:
-	export GOOS=linux && export GOARCH=arm64 && export CGO_ENABLED=0 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm64 main.go
+	export GOOS=linux && export GOARCH=arm64 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Linux-arm64 main.go
 
 # The SEED must be the exact same that was used when compiling the agent
 # Garble version 0.5.2 or later must be installed and accessible in the PATH environment variable
