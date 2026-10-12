@@ -3,8 +3,8 @@ github.com/Binject/debug v0.0.0-20260128230015-4e22595eaac6 h1:ifeU3Z7zc7C/hl0q8
 github.com/Binject/debug v0.0.0-20260128230015-4e22595eaac6/go.mod h1:QzgxDLY/qdKlvnbnb65eqTedhvQPbaSP2NqIbcuKvsQ=
 github.com/Binject/go-donut v0.0.0-20220908180326-fcdcc35d591c h1:cFMQKxryHZ3Sddca8nqJ1RDjaUTW/+79lRKs+7508nk=
 github.com/Binject/go-donut v0.0.0-20220908180326-fcdcc35d591c/go.mod h1:dc3mUnr4KTKcFKVq7BVbHGF0xAHrIyooQ+VTO7/bIZw=
-github.com/Ne0nd0g/merlin-message v1.4.0-rc1 h1:fSC3xCNrSB29Pyqr2oQR0SR0DtZ0wXFeCSA845zlid0=
-github.com/Ne0nd0g/merlin-message v1.4.0-rc1/go.mod h1:lGsAP7uYbC0AOmlVyi+ZtiAS1N57lqqqppgVRFvNgmA=
+github.com/Ne0nd0g/merlin-message v1.4.0 h1:vva3J89ZoMv28LqZm5pHIWGH9IEpp0fXLGkG7EI8w0w=
+github.com/Ne0nd0g/merlin-message v1.4.0/go.mod h1:lGsAP7uYbC0AOmlVyi+ZtiAS1N57lqqqppgVRFvNgmA=
 github.com/akamensky/argparse v1.3.0/go.mod h1:S5kwC7IuDcEr5VeXtGPRVZ5o/FdhcMlQz4IZQuw64xA=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
@@ -80,8 +80,8 @@ golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v
 golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
 golang.org/x/net v0.10.0/go.mod h1:0qNGK6F8kojg2nk9dLZ2mShWaEBan6FAoqfSigmmuDg=
-golang.org/x/net v0.59.0 h1:5zfYln+w5XCxwrnMMJPufRgNoXEaGxl0wo5GqPXyues=
-golang.org/x/net v0.59.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=
+golang.org/x/net v0.60.0 h1:79p50tfZlm0J9YfoDsSi639qSXNGVwEzOPLCxM2FsYU=
+golang.org/x/net v0.60.0/go.mod h1:2DA/G1UfVbCpQPeWTmMPGY7Cs2PkBkwu743bVX5PIVg=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

@@ -1,10 +1,10 @@
 module github.com/Ne0nd0g/merlin/v2
 
-go 1.27.0
+go 1.27.2
 
 require (
 	github.com/Binject/go-donut v0.0.0-20220908180326-fcdcc35d591c
-	github.com/Ne0nd0g/merlin-message v1.4.0-rc1
+	github.com/Ne0nd0g/merlin-message v1.4.0
 	github.com/cretz/gopaque v0.1.0
 	github.com/go-jose/go-jose/v3 v3.0.5
 	github.com/google/uuid v1.6.0
@@ -21,7 +21,7 @@ require (
 	go.dedis.ch/fixbuf v1.0.3 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
-	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
