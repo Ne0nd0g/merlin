@@ -554,16 +554,11 @@ func (s *Service) getBaseVisited(id uuid.UUID, seen map[uuid.UUID]bool) (data []
 	return s.Construct(returnMessage)
 }
 
-// getDelegates retrieves messages stored in the delegates repository for the passed in Agent ID
-func (s *Service) getDelegates(id uuid.UUID) ([]messages.Delegate, error) {
-	// Seed the visited set with the root Agent so the walk below cannot recurse
-	// forever on a cyclic peer-to-peer link (GHSA-j4v3-8vg5-7p7g).
-	return s.getDelegatesVisited(id, map[uuid.UUID]bool{id: true})
-}
-
-// getDelegatesVisited is the recursive core of getDelegates. seen holds the Agent
-// IDs already visited on the current walk so that a cycle in the peer-to-peer link
-// graph cannot drive unbounded recursion and crash the server (GHSA-j4v3-8vg5-7p7g).
+// getDelegatesVisited retrieves messages stored in the delegates repository for the
+// passed in Agent ID and walks its peer-to-peer children. seen holds the Agent IDs
+// already visited on the current walk so that a cycle in the peer-to-peer link graph
+// cannot drive unbounded recursion and crash the server (GHSA-j4v3-8vg5-7p7g). Callers
+// seed it with the root Agent ID; getBaseVisited is the entry point for a check-in.
 func (s *Service) getDelegatesVisited(id uuid.UUID, seen map[uuid.UUID]bool) ([]messages.Delegate, error) {
 	//fmt.Printf("Getting delegate messages for %s\n", id)
 	var delegates []messages.Delegate

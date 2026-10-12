@@ -92,4 +92,19 @@ jobs:
         # analyze this module's Go version; the securego/gosec Docker action can ship an older Go.
         # G115 (integer overflow on conversion) is excluded repo-wide, matching the previous CI;
         # individual findings are annotated inline with #nosec.
-        run: go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -exclude G115 ./...
+        #
+        # gosec v2.29.0 (latest) cannot build the SSA representation of a go1.27.2 module and exits
+        # non-zero with "package ... has type errors" on nearly every package, despite finding zero
+        # issues. Until a gosec release supports go1.27.2, run with -no-fail and gate on the real
+        # finding count (Stats.found) from the JSON report: still fails on an actual finding, but
+        # tolerates the SSA analysis noise.
+        run: |
+          out="${RUNNER_TEMP}/gosec.json"
+          go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 \
+            -no-fail -exclude G115 -fmt json -out "$out" ./...
+          found=$(jq '.Stats.found' "$out")
+          echo "gosec real issues found: $found (SSA/type-error analysis noise is tolerated)"
+          if [ "$found" -ne 0 ]; then
+            jq -r '.Issues[] | "  \(.severity)/\(.confidence) \(.rule_id) \(.file):\(.line) \(.details)"' "$out"
+            exit 1
+          fi

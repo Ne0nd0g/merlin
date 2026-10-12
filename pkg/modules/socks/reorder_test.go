@@ -40,7 +40,7 @@ func TestProcessMessageReorders(t *testing.T) {
 	// serverConn, the test reads what the SOCKS client would have received from
 	// clientConn.
 	clientConn, serverConn := net.Pipe()
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	id := uuid.New()
 	connections.Store(id, &Connection{
