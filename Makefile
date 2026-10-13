@@ -52,12 +52,16 @@ linux-garble:
 darwin:
 	export GOOS=darwin && export GOARCH=amd64 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Darwin-x64 main.go
 
+# Compile Server - Darwin arm64 (Apple Silicon)
+darwin-arm64:
+	export GOOS=darwin && export GOARCH=arm64 && go build ${LDFLAGS} -o ${DIR}/merlinServer-Darwin-arm64 main.go
+
 # The SEED must be the exact same that was used when compiling the agent
 # Garble version 0.5.2 or later must be installed and accessible in the PATH environment variable
 darwin-garble:
 	export GOOS=darwin GOARCH=amd64 && garble -tiny -literals -seed ${SEED} build ${LDFLAGS} -o ${DIR}/merlinServer-Darwin-x64.exe main.go
 
-distro: windows linux linux-arm linux-arm64 darwin
+distro: windows linux linux-arm linux-arm64 darwin darwin-arm64
 
 clean:
 	rm -rf ${DIR}*

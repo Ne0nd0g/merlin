@@ -95,6 +95,7 @@ jobs:
           7za a -pmerlin -mhe -mx=9 merlinServer-Linux-arm64.7z $F merlinServer-Linux-arm64
           7za a -pmerlin -mhe -mx=9 merlinServer-Linux-arm.7z $F merlinServer-Linux-arm
           7za a -pmerlin -mhe -mx=9 merlinServer-Darwin-x64.7z $F merlinServer-Darwin-x64
+          7za a -pmerlin -mhe -mx=9 merlinServer-Darwin-arm64.7z $F merlinServer-Darwin-arm64
           7za a -pmerlin -mhe -mx=9 merlinServer-Windows-x64.7z $F merlinServer-Windows-x64.exe
 
       - name: Create Draft Release
