@@ -35,6 +35,7 @@ import (
 
 	// Merlin
 	"github.com/Ne0nd0g/merlin/v2/pkg/agents"
+	"github.com/Ne0nd0g/merlin/v2/pkg/agents/bolt"
 	"github.com/Ne0nd0g/merlin/v2/pkg/agents/memory"
 	"github.com/Ne0nd0g/merlin/v2/pkg/group"
 	groupMemory "github.com/Ne0nd0g/merlin/v2/pkg/group/memory"
@@ -46,7 +47,9 @@ type Service struct {
 	groupRepo group.Repository
 }
 
-// memoryService is an in-memory instantiation of the Agent service so that it can be used by others
+// memoryService is the process-wide Agent service singleton shared by every caller
+// of NewAgentService(). It defaults to an in-memory Agent repository but may be
+// configured for persistence up front via UseBoltAgentRepository().
 var memoryService *Service
 
 // NewAgentService is a factory to create an Agent service to be used by other packages or services
@@ -60,9 +63,36 @@ func NewAgentService() *Service {
 	return memoryService
 }
 
+// UseBoltAgentRepository configures the process-wide Agent service to persist Agents
+// to a bbolt database at the provided path instead of keeping them only in memory, so
+// Agents survive a server restart. It must be called once during start-up, before the
+// first call to NewAgentService() (i.e. before any listener, authenticator, or RPC
+// service is created). It returns an error if the database cannot be opened or if the
+// Agent service has already been initialized.
+func UseBoltAgentRepository(path string) error {
+	if memoryService != nil {
+		return fmt.Errorf("pkg/services/agent.UseBoltAgentRepository(): the Agent service is already initialized; it must be called before NewAgentService()")
+	}
+	repo, err := WithBoltAgentRepository(path)
+	if err != nil {
+		return err
+	}
+	memoryService = &Service{
+		agentRepo: repo,
+		groupRepo: WithMemoryGroupRepository(),
+	}
+	return nil
+}
+
 // WithMemoryAgentRepository retrieves an in-memory Agent repository interface used to manage Agent object
 func WithMemoryAgentRepository() agents.Repository {
 	return memory.NewRepository()
+}
+
+// WithBoltAgentRepository retrieves a bbolt-backed Agent repository that persists Agents
+// to the database at path so they survive a server restart
+func WithBoltAgentRepository(path string) (agents.Repository, error) {
+	return bolt.NewRepository(path)
 }
 
 // WithMemoryGroupRepository retrieves an in-memory Group repository interface used to manage Agent Group object

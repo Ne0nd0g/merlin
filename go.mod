@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/quic-go/quic-go v0.63.0
 	go.dedis.ch/kyber/v3 v3.1.0
+	go.etcd.io/bbolt v1.4.3
 	golang.org/x/sync v0.23.0
 	google.golang.org/grpc v1.83.2 // pinned <1.84: v1.84.0 regressed GO-2026-6443; next stable fix is v1.85.x
 	google.golang.org/protobuf v1.36.12

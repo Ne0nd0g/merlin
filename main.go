@@ -29,6 +29,7 @@ import (
 	// Internal
 	merlin "github.com/Ne0nd0g/merlin/v2/pkg"
 	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/services/agent"
 	"github.com/Ne0nd0g/merlin/v2/pkg/services/rpc"
 )
 
@@ -39,6 +40,7 @@ func main() {
 	tlsKey := flag.String("tlsKey", "", "TLS private key file path")
 	tlsCert := flag.String("tlsCert", "", "TLS certificate file path")
 	tlsCA := flag.String("tlsCA", "", "TLS Certificate Authority file path to verify client certificates")
+	db := flag.String("db", "", "Path to a bbolt database file used to persist Agents across restarts; Agents are kept only in memory when empty")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	trace := flag.Bool("trace", false, "Enable trace logging")
 	extra := flag.Bool("extra", false, "Enable extra debug logging")
@@ -57,6 +59,14 @@ func main() {
 		logging.SetLevel(logging.LevelTrace)
 	} else if *debug {
 		logging.SetLevel(logging.LevelDebug)
+	}
+
+	// Configure Agent persistence before any service is created (NewRPCService below
+	// instantiates the Agent service singleton, so this must come first)
+	if *db != "" {
+		if err := agent.UseBoltAgentRepository(*db); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// Get the RPC service
