@@ -577,12 +577,11 @@ func (s *Server) SharpGen(ctx context.Context, in *pb.AgentCMD) (msg *pb.Message
 		slog.Error(err.Error())
 		return
 	}
-	sharpGenDLL := filepath.Join(currentDir, "data", "src", "cobbr", "SharpGen", "bin", "release", "netcoreapp2.1", "SharpGen.dll")
 	sharpGenExe := filepath.Join(currentDir, "sharpgen.exe")
 
-	// Set SharpGen Module Parse() options
-	options["dotnetbin"] = "dotnet"
-	options["sharpgenbin"] = sharpGenDLL
+	// Set SharpGen Module Parse() options.
+	// NOTE: "dotnetbin"/"sharpgenbin" are intentionally not set here; they are pinned server-side
+	// inside sharpgen.Parse (GHSA-gmq6-43v4-9vrv) and are no longer operator- or caller-supplied.
 	options["help"] = "false"
 	options["file"] = sharpGenExe
 	options["dotnet"] = ""

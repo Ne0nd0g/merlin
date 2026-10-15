@@ -39,7 +39,10 @@ import (
 // The function input types are limited to strings and therefore require additional processing
 func Parse(options map[string]string) ([]string, error) {
 	// Verify the expected options are present
-	opts := []string{"dotnetbin", "sharpgenbin", "help", "file", "dotnet", "output-kind", "platform", "no-optimization", "assembly-name", "source-file", "class-name", "confuse", "code", "verbose", "spawnto", "args"}
+	// NOTE: "dotnetbin" and "sharpgenbin" are intentionally absent. They are pinned to fixed,
+	// server-side locations (see sharpGenToolPaths) and are not operator-controllable
+	// (GHSA-gmq6-43v4-9vrv).
+	opts := []string{"help", "file", "dotnet", "output-kind", "platform", "no-optimization", "assembly-name", "source-file", "class-name", "confuse", "code", "verbose", "spawnto", "args"}
 
 	for _, opt := range opts {
 		if _, ok := options[opt]; !ok {

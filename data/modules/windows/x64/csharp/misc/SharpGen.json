@@ -12,8 +12,6 @@
     "remote": "",
     "local": [""],
     "options": [
-      {"name": "dotnetbin", "value": "dotnet", "required": true, "flag": "", "description":"The file path for the \"dotnet\" core executable. Use just executable name if in PATH variable "},
-      {"name": "sharpgenbin", "value": "data/src/cobbr/SharpGen/bin/release/netcoreapp2.1/SharpGen.dll", "required": true, "flag": "", "description":"Path to SharpGen DLL"},
       {"name": "help", "value": "false", "required": false, "flag": "-h", "description":"Show help information"},
       {"name": "file", "value": "output.exe", "required": true, "flag": "-f", "description":"The output file name (not the path)"},
       {"name": "dotnet", "value": "", "required": false, "flag": "-d", "description":"The Dotnet Framework version to target (net35 or net40)"},
