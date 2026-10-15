@@ -102,8 +102,13 @@ func Parse(options map[string]string) ([]string, error) {
 	sharpGenConfig.AssemblyName = options["assembly-name"] // Assembly Name
 	sharpGenConfig.ClassName = options["class-name"]       // Class Name
 	sharpGenConfig.InlineCode = options["code"]            // Inline code; This is a positional argument
-	sharpGenConfig.SharpGenBin = options["sharpgenbin"]    // The location of SharpGen.dll
-	sharpGenConfig.DotNetBin = options["dotnetbin"]        // Location of the `dotnet` Core 2.1 SDK executable
+	// SECURITY (GHSA-gmq6-43v4-9vrv): the dotnet executable and the SharpGen compiler DLL are
+	// deliberately NOT operator-controllable. Honoring the operator-supplied "dotnetbin" and
+	// "sharpgenbin" values turned "compile C#" into arbitrary command execution on the teamserver
+	// (e.g. dotnetbin=/bin/bash, sharpgenbin=<uploaded script> => exec.Command runs the script).
+	// Both are pinned to known-good, server-side locations; the operator-supplied values for these
+	// two options are intentionally ignored.
+	sharpGenConfig.DotNetBin, sharpGenConfig.SharpGenBin = sharpGenToolPaths(current)
 
 	// Compile application and get bytes
 	err = Generate(&sharpGenConfig)
@@ -126,6 +131,19 @@ func Parse(options map[string]string) ([]string, error) {
 	}
 
 	return []string{"CreateProcess", base64.StdEncoding.EncodeToString(donutBuffer.Bytes()), options["spawnto"], options["args"]}, nil
+}
+
+// sharpGenToolPaths returns the fixed, server-side locations of the dotnet executable and the
+// SharpGen compiler DLL. These are intentionally not derived from operator-supplied input:
+// allowing an operator to choose the executable (and its first argument) is remotely exploitable
+// (GHSA-gmq6-43v4-9vrv) because exec.Command would then run an arbitrary binary on the teamserver.
+// dotnet is resolved from the server's PATH; the SharpGen DLL is located under the Merlin root.
+// root is the Merlin server's working directory. This mirrors the hard-coded values the SharpGen
+// RPC handler already uses (pkg/services/rpc/agent.go).
+func sharpGenToolPaths(root string) (dotNetBin, sharpGenBin string) {
+	dotNetBin = "dotnet"
+	sharpGenBin = filepath.Join(root, "data", "src", "cobbr", "SharpGen", "bin", "release", "netcoreapp2.1", "SharpGen.dll")
+	return dotNetBin, sharpGenBin
 }
 
 // Generate uses .NET core to compile source code and return the assembly as bytes
