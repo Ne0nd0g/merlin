@@ -57,3 +57,28 @@ func TestSharpGenToolPaths_IndependentOfOperatorInput(t *testing.T) {
 		}
 	}
 }
+
+// TestSetDotNetBin verifies the server operator can override the dotnet executable path (the
+// -dotnetBin launch flag) while the SharpGen DLL stays pinned under the Merlin root. This is a
+// server-launch setting, not a gRPC option, so it does not reintroduce GHSA-gmq6-43v4-9vrv.
+func TestSetDotNetBin(t *testing.T) {
+	defer SetDotNetBin("dotnet") // restore the package default for other tests
+	dotNetBin = "dotnet"
+
+	// An empty override is ignored; the default is retained.
+	SetDotNetBin("")
+	if dotnet, _ := sharpGenToolPaths("/opt/merlin"); dotnet != "dotnet" {
+		t.Errorf(`after SetDotNetBin(""), dotnet = %q, want "dotnet"`, dotnet)
+	}
+
+	// A non-empty override is applied; the SharpGen DLL remains pinned under the Merlin root.
+	const custom = "/usr/local/dotnet/dotnet"
+	SetDotNetBin(custom)
+	dotnet, sharpgen := sharpGenToolPaths("/opt/merlin")
+	if dotnet != custom {
+		t.Errorf("after SetDotNetBin(%q), dotnet = %q, want %q", custom, dotnet, custom)
+	}
+	if filepath.Base(sharpgen) != "SharpGen.dll" {
+		t.Errorf("SharpGen DLL should remain pinned regardless of the dotnet override, got %q", sharpgen)
+	}
+}

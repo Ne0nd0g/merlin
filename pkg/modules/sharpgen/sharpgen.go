@@ -136,17 +136,34 @@ func Parse(options map[string]string) ([]string, error) {
 	return []string{"CreateProcess", base64.StdEncoding.EncodeToString(donutBuffer.Bytes()), options["spawnto"], options["args"]}, nil
 }
 
-// sharpGenToolPaths returns the fixed, server-side locations of the dotnet executable and the
-// SharpGen compiler DLL. These are intentionally not derived from operator-supplied input:
-// allowing an operator to choose the executable (and its first argument) is remotely exploitable
-// (GHSA-gmq6-43v4-9vrv) because exec.Command would then run an arbitrary binary on the teamserver.
-// dotnet is resolved from the server's PATH; the SharpGen DLL is located under the Merlin root.
-// root is the Merlin server's working directory. This mirrors the hard-coded values the SharpGen
-// RPC handler already uses (pkg/services/rpc/agent.go).
-func sharpGenToolPaths(root string) (dotNetBin, sharpGenBin string) {
-	dotNetBin = "dotnet"
-	sharpGenBin = filepath.Join(root, "data", "src", "cobbr", "SharpGen", "bin", "release", "netcoreapp2.1", "SharpGen.dll")
-	return dotNetBin, sharpGenBin
+// dotNetBin is the path to (or PATH-resolvable name of) the dotnet executable the SharpGen module
+// uses to run the compiler. It defaults to "dotnet" (resolved from the server's PATH) and may be
+// overridden once at startup by the server operator via SetDotNetBin (the -dotnetBin flag). It is
+// configured server-side only and is deliberately NOT operator-controllable over gRPC
+// (GHSA-gmq6-43v4-9vrv): letting a remote operator choose the executable is arbitrary command
+// execution on the teamserver.
+var dotNetBin = "dotnet"
+
+// SetDotNetBin overrides the dotnet executable path used by the SharpGen module. It is intended to
+// be called once at server startup from the -dotnetBin command-line flag. An empty path is ignored
+// so the default ("dotnet", resolved from PATH) is retained. This is a server-launch setting, not a
+// gRPC option, so it does not reintroduce GHSA-gmq6-43v4-9vrv.
+func SetDotNetBin(path string) {
+	if path != "" {
+		dotNetBin = path
+	}
+}
+
+// sharpGenToolPaths returns the server-side locations of the dotnet executable and the SharpGen
+// compiler DLL. Neither is derived from operator-supplied gRPC input: allowing an operator to
+// choose the executable (and its first argument) is remotely exploitable (GHSA-gmq6-43v4-9vrv)
+// because exec.Command would then run an arbitrary binary on the teamserver. The dotnet path comes
+// from the server-configured dotNetBin (default "dotnet", from PATH); the SharpGen DLL is located
+// under the Merlin root. root is the Merlin server's working directory.
+func sharpGenToolPaths(root string) (dotnet, sharpgen string) {
+	dotnet = dotNetBin
+	sharpgen = filepath.Join(root, "data", "src", "cobbr", "SharpGen", "bin", "release", "netcoreapp2.1", "SharpGen.dll")
+	return dotnet, sharpgen
 }
 
 // Generate uses .NET core to compile source code and return the assembly as bytes
