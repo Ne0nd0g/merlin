@@ -85,7 +85,7 @@ jobs:
         id: package_release
         working-directory: /home/runner/work/merlin/merlin
         run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//')
+          VERSION=$(make version)
           BUILD=$(git rev-parse HEAD)
           DIR=data/temp/v${VERSION}/${BUILD}
           cp docs/CHANGELOG.MD .

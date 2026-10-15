@@ -65,3 +65,8 @@ distro: windows linux linux-arm linux-arm64 darwin darwin-arm64
 
 clean:
 	rm -rf ${DIR}*
+
+# Print the resolved Merlin version. Single source of truth for CI and the release packaging step
+# (.github/workflows/release.yml) so they never recompute it and drift from this Makefile.
+version:
+	@echo ${VERSION}

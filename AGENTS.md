@@ -50,6 +50,19 @@ merlin-message (base, stable v1.3.0) ──> merlin (this repo) ──(rpc.proto
 repo's `rpc.proto`, so after changing the proto, regenerate the CLI's stubs and keep grpc/protobuf
 versions aligned across both. Release order: message → server → cli.
 
+## Release / versioning
+
+The server version is **sourced from the git tag** at build time via ldflags — `make` derives it
+with `git describe --tags` (the `VERSION` variable in the [`Makefile`](Makefile)) and injects it into
+`pkg.Version`. `pkg/merlin.go` holds `var Version = "dev"` only as a fallback for untagged builds;
+**do not reintroduce a `const Version =` literal**, and do not grep the source for the version.
+
+Anything that needs the version (CI, the `release.yml` packaging step) must get it from
+**`make version`** — the single source of truth — so it can never drift from the Makefile. A stale
+copy of this logic in `release.yml` is exactly what broke the v2.2.2 release build. Releases are cut
+by pushing a `vX.Y.Z` tag, which triggers [`release.yml`](.github/workflows/release.yml) to build all
+targets and create a **draft** GitHub release for review.
+
 ## Conventions
 
 - **Branches:** do all work on `dev` (or a feature branch). **Never commit to `main`.**
