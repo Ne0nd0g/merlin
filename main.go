@@ -29,6 +29,7 @@ import (
 	// Internal
 	merlin "github.com/Ne0nd0g/merlin/v2/pkg"
 	"github.com/Ne0nd0g/merlin/v2/pkg/logging"
+	"github.com/Ne0nd0g/merlin/v2/pkg/modules/sharpgen"
 	"github.com/Ne0nd0g/merlin/v2/pkg/services/rpc"
 )
 
@@ -42,6 +43,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	trace := flag.Bool("trace", false, "Enable trace logging")
 	extra := flag.Bool("extra", false, "Enable extra debug logging")
+	dotnetBin := flag.String("dotnetBin", "dotnet", "File path to the 'dotnet' executable used by the SharpGen module; defaults to 'dotnet' resolved from the server's PATH")
 	v := flag.Bool("version", false, "Print the version number and exit")
 	flag.Parse()
 
@@ -49,6 +51,10 @@ func main() {
 		fmt.Printf("Merlin Version: %s, Build: %s\n", merlin.Version, merlin.Build)
 		return
 	}
+
+	// Configure the SharpGen module's dotnet executable path. This is a server-launch setting only;
+	// it is deliberately not exposed as a gRPC/operator option (GHSA-gmq6-43v4-9vrv).
+	sharpgen.SetDotNetBin(*dotnetBin)
 
 	// Set the logging level
 	if *extra {
