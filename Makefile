@@ -1,5 +1,5 @@
 # Merlin version
-VERSION=$(shell cat pkg/merlin.go |grep "const Version ="|cut -d"\"" -f2)
+VERSION=$(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//')
 BUILD=$(shell git rev-parse HEAD)
 
 # Output File Location
@@ -7,7 +7,7 @@ DIR=data/temp/v${VERSION}/${BUILD}
 $(shell mkdir -p ${DIR})
 
 # Go build flags
-LDFLAGS=-ldflags '-X github.com/Ne0nd0g/merlin/v2/pkg.Build=${BUILD} -buildid='
+LDFLAGS=-ldflags '-X github.com/Ne0nd0g/merlin/v2/pkg.Build=${BUILD} -X github.com/Ne0nd0g/merlin/v2/pkg.Version=${VERSION} -buildid='
 
 # Build fully static, pure-Go binaries for every target. The server uses no cgo,
 # so this only forces static linking + Go's native net/user resolvers and makes
